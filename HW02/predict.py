@@ -36,7 +36,11 @@ if __name__ == '__main__':
             features = batch
             features = features.to(device)
 
+            features = features.view(-1, concat_nframes, input_dim_lstm)
+
             outputs = model(features)
+
+            outputs = outputs[:, concat_nframes // 2, :].view(outputs.shape[0], -1)
 
             _, test_pred = torch.max(outputs, 1)  # get the index of the class with the highest probability
             pred = np.concatenate((pred, test_pred.cpu().numpy()), axis=0)

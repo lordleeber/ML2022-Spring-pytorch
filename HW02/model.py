@@ -8,10 +8,10 @@ class Classifier(nn.Module):
         self.lstm = nn.LSTM(  # LSTM 效果要比 nn.RNN() 好多了
             input_size=39,  # 图片每行的数据像素点
             hidden_size=hidden_dim,  # rnn hidden unit
-            num_layers=1,  # 有几层 RNN layers
+            num_layers=10,  # 有几层 RNN layers
             batch_first=True,  # input & output 会是以 batch size 为第一维度的特征集 e.g. (batch, time_step, input_size)
+            dropout=0.5,
         )
-
         self.out = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):
