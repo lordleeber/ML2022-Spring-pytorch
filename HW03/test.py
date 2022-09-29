@@ -19,7 +19,7 @@ test_tfm = transforms.Compose([
 
 test_set = FoodDataset(os.path.join(dataset_dir, "test"), tfm=test_tfm)
 test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
-device = 'cpu'
+device = "cuda"
 
 
 """# Testing and generate prediction CSV"""

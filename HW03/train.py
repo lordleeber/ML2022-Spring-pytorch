@@ -63,11 +63,11 @@ valid_set = FoodDataset(os.path.join(dataset_dir, "validation"), tfm=test_tfm)
 valid_loader = DataLoader(valid_set, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
 
 # "cuda" only when GPUs are available.
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(device)
+# device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cuda"
 
 # The number of training epochs and patience.
-n_epochs = 15
+n_epochs = 5
 patience = 300  # If no improvement in 'patience' epochs, early stop
 
 # Initialize a model, and put it on the device specified.

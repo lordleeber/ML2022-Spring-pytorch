@@ -25,7 +25,7 @@ class FoodDataset(Dataset):
         im = self.transform(im)
         # im = self.data[idx]
         try:
-            label = int(fname.split("/")[-1].split("_")[0])
+            label = int(fname.split("\\")[-1].split("_")[0])
         except:
             label = -1 # test has no label
         return im, label
