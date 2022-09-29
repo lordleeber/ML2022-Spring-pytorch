@@ -1,6 +1,8 @@
 import torch
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = "cuda"
+
 config = {
     'seed': 5201314,      # Your seed number, you can pick your lucky number. :)
     'select_all': True,   # Whether to use all features.
