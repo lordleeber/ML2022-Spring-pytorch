@@ -1,0 +1,5 @@
+checkpoints/*
+faces/*
+logs/*
+output/*
+*.zip
