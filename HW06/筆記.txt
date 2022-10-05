@@ -1,0 +1,9 @@
+2022/10/01
+1.原本的code只要提升config裡的n_epoch就能得到不錯的提升
+
+2.WGAN, WGAN-GP只替換loss_G是不能使用的
+需進一步研究
+
+3.styleGAN2看起來在win10下用python3.8會有安裝套件的問題
+也許以後使用ubuntu再跑
+
