@@ -1,8 +1,8 @@
 
 """## Hyper-parameters"""
 # data prarameters
-concat_nframes = 21  # the number of frames to concat with, n must be odd (total 2k+1 = n frames)
-train_ratio = 0.99  # the ratio of data used for training, the rest will be used for validation
+concat_nframes = 11  # the number of frames to concat with, n must be odd (total 2k+1 = n frames)
+train_ratio = 0.9  # the ratio of data used for training, the rest will be used for validation
 
 # training parameters
 seed = 0  # random seed
