@@ -4,11 +4,13 @@ import torch
 
 """# Dataset"""
 
+
 class COVID19Dataset(Dataset):
-    '''
+    """
     x: Features.
     y: Targets, if none, do prediction.
-    '''
+    """
+
     def __init__(self, x, y=None):
         if y is None:
             self.y = y

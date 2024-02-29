@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 
 
 def predict(test_loader, model, device):
-    model.eval() # Set your model to evaluation mode.
+    model.eval()  # Set your model to evaluation mode.
     preds = []
     for x in tqdm(test_loader):
         x = x.to(device)

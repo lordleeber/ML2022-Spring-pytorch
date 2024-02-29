@@ -1,7 +1,11 @@
 import torch.nn as nn
-"""# Neural Network Model
+
+
+"""
+# Neural Network Model
 Try out different model architectures by modifying the class below.
 """
+
 
 class My_Model(nn.Module):
     def __init__(self, input_dim):

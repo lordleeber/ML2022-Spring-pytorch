@@ -1,4 +1,3 @@
-
 # Numerical Operations
 import math
 
@@ -24,24 +23,28 @@ from tqdm import tqdm
 
 """# Training Loop"""
 
-def trainer(train_loader, valid_loader, model, config, device):
 
-    criterion = nn.MSELoss(reduction='mean') # Define your loss function, do not modify this.
+def trainer(train_loader, valid_loader, model, config, device):
+    # Define your loss function, do not modify this.
+    criterion = nn.MSELoss(reduction='mean')
 
     # Define your optimization algorithm. 
     # TODO: Please check https://pytorch.org/docs/stable/optim.html to get more available algorithms.
     # TODO: L2 regularization (optimizer(weight decay...) or implement by your self).
-    optimizer = torch.optim.SGD(model.parameters(), lr=config['learning_rate'], momentum=0.9) 
+    optimizer = torch.optim.SGD(model.parameters(), lr=config['learning_rate'], momentum=0.9)
 
-    writer = SummaryWriter() # Writer of tensoboard.
+    # Writer of tensorboard.
+    writer = SummaryWriter()
 
+    # Create directory of saving models.
     if not os.path.isdir('./models'):
-        os.mkdir('./models') # Create directory of saving models.
+        os.mkdir('./models')
 
     n_epochs, best_loss, step, early_stop_count = config['n_epochs'], math.inf, 0, 0
 
     for epoch in range(n_epochs):
-        model.train() # Set your model to train mode.
+        # Set your model to train mode.
+        model.train()
         loss_record = []
 
         # tqdm is a package to visualize your training progress.
@@ -64,7 +67,8 @@ def trainer(train_loader, valid_loader, model, config, device):
         mean_train_loss = sum(loss_record)/len(loss_record)
         writer.add_scalar('Loss/train', mean_train_loss, step)
 
-        model.eval() # Set your model to evaluation mode.
+        # Set your model to evaluation mode.
+        model.eval()
         loss_record = []
         for x, y in valid_loader:
             x, y = x.to(device), y.to(device)
@@ -80,7 +84,8 @@ def trainer(train_loader, valid_loader, model, config, device):
 
         if mean_valid_loss < best_loss:
             best_loss = mean_valid_loss
-            torch.save(model.state_dict(), config['save_path']) # Save your best model
+            # Save your best model
+            torch.save(model.state_dict(), config['save_path'])
             print('Saving model with loss {:.3f}...'.format(best_loss))
             early_stop_count = 0
         else: 
@@ -94,7 +99,6 @@ def trainer(train_loader, valid_loader, model, config, device):
 if __name__ == '__main__':
     # Set seed for reproducibility
     same_seed(config['seed'])
-
 
     # train_data size: 2699 x 118 (id + 37 states + 16 features x 5 days)
     # test_data size: 1078 x 117 (without last day's positive rate)
@@ -114,14 +118,10 @@ if __name__ == '__main__':
 
     train_dataset, valid_dataset = COVID19Dataset(x_train, y_train), COVID19Dataset(x_valid, y_valid)
 
-
     # Pytorch data loader loads pytorch dataset into batches.
     train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True)
     valid_loader = DataLoader(valid_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True)
 
-
     """# Start training!"""
-
-    model = My_Model(input_dim=x_train.shape[1]).to(device) # put your model and data on the same computation device.
+    model = My_Model(input_dim=x_train.shape[1]).to(device)  # put your model and data on the same computation device.
     trainer(train_loader, valid_loader, model, config, device)
-
