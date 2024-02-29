@@ -27,7 +27,7 @@ if __name__ == '__main__':
     del train_X, train_y, val_X, val_y
     gc.collect()
 
-    # get dataloader
+    # get data loader
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False)
 
@@ -41,7 +41,6 @@ if __name__ == '__main__':
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
     """## Training"""
-
     best_acc = 0.0
     for epoch in range(num_epoch):
         train_acc = 0.0
@@ -49,8 +48,8 @@ if __name__ == '__main__':
         val_acc = 0.0
         val_loss = 0.0
 
-        # training
-        model.train() # set the model to training mode
+        # set the model to training mode
+        model.train()
         for i, batch in enumerate(tqdm(train_loader)):
             features, labels = batch
             features = features.to(device)
@@ -72,13 +71,15 @@ if __name__ == '__main__':
             outputs = outputs[:, concat_nframes // 2, :].view(outputs.shape[0], -1)
             labels = labels[:, concat_nframes // 2]
 
-            _, train_pred = torch.max(outputs, 1) # get the index of the class with the highest probability
+            # get the index of the class with the highest probability
+            _, train_pred = torch.max(outputs, 1)
             train_acc += (train_pred.detach() == labels.detach()).sum().item()
             train_loss += loss.item()
 
         # validation
         if len(val_set) > 0:
-            model.eval() # set the model to evaluation mode
+            # set the model to evaluation mode
+            model.eval()
             with torch.no_grad():
                 for i, batch in enumerate(tqdm(val_loader)):
                     features, labels = batch
@@ -99,7 +100,8 @@ if __name__ == '__main__':
                     labels = labels[:, concat_nframes // 2]
 
                     _, val_pred = torch.max(outputs, 1)
-                    val_acc += (val_pred.cpu() == labels.cpu()).sum().item() # get the index of the class with the highest probability
+                    # get the index of the class with the highest probability
+                    val_acc += (val_pred.cpu() == labels.cpu()).sum().item()
                     val_loss += loss.item()
 
                 print('[{:03d}/{:03d}] Train Acc: {:3.6f} Loss: {:3.6f} | Val Acc: {:3.6f} loss: {:3.6f}'.format(

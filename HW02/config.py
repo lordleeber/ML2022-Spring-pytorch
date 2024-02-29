@@ -16,6 +16,3 @@ input_dim = 39 * concat_nframes  # the input dim of the model, you should not ch
 input_dim_lstm = 39
 hidden_layers = 1  # the number of hidden layers
 hidden_dim = 512  # the hidden dim
-
-
-
