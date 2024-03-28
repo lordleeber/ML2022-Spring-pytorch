@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-"""HW03.ipynb
-"""# Training"""
-
+"""
+HW03.ipynb
+"""
 
 # Import necessary packages.
 import numpy as np
 
-import torch
 import os
+import torch.backends.cudnn
 import torch.nn as nn
 import torchvision.transforms as transforms
 
@@ -24,7 +24,8 @@ from dataset import FoodDataset
 from config import *
 
 
-myseed = 6666  # set a random seed for reproducibility
+# set a random seed for reproducibility
+myseed = 6666
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 np.random.seed(myseed)
@@ -84,7 +85,6 @@ stale = 0
 best_acc = 0
 
 for epoch in range(n_epochs):
-
     # ---------- Training ----------
     # Make sure the model is in train mode before training.
     model.train()
@@ -94,18 +94,18 @@ for epoch in range(n_epochs):
     train_accs = []
 
     for batch in tqdm(train_loader):
-
         # A batch consists of image data and corresponding labels.
         imgs, labels = batch
-        #imgs = imgs.half()
-        #print(imgs.shape,labels.shape)
+        # imgs = imgs.half()
+        # print(imgs.shape,labels.shape)
 
         # Forward the data. (Make sure data and model are on the same device.)
         logits = model(imgs.to(device))
+        labels_on_device = labels.to(device)
 
         # Calculate the cross-entropy loss.
         # We don't need to apply softmax before computing cross-entropy as it is done automatically.
-        loss = criterion(logits, labels.to(device))
+        loss = criterion(logits, labels_on_device)
 
         # Gradients stored in the parameters in the previous step should be cleared out first.
         optimizer.zero_grad()
@@ -120,7 +120,9 @@ for epoch in range(n_epochs):
         optimizer.step()
 
         # Compute the accuracy for current batch.
-        acc = (logits.argmax(dim=-1) == labels.to(device)).float().mean()
+        # acc = (logits.argmax(dim=-1) == labels.to(device)).float().mean()
+        compare_result = torch.eq(logits.argmax(dim=-1), labels_on_device)
+        acc = compare_result.float().mean()
 
         # Record the loss and accuracy.
         train_loss.append(loss.item())
@@ -145,23 +147,26 @@ for epoch in range(n_epochs):
 
         # A batch consists of image data and corresponding labels.
         imgs, labels = batch
-        #imgs = imgs.half()
+        # imgs = imgs.half()
 
         # We don't need gradient in validation.
         # Using torch.no_grad() accelerates the forward process.
         with torch.no_grad():
             logits = model(imgs.to(device))
+            labels_on_device = labels.to(device)
 
         # We can still compute the loss (but not the gradient).
-        loss = criterion(logits, labels.to(device))
+        loss = criterion(logits, labels_on_device)
 
         # Compute the accuracy for current batch.
-        acc = (logits.argmax(dim=-1) == labels.to(device)).float().mean()
+        # acc = (logits.argmax(dim=-1) == labels.to(device)).float().mean()
+        compare_result = torch.eq(logits.argmax(dim=-1), labels_on_device)
+        acc = compare_result.float().mean()
 
         # Record the loss and accuracy.
         valid_loss.append(loss.item())
         valid_accs.append(acc)
-        #break
+        # break
 
     # The average loss and accuracy for entire validation set is the average of the recorded values.
     valid_loss = sum(valid_loss) / len(valid_loss)

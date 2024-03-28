@@ -35,7 +35,7 @@ with torch.no_grad():
         prediction += test_label.squeeze().tolist()
 
 
-#create test csv
+# create test csv
 def pad4(i):
     return "0"*(4-len(str(i)))+str(i)
 
