@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 0 章　任務與環境：先讓它跑起來 — HW01 COVID-19 確診率預測</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch01.html">第 1 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW01 讀碼教材</p>
+  <h1>第 0 章　任務與環境：先讓它跑起來</h1>
+  <p class="chap-lead">讀程式之前，先讓它在你的機器上完整跑一次。本章說明作業要預測什麼、為什麼這台機器不能照原本的 requirements 安裝，然後實際執行 <code>train.py</code> 與 <code>predict.py</code>，把終端機印出的每一行對回程式碼。最後畫一張六個檔案的分工地圖，當作後面各章的索引。</p>
+</header>
+<main>
+
+<h2 id="task">0.1　作業要預測什麼</h2>
+<p>資料來自卡內基美隆大學 Delphi 研究群：他們從 2020 年 4 月起透過 Facebook 每天在美國各州發問卷，問受訪者有沒有發燒咳嗽、最近有沒有戴口罩、有沒有去餐廳、心情焦不焦慮等問題，再把每州每天的回答統計成百分比。其中一個欄位 <code>tested_positive</code> 是「受檢者中檢驗陽性的比例」，也是我們要預測的目標。</p>
+<p>作業把資料整理成這樣：<strong>每一筆（一列）代表某一州、連續 5 天</strong>的統計。前 4 天的所有欄位（包含 tested_positive）都給你，第 5 天則只給問卷欄位、不給 tested_positive。你的模型要根據這些數字，輸出第 5 天的 tested_positive——一個實數。輸出是連續值而不是類別，所以這叫<strong>迴歸（regression）</strong>。</p>
+<p>成績怎麼算？作業投影片寫明評估指標是<strong>均方誤差（Mean Squared Error, MSE）</strong>：</p>
+<div class="eq">MSE = (1/N) · Σ (預測值<sub>i</sub> − 真實值<sub>i</sub>)²</div>
+<p>差距平方後取平均，所以越小越好；預測偏 1 個百分點貢獻 1，偏 3 個百分點貢獻 9，大錯會被重罰。你在 Kaggle（一個舉辦資料科學競賽的網站，課程在上面開了這份作業的排行榜）上傳 <code>pred.csv</code>，網站用隱藏的正確答案算出你的 MSE；助教事先設了 simple／medium／strong／boss 四條分數門檻（基準線），每超過一條就多拿分。助教提供的範例程式能過 simple；後面三條要靠第 7 章的改進。本書不談上傳流程，只談程式。</p>
+
+<div class="note"><h4>一句話記住這個作業</h4>
+<p>輸入：一列 117 個數字（1 個編號 id、37 個代表「哪一州」的欄位、5 天的問卷統計，第 1 章逐欄拆給你看）。輸出：第 5 天的陽性率（1 個數字）。訓練目標：讓預測和真實值的 MSE 盡量小。</p>
+</div>
+
+<h2 id="env">0.2　環境：為什麼不能照原本的 requirements 裝</h2>
+<p>先認識兩個名字。<strong>PyTorch</strong>（套件名 <code>torch</code>）是用來建立與訓練神經網路的 Python 函式庫，本作業的模型就是一個小型神經網路。<strong>CUDA</strong> 是 NVIDIA 提供的一套讓程式在顯卡上做運算的平台（驅動程式之上的函式庫與編譯工具）；PyTorch 要用顯卡，就是透過 CUDA。所以 GPU 版 PyTorch 的版本號會連帶標明它是用哪一版 CUDA 編譯的，例如 <code>cu116</code> 就是 CUDA 11.6。</p>
+<p>本 repo 原本的 <code>requirements.txt</code> 第一行是 <code>pip install torch==1.13.1+cu116 …</code>，也就是 2022 年課程當時的 PyTorch 1.13 搭 CUDA 11.6。這組版本在這台機器上有兩個無法繞過的問題：</p>
+<ol>
+  <li><strong>顯卡太新。</strong>本機是 NVIDIA RTX PRO 4000 Blackwell，運算能力（compute capability）是 12.0，PyTorch 的說法叫 <code>sm_120</code>。這個數字不是效能分數，而是<strong>顯卡架構世代的版本號</strong>：同一世代的指令集相同，新世代會有舊程式不認得的指令。PyTorch 的 GPU 程式（kernel）是事先針對特定 sm 版本編譯好放進安裝包的；1.13 的安裝包裡根本沒有 sm_120 的 kernel，CUDA 11.6 也不認識這代架構。要支援 Blackwell，至少要 CUDA 12.8 版的安裝包（cu128）。</li>
+  <li><strong>Python 太新。</strong>本機是 Python 3.12，而 PyTorch 1.13 沒有為 3.12 發布過安裝包，pip 會直接找不到可裝的版本。</li>
+</ol>
+<p>所以這次改用 PyTorch 2.11 的 cu128 版本，並把 requirements 改成實際安裝的版本：</p>
+
+<figure class="listing"><figcaption>requirements.txt:1–10 — 全 repo 共用的套件清單</figcaption>
+<pre class="shell" data-hot="3-5"><code># Python 3.12, CUDA 12.8 (needed for Blackwell / sm_120 GPUs)
+# UV_HTTP_TIMEOUT=600 uv pip install -r requirements.txt
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.11.0+cu128
+torchvision==0.26.0+cu128
+numpy==2.5.3
+pandas==3.0.6
+tqdm==4.70.1
+tensorboard==2.21.0
+matplotlib==3.11.2</code></pre></figure>
+
+<p>重點在第 3–5 行。一般套件從 PyPI 下載；但 GPU 版 PyTorch 放在 PyTorch 自己的伺服器上，依 CUDA 版本分目錄，<code>--extra-index-url</code> 告訴安裝工具「除了 PyPI 之外也去 cu128 那個目錄找」。版本號後面的 <code>+cu128</code> 就是指定「CUDA 12.8 編譯的那一份」。其餘套件各司其職：<code>numpy</code>／<code>pandas</code> 處理表格、<code>tqdm</code> 畫進度條、<code>tensorboard</code> 記錄並顯示訓練曲線、<code>matplotlib</code> 畫圖，<code>torchvision</code> 是 PyTorch 的影像工具包（這兩個 HW01 都用不到，其他作業會用；torchvision 必須和 torch 版本配對，所以也要從 cu128 目錄裝）。</p>
+
+<h3>建立環境</h3>
+<p>這個 repo 有八份作業，大多可以共用同一個環境，所以虛擬環境（venv，一個與系統 Python 隔開的獨立套件目錄）建在 repo 根目錄的 <code>.venv</code>。這裡用 <a href="https://docs.astral.sh/uv/">uv</a> 這套比 pip 快很多的安裝工具。以下指令都在 repo 根目錄執行；第一行的 <code>~/poyi/GitHubPoyi/ML2022-Spring-pytorch</code> 是作者機器上的位置，請換成你自己 clone 這個 repo 的目錄：</p>
+<pre class="shell"><code>$ cd ~/poyi/GitHubPoyi/ML2022-Spring-pytorch
+$ uv venv .venv --python 3.12
+$ UV_HTTP_TIMEOUT=600 uv pip install --python .venv -r requirements.txt</code></pre>
+<p><code>UV_HTTP_TIMEOUT=600</code> 把下載逾時放寬到 600 秒。這種「<code>變數=值 指令</code>」的寫法是 shell 語法：只替後面這一條指令設定環境變數，指令結束就失效，不必先 <code>export</code>。GPU 版 PyTorch 會連帶下載十幾個 NVIDIA 函式庫，其中 cuFFT、cuDNN 等單檔就有數百 MB；在這台機器的網路上用預設逾時，第一次安裝就卡在 cuFFT 失敗過。裝好之後確認 PyTorch 真的看得到顯卡：</p>
+<pre class="shell"><code>$ .venv/bin/python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0), torch.cuda.get_device_capability(0)); print(torch.cuda.get_arch_list())"
+2.11.0+cu128 True NVIDIA RTX PRO 4000 Blackwell (12, 0)  «1»
+['sm_75', 'sm_80', 'sm_86', 'sm_90', 'sm_100', 'sm_120']  «2»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>版本確實是 cu128；<code>is_available()</code> 為 True；<code>(12, 0)</code> 就是 compute capability 12.0，即 sm_120。</li>
+  <li>這份 PyTorch 內建了哪些架構的 kernel。最後一個 <code>sm_120</code> 正是本機需要的——這一行就是「cu128 才能用」的直接證據。</li>
+</ol>
+
+<h2 id="config">0.3　config.py：全專案的設定中心</h2>
+<p>跑之前先看一眼設定檔，因為它決定了你等一下會看到的所有數字：</p>
+
+<figure class="listing"><figcaption>config.py:1–18 — device 與超參數</figcaption>
+<pre class="py" data-hot="3-7"><code>import torch
+
+# device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = "cuda"
+
+print(torch.cuda.is_available())
+print(torch.cuda.current_device())
+
+config = {
+    'seed': 5201314,      # Your seed number, you can pick your lucky number. :)
+    'select_all': True,   # Whether to use all features.
+    'valid_ratio': 0.2,   # validation_size = train_size * valid_ratio
+    'n_epochs': 3000,     # Number of epochs.
+    'batch_size': 256,
+    'learning_rate': 1e-5,
+    'early_stop': 400,    # If model has not improved for this many consecutive epochs, stop training.
+    'save_path': './models/model.ckpt'  # Your model will be saved here.
+}</code></pre></figure>
+
+<p>先解釋一個會反覆出現的詞：<strong>驗證集（validation set）</strong>。訓練時模型只從<strong>訓練集</strong>學；另外保留一小部分有答案、但模型訓練時沒看過的資料，專門拿來打分數，藉此判斷模型是「真的學會」還是「只是背下訓練資料」。這一份就是驗證集，<code>valid_ratio</code> 決定切多少出來。<strong>測試集</strong>則是作業給的、沒有答案的那 1078 筆，只用來產生要上傳的預測。</p>
+<p>注意第 12 行的註解寫 <code>validation_size = train_size * valid_ratio</code>，但這和實際行為不符：程式是用<strong>切分前的全部資料</strong>乘以 0.2（2699 × 0.2 → 539），不是訓練集 2160 × 0.2 = 432。等一下的輸出會印出 539，第 2 章再對照程式碼說明。</p>
+<p>下半部的 <code>config</code> 字典是<strong>超參數（hyperparameter）</strong>：由人決定、不靠訓練學出來的設定。其中 <code>seed</code>（亂數種子）是亂數產生器的起點：訓練中有好幾處需要亂數（模型權重的初始值、資料切分、每個 epoch 打亂資料順序），固定 seed 就讓每次抽出的亂數序列都一樣。每一項後面各章都會講到——<code>seed</code> 與 <code>valid_ratio</code> 在第 2 章、<code>batch_size</code> 在第 3 章、<code>learning_rate</code>、<code>n_epochs</code>、<code>early_stop</code> 在第 5 章、<code>select_all</code> 在第 2 章與第 7 章。現在只要知道：<strong>想調整訓練行為，先來這裡改</strong>。</p>
+<p>上半部的 <code>device</code> 決定模型與資料放在哪個裝置上計算。<code>'cuda'</code> 代表 NVIDIA 顯卡，<code>'cpu'</code> 代表處理器。</p>
+
+<div class="warn"><h4>和原版不同：device 被寫死了</h4>
+<p>第 3 行被註解掉的那一句，正是官方原版的寫法：有 GPU 就用 cuda，沒有就退回 cpu。本 repo 改成第 4 行的 <code>device = "cuda"</code>，並在第 6–7 行加了兩個 print。後果有兩個：</p>
+<ul>
+  <li><strong>沒有 NVIDIA 顯卡的機器跑不起來。</strong>第 7 行的 <code>torch.cuda.current_device()</code> 在沒有 GPU 時會直接拋出 <code>RuntimeError: No CUDA GPUs are available</code>（用 <code>CUDA_VISIBLE_DEVICES=""</code> 把顯卡藏起來就能重現），程式在讀資料之前就結束了。</li>
+  <li><strong>每支 import config 的程式都會先印兩行。</strong>這是 <code>import</code> 的特性：Python 第一次 import 一個模組時，會把它從頭執行一遍，模組層級的 <code>print</code> 也跟著執行。所以等一下 train.py 與 predict.py 的輸出開頭都是 <code>True</code> 與 <code>0</code>。</li>
+</ul>
+<p>在這台有 GPU 的機器上沒有影響。要給別人用，就把第 3 行恢復、第 4、6、7 行刪掉——這也是第 7 章的入門練習之一。</p>
+</div>
+
+<h2 id="train">0.4　跑一次 train.py，逐行解讀輸出</h2>
+<p>所有程式都用相對路徑讀資料（<code>./covid.train.csv</code>）與存模型（<code>./models/model.ckpt</code>），所以<strong>一定要先 cd 進 <code>HW01/</code> 再執行</strong>，否則會找不到檔案。venv 在上一層，所以 Python 的路徑是 <code>../.venv/bin/python</code>：</p>
+<pre class="shell"><code>$ cd ~/poyi/GitHubPoyi/ML2022-Spring-pytorch/HW01
+$ time ../.venv/bin/python train.py</code></pre>
+<p>輸出有兩條管道：一般的 <code>print</code> 走標準輸出（stdout），tqdm 進度條走標準錯誤（stderr）。兩者在終端機上會交錯出現，這裡分開看。想在自己的終端機上也分開看，可以把 stderr 導到檔案：<code>../.venv/bin/python train.py 2&gt;train.err</code>（<code>2&gt;</code> 是「把第 2 號輸出，也就是 stderr，寫進檔案」），畫面上就只剩 stdout，進度條則在 <code>train.err</code> 裡。先看 stdout 的前 8 行：</p>
+<pre class="shell"><code>True  «1»
+0  «1»
+train_data size: (2160, 118)   «2»
+    valid_data size: (539, 118)   «3»
+    test_data size: (1078, 117)  «4»
+number of features: 117  «5»
+Epoch [1/3000]: Train loss: 134.2442, Valid loss: 107.2155  «6»
+Saving model with loss 107.215...  «7»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>config.py 第 6–7 行的兩個 print：GPU 可用、目前用第 0 號 GPU。</li>
+  <li><span class="mk">2</span>切分後的訓練集：2160 列 × 118 欄。原始 2699 列中，80% 留作訓練（第 2 章算給你看）。</li>
+  <li><span class="mk">3</span>驗證集 539 列。這一行和下一行前面多了 4 個空白——因為 train.py 用三引號字串印這三行，而第 2、3 行在原始碼裡是縮排的，三引號字串會把縮排原樣保留下來。不是 bug，只是排版瑕疵。</li>
+  <li><span class="mk">4</span>測試集 1078 列 × 117 欄：比訓練集少 1 欄，少的正是要預測的第 5 天 tested_positive。</li>
+  <li><span class="mk">5</span>送進模型的特徵數：118 欄扣掉最後一欄答案 = 117。注意這 117 個裡面<strong>包含 id 欄</strong>，第 2 章會回來討論。</li>
+  <li><span class="mk">6</span>第 1 個 epoch（把整個訓練集看過一遍叫一個 epoch）的平均 loss。數字是 MSE：預測平均偏了 √107 ≈ 10 個百分點，模型還在亂猜。</li>
+  <li><span class="mk">7</span>驗證 loss 創新低，就把模型存到 <code>models/model.ckpt</code>。第 1 個 epoch 一定創新低（之前的紀錄是無限大）。</li>
+</ol>
+<p>stderr 的 tqdm 進度條每個 epoch 一條，畫完會停在 100%。前兩個 epoch 與最後一個 epoch 長這樣：</p>
+<pre class="shell"><code>Epoch [1/3000]: 100%|██████████| 9/9 [00:00&lt;00:00, 23.98it/s, loss=60.4]  «1»
+Epoch [2/3000]: 100%|██████████| 9/9 [00:00&lt;00:00, 732.73it/s, loss=65.9]  «2»
+Epoch [1883/3000]: 100%|██████████| 9/9 [00:00&lt;00:00, 739.84it/s, loss=1.91]  «3»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>方括號裡 <code>00:00&lt;00:00</code> 是「已花時間&lt;預估剩餘時間」，<code>it/s</code> 是每秒處理幾個 batch。<code>9/9</code>：每個 epoch 跑 9 個 batch（一次餵給模型的一小批資料；2160 筆每批 256 筆，第 3 章細算）。<code>loss=60.4</code> 是<strong>最後一個 batch</strong> 的 loss，不是整個 epoch 的平均，所以和上面 stdout 的 134.2442 不一樣。</li>
+  <li><span class="mk">2</span>第 2 個 epoch 起速度從每秒 24 個 batch 跳到 700 多個：第一次呼叫 GPU 要做初始化與載入 kernel，之後就快了。</li>
+  <li><span class="mk">3</span>最後一個 epoch 是 1883，不是設定的 3000——訓練提早停了。</li>
+</ol>
+<p>再看 stdout 的結尾，以及 <code>time</code> 量到的時間：</p>
+<pre class="shell"><code>Epoch [1881/3000]: Train loss: 1.8538, Valid loss: 2.3940
+Epoch [1882/3000]: Train loss: 1.8373, Valid loss: 2.0718
+Epoch [1883/3000]: Train loss: 1.7689, Valid loss: 2.5030
+
+Model is not improving, so we halt the training session.  «1»
+
+real	0m34.167s  «2»
+user	0m32.393s
+sys	0m2.904s</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>early stopping 觸發。往回翻 log，最後一次 <code>Saving model</code> 出現在第 1483 個 epoch（<code>Valid loss: 1.6611</code>）。1483 + 400 = 1883：連續 400 個 epoch 驗證 loss 都沒有再創新低，程式判定「不會再進步了」就收工。400 就是 config 的 <code>early_stop</code>。整個訓練過程共存檔 49 次（<code>../.venv/bin/python train.py 2&gt;/dev/null | grep -c Saving</code> 可以數，<code>grep -c</code> 是只印符合的行數）。</li>
+  <li><span class="mk">2</span><code>time</code> 印三個時間：<code>real</code> 是實際經過的時間（牆上時鐘），<code>user</code>／<code>sys</code> 是 CPU 花在程式本身／作業系統上的時間。整段訓練約 34 秒。模型很小、資料只有兩千多筆，GPU 幾乎沒有發揮空間，時間多半花在 Python 迴圈與每個 epoch 的存檔、印 log 上。</li>
+</ol>
+<p>所以這次訓練的成果是：<strong>驗證集 MSE 1.661</strong>，換算平均誤差約 √1.661 ≈ 1.29 個百分點，比第 1 個 epoch 的 10 個百分點好了很多。這台機器上同樣的指令重跑兩次，最佳 loss、停止的 epoch 都一模一樣——這是第 2 章 <code>same_seed</code> 的功勞。</p>
+
+<h2 id="predict">0.5　跑 predict.py 產生預測</h2>
+<pre class="shell"><code>$ ../.venv/bin/python predict.py
+True
+0
+train_data size: (2160, 118)   «1»
+    valid_data size: (539, 118)
+    test_data size: (1078, 117)
+100%|██████████| 5/5 [00:00&lt;00:00, 44.46it/s]  «2»
+$ head -4 pred.csv
+id,tested_positive  «3»
+0,8.850631
+1,7.368863
+2,4.1526003</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>predict.py 也重新讀了訓練資料並切分一次。它其實只需要測試集；這個多餘的步驟是為了算出特徵數 117，好建出同樣形狀的模型。第 6 章會討論。</li>
+  <li><span class="mk">2</span>1078 筆測試資料，每批 256 筆，共 5 批。</li>
+  <li><span class="mk">3</span>提交格式：表頭加上 1078 列「編號, 預測值」。整個檔案 1079 行。</li>
+</ol>
+
+<h2 id="artifacts">0.6　跑完之後多了什麼</h2>
+<p>兩支程式跑完，<code>HW01/</code> 底下多了三樣東西：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>產物</th><th>誰產生</th><th>內容</th></tr></thead>
+<tbody>
+<tr><td><code>models/model.ckpt</code></td><td>train.py</td><td>驗證 loss 最低那一刻的模型權重（weights，模型裡由訓練學出來的那些數字，也叫參數；<code>.ckpt</code> 是 checkpoint 的縮寫），11,005 bytes（<code>ls -l models/</code> 可查）。檔案這麼小，是因為整個模型只有 2,033 個參數（第 4 章實算）。</td></tr>
+<tr><td><code>runs/Oct02_21-34-17_ValtecBlackwell/</code></td><td>train.py</td><td>TensorBoard 的紀錄檔。目錄名是「月日_時-分-秒_主機名」，每跑一次多一個目錄。</td></tr>
+<tr><td><code>pred.csv</code></td><td>predict.py</td><td>1078 筆預測，可直接上傳。</td></tr>
+</tbody>
+</table></div>
+<p>這三樣都被 <code>HW01/.gitignore</code> 排除，不會被 git 追蹤。這個檔案只有三行（<code>cat .gitignore</code> 可看）：<code>models/*</code>、<code>runs/*</code>、<code>*.csv</code>。注意最後一條 <code>*.csv</code> 照字面也涵蓋 <code>covid.train.csv</code> 與 <code>covid.test.csv</code>，但這兩個資料檔在加上這條規則之前就已經 commit 進 repo，git 會繼續追蹤已追蹤的檔案，所以 clone 下來資料檔都在；被擋掉的只有新產生的 <code>pred.csv</code>。</p>
+<p>想看訓練曲線，在 <code>HW01/</code> 裡啟動 TensorBoard，再用瀏覽器打開它印出的網址（預設 <code>http://localhost:6006</code>）：</p>
+<pre class="shell"><code>$ ../.venv/bin/tensorboard --logdir runs</code></pre>
+<p>你會看到 <code>Loss/train</code> 與 <code>Loss/valid</code> 兩條曲線：驗證 loss 從第 1 個 epoch 的 107 急降，第 100 個 epoch 已到 4.28，之後在 2～4 之間上下震盪、緩慢走低（例如第 300 個 epoch 2.63、第 1000 個 epoch 3.86；這幾個精確數字是從 stdout 的 log 查的，例如 <code>grep "Epoch \[300/"</code>，TensorBoard 上則把游標停在曲線上看）。這兩條曲線怎麼被寫進去，第 5 章會講。</p>
+
+<div class="lab"><h4>動手做：親手驗證本章的三個說法</h4>
+<p>以下指令都在 <code>HW01/</code> 裡執行。每一個都只要幾秒到半分鐘，做完你就不必相信本書，而是相信自己的終端機。</p>
+<ol>
+  <li><strong>可重現性</strong>：再跑一次 <code>../.venv/bin/python train.py 2&gt;/dev/null | tail -3</code>，最後一個 epoch 應該仍是 <code>Epoch [1883/3000]</code>，數字與 0.4 節完全相同。接著把 <code>config.py</code> 的 <code>'seed'</code> 改成別的數字再跑，停止的 epoch 會變；再跑一次第 3 項的指令，最佳 loss 也不再是 1.661。做完記得把 seed 改回 <code>5201314</code>，<strong>並再跑一次 train.py</strong>，讓 <code>models/model.ckpt</code> 回到 1.661 那一份——後面各章的數字都以它為準。</li>
+  <li><strong>寫死 cuda 的後果</strong>：執行 <code>CUDA_VISIBLE_DEVICES="" ../.venv/bin/python -c "import config"</code>。這個環境變數讓 PyTorch 看不到任何顯卡，模擬一台沒有 GPU 的機器；你會先看到 <code>False</code>，接著是 <code>RuntimeError: No CUDA GPUs are available</code>。</li>
+  <li><strong>最後一次存檔在哪</strong>：執行 <code>../.venv/bin/python train.py 2&gt;/dev/null | grep -B1 Saving | tail -2</code>，<code>-B1</code> 讓 grep 連同前一行一起印，你會看到 <code>Epoch [1483/3000]</code> 與 <code>Saving model with loss 1.661...</code>。</li>
+</ol>
+<p><code>2&gt;/dev/null</code> 把 stderr（tqdm 進度條）丟掉，否則管線只接住 stdout，進度條仍會灌滿螢幕。第 1、3 項每跑一次都會覆寫 <code>models/model.ckpt</code>，並在 <code>runs/</code> 多一個目錄；只要 seed 是 5201314，覆寫後的權重和原本相同。</p>
+</div>
+
+<h2 id="map">0.7　六個檔案的分工地圖</h2>
+<p>官方原版是一份 Jupyter／Colab 筆記本（<code>.ipynb</code>，把程式切成一格一格、在瀏覽器裡從上往下依序執行的檔案）；本 repo 把它按職責拆成六個檔案。下圖是資料在它們之間流動的方向：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 290" role="img" aria-label="HW01 六個檔案的資料流：CSV 經 utils 切分、data_loader 包裝後進 train 訓練，存成 model.ckpt，再由 predict 讀回產生 pred.csv；model.py 被 train 與 predict 共用，config.py 被所有檔案 import">
+  <defs>
+    <marker id="ar0" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#93a1af"/>
+    </marker>
+  </defs>
+  <text class="s-sm" x="20" y="22">第一列：訓練（train.py 執行時）　　第二列：預測（predict.py 執行時）</text>
+  <!-- row 1 -->
+  <rect x="20" y="45" width="150" height="66" rx="10" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-key" x="95" y="74" text-anchor="middle">covid.*.csv</text>
+  <text class="s-sm" x="95" y="94" text-anchor="middle">原始資料（第 1 章）</text>
+
+  <rect x="210" y="45" width="150" height="66" rx="10" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-key" x="285" y="74" text-anchor="middle">utils.py</text>
+  <text class="s-sm" x="285" y="94" text-anchor="middle">切分・選特徵（第 2 章）</text>
+
+  <rect x="400" y="45" width="150" height="66" rx="10" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-key" x="475" y="74" text-anchor="middle">data_loader.py</text>
+  <text class="s-sm" x="475" y="94" text-anchor="middle">包成 Dataset（第 3 章）</text>
+
+  <rect x="590" y="45" width="150" height="66" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-key" x="665" y="74" text-anchor="middle">train.py</text>
+  <text class="s-sm" x="665" y="94" text-anchor="middle">訓練迴圈（第 5 章）</text>
+
+  <rect x="770" y="45" width="115" height="66" rx="10" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-key" x="827" y="74" text-anchor="middle">model.ckpt</text>
+  <text class="s-sm" x="827" y="94" text-anchor="middle">最佳權重</text>
+
+  <line x1="172" y1="78" x2="206" y2="78" stroke="#93a1af" stroke-width="2" marker-end="url(#ar0)"/>
+  <line x1="362" y1="78" x2="396" y2="78" stroke="#93a1af" stroke-width="2" marker-end="url(#ar0)"/>
+  <line x1="552" y1="78" x2="586" y2="78" stroke="#93a1af" stroke-width="2" marker-end="url(#ar0)"/>
+  <line x1="742" y1="78" x2="766" y2="78" stroke="#93a1af" stroke-width="2" marker-end="url(#ar0)"/>
+
+  <!-- row 2 -->
+  <rect x="20" y="185" width="150" height="66" rx="10" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-key" x="95" y="214" text-anchor="middle">config.py</text>
+  <text class="s-sm" x="95" y="234" text-anchor="middle">被每個檔案 import</text>
+
+  <rect x="400" y="185" width="150" height="66" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-key" x="475" y="214" text-anchor="middle">model.py</text>
+  <text class="s-sm" x="475" y="234" text-anchor="middle">神經網路（第 4 章）</text>
+
+  <rect x="590" y="185" width="150" height="66" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-key" x="665" y="214" text-anchor="middle">predict.py</text>
+  <text class="s-sm" x="665" y="234" text-anchor="middle">用模型預測（第 6 章）</text>
+
+  <rect x="770" y="185" width="115" height="66" rx="10" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-key" x="827" y="214" text-anchor="middle">pred.csv</text>
+  <text class="s-sm" x="827" y="234" text-anchor="middle">提交檔</text>
+
+  <line x1="552" y1="200" x2="610" y2="114" stroke="#93a1af" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ar0)"/>
+  <line x1="552" y1="218" x2="586" y2="218" stroke="#93a1af" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ar0)"/>
+  <line x1="827" y1="113" x2="720" y2="182" stroke="#93a1af" stroke-width="2" marker-end="url(#ar0)"/>
+  <line x1="742" y1="218" x2="766" y2="218" stroke="#93a1af" stroke-width="2" marker-end="url(#ar0)"/>
+  <text class="s-sm" x="598" y="148">類別定義</text>
+  <path d="M130,113 V170 H655 V182" fill="none" stroke="#93a1af" stroke-width="2" marker-end="url(#ar0)"/>
+  <text class="s-sm" x="200" y="164">predict.py 也自己讀 CSV（第 6 章）</text>
+  <text class="s-sm" x="780" y="160">載回權重</text>
+  <text class="s-sm" x="20" y="278">實線＝資料或檔案的流向；虛線＝程式碼層級的引用（import）。</text>
+</svg>
+<figcaption>圖 0.1 — 訓練與預測共用同一份模型定義；訓練的成果只透過磁碟上的 model.ckpt 交給預測。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#58a6ff"></i>CPU 端的資料處理</span>
+  <span><i style="background:#3fb950"></i>在 GPU 上運算</span>
+  <span><i style="background:#e3b341"></i>磁碟檔案</span>
+  <span><i style="background:#a371f7"></i>設定</span>
+</div>
+
+<p>這張圖有兩個值得記住的地方。第一，<strong>train.py 和 predict.py 是兩個獨立的程式</strong>：訓練結束後 Python 行程就結束了，記憶體裡的模型也跟著消失；預測時要用 <code>model.py</code> 重建一個同樣形狀的空模型，再從 <code>model.ckpt</code> 把權重填回去。另外，predict.py 不經過 train.py：它自己 import utils 與 data_loader，自己讀 CSV。第二，<strong>這些檔案之間靠 <code>import *</code> 連在一起</strong>：</p>
+
+<figure class="listing"><figcaption>train.py:17–21 — 把其他四個檔案的名字全部匯入</figcaption>
+<pre class="py"><code>from model import *
+from utils import *
+from config import *
+from data_loader import *
+from tqdm import tqdm</code></pre></figure>
+
+<p><code>from X import *</code> 會把模組 X 裡所有公開的名字（函式、類別、變數，以及 X 自己 import 進來的東西）倒進目前的命名空間。所以 train.py 裡直接寫 <code>config['seed']</code>、<code>device</code>、<code>My_Model</code>、<code>same_seed</code> 都能用，不必加前綴。這樣寫很方便，代價是讀程式時看不出某個名字從哪來——例如 train.py 自己沒有 <code>import torch</code>，卻能使用 <code>torch.optim.SGD</code>，因為 config.py、utils.py、data_loader.py 都 <code>import torch</code>，<code>torch</code> 這個名字就跟著 <code>import *</code> 一起進來了；同理，train.py 用到的 <code>nn.MSELoss</code> 的 <code>nn</code>，來自 model.py 第 1 行的 <code>import torch.nn as nn</code>。遇到「這個名字哪來的？」就回頭查這張圖。另外，第 21 行的 <code>from tqdm import tqdm</code> 在第 9 行（<code>train.py:9</code>，註解 <code># For Progress Bar</code> 底下）已經出現過一次，重複 import 無害，只是多餘。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>HW01 是迴歸問題：用一列 117 個數字（id、州別、5 天的問卷統計）預測第 5 天的陽性率，以 MSE 評分。</li>
+  <li>Blackwell 顯卡（sm_120）需要 cu128 以上的 PyTorch；repo 根目錄的 <code>.venv</code> 是 Python 3.12 + PyTorch 2.11.0+cu128。</li>
+  <li>所有程式都要在 <code>HW01/</code> 裡執行，Python 用 <code>../.venv/bin/python</code>。</li>
+  <li>實測：訓練約 34 秒，第 1483 個 epoch 得到最佳驗證 MSE 1.661，第 1883 個 epoch early stop；predict 產生 1078 筆預測。</li>
+  <li><code>config.py</code> 把 device 寫死為 cuda，沒 GPU 的機器會在 import 時就失敗。</li>
+  <li>train 與 predict 是兩個獨立程式，透過 <code>models/model.ckpt</code> 交接。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 為什麼這台機器不能安裝原本指定的 torch==1.13.1+cu116？請說出兩個理由。</summary>
+<p>一、顯卡是 Blackwell（sm_120），PyTorch 1.13 的安裝包沒有編譯 sm_120 的 kernel，CUDA 11.6 也不支援這代架構，至少要 cu128。二、本機是 Python 3.12，而 PyTorch 1.13 沒有發布 3.12 的安裝包。</p></details>
+<details class="quiz"><summary>2. 在一台沒有 NVIDIA 顯卡的筆電上執行 train.py，程式會在哪裡失敗？為什麼還沒開始讀資料就失敗了？</summary>
+<p>在 config.py 第 7 行 <code>torch.cuda.current_device()</code>。train.py 開頭的 <code>from config import *</code> 會先把 config.py 整個執行一遍，模組層級的程式碼在 import 時就跑了，而讀 CSV 的程式碼還在後面。</p></details>
+<details class="quiz"><summary>3. 輸出中 <code>valid_data size</code> 與 <code>test_data size</code> 前面為什麼多了 4 個空白？</summary>
+<p>那三行是用一個三引號 f-string 印的，第 2、3 行在原始碼裡有縮排，而三引號字串會原樣保留換行與縮排。</p></details>
+<details class="quiz"><summary>4. 訓練設定是 3000 個 epoch，為什麼停在 1883？從哪兩個數字可以驗證？</summary>
+<p>early stopping：最佳驗證 loss 出現在第 1483 個 epoch，之後連續 400 個 epoch（config 的 <code>early_stop</code>）都沒有更好，1483 + 400 = 1883，程式便停止。</p></details>
+<details class="quiz"><summary>5. tqdm 進度條顯示 <code>loss=60.4</code>，stdout 卻印 <code>Train loss: 134.2442</code>，兩者都是第 1 個 epoch，為什麼不同？</summary>
+<p>進度條顯示的是當下這個 batch 的 loss，跑完時就是最後一個 batch 的值；stdout 印的是這個 epoch 9 個 batch 的 loss 平均。第 1 個 epoch 裡 loss 下降得很快，前面的 batch loss 很大，把平均拉高了。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://pytorch.org/get-started/locally/">PyTorch — Get Started Locally</a>：依作業系統、套件管理工具與 CUDA 版本產生安裝指令。</li>
+  <li><a href="https://developer.nvidia.com/cuda-gpus">NVIDIA — CUDA GPUs Compute Capability</a>：查你的顯卡是哪一個 sm 版本。</li>
+  <li><a href="https://docs.astral.sh/uv/pip/environments/">uv — Using Python environments</a>：<code>uv venv</code> 與 <code>uv pip</code> 的用法。</li>
+  <li><a href="https://delphi.cmu.edu/covidcast/">Delphi COVIDcast</a>：本作業資料的來源計畫。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch01.html">第 1 章 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW01 讀碼教材 · 對應 commit 717528b · 程式碼引用取自本 repo 的 HW01/ 與 requirements.txt；實測輸出取自 2026-10-02 本機執行</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py；本教材的原始碼全是 .py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行（1 起算）包進 .hot-line。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>
