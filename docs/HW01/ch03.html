@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 3 章　Dataset 與 DataLoader — HW01 COVID-19 確診率預測</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch02.html">← 第 2 章</a><a href="ch04.html">第 4 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW01 讀碼教材</p>
+  <h1>第 3 章　Dataset 與 DataLoader</h1>
+  <p class="chap-lead">第 2 章結束時，資料是五個 NumPy 陣列。本章看它們怎麼變成模型吃得下的形式：<code>data_loader.py</code> 的 <code>COVID19Dataset</code> 把陣列轉成 PyTorch 的 tensor，<code>DataLoader</code> 再把資料切成一批 256 筆、每個 epoch 重新打亂。最後回答前面幾章一直延後的問題：為什麼訓練時印出的最佳驗證 loss 是 1.661，存下來的模型真實 MSE 卻是 2.069。</p>
+</header>
+<main>
+
+<h2 id="where">3.1　本章在流程中的位置</h2>
+<p>接著第 2 章停下的地方往下讀。train.py 主程式第 119–123 行只有三個陳述式，卻把資料從「一整張表」變成「一批一批送進模型」的形式：</p>
+
+<figure class="listing"><figcaption>train.py:119–123 — 包成 Dataset，再交給 DataLoader</figcaption>
+<pre class="py" data-hot="119,122-123"><code>    train_dataset, valid_dataset = COVID19Dataset(x_train, y_train), COVID19Dataset(x_valid, y_valid)
+
+    # Pytorch data loader loads pytorch dataset into batches.
+    train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True)</code></pre></figure>
+
+<p>分兩層：</p>
+<ul>
+  <li><strong>第 119 行</strong>：用 <code>COVID19Dataset</code> 把第 2 章的 <code>x_train</code>／<code>y_train</code> 與 <code>x_valid</code>／<code>y_valid</code> 各包成一個 Dataset。<code>COVID19Dataset</code> 定義在 data_loader.py，經由第 20 行的 <code>from data_loader import *</code> 進來（圖 0.2）。<code>x_test</code> 這裡沒用到，測試集要到 predict.py 才包（3.4 節）。</li>
+  <li><strong>第 122–123 行</strong>：用 PyTorch 的 <code>DataLoader</code>（第 12 行 import）把兩個 Dataset 各包成一個 loader。三個參數 <code>batch_size</code>、<code>shuffle</code>、<code>pin_memory</code> 分別在 3.3、3.4 節講。兩行唯一的差別是第一個參數，<strong>連 <code>shuffle=True</code> 都一樣</strong>——3.5 節會看到，驗證集也打亂，正是 1.661 偏低的原因之一。</li>
+</ul>
+<p>把這兩層和它們的使用者畫在一起：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 270" role="img" aria-label="本章資料流：NumPy 陣列 x_train 與 y_train 被 COVID19Dataset 轉成 float32 tensor；DataLoader 每次向 Dataset 要 256 筆，疊成一個 batch，交給第 5 章的訓練迴圈，在那裡才搬上 GPU">
+  <defs>
+    <marker id="ar3" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#93a1af"/>
+    </marker>
+  </defs>
+  <rect x="20" y="40" width="150" height="70" rx="8" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-key" x="95" y="64" text-anchor="middle">x_train, y_train</text>
+  <text class="s-mono" x="95" y="83" text-anchor="middle">(2160,117) (2160,)</text>
+  <text class="s-sm" x="95" y="100" text-anchor="middle">NumPy float64</text>
+
+  <rect x="210" y="40" width="160" height="70" rx="8" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-key" x="290" y="64" text-anchor="middle">COVID19Dataset</text>
+  <text class="s-mono" x="290" y="83" text-anchor="middle">self.x, self.y</text>
+  <text class="s-sm" x="290" y="100" text-anchor="middle">tensor float32（3.2 節）</text>
+  <line x1="170" y1="75" x2="206" y2="75" stroke="#93a1af" stroke-width="2" marker-end="url(#ar3)"/>
+
+  <rect x="410" y="40" width="160" height="70" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-key" x="490" y="64" text-anchor="middle">DataLoader</text>
+  <text class="s-mono" x="490" y="83" text-anchor="middle">batch_size=256</text>
+  <text class="s-sm" x="490" y="100" text-anchor="middle">shuffle（3.3、3.4 節）</text>
+  <line x1="370" y1="75" x2="406" y2="75" stroke="#93a1af" stroke-width="2" marker-end="url(#ar3)"/>
+
+  <rect x="610" y="40" width="130" height="70" rx="8" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-key" x="675" y="64" text-anchor="middle">一個 batch</text>
+  <text class="s-mono" x="675" y="83" text-anchor="middle">x (256,117)</text>
+  <text class="s-mono" x="675" y="100" text-anchor="middle">y (256,)</text>
+  <line x1="570" y1="75" x2="606" y2="75" stroke="#93a1af" stroke-width="2" marker-end="url(#ar3)"/>
+
+  <rect x="770" y="40" width="110" height="70" rx="8" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-key" x="825" y="64" text-anchor="middle">.to(device)</text>
+  <text class="s-sm" x="825" y="83" text-anchor="middle">搬上 GPU</text>
+  <text class="s-sm" x="825" y="100" text-anchor="middle">（第 5 章）</text>
+  <line x1="740" y1="75" x2="766" y2="75" stroke="#93a1af" stroke-width="2" marker-end="url(#ar3)"/>
+
+  <path d="M490,110 C490,170 290,170 290,114" fill="none" stroke="#93a1af" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ar3)"/>
+  <text class="s-sm" x="390" y="176" text-anchor="middle">DataLoader 呼叫 dataset[i] 256 次，再把結果疊起來</text>
+
+  <path d="M825,110 C825,215 490,215 490,114" fill="none" stroke="#a371f7" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ar3)"/>
+  <text class="s-sm" x="660" y="225" text-anchor="middle">for x, y in train_loader：要下一個 batch</text>
+  <text class="s-sm" x="20" y="258">train 每個 epoch 9 個 batch、valid 3 個；全部在 CPU 上準備好，訓練迴圈拿到後才搬上 GPU。</text>
+</svg>
+<figcaption>圖 3.1 — Dataset 回答「第 i 筆是什麼」，DataLoader 決定「這一批要哪幾筆、按什麼順序」；兩者都在 CPU 上，搬上 GPU 是訓練迴圈的事。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#58a6ff"></i>CPU 端的資料（NumPy／tensor／Dataset）</span>
+  <span><i style="background:#a371f7"></i>控制：分批與打亂</span>
+  <span><i style="background:#3fb950"></i>GPU 上的運算</span>
+</div>
+
+<h2 id="dataset">3.2　COVID19Dataset：三個方法</h2>
+<p>data_loader.py 整個檔案只有 28 行，就是一個類別（class）。分兩段看，先看前半：</p>
+
+<figure class="listing"><figcaption>data_loader.py:1–19 — import、類別宣告與 __init__()</figcaption>
+<pre class="py" data-hot="8,18-19"><code>from torch.utils.data import Dataset
+import torch
+
+
+"""# Dataset"""
+
+
+class COVID19Dataset(Dataset):
+    """
+    x: Features.
+    y: Targets, if none, do prediction.
+    """
+
+    def __init__(self, x, y=None):
+        if y is None:
+            self.y = y
+        else:
+            self.y = torch.FloatTensor(y)
+        self.x = torch.FloatTensor(x)</code></pre></figure>
+
+<p>第 5 行的 <code>"""# Dataset"""</code> 是一個沒有被指定給任何變數的字串，執行時什麼都不做。它是從原版 Jupyter 筆記本拆檔時留下的：筆記本裡這是一個 Markdown 小標題「Dataset」，轉成 .py 時變成了字串。train.py 第 24 行的 <code>"""# Training Loop"""</code> 也是同一回事。</p>
+
+<h3>第 8 行：繼承 Dataset</h3>
+<p><code>class COVID19Dataset(Dataset)</code> 的意思是：定義一個新類別 <code>COVID19Dataset</code>，它<strong>繼承（inherit）</strong>第 1 行 import 的 <code>Dataset</code>。繼承讓新類別自動擁有父類別的一切，並且「算是一種」父類別。本機實測 <code>isinstance(train_dataset, Dataset)</code> 為 <code>True</code>。</p>
+<p>第 2 章 2.3 節把 Dataset 粗略定義成「能用 <code>len()</code> 問長度、能用 <code>[i]</code> 取第 i 筆的資料容器」。這就是 PyTorch 對它的全部要求：PyTorch 的 <code>Dataset</code> 類別本身幾乎是空的，真正的內容由子類別補上兩個方法——<code>__getitem__</code> 與 <code>__len__</code>。繼承它主要是表明身分，讓讀程式的人（和工具）一眼看出「這是一個資料集」。</p>
+
+<h3>第 14–19 行：__init__ 把 NumPy 陣列轉成 tensor</h3>
+<p><code>__init__</code> 是建立物件時自動執行的方法。train.py 第 119 行寫 <code>COVID19Dataset(x_train, y_train)</code>，Python 就建立一個新物件，然後呼叫 <code>__init__(self, x_train, y_train)</code>；<code>self</code> 是這個新物件本身，<code>self.x = …</code> 就是把東西存成物件的屬性，之後其他方法還拿得到。</p>
+<p>存進去的不是原本的 NumPy 陣列，而是 <code>torch.FloatTensor(x)</code> 的結果。<strong>tensor</strong> 是 PyTorch 的多維陣列，用法跟 NumPy 陣列很像（有 shape、能用 <code>[i]</code> 取值、能切片），但多了兩個 NumPy 沒有的能力：可以放在 GPU 上運算，以及自動計算梯度（第 5 章）。模型只吃 tensor，所以資料遲早要轉過來，這個類別選在一開始就一次轉好。</p>
+<p><code>torch.FloatTensor(x)</code> 做了兩件事，都經本機實測：</p>
+<ol>
+  <li><strong>把 float64 轉成 float32。</strong>第 1 章看過，<code>.values</code> 得到的是 float64（64 位元浮點數）；FloatTensor 是 32 位元浮點數（float32），每個數字佔 4 bytes 而不是 8 bytes。<code>x_train</code> 的 2160 × 117 個數字，NumPy 版佔 2,021,760 bytes，tensor 版佔 1,010,880 bytes，剛好一半。</li>
+  <li><strong>複製一份。</strong>建立之後再去改 NumPy 陣列，tensor 不會跟著變。對照組 <code>torch.from_numpy(x)</code> 則和原陣列共用同一塊記憶體（改一邊、另一邊跟著變），而且 dtype（資料型別）維持 float64。</li>
+</ol>
+<p>為什麼要轉成 float32？因為 PyTorch 建立的模型參數預設就是 float32，GPU 對 float32 的運算也快得多；把 float64 的輸入直接餵給 float32 的模型，PyTorch 會報 dtype 不符的錯，不會自動幫你轉。轉換的代價是精度：float32 大約只有 7 位有效數字。本機實測 <code>x_train</code> 全部數值轉換後的最大絕對誤差是 3.81 × 10<sup>−6</sup>，最大相對誤差（誤差除以原值）5.94 × 10<sup>−8</sup>。以第一筆答案為例，float64 是 3.7109291，float32 存成 3.7109291553497314——多出來的尾數是 float32 能表示的最接近值，不是原資料。對一個預測誤差以「百分點」計的問題，這種誤差完全可以忽略。</p>
+<p>第 15–18 行處理 <code>y</code>。<code>y=None</code> 是預設值：呼叫時不給 <code>y</code>，它就是 <code>None</code>。docstring 那句「if none, do prediction」說的就是這個用途——predict.py 只有特徵、沒有答案，所以只傳 <code>x</code>（3.4 節）。這時第 16 行 <code>self.y = y</code> 存的就是 <code>None</code>（直接寫 <code>self.y = None</code> 意思相同，只是比較明白）。本機實測：train 的 Dataset，<code>self.x</code> 是 (2160, 117) float32、<code>self.y</code> 是 (2160,) float32；只給 x 建立的 test Dataset，<code>self.y</code> 是 <code>None</code>。</p>
+
+<p>再看後半：</p>
+<figure class="listing"><figcaption>data_loader.py:21–28 — __getitem__() 與 __len__()</figcaption>
+<pre class="py" data-hot="25,28"><code>    def __getitem__(self, idx):
+        if self.y is None:
+            return self.x[idx]
+        else:
+            return self.x[idx], self.y[idx]
+
+    def __len__(self):
+        return len(self.x)</code></pre></figure>
+
+<h3>前後各兩條底線的方法</h3>
+<p><code>__init__</code>、<code>__getitem__</code>、<code>__len__</code> 這種名字前後各有兩條底線的方法，是 Python 的<strong>特殊方法（special method）</strong>，俗稱 dunder（double underscore）方法。你通常不會直接呼叫它們，而是由 Python 在對應的語法出現時代為呼叫：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>你寫的</th><th>Python 實際呼叫的</th><th>本機實測（train 的 Dataset）</th></tr></thead>
+<tbody>
+<tr><td><code>COVID19Dataset(x, y)</code></td><td><code>__init__(self, x, y)</code></td><td>建立物件</td></tr>
+<tr><td><code>len(train_dataset)</code></td><td><code>train_dataset.__len__()</code></td><td>2160（valid 539、test 1078）</td></tr>
+<tr><td><code>train_dataset[0]</code></td><td><code>train_dataset.__getitem__(0)</code></td><td>一個長度 2 的 tuple：x 與 y</td></tr>
+</tbody>
+</table></div>
+<p>第 2 章說 duck typing 只看「你會不會做這些動作」，這兩個特殊方法就是「會做」的具體意思：有 <code>__len__</code> 就能被 <code>len()</code>，有 <code>__getitem__</code> 就能被 <code>[i]</code>。</p>
+
+<h3>__getitem__ 回傳什麼</h3>
+<p>有答案時，第 25 行回傳 <code>self.x[idx], self.y[idx]</code>——逗號隔開的兩個值在 Python 裡就是一個 <strong>tuple</strong>（不可修改的序列）。本機實測 <code>train_dataset[0]</code>：</p>
+<ul>
+  <li>tuple 長度 2。</li>
+  <li>x 的 shape 是 <code>(117,)</code>：一筆資料的 117 個特徵。前 3 個值是 696.0、0.0、0.0——第一個是 id 696，正是第 2 章圖 2.2 裡訓練集的第一個列號；後面兩個是 AL、AK 兩州的 one-hot。</li>
+  <li>y 的 shape 是 <code>()</code>，值 3.7109。shape 是空的，表示這是一個 <strong>0 維 tensor</strong>：只裝一個數字的 tensor，沒有任何軸。從一維的 <code>self.y</code> 用單一整數取一個元素，得到的就是 0 維 tensor。這個「每筆答案是 0 維」的事實，3.3 節疊成 batch 時會變成 <code>(256,)</code>。</li>
+</ul>
+<p>沒有答案時，第 23 行只回傳 <code>self.x[idx]</code>：本機實測 <code>test_dataset[0]</code> 是單獨一個 shape <code>(117,)</code> 的 tensor，不是 tuple。所以同一個類別會依照有沒有 y，回傳兩種不同結構的東西，使用它的程式要配合：train.py 寫 <code>for x, y in …</code>，predict.py 寫 <code>for x in …</code>。</p>
+<p>因為 <code>idx</code> 直接拿去索引 tensor，凡是 tensor 接受的索引這裡都接受。本機實測切片 <code>train_dataset[0:3]</code> 回傳 x (3, 117) 與 y (3,)；負數索引 <code>train_dataset[-1]</code> 取最後一筆，它的 y 是 2.1545。不過 DataLoader 只會用單一整數來要資料，這些用法只在你自己檢查資料時方便。</p>
+
+<h3>__len__：以 x 的列數為準</h3>
+<p>第 28 行 <code>len(self.x)</code> 對二維 tensor 回傳第一維的大小，也就是列數。用 x 而不是 y 是對的：test 的 Dataset 沒有 y，只有 x 永遠存在。<code>__len__</code> 看起來不起眼，但 DataLoader 需要它來決定要產生 0 到多少的索引、總共切成幾批。</p>
+
+<div class="note"><h4>現在的做法：TensorDataset 與明確的 dtype</h4>
+<p>像 HW01 這種「資料已經全部在記憶體裡、每筆就是一列」的情況，PyTorch 內建的 <code>TensorDataset</code> 可以取代整個 COVID19Dataset：</p>
+<pre class="py"><code>import torch
+from torch.utils.data import TensorDataset
+
+train_dataset = TensorDataset(torch.tensor(x_train, dtype=torch.float32),
+                              torch.tensor(y_train, dtype=torch.float32))
+test_dataset = TensorDataset(torch.tensor(x_test, dtype=torch.float32))</code></pre>
+<ul>
+  <li><strong><code>torch.FloatTensor(…)</code> 是舊式寫法。</strong>PyTorch 文件建議用 <code>torch.tensor(data, dtype=…)</code>（一定複製）或 <code>torch.from_numpy(data).float()</code>，dtype 寫在明處，讀的人不必記得「FloatTensor 等於 float32」。</li>
+  <li><strong>TensorDataset 的回傳永遠是 tuple。</strong>上面 <code>test_dataset[0]</code> 回傳的是只有一個元素的 tuple，所以預測時要寫 <code>for (x,) in loader</code>（把只有一個元素的 tuple 拆開）或 <code>for batch in loader: x = batch[0]</code>——比 COVID19Dataset 多一點點麻煩，換來的是訓練和預測的結構一致。</li>
+  <li>自己寫 Dataset 類別仍然是正確的技能：資料太大放不進記憶體、每筆要從磁碟讀圖片或文字、要在取資料時做轉換，都得自己寫 <code>__getitem__</code>。後面的作業（影像、語音）就是這種情況。</li>
+</ul>
+</div>
+
+<h2 id="loader">3.3　DataLoader：每個 epoch 為什麼是 9 個 batch</h2>
+<p>Dataset 一次只給一筆；訓練卻要一次處理一批（第 0 章：batch 是一次餵給模型的一小批資料）。在兩者之間把單筆組成一批的，就是 <code>DataLoader</code>。</p>
+
+<h3>一個 batch 是怎麼組出來的</h3>
+<p>每次訓練迴圈要「下一個 batch」，DataLoader 做三件事：</p>
+<ol>
+  <li><strong>決定要哪幾筆。</strong>由一個叫 <strong>sampler</strong>（取樣器）的物件產生索引：<code>shuffle=False</code> 時依序產生 0、1、2…；<code>shuffle=True</code> 時是一個打亂過的順序（3.4 節）。一次拿 <code>batch_size</code> 個索引。</li>
+  <li><strong>逐筆向 Dataset 要資料。</strong>對每個索引呼叫一次 <code>dataset[i]</code>，也就是 <code>__getitem__</code>——一個滿的 batch 就是 256 次呼叫。</li>
+  <li><strong>疊起來。</strong>這一步叫 <strong>collate</strong>（整理、合併）。預設的做法是把 256 個 x（各為 <code>(117,)</code>）疊成 <code>(256, 117)</code>，把 256 個 y（各為 0 維）疊成 <code>(256,)</code>。</li>
+</ol>
+<p>本機實測一個 batch 的樣子：型別是 <strong>list</strong>（不是 tuple），長度 2；第一個元素 x 是 (256, 117) float32，第二個 y 是 (256,)。<code>__getitem__</code> 回傳 tuple，DataLoader 疊完卻交回 list，這是預設 collate 函式的固定行為，不影響使用：<code>for x, y in train_loader</code> 對 list 和 tuple 一樣能拆成兩個變數。</p>
+<p>y 的形狀 <code>(256,)</code> 值得記住。第 0 章 0.2 節看過，模型最後一層輸出 <code>(256, 1)</code>，再用 <code>squeeze(1)</code> 壓成 <code>(256,)</code>——就是為了和這裡的 y 形狀一致，第 4 章會細講。</p>
+
+<h3>9、3、5：無條件進位</h3>
+<p><code>batch_size</code> 是 config 的 256。資料筆數除以 256 通常除不盡，最後一批就是剩下的零頭。本機實測：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>loader</th><th>筆數</th><th>筆數 ÷ 256</th><th><code>len(loader)</code></th><th>每個 batch 的大小</th></tr></thead>
+<tbody>
+<tr><td>train</td><td>2160</td><td>8.4375</td><td>9</td><td>256 × 8，最後一批 112</td></tr>
+<tr><td>valid</td><td>539</td><td>2.105…</td><td>3</td><td>256、256、<strong>27</strong></td></tr>
+<tr><td>test（predict.py）</td><td>1078</td><td>4.21…</td><td>5</td><td>256 × 4，最後一批 54</td></tr>
+</tbody>
+</table></div>
+<p><code>len(loader)</code> 是 batch 數，等於筆數 ÷ 256 <strong>無條件進位</strong>。這就是第 0 章進度條上 <code>9/9</code> 的由來：train 每個 epoch 跑 9 個 batch，最後一個只有 2160 − 256 × 8 = 112 筆。</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 250" role="img" aria-label="三個 loader 的 batch 切法，寬度依筆數比例繪製：train 2160 筆切成 8 個 256 與 1 個 112；valid 539 筆切成 256、256、27；test 1078 筆切成 4 個 256 與 1 個 54">
+  <text class="s-sm" x="20" y="20">寬度依筆數比例繪製（1 筆 ≈ 0.4 單位寬）</text>
+
+  <text class="s-lbl" x="20" y="52">train</text>
+  <rect x="80" y="36" width="101" height="26" rx="3" fill="#58a6ff" opacity="0.55"/>
+  <rect x="182" y="36" width="101" height="26" rx="3" fill="#58a6ff" opacity="0.55"/>
+  <rect x="284" y="36" width="101" height="26" rx="3" fill="#58a6ff" opacity="0.55"/>
+  <rect x="386" y="36" width="101" height="26" rx="3" fill="#58a6ff" opacity="0.55"/>
+  <rect x="488" y="36" width="101" height="26" rx="3" fill="#58a6ff" opacity="0.55"/>
+  <rect x="590" y="36" width="101" height="26" rx="3" fill="#58a6ff" opacity="0.55"/>
+  <rect x="692" y="36" width="101" height="26" rx="3" fill="#58a6ff" opacity="0.55"/>
+  <rect x="794" y="36" width="101" height="26" rx="3" fill="#58a6ff" opacity="0.55"/>
+  <text class="s-mono" x="130" y="54" text-anchor="middle">256</text>
+  <text class="s-mono" x="232" y="54" text-anchor="middle">256</text>
+  <text class="s-mono" x="334" y="54" text-anchor="middle">256</text>
+  <text class="s-mono" x="436" y="54" text-anchor="middle">256</text>
+  <text class="s-mono" x="538" y="54" text-anchor="middle">256</text>
+  <text class="s-mono" x="640" y="54" text-anchor="middle">256</text>
+  <text class="s-mono" x="742" y="54" text-anchor="middle">256</text>
+  <text class="s-mono" x="844" y="54" text-anchor="middle">256</text>
+  <text class="s-sm" x="80" y="80">……第 9 個 batch 接在後面：</text>
+  <rect x="250" y="68" width="44" height="18" rx="3" fill="#58a6ff" opacity="0.9"/>
+  <text class="s-mono" x="300" y="82">112（最後一批）</text>
+  <text class="s-sm" x="880" y="82" text-anchor="end">len = 9</text>
+
+  <text class="s-lbl" x="20" y="134">valid</text>
+  <rect x="80" y="118" width="101" height="26" rx="3" fill="#58a6ff" opacity="0.55"/>
+  <rect x="182" y="118" width="101" height="26" rx="3" fill="#58a6ff" opacity="0.55"/>
+  <rect x="284" y="118" width="11" height="26" rx="2" fill="#a371f7"/>
+  <text class="s-mono" x="130" y="136" text-anchor="middle">256</text>
+  <text class="s-mono" x="232" y="136" text-anchor="middle">256</text>
+  <text class="s-mono" x="302" y="136">27</text>
+  <text class="s-sm" x="330" y="136">← 只有 27 筆，卻是 3 個 batch 之一（3.5 節）</text>
+  <text class="s-sm" x="880" y="136" text-anchor="end">len = 3</text>
+
+  <text class="s-lbl" x="20" y="194">test</text>
+  <rect x="80" y="178" width="101" height="26" rx="3" fill="#58a6ff" opacity="0.55"/>
+  <rect x="182" y="178" width="101" height="26" rx="3" fill="#58a6ff" opacity="0.55"/>
+  <rect x="284" y="178" width="101" height="26" rx="3" fill="#58a6ff" opacity="0.55"/>
+  <rect x="386" y="178" width="101" height="26" rx="3" fill="#58a6ff" opacity="0.55"/>
+  <rect x="488" y="178" width="21" height="26" rx="2" fill="#58a6ff" opacity="0.9"/>
+  <text class="s-mono" x="130" y="196" text-anchor="middle">256</text>
+  <text class="s-mono" x="232" y="196" text-anchor="middle">256</text>
+  <text class="s-mono" x="334" y="196" text-anchor="middle">256</text>
+  <text class="s-mono" x="436" y="196" text-anchor="middle">256</text>
+  <text class="s-mono" x="516" y="196">54</text>
+  <text class="s-sm" x="880" y="196" text-anchor="end">len = 5</text>
+
+  <text class="s-sm" x="20" y="236">train 的 8 個滿 batch 剛好佔滿一行，所以第 9 批畫在下一行；比例尺三列相同。</text>
+</svg>
+<figcaption>圖 3.2 — 每個 loader 的最後一批都是零頭；valid 的零頭最小，只有 27 筆，佔驗證集的 5%，卻是三個 batch 之一。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#58a6ff"></i>batch（CPU 端資料）</span>
+  <span><i style="background:#a371f7"></i>valid 的 27 筆零頭</span>
+</div>
+
+<p>零頭 batch 可以丟掉。DataLoader 有一個 <code>drop_last</code> 參數，預設 <code>False</code>（保留最後不滿的一批）；設成 <code>True</code> 時，本機實測 train 的 <code>len</code> 從 9 變成 8，那 112 筆在這個 epoch 不會被看到。訓練時丟零頭有時是為了讓每批大小一致；但驗證與預測<strong>絕對不能丟</strong>：驗證少算 27 筆就不是在全部驗證集上評估，預測少 54 筆就交不出 1078 行答案。</p>
+<p>還有一個沒寫出來的預設值：<code>num_workers</code>，本機實測為 0，意思是上面那三件事都在主程式自己的行程（process，作業系統裡一個正在執行的程式）裡做，沒有另開行程平行準備資料。資料在記憶體裡、每筆只是取一列 tensor，這樣最快；需要從磁碟讀圖片、做轉換的作業才會開多個 worker。</p>
+
+<h2 id="shuffle">3.4　shuffle、pin_memory，以及不打亂的 test loader</h2>
+
+<h3>shuffle=True：每個 epoch 一個新順序</h3>
+<p><code>shuffle=True</code> 時，DataLoader 用的 sampler 是 <code>RandomSampler</code>（本機實測）。每個 epoch 開始迭代時，它產生一個新的隨機排列，依這個順序分批。因為 train.py 沒有給 DataLoader 的 <code>generator</code> 參數指定一個自己的亂數產生器（第 2 章的 <code>torch.Generator</code>；和 Python 用 <code>yield</code> 寫的 generator 無關），它的亂數來自第 2 章表格裡的 <strong>PyTorch 全域產生器</strong>——那張表在「誰在用它」一欄寫的「DataLoader 每個 epoch 打亂資料順序（第 3 章）」，指的就是這裡。</p>
+<p>本機照 train.py 的實際順序執行（<code>same_seed</code> → 切分 → 建立模型 → 開始迭代），train_loader 第一個 batch 的前 8 個 id：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>第一個 batch 的前 8 個 id</th></tr></thead>
+<tbody>
+<tr><td>第 1 個 epoch</td><td>2285、2508、1402、559、1361、2114、469、1572</td></tr>
+<tr><td>第 2 個 epoch</td><td>385、383、712、792、821、1382、971、665</td></tr>
+</tbody>
+</table></div>
+<p>每個 epoch 順序都不同；但因為全域產生器的起點被 <code>same_seed</code> 固定了，<strong>整串順序每次執行都一樣</strong>，這是第 0 章兩次訓練結果完全相同的另一個原因。注意「建立模型」也在這串流程裡：模型的初始權重是從同一個全域產生器抽的（第 2 章），抽走多少亂數，就決定了 DataLoader 從哪裡接著抽。所以改了模型的層數或寬度，連 batch 的順序都會跟著變。</p>
+<p>為什麼訓練資料要打亂？訓練時模型每看完一個 batch 就更新一次權重（第 5 章）。如果每個 epoch 的 batch 都由同樣的 256 筆、依同樣的順序組成，模型每次都朝同一串方向走；資料若還照某種規律排列（例如同一州的列擠在一起），某些 batch 就只代表一小部分資料。每個 epoch 重新打亂，讓每個 batch 都比較接近整體資料的縮影。</p>
+<p>驗證就不一樣了：驗證時模型不更新，打不打亂都在算<strong>同一個模型</strong>在同一批 539 筆上的表現，順序本來不該有任何影響。HW01 的 valid_loader 也設了 <code>shuffle=True</code>，而 3.5 節會看到，在這份程式的算法下，順序<strong>確實</strong>會影響結果。</p>
+
+<h3>pin_memory=True：讓 batch 放在可以直接傳給 GPU 的記憶體</h3>
+<p>GPU 有自己的一塊記憶體（顯示記憶體），GPU 上的運算只能讀那裡的資料，所以每個 batch 都要從主記憶體複製過去——這就是「搬上 GPU」。作業系統可以把一般記憶體暫時搬到磁碟上（換頁，paging），需要時再搬回來。GPU 從主記憶體讀資料時，不能讀到一塊可能被搬走的記憶體，所以一般記憶體裡的資料要傳上 GPU，CUDA 會先把它複製到一塊「不會被搬走」的暫存區，再從那裡傳。這種被鎖定、不會被換頁的記憶體叫 <strong>pinned memory</strong>（也叫 page-locked memory）。</p>
+<p><code>pin_memory=True</code> 讓 DataLoader 把組好的 batch 直接放進 pinned memory，省掉那一次中轉複製；搭配 <code>.to(device, non_blocking=True)</code>，傳輸還能和 CPU 的其他工作同時進行。本機實測，設了之後 batch 的 <code>is_pinned()</code> 是 <code>True</code>，但 device 仍是 cpu——pin 只是換一種記憶體，不會替你搬上 GPU；不設時 <code>is_pinned()</code> 是 <code>False</code>。</p>
+<p>效果呢？本機實測迭代 10 個 epoch、每個 batch 都 <code>.cuda()</code>（搬上 GPU 的簡寫）：pin 0.038 秒、不 pin 0.039 秒。這份資料一個 batch 才 256 × 117 個 float32，大約 120 KB，傳輸時間本來就微不足道，量不出差別；HW01 的訓練迴圈也沒有用 <code>non_blocking=True</code>。pin_memory 是資料量大（例如一批影像）時才看得出效果的設定，這裡寫著無害。</p>
+
+<h3>test loader：shuffle=False，而且非這樣不可</h3>
+<p>predict.py 建立測試集 loader 的兩行，和 train.py 的寫法幾乎一樣：</p>
+<figure class="listing"><figcaption>predict.py:36–37 — 測試集的 Dataset 與 DataLoader</figcaption>
+<pre class="py" data-hot="36-37"><code>    test_dataset = COVID19Dataset(x_test)
+    test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False, pin_memory=True)</code></pre></figure>
+<p>兩個差別：第 36 行只傳 <code>x_test</code>，所以 <code>self.y</code> 是 <code>None</code>、每筆只回傳 x（3.2 節）；第 37 行是 <code>shuffle=False</code>。後者不是風格選擇，而是正確性的要求。預測結果最後由 <code>save_pred</code> 寫進 pred.csv：</p>
+<figure class="listing"><figcaption>utils.py:44–45 — save_pred() 寫出每一行預測</figcaption>
+<pre class="py" data-hot="44-45"><code>        for i, p in enumerate(preds):
+            writer.writerow([i, p])</code></pre></figure>
+<p><code>enumerate</code> 依序給出 0、1、2…，所以第 i 個預測值被標成 id i。這只有在「第 i 個預測值真的是測試集第 i 列的預測」時才成立，也就是 loader 必須依原始順序給資料。若 test loader 也 <code>shuffle=True</code>，預測值本身全都算對，但每一個都會被貼上錯的 id，上傳 Kaggle 後成績會差到像亂猜。</p>
+<p>三個 loader 並排看：train 打亂（訓練需要）、test 不打亂（輸出要對齊 id）、valid 打亂——valid 是唯一沒有理由打亂的那一個。</p>
+
+<h2 id="bias">3.5　為什麼印出的 1.661 比真實的 2.069 低</h2>
+<p>目錄頁、第 0 章、第 2 章都留了同一個問題：train.py 印出的最佳驗證 loss 是 <strong>1.661</strong>，但把當時存下的 <code>models/model.ckpt</code> 拿到全部 539 筆驗證資料上<strong>一次</strong>算完 MSE，得到的是 <strong>2.069</strong>（更精確是 2.0685）。同一個模型、同一批資料，差了 0.4。原因有三層，逐層看。</p>
+<p>先看驗證 loss 是怎麼算的。完整的訓練迴圈留給第 5 章，這裡只看每個 epoch 結尾計算驗證 loss 的這一段：</p>
+
+<figure class="listing"><figcaption>train.py:72–81 — 每個 epoch 結尾的驗證 loss</figcaption>
+<pre class="py" data-hot="73,77,79,81"><code>        loss_record = []
+        for x, y in valid_loader:
+            x, y = x.to(device), y.to(device)
+            with torch.no_grad():
+                pred = model(x)
+                loss = criterion(pred, y)
+
+            loss_record.append(loss.item())
+            
+        mean_valid_loss = sum(loss_record)/len(loss_record)</code></pre></figure>
+<p>只需要知道四件事：第 73 行從 valid_loader 一次拿一個 batch；第 77 行的 <code>criterion</code> 是 <code>nn.MSELoss(reduction='mean')</code>（train.py 第 29 行），算出<strong>這一個 batch</strong> 的 MSE；第 79 行把它（<code>.item()</code> 把 0 維 tensor 取成一個 Python 數字）記進 <code>loss_record</code>；第 81 行把 3 個 batch 的 MSE 加總再除以 3。<code>with torch.no_grad()</code> 與 <code>.to(device)</code> 是第 5 章的內容，這裡不影響推理。</p>
+
+<h3>第一層：最後 27 筆的份量被放大了將近 10 倍</h3>
+<p>真實的驗證 MSE 是 539 個平方誤差的平均，每筆在平均裡的份量都是 1/539（這裡的「份量」是平均時的加權比例，和模型的權重無關）。第 81 行算的卻是「平均的平均」：</p>
+<div class="eq">真實 MSE ＝ (256 · L<sub>1</sub> ＋ 256 · L<sub>2</sub> ＋ 27 · L<sub>3</sub>) ／ 539<br>
+第 81 行 ＝ (L<sub>1</sub> ＋ L<sub>2</sub> ＋ L<sub>3</sub>) ／ 3<br>
+<span style="font-size:.9em">L<sub>1</sub>、L<sub>2</sub>、L<sub>3</sub> 是三個 batch 各自的 MSE</span></div>
+<p>在真實 MSE 裡，最後一個 batch 只佔 27/539 ≈ 5% 的份量；在第 81 行的算法裡，它和兩個 256 筆的 batch 一樣佔 1/3。換算到每一筆：落在滿 batch 的一筆，份量是 1/(3 × 256) = 1/768；落在最後一批的一筆，份量是 1/(3 × 27) = 1/81，大了約 9.5 倍。</p>
+<p>如果最後那 27 筆每次都是固定同一組，這只會造成一個固定的偏移。本機用 <code>shuffle=False</code> 實測 model.ckpt：三個 batch 的平均是 2.0690，和一次算完的 2.0685 幾乎一樣——固定那 27 筆時，偏移小到可以忽略。問題出在第二層。</p>
+
+<h3>第二層：valid_loader 打亂，所以同一個模型每次量到不同的值</h3>
+<p>valid_loader 設了 <code>shuffle=True</code>，哪 27 筆落進最後一批，每個 epoch 都不一樣。這 27 筆碰巧都是好預測的，第 81 行的結果就偏低；碰巧混進幾筆誤差大的，就偏高——而且因為它們的份量被放大了 9.5 倍，影響很明顯。</p>
+<p>本機拿同一個 model.ckpt，不改任何權重，只換 valid_loader 的打亂順序重算第 81 行：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>量法</th><th>結果</th></tr></thead>
+<tbody>
+<tr><td>539 筆一次算完（真實 MSE）</td><td><strong>2.0685</strong></td></tr>
+<tr><td><code>shuffle=False</code> 的 batch 平均</td><td>2.0690</td></tr>
+<tr><td><code>shuffle=True</code>，換 20 種順序</td><td>1.7670～2.4477，平均 2.0699；前 5 次是 1.9214、1.973、2.1159、2.0788、1.8774</td></tr>
+<tr><td><code>shuffle=True</code>，換 200 種順序</td><td>最小 1.7069、第 5 百分位 1.8095、中位數 2.0528、最大 2.8467</td></tr>
+</tbody>
+</table></div>
+<p>（第 5 百分位：把 200 個值由小排到大，有 5% 的值比它小；中位數：剛好排在正中間的那個值。）</p>
+<p>這裡要分清兩種「不準」：一種是每次量都往同一個方向偏（例如總是偏低），叫<strong>系統性偏差</strong>；另一種是每次量的結果上下亂跳，但平均起來在真值附近，叫<strong>雜訊</strong>。平均起來，打亂的量法沒有系統性偏低：20 次的平均 2.0699 和真實的 2.0685 幾乎一樣。但單次量測的起伏很大：同一個模型，一次可能量到 1.77，下一次 2.45。第 0 章看過的 stdout 結尾就是活生生的例子：第 1881～1883 個 epoch 印出的驗證 loss 是 2.3940、2.0718、2.5030，相鄰 epoch 的模型只差一次更新，量到的數字卻跳了 0.4。</p>
+
+<h3>第三層：在將近 1900 個有雜訊的數字裡挑最小的</h3>
+<p>第 85 行 <code>if mean_valid_loss &lt; best_loss</code> 只在創新低時存檔（第 5 章細講）。訓練一共跑了 1883 個 epoch，每個 epoch 量一次，也就是將近 1900 個量測值，每一個都帶著第二層的雜訊。<strong>從一堆有雜訊的數字裡挑最小的，挑中的幾乎必然是「模型不錯、而且這次分組又特別幸運」的那一次</strong>——雜訊往下偏的量測比較容易勝出，所以被挑中的數字系統性地比該模型的真實表現低。這個現象在統計上叫選擇偏差（selection bias），也常被稱作「贏家的詛咒」（winner's curse）。</p>
+<p>1.661 就是這樣產生的：它是第 1483 個 epoch（第 0 章的 log）那個模型、在那一次特定的打亂順序下量到的值。存下來的權重正是那個模型，但把它換 200 種順序重量，最小值也才 1.7069——1.661 比這 200 次裡最幸運的一次還低。這不矛盾：重量時只抽了 200 次，訓練過程卻抽了 1883 次（每次量的是略有不同的模型），抽的次數越多，越容易碰到極端偏低的那一次，而 best_loss 專門把那一次留下來。真實的表現，是一次算完的 2.069。</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 260" role="img" aria-label="同一個 model.ckpt 的各種驗證 loss 量法畫在同一條數線上：200 種順序的範圍 1.7069 到 2.8467，中位數 2.0528；20 種順序的範圍 1.767 到 2.448；一次算完的真實 MSE 2.0685；訓練時印出並挑中的 1.661 落在所有範圍的左邊">
+  <line x1="60" y1="210" x2="860" y2="210" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="60" y1="205" x2="60" y2="215" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="183" y1="205" x2="183" y2="215" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="306" y1="205" x2="306" y2="215" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="429" y1="205" x2="429" y2="215" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="552" y1="205" x2="552" y2="215" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="675" y1="205" x2="675" y2="215" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="798" y1="205" x2="798" y2="215" stroke="#93a1af" stroke-width="1.5"/>
+  <text class="s-mono" x="60" y="232" text-anchor="middle">1.6</text>
+  <text class="s-mono" x="183" y="232" text-anchor="middle">1.8</text>
+  <text class="s-mono" x="306" y="232" text-anchor="middle">2.0</text>
+  <text class="s-mono" x="429" y="232" text-anchor="middle">2.2</text>
+  <text class="s-mono" x="552" y="232" text-anchor="middle">2.4</text>
+  <text class="s-mono" x="675" y="232" text-anchor="middle">2.6</text>
+  <text class="s-mono" x="798" y="232" text-anchor="middle">2.8</text>
+  <text class="s-sm" x="860" y="252" text-anchor="end">驗證 loss（MSE）</text>
+
+  <line x1="348" y1="22" x2="348" y2="205" stroke="#dde5ec" stroke-width="2" stroke-dasharray="6 4"/>
+  <text class="s-lbl" x="356" y="34">一次算完：2.0685（真實值）</text>
+
+  <text class="s-sm" x="60" y="66">換 200 種順序（最小 1.7069 ～ 最大 2.8467）</text>
+  <rect x="126" y="74" width="701" height="18" rx="3" fill="#58a6ff" opacity="0.35"/>
+  <line x1="189" y1="70" x2="189" y2="96" stroke="#58a6ff" stroke-width="2"/>
+  <line x1="339" y1="70" x2="339" y2="96" stroke="#58a6ff" stroke-width="3"/>
+  <text class="s-sm" x="189" y="110" text-anchor="middle">第 5 百分位 1.8095</text>
+  <text class="s-sm" x="420" y="110">中位數 2.0528</text>
+
+  <text class="s-sm" x="60" y="140">換 20 種順序（1.767 ～ 2.448）；圓點是前 5 次</text>
+  <rect x="163" y="148" width="419" height="18" rx="3" fill="#58a6ff" opacity="0.35"/>
+  <circle cx="258" cy="157" r="4.5" fill="#58a6ff"/>
+  <circle cx="290" cy="157" r="4.5" fill="#58a6ff"/>
+  <circle cx="378" cy="157" r="4.5" fill="#58a6ff"/>
+  <circle cx="355" cy="157" r="4.5" fill="#58a6ff"/>
+  <circle cx="230" cy="157" r="4.5" fill="#58a6ff"/>
+
+  <line x1="98" y1="40" x2="98" y2="205" stroke="#a371f7" stroke-width="3"/>
+  <text class="s-lbl" x="104" y="196" style="fill:#a371f7">1.661</text>
+  <text class="s-sm" x="104" y="182" style="fill:#a371f7">訓練時印出、被挑中</text>
+</svg>
+<figcaption>圖 3.3 — 同一組權重，只換驗證集的打亂順序，量到的值就散在 1.7 到 2.8 之間；訓練過程從將近 1900 個這種量測裡挑最小的，挑中的 1.661 落在範圍之外的左邊，而真實值在 2.07。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#58a6ff"></i>同一個模型、不同打亂順序的量測</span>
+  <span><i style="background:#dde5ec"></i>一次算完的真實 MSE</span>
+  <span><i style="background:#a371f7"></i>best_loss 挑出的值（控制邏輯）</span>
+</div>
+
+<p>三層合起來：第一層讓單次量測<strong>很容易受最後 27 筆影響</strong>（份量放大），第二層讓這個影響<strong>每個 epoch 都不一樣</strong>，第三層<strong>專挑偏低的那一次</strong>。少了任何一層，偏差都會小很多：不打亂，量測就是固定的 2.0690；依筆數加權，最後 27 筆就只佔 5%，打亂也晃不了多少；不挑最小值，就不會系統性偏低。</p>
+<p>還有一個副作用：挑選本身也被雜訊影響。best_loss 比較的是帶雜訊的數字，所以被存下來的 checkpoint，不一定是 1883 個 epoch 裡真實表現最好的那一個。</p>
+
+<h3>同樣的偏差也出現在第 2 章的實驗裡</h3>
+<p>第 2 章動手做的兩個改良版本，印出的最佳 loss 也是同樣挑出來的。本機用同樣的方法重量它們的 checkpoint：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>模型</th><th>訓練時印出的最佳值</th><th>一次算完的真實 MSE</th><th>換 200 種順序</th></tr></thead>
+<tbody>
+<tr><td>範例原版（117 欄，含 id）</td><td>1.661</td><td><strong>2.0685</strong></td><td>最小 1.7069、中位數 2.0528、最大 2.8467</td></tr>
+<tr><td>拿掉 id（116 欄）</td><td>0.982</td><td><strong>1.2403</strong></td><td>最小 0.9970、中位數 1.2326、最大 1.7167</td></tr>
+<tr><td>id 除以 2699（117 欄）</td><td>1.003</td><td><strong>1.2588</strong></td><td>最小 1.0154、中位數 1.2465、最大 1.8034</td></tr>
+</tbody>
+</table></div>
+<p>三個模型都一樣：印出的值比 200 次重量的最小值還低，真實值在中位數附近。</p>
+<p>這就是目錄頁和第 2 章堅持用「一次算完」的數字來比較的原因。目錄頁的線性迴歸與「抄第 4 天」，本來就是在 539 筆上一次算完的 MSE，可以和上表的「一次算完的真實 MSE」那一欄直接比，<strong>但不能和印出的 1.661／0.982 比</strong>。用真實數字排名：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>方法</th><th>539 筆驗證集上的真實 MSE</th></tr></thead>
+<tbody>
+<tr><td>線性迴歸，116 欄（拿掉 id）</td><td>1.166</td></tr>
+<tr><td>線性迴歸，117 欄（含 id）</td><td>1.172</td></tr>
+<tr><td>DNN，拿掉 id</td><td>1.240</td></tr>
+<tr><td>DNN，id 除以 2699</td><td>1.259</td></tr>
+<tr><td>直接抄第 4 天的陽性率</td><td>1.313</td></tr>
+<tr><td>DNN，範例原版</td><td>2.069</td></tr>
+</tbody>
+</table></div>
+<p>如果拿印出的 0.982 來比，會得出「改良後的 DNN 贏過線性迴歸」的錯誤結論；真實數字顯示它還差一截。</p>
+<p>train loss 也有同樣的問題：train 的最後一個 batch 是 112 筆，第 67 行一樣是各 batch 平均再平均；而且 train loss 是一邊更新權重一邊記錄的，9 個 batch 的 loss 來自 9 個略有不同的模型，本來就不是某一個固定模型的 MSE。第 5 章講訓練迴圈時會再提。</p>
+
+<div class="note"><h4>現在的做法：驗證不打亂，依筆數加權</h4>
+<p>修法只要動兩處。第一，valid_loader 改成 <code>shuffle=False</code>（和 test loader 一樣）；第二，累加每個 batch 的<strong>平方誤差總和</strong>，最後除以總筆數，而不是平均各 batch 的平均：</p>
+<pre class="py"><code>valid_loader = DataLoader(valid_dataset, batch_size=config['batch_size'], shuffle=False, pin_memory=True)
+
+model.eval()
+total, n = 0.0, 0
+with torch.no_grad():
+    for x, y in valid_loader:
+        x, y = x.to(device), y.to(device)
+        pred = model(x)
+        total += nn.functional.mse_loss(pred, y, reduction='sum').item()
+        n += len(y)
+mean_valid_loss = total / n</code></pre>
+<ul>
+  <li><code>model.eval()</code> 與 <code>torch.no_grad()</code> 是原程式本來就有的（train.py 第 71、75 行，第 5 章講），不是這次修改的一部分。</li>
+  <li><code>reduction='sum'</code> 讓一個 batch 回傳平方誤差的<strong>總和</strong>而不是平均，加總後除以 539，數學上就等於一次算完的 MSE，與 batch 怎麼切無關。也可以寫 <code>criterion(pred, y).item() * len(y)</code>，把平均乘回總和。</li>
+  <li>只有 shuffle=False 不加權：量測固定了（每個 epoch 都是同一組 27 筆），對 HW01 的 model.ckpt 來說是 2.0690，離真值很近。但固定的偏移仍在，換一個資料集或 batch_size 可能就不小。兩處一起改才正確。</li>
+  <li>驗證集只有 539 筆時，更簡單的做法是驗證用 <code>batch_size=len(valid_dataset)</code>，一個 batch 一次算完。驗證不算梯度、佔的記憶體小，batch 可以比訓練時大很多。</li>
+  <li>修好量法，第三層的「挑最小值」仍然存在，只是不再被打亂的雜訊放大。今天的習慣是：用驗證集挑模型，最後的成績用<strong>沒有參與挑選</strong>的資料來報告。HW01 的測試集答案不在我們手上，這一步由 Kaggle 代勞：上傳 pred.csv 後，Kaggle 用它保留的答案算分。</li>
+  <li>現成的工具也是這樣算的，例如 TorchMetrics 的 <code>MeanSquaredError</code> 會跨 batch 累加平方誤差與筆數，最後才相除。</li>
+</ul>
+</div>
+
+<h2 id="lab">3.6　動手做</h2>
+<div class="lab"><h4>動手做：親手看 Dataset、batch 與量法的偏差</h4>
+<p>以下指令都在 <code>HW01/</code> 裡執行。第 1、2 項只 import <code>utils</code> 與 <code>data_loader</code>，不 import <code>config</code>，所以輸出開頭<strong>不會</strong>有 <code>True</code>、<code>0</code> 兩行（config.py 被 import 時印的，第 0 章 0.4 節）；第 3 項要載入模型、用 GPU，會 import config，所以會有。第 1 項寫死的 <code>0.2</code>、<code>5201314</code> 就是 config 的 <code>valid_ratio</code> 與 <code>seed</code>，<code>select_feat</code> 沒給 <code>select_all</code> 時預設 <code>True</code>，也和 config 相同，所以三項切出的資料完全一樣。</p>
+<ol>
+  <li><strong>一筆資料長什麼樣</strong>：
+<pre class="shell"><code>$ ../.venv/bin/python -c "
+import pandas as pd
+from utils import train_valid_split, select_feat
+from data_loader import COVID19Dataset
+tr, te = pd.read_csv('covid.train.csv').values, pd.read_csv('covid.test.csv').values
+tr, va = train_valid_split(tr, 0.2, 5201314)
+x_tr, x_va, x_te, y_tr, y_va = select_feat(tr, va, te)
+ds = COVID19Dataset(x_tr, y_tr)
+x, y = ds[0]
+print(len(ds), x.shape, x.dtype, y.shape, y.item())
+print(x[:3])
+"
+2160 torch.Size([117]) torch.float32 torch.Size([]) 3.7109291553497314
+tensor([696.,   0.,   0.])</code></pre>
+  對照 3.2 節：長度 2160；x 的形狀是 117、dtype 是 float32；y 的形狀 <code>torch.Size([])</code> 是空的，表示 0 維 tensor；<code>y.item()</code> 是 float32 存下的 3.7109291553497314。第二行是 x 的前 3 個值 696、0、0，tensor 印出時也像 NumPy 一樣補空白對齊。把 <code>ds = COVID19Dataset(x_tr, y_tr)</code> 改成 <code>ds = COVID19Dataset(x_te)</code>，<code>ds[0]</code> 就只剩一個 tensor，<code>x, y = …</code> 那行會失敗——想想為什麼。（答案：沒有 y 時 <code>__getitem__</code> 只回傳一個 shape (117,) 的 tensor，Python 會試著把它沿第一維拆成 117 個值，數量對不上兩個變數。）</li>
+  <li><strong>每個 batch 有幾筆</strong>：在第 1 項指令的 Python 程式碼最後、收尾的 <code>"</code> <strong>之前</strong>加兩行再跑：
+<pre class="py"><code>from torch.utils.data import DataLoader
+print([len(y) for x, y in DataLoader(COVID19Dataset(x_va, y_va), batch_size=256, shuffle=True)])</code></pre>
+  應該得到 <code>[256, 256, 27]</code>。把 <code>x_va, y_va</code> 換成 <code>x_tr, y_tr</code>，會是 8 個 256 加一個 112；再加上 <code>drop_last=True</code>，112 那一批就消失了。</li>
+  <li><strong>同一個模型，量到不同的驗證 loss</strong>：<code>models/model.ckpt</code> 必須是 1.661 那一份（第 2 章動手做第 3 項的提醒）。下面輸出的 <code>one shot</code> 那一行就是確認：是 2.0685 就對了；不是的話，先照第 4 項末尾的方法重跑一次原版 train.py。
+<pre class="shell"><code>$ ../.venv/bin/python -c "
+import pandas as pd, torch
+from torch.utils.data import DataLoader
+from utils import train_valid_split, select_feat
+from data_loader import COVID19Dataset
+from model import My_Model
+from config import config
+tr, te = pd.read_csv('covid.train.csv').values, pd.read_csv('covid.test.csv').values
+tr, va = train_valid_split(tr, config['valid_ratio'], config['seed'])
+x_tr, x_va, x_te, y_tr, y_va = select_feat(tr, va, te, config['select_all'])
+model = My_Model(input_dim=x_tr.shape[1]).to('cuda')
+model.load_state_dict(torch.load(config['save_path']))
+model.eval()
+ds = COVID19Dataset(x_va, y_va)
+mse = torch.nn.MSELoss()
+with torch.no_grad():
+    print('one shot', f'{mse(model(ds.x.cuda()), ds.y.cuda()).item():.4f}')
+    for shuffle in [False, True, True, True]:
+        losses = [mse(model(xb.cuda()), yb.cuda()).item() for xb, yb in DataLoader(ds, batch_size=256, shuffle=shuffle)]
+        print('shuffle', shuffle, f'{sum(losses) / len(losses):.4f}')
+"
+True
+0
+one shot 2.0685
+shuffle False 2.0690
+shuffle True 1.9393
+shuffle True 2.1544
+shuffle True 2.0068</code></pre>
+  <code>True</code>、<code>0</code> 之後，<code>one shot</code> 那一行是一次算完的真實 MSE，就是 3.5 節的 2.0685；<code>shuffle False</code> 那一行是 2.0690；後面三行 <code>shuffle True</code> 每一行都不同，而且每次執行這條指令都會不同（這段程式沒有呼叫 <code>same_seed</code>），所以你跑出來的這三行不會跟上面一樣。本機 20 次落在 1.77～2.45 之間。多跑幾次，看你能不能碰到比 1.661 還低的值。</li>
+  <li><strong>修好量法再訓練一次</strong>：先備份：<code>cp train.py train.py.bak</code>。然後只改三行，每一行原地修改、縮排不動，所以行號不會位移（這是「現在的做法」方框裡 <code>criterion(pred, y).item() * len(y)</code> 那種寫法）：
+<ul>
+  <li>第 123 行：<code>shuffle=True</code> 改成 <code>shuffle=False</code>。</li>
+  <li>第 79 行：<code>loss_record.append(loss.item())</code> 改成 <code>loss_record.append(loss.item() * len(y))</code>，記下這個 batch 的平方誤差總和。</li>
+  <li>第 81 行：<code>sum(loss_record)/len(loss_record)</code> 改成 <code>sum(loss_record)/len(valid_loader.dataset)</code>，除以總筆數 539。</li>
+</ul>
+  重跑 train.py（例如用第 2 章動手做的 <code>../.venv/bin/python train.py 2&gt;/dev/null &gt; fixed.log</code> 與 <code>grep -B1 Saving fixed.log | tail -2</code>），觀察最佳驗證 loss、它出現的 epoch、early stop 的 epoch 和原本比有什麼不同。原本是：最佳 1.661 出現在第 1483 個 epoch、第 1883 個 epoch early stop（第 0 章；<code>Epoch [1483/3000]</code> 裡的 3000 是 config 的 <code>n_epochs</code> 上限）。印出的最佳值現在就是那個 checkpoint 一次算完的 MSE，可以直接拿去和線性迴歸的 1.166 比。
+<details class="quiz"><summary>看答案：本機實測結果</summary>
+<pre class="shell"><code>$ grep -B1 Saving fixed.log | tail -2
+Epoch [2968/3000]: Train loss: 1.5739, Valid loss: 1.7174
+Saving model with loss 1.717...
+$ tail -1 fixed.log
+Epoch [3000/3000]: Train loss: 1.7492, Valid loss: 2.0180</code></pre>
+<ul>
+  <li><strong>印出的值就是真值。</strong>最佳是第 2968 個 epoch 的 1.717，把這個 checkpoint 拿到 539 筆上一次算完，MSE 也是 1.7174，兩者完全一致。這證明修法正確：印出的數字不再受分組和順序影響。</li>
+  <li><strong>沒有 early stop。</strong>最後一行是第 3000 個 epoch，也就是 config 的 <code>n_epochs</code> 上限，沒有出現「Model is not improving」，總共存檔 187 次。原版第 1883 個 epoch 就停了，因為 1.661 是靠運氣量到的低值，之後連續 400 個 epoch 都打不破，early stop 就提早觸發。量法誠實之後，每次創新低都是模型真的進步了，所以一直到 3000 個 epoch 還在進步。</li>
+  <li><strong>真實 MSE 從 2.069 降到 1.717。</strong>但這不全是量法的功勞：valid 不打亂之後，valid_loader 不再從全域產生器抽亂數，train_loader 每個 epoch 拿到的順序也跟原版不同（3.4 節），等於換了一條訓練路徑。可以確定的是：印出的數字現在可信，early stop 也不再被雜訊誤導。</li>
+  <li>1.717 仍然輸給線性迴歸的 1.166。第 2 章拿掉 id 後的真實值是 1.240，第 7 章會把這些改良合在一起。</li>
+</ul>
+</details>
+  做完<strong>務必還原 train.py 並再跑一次</strong>（<code>mv train.py.bak train.py</code>，再 <code>../.venv/bin/python train.py</code>），讓 <code>models/model.ckpt</code> 回到 1.661 那一份（應該再看到 <code>Epoch [1483/3000]</code> 與 <code>Saving model with loss 1.661...</code>）。後面各章的數字都以它為準。</li>
+</ol>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li><code>COVID19Dataset</code> 繼承 <code>Dataset</code>，只做三件事：<code>__init__</code> 把 NumPy float64 轉成（並複製成）float32 tensor，<code>__getitem__</code> 回傳第 i 筆（有答案時是 x、y 的 tuple，沒答案時只有 x），<code>__len__</code> 回傳列數。</li>
+  <li><code>DataLoader</code> 用 sampler 決定索引、逐筆呼叫 <code>dataset[i]</code>、再 collate 疊成一批：x (256, 117)、y (256,)，型別是 list。</li>
+  <li>batch 數是筆數 ÷ 256 無條件進位：train 9（最後 112 筆）、valid 3（256、256、27）、test 5（最後 54 筆）。<code>drop_last</code> 預設保留零頭，驗證與預測都不能丟。</li>
+  <li><code>shuffle=True</code> 的順序來自 PyTorch 全域產生器，每個 epoch 不同、每次執行相同；test loader 必須 <code>shuffle=False</code>，因為 <code>save_pred</code> 依順序編 id。<code>pin_memory</code> 在這份小資料上量不出差別。</li>
+  <li>印出的 1.661 偏低有三層原因：各 batch 平均再平均讓最後 27 筆在平均裡的份量放大約 9.5 倍；valid 也打亂，同一個模型每次量到 1.77～2.45 不等；再從將近 1900 個量測裡挑最小值。真實 MSE 是 2.069，比較模型時要用一次算完的數字。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 如果把 config 的 <code>batch_size</code> 改成 100，train、valid、test 三個 loader 各有幾個 batch？valid 最後一批有幾筆？</summary>
+<p>無條件進位：train 2160 ÷ 100 = 21.6 → 22 個；valid 539 ÷ 100 = 5.39 → 6 個；test 1078 ÷ 100 = 10.78 → 11 個。valid 最後一批是 539 − 500 = 39 筆。</p></details>
+<details class="quiz"><summary>2. <code>train_dataset[0]</code> 的 y 是 0 維 tensor，為什麼 DataLoader 給出的 batch 裡 y 是 <code>(256,)</code> 而不是 <code>(256, 1)</code>？</summary>
+<p>collate 把 256 個形狀為 <code>()</code> 的 tensor 疊在一起，新增的那一維就是 batch 維，所以是 <code>(256,)</code>。若 <code>__getitem__</code> 回傳的 y 是 <code>(1,)</code>，疊出來才會是 <code>(256, 1)</code>。模型最後要 <code>squeeze(1)</code> 成 <code>(256,)</code>，就是為了和這個 y 對齊（第 4 章）。</p></details>
+<details class="quiz"><summary>3. 把 predict.py 第 37 行改成 <code>shuffle=True</code>，模型算出的預測值會變嗎？上傳的成績呢？</summary>
+<p>每一筆的預測值不變，模型是同一個，只是順序被打亂。但 <code>save_pred</code> 用 <code>enumerate</code> 依順序編 id，打亂後每個預測都被貼到錯的 id 上，成績會差到像亂猜。</p></details>
+<details class="quiz"><summary>4. 只把 valid_loader 改成 <code>shuffle=False</code>、不改第 81 行的平均方式，1.661 那種偏低還會發生嗎？</summary>
+<p>大幅減輕。不打亂時同一個模型每次量到同一個值（對 model.ckpt 是 2.0690，離真值 2.0685 很近），第二層的雜訊消失，第三層「挑最小值」就沒有隨機的好運可挑。但最後 27 筆份量放大的固定偏移還在，所以正確做法是連平均方式一起改成依筆數加權。</p></details>
+<details class="quiz"><summary>5. 同學說：「我的 DNN 印出 0.982，線性迴歸是 1.166，所以 DNN 比較好。」哪裡錯了？</summary>
+<p>兩個數字的量法不同。0.982 是各 batch 平均再平均、驗證集又打亂、再從一千多個 epoch 裡挑出的最小值，系統性偏低；1.166 是 539 筆一次算完的 MSE。把同一個 checkpoint 一次算完是 1.240，仍然輸給線性迴歸。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://pytorch.org/docs/stable/data.html">torch.utils.data</a>：Dataset、DataLoader、sampler、collate、<code>drop_last</code>、<code>pin_memory</code> 的官方說明，包括 map-style dataset 只需要 <code>__getitem__</code> 與 <code>__len__</code>。</li>
+  <li><a href="https://pytorch.org/tutorials/beginner/basics/data_tutorial.html">PyTorch Tutorials — Datasets &amp; DataLoaders</a>：自己寫 Dataset 類別的官方入門教學。</li>
+  <li><a href="https://pytorch.org/tutorials/intermediate/pinmem_nonblock.html">A guide on good usage of non_blocking and pin_memory() in PyTorch</a>：pinned memory 與 <code>non_blocking</code> 什麼時候有用、什麼時候沒用。</li>
+  <li><a href="https://lightning.ai/docs/torchmetrics/stable/regression/mean_squared_error.html">TorchMetrics — MeanSquaredError</a>：跨 batch 正確累加的評估指標實作。</li>
+  <li><a href="https://www.jmlr.org/papers/v11/cawley10a.html">Cawley &amp; Talbot (2010), On Over-fitting in Model Selection and Subsequent Selection Bias in Performance Evaluation</a>：用驗證集挑模型為什麼會讓挑中的分數偏樂觀。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch02.html">← 第 2 章</a><a href="ch04.html">第 4 章 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW01 讀碼教材 · 對應 commit 717528b · 程式碼引用取自本 repo 的 HW01/；實測輸出取自 2026-10-02、10-03 本機執行</footer>
+
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py；本教材的原始碼全是 .py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>

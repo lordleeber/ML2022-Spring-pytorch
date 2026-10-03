@@ -141,9 +141,10 @@
     return set;
   }
 
-  /* 把 data-hot 指定的行（1 起算）包進 .hot-line。
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
      跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
-  function wrapHotLines(html, spec) {
+  function wrapHotLines(html, spec, offset) {
     var hot = parseHotSpec(spec);
     var carry = null;
     return html.split('\n').map(function (line, i) {
@@ -156,7 +157,7 @@
       } else {
         carry = null;
       }
-      return hot.has(i + 1) ? '<span class="hot-line">' + s + '</span>' : s;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
     }).join('\n');
   }
 
@@ -182,7 +183,12 @@
       target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
     }
     if (pre.dataset.hot) {
-      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot);
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
     }
   });
 
