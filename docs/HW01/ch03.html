@@ -4,7 +4,468 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>第 3 章　Dataset 與 DataLoader — HW01 COVID-19 確診率預測</title>
-<!-- INLINE-ASSETS -->
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
 </head>
 <body>
 <nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch02.html">← 第 2 章</a><a href="ch04.html">第 4 章 →</a></nav>
@@ -121,7 +582,7 @@ class COVID19Dataset(Dataset):
   <li><strong>把 float64 轉成 float32。</strong>第 1 章看過，<code>.values</code> 得到的是 float64（64 位元浮點數）；FloatTensor 是 32 位元浮點數（float32），每個數字佔 4 bytes 而不是 8 bytes。<code>x_train</code> 的 2160 × 117 個數字，NumPy 版佔 2,021,760 bytes，tensor 版佔 1,010,880 bytes，剛好一半。</li>
   <li><strong>複製一份。</strong>建立之後再去改 NumPy 陣列，tensor 不會跟著變。對照組 <code>torch.from_numpy(x)</code> 則和原陣列共用同一塊記憶體（改一邊、另一邊跟著變），而且 dtype（資料型別）維持 float64。</li>
 </ol>
-<p>為什麼要轉成 float32？因為 PyTorch 建立的模型參數預設就是 float32，GPU 對 float32 的運算也快得多；把 float64 的輸入直接餵給 float32 的模型，PyTorch 會報 dtype 不符的錯，不會自動幫你轉。轉換的代價是精度：float32 大約只有 7 位有效數字。本機實測 <code>x_train</code> 全部數值轉換後的最大絕對誤差是 3.81 × 10<sup>−6</sup>，最大相對誤差 5.94 × 10<sup>−8</sup>。以第一筆答案為例，float64 是 3.7109291，float32 存成 3.7109291553497314——多出來的尾數是 float32 能表示的最接近值，不是原資料。對一個預測誤差以「百分點」計的問題，這種誤差完全可以忽略。</p>
+<p>為什麼要轉成 float32？因為 PyTorch 建立的模型參數預設就是 float32，GPU 對 float32 的運算也快得多；把 float64 的輸入直接餵給 float32 的模型，PyTorch 會報 dtype 不符的錯，不會自動幫你轉。轉換的代價是精度：float32 大約只有 7 位有效數字。本機實測 <code>x_train</code> 全部數值轉換後的最大絕對誤差是 3.81 × 10<sup>−6</sup>，最大相對誤差（誤差除以原值）5.94 × 10<sup>−8</sup>。以第一筆答案為例，float64 是 3.7109291，float32 存成 3.7109291553497314——多出來的尾數是 float32 能表示的最接近值，不是原資料。對一個預測誤差以「百分點」計的問題，這種誤差完全可以忽略。</p>
 <p>第 15–18 行處理 <code>y</code>。<code>y=None</code> 是預設值：呼叫時不給 <code>y</code>，它就是 <code>None</code>。docstring 那句「if none, do prediction」說的就是這個用途——predict.py 只有特徵、沒有答案，所以只傳 <code>x</code>（3.4 節）。這時第 16 行 <code>self.y = y</code> 存的就是 <code>None</code>（直接寫 <code>self.y = None</code> 意思相同，只是比較明白）。本機實測：train 的 Dataset，<code>self.x</code> 是 (2160, 117) float32、<code>self.y</code> 是 (2160,) float32；只給 x 建立的 test Dataset，<code>self.y</code> 是 <code>None</code>。</p>
 
 <p>再看後半：</p>
@@ -170,7 +631,7 @@ train_dataset = TensorDataset(torch.tensor(x_train, dtype=torch.float32),
 test_dataset = TensorDataset(torch.tensor(x_test, dtype=torch.float32))</code></pre>
 <ul>
   <li><strong><code>torch.FloatTensor(…)</code> 是舊式寫法。</strong>PyTorch 文件建議用 <code>torch.tensor(data, dtype=…)</code>（一定複製）或 <code>torch.from_numpy(data).float()</code>，dtype 寫在明處，讀的人不必記得「FloatTensor 等於 float32」。</li>
-  <li><strong>TensorDataset 的回傳永遠是 tuple。</strong>上面 <code>test_dataset[0]</code> 回傳的是只有一個元素的 tuple，所以預測時要寫 <code>for (x,) in loader</code> 或 <code>x = batch[0]</code>——比 COVID19Dataset 多一點點麻煩，換來的是訓練和預測的結構一致。</li>
+  <li><strong>TensorDataset 的回傳永遠是 tuple。</strong>上面 <code>test_dataset[0]</code> 回傳的是只有一個元素的 tuple，所以預測時要寫 <code>for (x,) in loader</code>（把只有一個元素的 tuple 拆開）或 <code>for batch in loader: x = batch[0]</code>——比 COVID19Dataset 多一點點麻煩，換來的是訓練和預測的結構一致。</li>
   <li>自己寫 Dataset 類別仍然是正確的技能：資料太大放不進記憶體、每筆要從磁碟讀圖片或文字、要在取資料時做轉換，都得自己寫 <code>__getitem__</code>。後面的作業（影像、語音）就是這種情況。</li>
 </ul>
 </div>
@@ -259,12 +720,12 @@ test_dataset = TensorDataset(torch.tensor(x_test, dtype=torch.float32))</code></
 </div>
 
 <p>零頭 batch 可以丟掉。DataLoader 有一個 <code>drop_last</code> 參數，預設 <code>False</code>（保留最後不滿的一批）；設成 <code>True</code> 時，本機實測 train 的 <code>len</code> 從 9 變成 8，那 112 筆在這個 epoch 不會被看到。訓練時丟零頭有時是為了讓每批大小一致；但驗證與預測<strong>絕對不能丟</strong>：驗證少算 27 筆就不是在全部驗證集上評估，預測少 54 筆就交不出 1078 行答案。</p>
-<p>還有一個沒寫出來的預設值：<code>num_workers</code>，本機實測為 0，意思是上面那三件事都在主程式自己的行程裡做，沒有另開行程平行準備資料。資料在記憶體裡、每筆只是取一列 tensor，這樣最快；需要從磁碟讀圖片、做轉換的作業才會開多個 worker。</p>
+<p>還有一個沒寫出來的預設值：<code>num_workers</code>，本機實測為 0，意思是上面那三件事都在主程式自己的行程（process，作業系統裡一個正在執行的程式）裡做，沒有另開行程平行準備資料。資料在記憶體裡、每筆只是取一列 tensor，這樣最快；需要從磁碟讀圖片、做轉換的作業才會開多個 worker。</p>
 
 <h2 id="shuffle">3.4　shuffle、pin_memory，以及不打亂的 test loader</h2>
 
 <h3>shuffle=True：每個 epoch 一個新順序</h3>
-<p><code>shuffle=True</code> 時，DataLoader 用的 sampler 是 <code>RandomSampler</code>（本機實測）。每個 epoch 開始迭代時，它產生一個新的隨機排列，依這個順序分批。因為 train.py 沒有給 DataLoader 指定自己的 generator，它的亂數來自第 2 章表格裡的 <strong>PyTorch 全域產生器</strong>——那張表在「誰在用它」一欄寫的「DataLoader 每個 epoch 打亂資料順序（第 3 章）」，指的就是這裡。</p>
+<p><code>shuffle=True</code> 時，DataLoader 用的 sampler 是 <code>RandomSampler</code>（本機實測）。每個 epoch 開始迭代時，它產生一個新的隨機排列，依這個順序分批。因為 train.py 沒有給 DataLoader 的 <code>generator</code> 參數指定一個自己的亂數產生器（第 2 章的 <code>torch.Generator</code>；和 Python 用 <code>yield</code> 寫的 generator 無關），它的亂數來自第 2 章表格裡的 <strong>PyTorch 全域產生器</strong>——那張表在「誰在用它」一欄寫的「DataLoader 每個 epoch 打亂資料順序（第 3 章）」，指的就是這裡。</p>
 <p>本機照 train.py 的實際順序執行（<code>same_seed</code> → 切分 → 建立模型 → 開始迭代），train_loader 第一個 batch 的前 8 個 id：</p>
 <div class="tablewrap"><table>
 <thead><tr><th></th><th>第一個 batch 的前 8 個 id</th></tr></thead>
@@ -278,7 +739,7 @@ test_dataset = TensorDataset(torch.tensor(x_test, dtype=torch.float32))</code></
 <p>驗證就不一樣了：驗證時模型不更新，打不打亂都在算<strong>同一個模型</strong>在同一批 539 筆上的表現，順序本來不該有任何影響。HW01 的 valid_loader 也設了 <code>shuffle=True</code>，而 3.5 節會看到，在這份程式的算法下，順序<strong>確實</strong>會影響結果。</p>
 
 <h3>pin_memory=True：讓 batch 放在可以直接傳給 GPU 的記憶體</h3>
-<p>作業系統可以把一般記憶體暫時搬到磁碟上（換頁，paging），需要時再搬回來。GPU 從主記憶體讀資料時，不能讀到一塊可能被搬走的記憶體，所以一般記憶體裡的資料要傳上 GPU，CUDA 會先把它複製到一塊「不會被搬走」的暫存區，再從那裡傳。這種被鎖定、不會被換頁的記憶體叫 <strong>pinned memory</strong>（也叫 page-locked memory）。</p>
+<p>GPU 有自己的一塊記憶體（顯示記憶體），GPU 上的運算只能讀那裡的資料，所以每個 batch 都要從主記憶體複製過去——這就是「搬上 GPU」。作業系統可以把一般記憶體暫時搬到磁碟上（換頁，paging），需要時再搬回來。GPU 從主記憶體讀資料時，不能讀到一塊可能被搬走的記憶體，所以一般記憶體裡的資料要傳上 GPU，CUDA 會先把它複製到一塊「不會被搬走」的暫存區，再從那裡傳。這種被鎖定、不會被換頁的記憶體叫 <strong>pinned memory</strong>（也叫 page-locked memory）。</p>
 <p><code>pin_memory=True</code> 讓 DataLoader 把組好的 batch 直接放進 pinned memory，省掉那一次中轉複製；搭配 <code>.to(device, non_blocking=True)</code>，傳輸還能和 CPU 的其他工作同時進行。本機實測，設了之後 batch 的 <code>is_pinned()</code> 是 <code>True</code>，但 device 仍是 cpu——pin 只是換一種記憶體，不會替你搬上 GPU；不設時 <code>is_pinned()</code> 是 <code>False</code>。</p>
 <p>效果呢？本機實測迭代 10 個 epoch、每個 batch 都 <code>.cuda()</code>（搬上 GPU 的簡寫）：pin 0.038 秒、不 pin 0.039 秒。這份資料一個 batch 才 256 × 117 個 float32，大約 120 KB，傳輸時間本來就微不足道，量不出差別；HW01 的訓練迴圈也沒有用 <code>non_blocking=True</code>。pin_memory 是資料量大（例如一批影像）時才看得出效果的設定，這裡寫著無害。</p>
 
@@ -311,16 +772,16 @@ test_dataset = TensorDataset(torch.tensor(x_test, dtype=torch.float32))</code></
         mean_valid_loss = sum(loss_record)/len(loss_record)</code></pre></figure>
 <p>只需要知道四件事：第 73 行從 valid_loader 一次拿一個 batch；第 77 行的 <code>criterion</code> 是 <code>nn.MSELoss(reduction='mean')</code>（train.py 第 29 行），算出<strong>這一個 batch</strong> 的 MSE；第 79 行把它（<code>.item()</code> 把 0 維 tensor 取成一個 Python 數字）記進 <code>loss_record</code>；第 81 行把 3 個 batch 的 MSE 加總再除以 3。<code>with torch.no_grad()</code> 與 <code>.to(device)</code> 是第 5 章的內容，這裡不影響推理。</p>
 
-<h3>第一層：最後 27 筆的權重被放大了將近 10 倍</h3>
-<p>真實的驗證 MSE 是 539 個平方誤差的平均，每筆權重都是 1/539。第 81 行算的卻是「平均的平均」：</p>
+<h3>第一層：最後 27 筆的份量被放大了將近 10 倍</h3>
+<p>真實的驗證 MSE 是 539 個平方誤差的平均，每筆在平均裡的份量都是 1/539（這裡的「份量」是平均時的加權比例，和模型的權重無關）。第 81 行算的卻是「平均的平均」：</p>
 <div class="eq">真實 MSE ＝ (256 · L<sub>1</sub> ＋ 256 · L<sub>2</sub> ＋ 27 · L<sub>3</sub>) ／ 539<br>
 第 81 行 ＝ (L<sub>1</sub> ＋ L<sub>2</sub> ＋ L<sub>3</sub>) ／ 3<br>
 <span style="font-size:.9em">L<sub>1</sub>、L<sub>2</sub>、L<sub>3</sub> 是三個 batch 各自的 MSE</span></div>
-<p>在真實 MSE 裡，最後一個 batch 只佔 27/539 ≈ 5% 的份量；在第 81 行的算法裡，它和兩個 256 筆的 batch 一樣佔 1/3。換算到每一筆：落在滿 batch 的一筆，權重是 1/(3 × 256) = 1/768；落在最後一批的一筆，權重是 1/(3 × 27) = 1/81，大了約 9.5 倍。</p>
+<p>在真實 MSE 裡，最後一個 batch 只佔 27/539 ≈ 5% 的份量；在第 81 行的算法裡，它和兩個 256 筆的 batch 一樣佔 1/3。換算到每一筆：落在滿 batch 的一筆，份量是 1/(3 × 256) = 1/768；落在最後一批的一筆，份量是 1/(3 × 27) = 1/81，大了約 9.5 倍。</p>
 <p>如果最後那 27 筆每次都是固定同一組，這只會造成一個固定的偏移。本機用 <code>shuffle=False</code> 實測 model.ckpt：三個 batch 的平均是 2.0690，和一次算完的 2.0685 幾乎一樣——固定那 27 筆時，偏移小到可以忽略。問題出在第二層。</p>
 
 <h3>第二層：valid_loader 打亂，所以同一個模型每次量到不同的值</h3>
-<p>valid_loader 設了 <code>shuffle=True</code>，哪 27 筆落進最後一批，每個 epoch 都不一樣。這 27 筆碰巧都是好預測的，第 81 行的結果就偏低；碰巧混進幾筆誤差大的，就偏高——而且因為它們的權重被放大了 9.5 倍，影響很明顯。</p>
+<p>valid_loader 設了 <code>shuffle=True</code>，哪 27 筆落進最後一批，每個 epoch 都不一樣。這 27 筆碰巧都是好預測的，第 81 行的結果就偏低；碰巧混進幾筆誤差大的，就偏高——而且因為它們的份量被放大了 9.5 倍，影響很明顯。</p>
 <p>本機拿同一個 model.ckpt，不改任何權重，只換 valid_loader 的打亂順序重算第 81 行：</p>
 <div class="tablewrap"><table>
 <thead><tr><th>量法</th><th>結果</th></tr></thead>
@@ -332,11 +793,11 @@ test_dataset = TensorDataset(torch.tensor(x_test, dtype=torch.float32))</code></
 </tbody>
 </table></div>
 <p>（第 5 百分位：把 200 個值由小排到大，有 5% 的值比它小；中位數：剛好排在正中間的那個值。）</p>
-<p>平均起來，打亂的量法沒有系統性偏低：20 次的平均 2.0699 和真實的 2.0685 幾乎一樣。但單次量測的起伏很大：同一個模型，一次可能量到 1.77，下一次 2.45。第 0 章看過的 stdout 結尾就是活生生的例子：第 1881～1883 個 epoch 印出的驗證 loss 是 2.3940、2.0718、2.5030，相鄰 epoch 的模型只差一次更新，量到的數字卻跳了 0.4。</p>
+<p>這裡要分清兩種「不準」：一種是每次量都往同一個方向偏（例如總是偏低），叫<strong>系統性偏差</strong>；另一種是每次量的結果上下亂跳，但平均起來在真值附近，叫<strong>雜訊</strong>。平均起來，打亂的量法沒有系統性偏低：20 次的平均 2.0699 和真實的 2.0685 幾乎一樣。但單次量測的起伏很大：同一個模型，一次可能量到 1.77，下一次 2.45。第 0 章看過的 stdout 結尾就是活生生的例子：第 1881～1883 個 epoch 印出的驗證 loss 是 2.3940、2.0718、2.5030，相鄰 epoch 的模型只差一次更新，量到的數字卻跳了 0.4。</p>
 
 <h3>第三層：在將近 1900 個有雜訊的數字裡挑最小的</h3>
 <p>第 85 行 <code>if mean_valid_loss &lt; best_loss</code> 只在創新低時存檔（第 5 章細講）。訓練一共跑了 1883 個 epoch，每個 epoch 量一次，也就是將近 1900 個量測值，每一個都帶著第二層的雜訊。<strong>從一堆有雜訊的數字裡挑最小的，挑中的幾乎必然是「模型不錯、而且這次分組又特別幸運」的那一次</strong>——雜訊往下偏的量測比較容易勝出，所以被挑中的數字系統性地比該模型的真實表現低。這個現象在統計上叫選擇偏差（selection bias），也常被稱作「贏家的詛咒」（winner's curse）。</p>
-<p>1.661 就是這樣產生的：它是第 1483 個 epoch 那個模型、在那一次特定的打亂順序下量到的值。存下來的權重正是那個模型，但把它換 200 種順序重量，最小值也才 1.7069——1.661 比這 200 次裡最幸運的一次還低，是一次相當罕見的好運。真實的表現，是一次算完的 2.069。</p>
+<p>1.661 就是這樣產生的：它是第 1483 個 epoch（第 0 章的 log）那個模型、在那一次特定的打亂順序下量到的值。存下來的權重正是那個模型，但把它換 200 種順序重量，最小值也才 1.7069——1.661 比這 200 次裡最幸運的一次還低。這不矛盾：重量時只抽了 200 次，訓練過程卻抽了 1883 次（每次量的是略有不同的模型），抽的次數越多，越容易碰到極端偏低的那一次，而 best_loss 專門把那一次留下來。真實的表現，是一次算完的 2.069。</p>
 
 <figure class="fig">
 <svg viewBox="0 0 900 260" role="img" aria-label="同一個 model.ckpt 的各種驗證 loss 量法畫在同一條數線上：200 種順序的範圍 1.7069 到 2.8467，中位數 2.0528；20 種順序的範圍 1.767 到 2.448；一次算完的真實 MSE 2.0685；訓練時印出並挑中的 1.661 落在所有範圍的左邊">
@@ -387,7 +848,7 @@ test_dataset = TensorDataset(torch.tensor(x_test, dtype=torch.float32))</code></
   <span><i style="background:#a371f7"></i>best_loss 挑出的值（控制邏輯）</span>
 </div>
 
-<p>三層合起來：第一層讓單次量測<strong>很容易受最後 27 筆影響</strong>，第二層讓這個影響<strong>每個 epoch 都不一樣</strong>，第三層<strong>專挑偏低的那一次</strong>。少了任何一層，偏差都會小很多：不打亂，量測就是固定的 2.0690；依筆數加權，最後 27 筆就只佔 5%，打亂也晃不了多少；不挑最小值，就不會系統性偏低。</p>
+<p>三層合起來：第一層讓單次量測<strong>很容易受最後 27 筆影響</strong>（份量放大），第二層讓這個影響<strong>每個 epoch 都不一樣</strong>，第三層<strong>專挑偏低的那一次</strong>。少了任何一層，偏差都會小很多：不打亂，量測就是固定的 2.0690；依筆數加權，最後 27 筆就只佔 5%，打亂也晃不了多少；不挑最小值，就不會系統性偏低。</p>
 <p>還有一個副作用：挑選本身也被雜訊影響。best_loss 比較的是帶雜訊的數字，所以被存下來的 checkpoint，不一定是 1883 個 epoch 裡真實表現最好的那一個。</p>
 
 <h3>同樣的偏差也出現在第 2 章的實驗裡</h3>
@@ -397,11 +858,11 @@ test_dataset = TensorDataset(torch.tensor(x_test, dtype=torch.float32))</code></
 <tbody>
 <tr><td>範例原版（117 欄，含 id）</td><td>1.661</td><td><strong>2.0685</strong></td><td>最小 1.7069、中位數 2.0528、最大 2.8467</td></tr>
 <tr><td>拿掉 id（116 欄）</td><td>0.982</td><td><strong>1.2403</strong></td><td>最小 0.9970、中位數 1.2326、最大 1.7167</td></tr>
-<tr><td>id 除以 2699（117 欄）</td><td>1.003</td><td><strong>1.2588</strong></td><td>最小 1.0154、中位數 1.2465</td></tr>
+<tr><td>id 除以 2699（117 欄）</td><td>1.003</td><td><strong>1.2588</strong></td><td>最小 1.0154、中位數 1.2465<!-- TODO(本機實測): id 除以 2699 的 checkpoint，200 種順序的最大值 --></td></tr>
 </tbody>
 </table></div>
 <p>三個模型都一樣：印出的值比 200 次重量的最小值還低，真實值在中位數附近。</p>
-<p>這就是目錄頁和第 2 章堅持用「一次算完」的數字來比較的原因。目錄頁的線性迴歸與「抄第 4 天」，本來就是在 539 筆上一次算完的 MSE，可以和右欄直接比，<strong>但不能和印出的 1.661／0.982 比</strong>。用真實數字排名：</p>
+<p>這就是目錄頁和第 2 章堅持用「一次算完」的數字來比較的原因。目錄頁的線性迴歸與「抄第 4 天」，本來就是在 539 筆上一次算完的 MSE，可以和上表的「一次算完的真實 MSE」那一欄直接比，<strong>但不能和印出的 1.661／0.982 比</strong>。用真實數字排名：</p>
 <div class="tablewrap"><table>
 <thead><tr><th>方法</th><th>539 筆驗證集上的真實 MSE</th></tr></thead>
 <tbody>
@@ -430,17 +891,18 @@ with torch.no_grad():
         n += len(y)
 mean_valid_loss = total / n</code></pre>
 <ul>
+  <li><code>model.eval()</code> 與 <code>torch.no_grad()</code> 是原程式本來就有的（train.py 第 71、75 行，第 5 章講），不是這次修改的一部分。</li>
   <li><code>reduction='sum'</code> 讓一個 batch 回傳平方誤差的<strong>總和</strong>而不是平均，加總後除以 539，數學上就等於一次算完的 MSE，與 batch 怎麼切無關。也可以寫 <code>criterion(pred, y).item() * len(y)</code>，把平均乘回總和。</li>
   <li>只有 shuffle=False 不加權：量測固定了（每個 epoch 都是同一組 27 筆），對 HW01 的 model.ckpt 來說是 2.0690，離真值很近。但固定的偏移仍在，換一個資料集或 batch_size 可能就不小。兩處一起改才正確。</li>
   <li>驗證集只有 539 筆時，更簡單的做法是驗證用 <code>batch_size=len(valid_dataset)</code>，一個 batch 一次算完。驗證不算梯度、佔的記憶體小，batch 可以比訓練時大很多。</li>
-  <li>修好量法，第三層的「挑最小值」仍然存在，只是不再被打亂的雜訊放大。今天的習慣是：用驗證集挑模型，最後的成績用<strong>沒有參與挑選</strong>的資料（測試集）來報告。</li>
+  <li>修好量法，第三層的「挑最小值」仍然存在，只是不再被打亂的雜訊放大。今天的習慣是：用驗證集挑模型，最後的成績用<strong>沒有參與挑選</strong>的資料來報告。HW01 的測試集答案不在我們手上，這一步由 Kaggle 代勞：上傳 pred.csv 後，Kaggle 用它保留的答案算分。</li>
   <li>現成的工具也是這樣算的，例如 TorchMetrics 的 <code>MeanSquaredError</code> 會跨 batch 累加平方誤差與筆數，最後才相除。</li>
 </ul>
 </div>
 
 <h2 id="lab">3.6　動手做</h2>
 <div class="lab"><h4>動手做：親手看 Dataset、batch 與量法的偏差</h4>
-<p>以下指令都在 <code>HW01/</code> 裡執行。第 1、2 項只 import <code>utils</code> 與 <code>data_loader</code>，不 import <code>config</code>，所以輸出開頭<strong>不會</strong>有 <code>True</code>、<code>0</code> 兩行；第 3 項要載入模型、用 GPU，會 import config，所以會有。</p>
+<p>以下指令都在 <code>HW01/</code> 裡執行。第 1、2 項只 import <code>utils</code> 與 <code>data_loader</code>，不 import <code>config</code>，所以輸出開頭<strong>不會</strong>有 <code>True</code>、<code>0</code> 兩行（config.py 被 import 時印的，第 0 章 0.4 節）；第 3 項要載入模型、用 GPU，會 import config，所以會有。第 1 項寫死的 <code>0.2</code>、<code>5201314</code> 就是 config 的 <code>valid_ratio</code> 與 <code>seed</code>，<code>select_feat</code> 沒給 <code>select_all</code> 時預設 <code>True</code>，也和 config 相同，所以三項切出的資料完全一樣。</p>
 <ol>
   <li><strong>一筆資料長什麼樣</strong>：
 <pre class="shell"><code>$ ../.venv/bin/python -c "
@@ -456,12 +918,12 @@ print(len(ds), x.shape, x.dtype, y.shape, y.item())
 print(x[:3])
 "</code></pre>
   <!-- TODO(本機實測): 第 1 項指令的逐字輸出（兩行），貼成 pre.shell 取代下面的文字描述 -->
-  對照 3.2 節：長度 2160；x 的形狀是 117、dtype 是 float32；y 的形狀是空的（0 維 tensor）；<code>y.item()</code> 是 float32 存下的 3.7109291553497314。第二行是 x 的前 3 個值 696、0、0。把 <code>ds = COVID19Dataset(x_tr, y_tr)</code> 改成 <code>ds = COVID19Dataset(x_te)</code>，<code>ds[0]</code> 就只剩一個 tensor，<code>x, y = …</code> 那行會失敗——想想為什麼。</li>
-  <li><strong>每個 batch 有幾筆</strong>：在上一段的最後加兩行再跑：
+  對照 3.2 節：長度 2160；x 的形狀是 117、dtype 是 float32；y 的形狀是空的（0 維 tensor）；<code>y.item()</code> 是 float32 存下的 3.7109291553497314。第二行是 x 的前 3 個值 696、0、0。把 <code>ds = COVID19Dataset(x_tr, y_tr)</code> 改成 <code>ds = COVID19Dataset(x_te)</code>，<code>ds[0]</code> 就只剩一個 tensor，<code>x, y = …</code> 那行會失敗——想想為什麼。（答案：沒有 y 時 <code>__getitem__</code> 只回傳一個 shape (117,) 的 tensor，Python 會試著把它沿第一維拆成 117 個值，數量對不上兩個變數。）</li>
+  <li><strong>每個 batch 有幾筆</strong>：在第 1 項指令的 Python 程式碼最後、收尾的 <code>"</code> <strong>之前</strong>加兩行再跑：
 <pre class="py"><code>from torch.utils.data import DataLoader
 print([len(y) for x, y in DataLoader(COVID19Dataset(x_va, y_va), batch_size=256, shuffle=True)])</code></pre>
   應該得到 <code>[256, 256, 27]</code>。把 <code>x_va, y_va</code> 換成 <code>x_tr, y_tr</code>，會是 8 個 256 加一個 112；再加上 <code>drop_last=True</code>，112 那一批就消失了。</li>
-  <li><strong>同一個模型，量到不同的驗證 loss</strong>：先確認 <code>models/model.ckpt</code> 是 1.661 那一份（第 2 章動手做第 3 項的提醒），然後：
+  <li><strong>同一個模型，量到不同的驗證 loss</strong>：<code>models/model.ckpt</code> 必須是 1.661 那一份（第 2 章動手做第 3 項的提醒）。下面輸出的 <code>one shot</code> 那一行就是確認：是 2.0685 就對了；不是的話，先照第 4 項末尾的方法重跑一次原版 train.py。
 <pre class="shell"><code>$ ../.venv/bin/python -c "
 import pandas as pd, torch
 from torch.utils.data import DataLoader
@@ -484,10 +946,16 @@ with torch.no_grad():
         print('shuffle', shuffle, f'{sum(losses) / len(losses):.4f}')
 "</code></pre>
   <!-- TODO(本機實測): 第 3 項指令的逐字輸出（True/0 兩行 + one shot + 4 行 shuffle），確認 one shot 印 2.0685、shuffle False 印 2.0690 -->
-  第一行數字是一次算完的真實 MSE，應該是 3.5 節的 2.0685；<code>shuffle False</code> 那一行應該是 2.0690；後面三行 <code>shuffle True</code> 每一行都不同，而且每次執行這條指令都會不同（這段程式沒有呼叫 <code>same_seed</code>），本機 20 次落在 1.77～2.45 之間。多跑幾次，看你能不能碰到比 1.661 還低的值。</li>
-  <li><strong>修好量法再訓練一次</strong>：照 3.5 節「現在的做法」改 train.py 的第 123 行與第 72–81 行（做之前先備份），重跑 train.py，觀察最佳驗證 loss、它出現的 epoch、early stop 的 epoch 和原本的 1.661／1483／1883 比有什麼不同。印出的最佳值現在就是那個 checkpoint 一次算完的 MSE，可以直接拿去和線性迴歸的 1.166 比。
+  <code>True</code>、<code>0</code> 之後，<code>one shot</code> 那一行是一次算完的真實 MSE，應該是 3.5 節的 2.0685；<code>shuffle False</code> 那一行應該是 2.0690；後面三行 <code>shuffle True</code> 每一行都不同，而且每次執行這條指令都會不同（這段程式沒有呼叫 <code>same_seed</code>），本機 20 次落在 1.77～2.45 之間。多跑幾次，看你能不能碰到比 1.661 還低的值。</li>
+  <li><strong>修好量法再訓練一次</strong>：先備份：<code>cp train.py train.py.bak</code>。然後只改三行，每一行原地修改、縮排不動，所以行號不會位移（這是「現在的做法」方框裡 <code>criterion(pred, y).item() * len(y)</code> 那種寫法）：
+<ul>
+  <li>第 123 行：<code>shuffle=True</code> 改成 <code>shuffle=False</code>。</li>
+  <li>第 79 行：<code>loss_record.append(loss.item())</code> 改成 <code>loss_record.append(loss.item() * len(y))</code>，記下這個 batch 的平方誤差總和。</li>
+  <li>第 81 行：<code>sum(loss_record)/len(loss_record)</code> 改成 <code>sum(loss_record)/len(valid_loader.dataset)</code>，除以總筆數 539。</li>
+</ul>
+  重跑 train.py（例如用第 2 章動手做的 <code>../.venv/bin/python train.py 2&gt;/dev/null &gt; fixed.log</code> 與 <code>grep -B1 Saving fixed.log | tail -2</code>），觀察最佳驗證 loss、它出現的 epoch、early stop 的 epoch 和原本比有什麼不同。原本是：最佳 1.661 出現在第 1483 個 epoch、第 1883 個 epoch early stop（第 0 章；<code>Epoch [1483/3000]</code> 裡的 3000 是 config 的 <code>n_epochs</code> 上限）。印出的最佳值現在就是那個 checkpoint 一次算完的 MSE，可以直接拿去和線性迴歸的 1.166 比。
   <!-- TODO(本機實測): 套用「現在的做法」（valid shuffle=False + reduction='sum' 依筆數加權）後重跑 train.py：最佳 valid loss、出現的 epoch、early stop 的 epoch、存檔次數；並確認該 checkpoint 一次算完的 MSE 等於印出值。補成 details.quiz「看答案：本機實測結果」 -->
-  做完<strong>務必還原 train.py 並再跑一次</strong>，讓 <code>models/model.ckpt</code> 回到 1.661 那一份（應該再看到 <code>Epoch [1483/3000]</code> 與 <code>Saving model with loss 1.661...</code>）。後面各章的數字都以它為準。</li>
+  做完<strong>務必還原 train.py 並再跑一次</strong>（<code>mv train.py.bak train.py</code>，再 <code>../.venv/bin/python train.py</code>），讓 <code>models/model.ckpt</code> 回到 1.661 那一份（應該再看到 <code>Epoch [1483/3000]</code> 與 <code>Saving model with loss 1.661...</code>）。後面各章的數字都以它為準。</li>
 </ol>
 </div>
 
@@ -497,7 +965,7 @@ with torch.no_grad():
   <li><code>DataLoader</code> 用 sampler 決定索引、逐筆呼叫 <code>dataset[i]</code>、再 collate 疊成一批：x (256, 117)、y (256,)，型別是 list。</li>
   <li>batch 數是筆數 ÷ 256 無條件進位：train 9（最後 112 筆）、valid 3（256、256、27）、test 5（最後 54 筆）。<code>drop_last</code> 預設保留零頭，驗證與預測都不能丟。</li>
   <li><code>shuffle=True</code> 的順序來自 PyTorch 全域產生器，每個 epoch 不同、每次執行相同；test loader 必須 <code>shuffle=False</code>，因為 <code>save_pred</code> 依順序編 id。<code>pin_memory</code> 在這份小資料上量不出差別。</li>
-  <li>印出的 1.661 偏低有三層原因：各 batch 平均再平均讓最後 27 筆權重放大約 9.5 倍；valid 也打亂，同一個模型每次量到 1.77～2.45 不等；再從將近 1900 個量測裡挑最小值。真實 MSE 是 2.069，比較模型時要用一次算完的數字。</li>
+  <li>印出的 1.661 偏低有三層原因：各 batch 平均再平均讓最後 27 筆在平均裡的份量放大約 9.5 倍；valid 也打亂，同一個模型每次量到 1.77～2.45 不等；再從將近 1900 個量測裡挑最小值。真實 MSE 是 2.069，比較模型時要用一次算完的數字。</li>
 </ul>
 </div>
 
@@ -509,7 +977,7 @@ with torch.no_grad():
 <details class="quiz"><summary>3. 把 predict.py 第 37 行改成 <code>shuffle=True</code>，模型算出的預測值會變嗎？上傳的成績呢？</summary>
 <p>每一筆的預測值不變，模型是同一個，只是順序被打亂。但 <code>save_pred</code> 用 <code>enumerate</code> 依順序編 id，打亂後每個預測都被貼到錯的 id 上，成績會差到像亂猜。</p></details>
 <details class="quiz"><summary>4. 只把 valid_loader 改成 <code>shuffle=False</code>、不改第 81 行的平均方式，1.661 那種偏低還會發生嗎？</summary>
-<p>大幅減輕。不打亂時同一個模型每次量到同一個值（對 model.ckpt 是 2.0690，離真值 2.0685 很近），第二層的雜訊消失，第三層「挑最小值」就沒有隨機的好運可挑。但最後 27 筆權重放大的固定偏移還在，所以正確做法是連平均方式一起改成依筆數加權。</p></details>
+<p>大幅減輕。不打亂時同一個模型每次量到同一個值（對 model.ckpt 是 2.0690，離真值 2.0685 很近），第二層的雜訊消失，第三層「挑最小值」就沒有隨機的好運可挑。但最後 27 筆份量放大的固定偏移還在，所以正確做法是連平均方式一起改成依筆數加權。</p></details>
 <details class="quiz"><summary>5. 同學說：「我的 DNN 印出 0.982，線性迴歸是 1.166，所以 DNN 比較好。」哪裡錯了？</summary>
 <p>兩個數字的量法不同。0.982 是各 batch 平均再平均、驗證集又打亂、再從一千多個 epoch 裡挑出的最小值，系統性偏低；1.166 是 539 筆一次算完的 MSE。把同一個 checkpoint 一次算完是 1.240，仍然輸給線性迴歸。</p></details>
 
@@ -526,5 +994,221 @@ with torch.no_grad():
 <nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch02.html">← 第 2 章</a><a href="ch04.html">第 4 章 →</a></nav>
 <footer class="chap-footer">ML2022 Spring HW01 讀碼教材 · 對應 commit 717528b · 程式碼引用取自本 repo 的 HW01/；實測輸出取自 2026-10-02、10-03 本機執行</footer>
 
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py；本教材的原始碼全是 .py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
 </body>
 </html>

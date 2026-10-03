@@ -11,6 +11,7 @@
   - 金 `#e3b341` = 磁碟檔案（csv、model.ckpt、pred.csv、runs/）
   - 紫 `#a371f7` = 控制與超參數（config、迴圈控制）
 - Python 程式碼用 `<pre class="py">`。
+- listing 的 `data-hot` 寫**原始碼行號**（與 figcaption 的 `檔名:起–迄` 同一套）；enhance.js 依 figcaption 起始行換算（2026-10-03 修正，之前會標錯行）。
 
 ## 環境（實測 2026-10-02）
 - Python 3.12.3、torch 2.11.0+cu128、torchvision 0.26.0+cu128、numpy 2.5.3、pandas 3.0.6。
@@ -65,6 +66,9 @@
 - ch01：pandas 基本語法（read_csv、d[col]、iloc、布林篩選、groupby、corr）、python -c 多行、np.isclose、one-hot、滑動視窗、相關係數（Pearson）、標準化（概念）、pandas DataFrame、`.values`、重複欄名後綴、`if __name__ == '__main__'`、0 起算 vs 1 起算欄號。
 - ch02：偽亂數（pseudo-random）與「每個函式庫各有獨立的亂數產生器」、cuDNN（deterministic／benchmark 旗標）、cuBLAS（一句帶過）、確定性演算法、docstring 與 `__doc__`、`torch.Generator`、`random_split`／`Subset`（indices）、duck typing、`int()` 截斷 vs 四捨五入、x（特徵）／y（目標）慣例、NumPy 整數陣列索引（fancy indexing）、`feat_idx`、全域產生器（沒指定 generator 時共用的那一個）、Dataset（只先粗略定義為「能 len() 與 [i] 的容器」，正式在 ch03）。
   ch02 圖號：圖 2.1 本章資料流、圖 2.2 random_split 打亂再切、圖 2.3 select_feat 欄位選擇。
+- ch03：tensor（PyTorch 多維陣列，可上 GPU、可算梯度）、float32 vs float64（4 vs 8 bytes、約 7 位有效數字）、`torch.FloatTensor` 會複製 vs `torch.from_numpy` 共用記憶體、繼承（class X(Dataset)）、`__init__`／`self`、特殊方法（dunder：`__getitem__`、`__len__`）、tuple、0 維 tensor、`.item()`、sampler（RandomSampler）、collate（batch 是 list）、`len(loader)` 無條件進位、`drop_last`、`num_workers`、行程（process）、DataLoader 的 shuffle 用 PyTorch 全域產生器（每 epoch 新順序、每次執行相同）、pinned（page-locked）memory、`non_blocking`、GPU 有自己的記憶體（搬上 GPU = 複製）、`enumerate` 與 test loader 必須不打亂、`reduction='mean'/'sum'`、「份量」（平均時的加權比例，刻意不叫權重以免和模型權重混淆）、系統性偏差 vs 雜訊、第 5 百分位／中位數、選擇偏差（winner's curse）、TensorDataset。
+  ch03 圖號：圖 3.1 Dataset／DataLoader 資料流、圖 3.2 三個 loader 的 batch 切法、圖 3.3 同一 checkpoint 的驗證 loss 量測分布（1.661 vs 2.0685）。
+  ch03 已完整解釋 1.661 vs 2.069（§3.5「三層」：份量放大 → valid 打亂造成雜訊 → 挑最小值）；後面章節回指 3.5 節即可。
 
 ## Baseline 實測（2026-10-03，與範例同一驗證集：random_split seed 5201314）
 - 抄第 4 天 tested_positive（第 101 欄）：MSE 1.313
