@@ -234,3 +234,13 @@ forward 時各層的形狀（valid 第一個 batch，shuffle=False，256 筆，�
 - 輸入 float64：`RuntimeError: mat1 and mat2 must have the same dtype, but got Double and Float`
 - 輸入 116 欄給 117 欄的模型：`RuntimeError: mat1 and mat2 shapes cannot be multiplied (4x116 and 117x16)`
 - 自訂 nn.Module 時沒呼叫 `super().__init__()` 就指定子模組：`AttributeError: cannot assign module before Module.__init__() call`
+
+## ch04 審稿補測（2026-10-03 本機）
+- 沒在工作的單元，用 train＋valid 合併的 2,699 筆判定（分開判定的單元數也一樣）：
+  - 初始化：第一層 2/16，0 的比例 46.6%；第二層 0/8。
+  - model.ckpt：第一層 10/16，0 的比例 81.5%；第二層 1/8。
+  - 拿掉 id：第一層 7/16，0 的比例 56.2%（train 和 valid 分開算也都是 56.2%）；第二層 2/8。
+- `My_Model(116)` 的 state_dict 載入 `My_Model(117)`，錯誤訊息最後兩行：`RuntimeError: Error(s) in loading state_dict for My_Model:`，接著 `size mismatch for layers.0.weight: copying a param with shape torch.Size([16, 116]) from checkpoint, the shape in current model is torch.Size([16, 117]).`（開頭是 tab）。
+- 沒呼叫 super().__init__() 時，traceback 最後三行指向 `torch/nn/modules/module.py` 第 2005 行的 `__setattr__`。
+- 動手做第 3 題在真正的終端機裡跑（tty），UserWarning 的兩行（`.../torch/nn/modules/loss.py:626: UserWarning: ...`，下一行是 `  return F.mse_loss(input, target, reduction=self.reduction)`）出現在 `with squeeze 1.7758` 和 `without      89.0963` 之間。輸出接到管線時，stdout 會被緩衝，警告反而出現在最前面。
+- 動手做第 4 題：`dead units 10 / 16`、`zero ratio 0.815`。

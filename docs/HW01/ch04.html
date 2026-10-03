@@ -817,12 +817,12 @@ Try out different model architectures by modifying the class below.
 <div class="tablewrap"><table>
 <thead><tr><th>模型</th><th>第一層：永遠輸出 0 的單元</th><th>第一層輸出中 0 的比例</th><th>第二層：永遠輸出 0 的單元</th></tr></thead>
 <tbody>
-<tr><td>剛初始化（訓練前）</td><td>2 / 16</td><td>46.6%（train）</td><td></td></tr>
+<tr><td>剛初始化（訓練前）</td><td>2 / 16</td><td>46.6%（train＋valid）</td><td>0 / 8</td></tr>
 <tr><td><strong>訓練好的 model.ckpt</strong></td><td><strong>10 / 16</strong></td><td>81.5%（train）、81.7%（valid）</td><td>1 / 8</td></tr>
-<tr><td>拿掉 id 後訓練的模型（第 2 章動手做）</td><td>7 / 16</td><td>56.2%<!-- TODO(本機實測): FACTS 沒註明 56.2% 是 train 還是 valid，請確認後補標 --></td><td>2 / 8</td></tr>
+<tr><td>拿掉 id 後訓練的模型（第 2 章動手做）</td><td>7 / 16</td><td>56.2%（train）、56.2%（valid）</td><td>2 / 8</td></tr>
 </tbody>
 </table></div>
-<p>（「永遠輸出 0」以訓練集加驗證集全部資料判定；初始化那一列的第二層沒有量。）</p>
+<p>（「永遠輸出 0」以訓練集加驗證集全部 2,699 筆資料判定；分開用訓練集或驗證集判定，單元數也完全相同。）</p>
 <p>訓練好的模型，第一層 16 個單元只剩 6 個在工作；第一層所有輸出裡超過八成是 0。剛初始化時只有 2 個這樣的單元，所以大部分是<strong>訓練過程中</strong>才變成這樣的。</p>
 <p>為什麼死了就回不來？訓練時，每個權重依「改動它能讓 loss 降多少」來調整（這個量叫梯度，第 5 章）。ReLU 在輸入為負時輸出固定是 0，輸入稍微變大或變小輸出都還是 0，所以對一個在所有資料上都輸入為負的單元來說，改動它的權重不會讓 loss 有任何變化，梯度是 0，權重就不再被資料推動。它停在那裡，參數還在，卻不貢獻任何東西。</p>
 <p>這帶出一個實際的意思：0.2 節算的「第一層 1,888 個參數」，在訓練好的模型裡有 10 列（10 個單元的權重與 bias）對輸出毫無影響，卻照樣存在 model.ckpt 裡、照樣佔參數量。<strong>參數量是模型能表達多複雜關係的上限（容量），不是它實際用上的量。</strong>拿掉 id 的模型死得少一些（7 / 16），但仍將近一半；單憑這兩組數字，還不能說 id 是唯一的原因。第 7 章換模型結構、調學習率時，這是值得回頭量的指標。</p>
@@ -893,7 +893,10 @@ Try out different model architectures by modifying the class below.
   <li><strong>第 40 行</strong>先用 <code>torch.load</code> 讀出存檔的字典，也就是 4.3 節那個「名字 → tensor」的 state_dict；再用 <code>load_state_dict</code> 依名字把每個 tensor 的數值複製進模型裡同名的參數。</li>
 </ul>
 <p>「依名字對應」決定了這兩行的前提：<strong>重建的模型必須和存檔時的模型有同樣的名字、同樣的形狀</strong>。名字由 model.py 的結構決定（<code>self.layers</code> 與 Sequential 裡的順序），形狀由 input_dim 與各層大小決定。predict.py 第 39 行為了拿到 input_dim，用的是 <code>x_train.shape[1]</code>：它必須和 train.py 一樣讀進訓練資料、切分、選特徵，才能算出 117——第 0 章 0.6 節說的「多餘的步驟」就是為了這一個數字，第 6 章會討論更好的做法。</p>
-<p>如果兩邊對不上，例如訓練時用了 116 欄、預測時用 117 欄建模型，<code>load_state_dict</code> 會在載入時報錯，指出哪個參數的形狀不符，而不會默默載入錯的權重。<!-- TODO(本機實測): 用 My_Model(116) 存一份 state_dict，再用 My_Model(117) 去 load_state_dict，記錄錯誤訊息的第一行（例如 RuntimeError: Error(s) in loading state_dict…）與指出 layers.0.weight 形狀不符的那一行，逐字。 --></p>
+<p>如果兩邊對不上，例如訓練時用了 116 欄、預測時用 117 欄建模型，<code>load_state_dict</code> 會在載入時報錯，指出哪個參數的形狀不符，而不會默默載入錯的權重。本機實測，把 <code>My_Model(input_dim=116)</code> 的 state_dict 載入 <code>My_Model(input_dim=117)</code>，錯誤訊息的最後兩行是：</p>
+<pre class="shell"><code>RuntimeError: Error(s) in loading state_dict for My_Model:
+	size mismatch for layers.0.weight: copying a param with shape torch.Size([16, 116]) from checkpoint, the shape in current model is torch.Size([16, 117]).</code></pre>
+<p>它指名道姓地說出是 <code>layers.0.weight</code>，也就是 4.3 節的名冊路徑：checkpoint 裡是 <code>(16, 116)</code>，目前的模型是 <code>(16, 117)</code>。只有第一層不符，因為 input_dim 只影響第一層每一列的長度。</p>
 <p>載入之後，predict.py 在 <code>predict()</code> 裡呼叫 <code>model.eval()</code>，再對每個 batch 做 <code>model(x)</code>——和 4.5 節的呼叫鏈完全相同，只是這次 forward 裡用的是填回去的權重。預測迴圈與 pred.csv 的格式是第 6 章的內容。</p>
 
 <div class="note"><h4>現在的做法：載入時把裝置與安全性寫清楚</h4>
@@ -916,8 +919,17 @@ for name, p in m.named_parameters():
 print(len(m.layers), sum(p.numel() for p in m.layers[1].parameters()))
 print(list(m.state_dict().keys()))
 print(sum(p.numel() for p in My_Model(input_dim=116).parameters()))
-"</code></pre>
-  對照 4.3 節：前六行是六個參數，名字從 <code>layers.0.weight</code> 到 <code>layers.4.bias</code>，第一個的形狀是 <code>(16, 117)</code>、1872 個，全部是 <code>torch.float32</code>、<code>True</code>；接著一行是 <code>5 0</code>（Sequential 有 5 個元件、ReLU 沒有參數）；再來是和 named_parameters 同順序的六個 key；最後一行是 116 欄模型的參數總數 2017。<!-- TODO(本機實測): 本題逐字輸出 --></li>
+"
+layers.0.weight (16, 117) 1872 torch.float32 True
+layers.0.bias (16,) 16 torch.float32 True
+layers.2.weight (8, 16) 128 torch.float32 True
+layers.2.bias (8,) 8 torch.float32 True
+layers.4.weight (1, 8) 8 torch.float32 True
+layers.4.bias (1,) 1 torch.float32 True
+5 0
+['layers.0.weight', 'layers.0.bias', 'layers.2.weight', 'layers.2.bias', 'layers.4.weight', 'layers.4.bias']
+2017</code></pre>
+  對照 4.3 節：前六行是六個參數，第一個的形狀是 <code>(16, 117)</code>、1872 個，全部是 <code>torch.float32</code>、<code>True</code>；<code>5 0</code> 是 Sequential 有 5 個元件、ReLU 沒有參數；再來是和 named_parameters 同順序的六個 key；最後一行是 116 欄模型的參數總數 2017。</li>
   <li><strong>忘了 super().__init__()</strong>：
 <pre class="shell"><code>$ ../.venv/bin/python -c "
 import torch.nn as nn
@@ -926,7 +938,11 @@ class Bad(nn.Module):
         self.layers = nn.Linear(117, 16)
 Bad()
 "</code></pre>
-  會印出一段 Traceback，錯誤是 4.2 節那則 <code>AttributeError: cannot assign module before Module.__init__() call</code>。在 <code>self.layers = …</code> 之前補一行 <code>super().__init__()</code>，再跑一次就不會有任何輸出——物件順利建好了。</li>
+  會印出一段 Traceback，最後三行是：
+<pre class="shell"><code>  File ".../torch/nn/modules/module.py", line 2005, in __setattr__
+    raise AttributeError(
+AttributeError: cannot assign module before Module.__init__() call</code></pre>
+  （路徑的開頭依你的環境而不同，這裡省略成 <code>...</code>。）錯誤是在 <code>__setattr__</code> 裡丟出的，正是 4.2 節說的「指定屬性時登記」那一步。在 <code>self.layers = …</code> 之前補一行 <code>super().__init__()</code>，再跑一次就不會有任何輸出——物件順利建好了。</li>
   <li><strong>逐層形狀與 squeeze 的對照</strong>：
 <pre class="shell"><code>$ ../.venv/bin/python -c "
 import pandas as pd, torch
@@ -953,15 +969,30 @@ with torch.no_grad():
     print(tuple(pred.shape), torch.equal(pred, model.forward(x)))
     print('with squeeze', round(mse(pred, y).item(), 4))
     print('without     ', round(mse(model.layers(x), y).item(), 4))
-"</code></pre>
-  <code>True</code>、<code>0</code> 之後，前五行依序是 Linear、ReLU、Linear、ReLU、Linear 與圖 4.2 的五個形狀；下一行是 <code>(256,)</code> 與 <code>True</code>（<code>model(x)</code> 和 <code>model.forward(x)</code> 相同）；最後兩行是 4.6 節的 1.7758 與 89.0963。最後一行算 loss 時，stderr 會多出 4.6 節那則 UserWarning。<code>next(iter(…))</code> 是「只從 loader 拿第一個 batch」的寫法；<code>with torch.no_grad():</code> 與 <code>model.eval()</code> 和第 3 章動手做第 3 項一樣，是只做預測、不訓練時的固定寫法（第 5 章）。<!-- TODO(本機實測): 本題逐字輸出（含 UserWarning 在 stderr 的實際樣子與出現位置） --></li>
+"
+True
+0
+Linear (256, 16)
+ReLU (256, 16)
+Linear (256, 8)
+ReLU (256, 8)
+Linear (256, 1)
+(256,) True
+with squeeze 1.7758
+.../torch/nn/modules/loss.py:626: UserWarning: Using a target size (torch.Size([256])) that is different to the input size (torch.Size([256, 1])). This will likely lead to incorrect results due to broadcasting. Please ensure they have the same size.
+  return F.mse_loss(input, target, reduction=self.reduction)
+without      89.0963</code></pre>
+  <code>True</code>、<code>0</code> 之後，前五行是圖 4.2 的五個形狀；<code>(256,) True</code> 表示 <code>model(x)</code> 和 <code>model.forward(x)</code> 相同；最後是 4.6 節的 1.7758 與 89.0963。UserWarning 的兩行來自 stderr，出現在 <code>with squeeze</code> 和 <code>without</code> 之間：最後一行的 loss 要先算完才印得出來，警告在計算的當下就印了。如果把輸出接到管線或檔案（例如加 <code>| cat</code>），stdout 會被緩衝，警告反而跑到最前面。加上 <code>2&gt;/dev/null</code> 再跑一次，警告就完全消失，這就是 4.6 節說的「唯一的線索也看不到」。<code>next(iter(…))</code> 是「只從 loader 拿第一個 batch」的寫法；<code>with torch.no_grad():</code> 與 <code>model.eval()</code> 和第 3 章動手做第 3 項一樣，是只做預測、不訓練時的固定寫法（第 5 章）。</li>
   <li><strong>數一數沒在工作的單元</strong>：在第 3 項的 Python 程式碼最後、收尾的 <code>"</code> <strong>之前</strong>加這幾行再跑（縮排從行首開始）：
 <pre class="py"><code>xs = torch.cat([COVID19Dataset(x_tr).x, COVID19Dataset(x_va).x]).cuda()
 with torch.no_grad():
     h1 = model.layers[1](model.layers[0](xs))
 print('dead units', (h1 == 0).all(dim=0).sum().item(), '/ 16')
 print('zero ratio', round((h1 == 0).float().mean().item(), 3))</code></pre>
-  <code>torch.cat</code> 把 train 的 2160 列與 valid 的 539 列上下接成一個 (2699, 117) 的 tensor；<code>h1</code> 是第一層 ReLU 之後的輸出，形狀 (2699, 16)。<code>(h1 == 0).all(dim=0)</code> 對每個單元（每一欄）問「是不是所有資料都等於 0」，加總就是永遠輸出 0 的單元數，應該是 4.7 節的 10。第二行是所有輸出中 0 的比例；這裡把 train 與 valid 合在一起算，所以會介於 4.7 節的 81.5% 與 81.7% 之間。<!-- TODO(本機實測): 本題逐字輸出（train+valid 合併的 zero ratio 實際值） --></li>
+  <code>torch.cat</code> 把 train 的 2160 列與 valid 的 539 列上下接成一個 (2699, 117) 的 tensor；<code>h1</code> 是第一層 ReLU 之後的輸出，形狀 (2699, 16)。<code>(h1 == 0).all(dim=0)</code> 對每個單元（每一欄）問「是不是所有資料都等於 0」，加總就是永遠輸出 0 的單元數。前面那段輸出照舊，最後多出兩行：
+<pre class="shell"><code>dead units 10 / 16
+zero ratio 0.815</code></pre>
+  10 就是 4.7 節的 10；0.815 是 train 與 valid 合在一起算的 0 的比例，因為 train 佔了八成（2160 筆），結果和 train 的 81.5% 相同。</li>
 </ol>
 </div>
 
