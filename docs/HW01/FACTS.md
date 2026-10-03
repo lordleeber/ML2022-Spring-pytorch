@@ -579,3 +579,53 @@ train_data size: (2160, 118)
 | 時間切分，early stop 100 | 1.3602 | 0.5149 | 37 | 5.5735 | 27.1906 |
 
   - 樹的預測不會超出訓練時見過的答案範圍（訓練集最大 30.3046），測試集第 4 天最大 46.95，所以樹在測試集上無法外推。
+
+## 附錄素材（2026-10-03 本機整理；行號都已對照 HW01/ 原檔核對）
+附錄（appendix.html）照大綱有四部分：名詞對照、超參數速查、函式速查、指令速查。使用者另外要求加兩部分：**關鍵數字一覽**、**repo 問題清單**。附錄不需要新的實測，內容全部取自 ch00–ch07 與本檔；每一項都要連回書中第一次講到它的章節（用 `chNN.html#id` 錨點，錨點要實際存在）。
+
+### repo 問題清單（原程式的問題，都已在書中講過）
+依影響分三級。「位置」已核對；「書中出處」是大致位置，寫附錄時要用 grep 確認正確的節號與錨點。
+
+**一、會影響結果的**
+| # | 問題 | 位置 | 書中出處 |
+|---|---|---|---|
+| 1 | id 被當成特徵：select_all=True 時 feat_idx 是 range(117)，包含第 0 欄 id；id 數值大到 2699，在第一層的貢獻是其他欄的約 400 倍，梯度約 108 倍；測試集的 id 是另一套 0–1077 | utils.py:32 | ch01 §1.6、ch02 §2.4、ch04 §4.7、ch05 §5.4 |
+| 2 | 印出的 valid loss 偏低：valid_loader shuffle=True，加上各 batch 平均再平均（256/256/27），又從約 1900 個量測裡挑最小，印出 1.661 但真實 MSE 是 2.069 | train.py:123、train.py:81（以及 train.py:85 挑最小） | ch03 §3.5、ch05 §5.7（第 1483 個 epoch 是幸運分組） |
+| 3 | train loss 也是各 batch 平均再平均，而且一邊更新一邊記錄 | train.py:67 | ch03 §3.5、ch05 §5.5 |
+| 4 | 沒有標準化：學習率只能壓到 1e-5；設定對 seed 敏感（量法修正版 seed 2 是 12.80；原版 train.py seed 2 的真實 MSE 是 13.24） | （原程式沒有這一步） | ch05 §5.4/§5.10、ch07 §7.5/§7.11 |
+| 5 | 隨機切分不符合滑動視窗的時間序列資料：驗證集會偷看到相鄰日子，挑出的模型偏向過擬合 | train.py:106（utils.py:17–23） | ch01 §1.6、ch06 §6.9、ch07 §7.10 |
+
+**二、潛在錯誤（目前碰巧沒出事，換個情況就會出錯）**
+| # | 問題 | 位置 | 書中出處 |
+|---|---|---|---|
+| 6 | save_pred 開檔沒有加 `newline=''`：csv.writer 一律寫 CRLF，在 Windows 上會變成 `\r\r\n` | utils.py:41 | ch06 §6.8 |
+| 7 | save_pred 用 enumerate 的 i 當 id，不讀測試集的 id 欄；剛好成立，是因為測試集的 id 正好是 0–1077 依序，而且 test loader 沒有打亂 | utils.py:44–45 | ch06 §6.6、ch03 §3.4 |
+| 8 | predict.py 為了拿到 input_dim 而重讀訓練資料並切分：預測依賴訓練資料；117 是執行當下重算的，跟訓練時用的特徵之間沒有任何檢查（欄位換了不會報錯） | predict.py:25–34、predict.py:39 | ch00 §0.6、ch04 §4.8、ch06 §6.2 |
+| 9 | checkpoint 只存 state_dict，沒有存 input_dim、feat_idx、標準化統計量 | train.py:88 | ch06 §6.3、ch07 §7.12 |
+| 10 | config.py 被 import 時會印出 `True` 和 `0`（每支程式的 stdout 開頭都多兩行） | config.py:6–7 | ch00 §0.4 |
+| 11 | SummaryWriter 從頭到尾沒有呼叫 close()/flush() | train.py:37 | ch05 §5.9 |
+
+**三、註解、文件與遺留寫法（不影響執行）**
+| # | 問題 | 位置 | 書中出處 |
+|---|---|---|---|
+| 12 | 註解 `validation_size = train_size * valid_ratio` 算錯對象：實際是切分前的全部 2699 × 0.2 = 539，不是 2160 × 0.2 | config.py:12 | ch00 §0.4、ch02 §2.3 |
+| 13 | docstring「Selects useful features」其實什麼都沒挑 | utils.py:27 | ch02 §2.4 |
+| 14 | select_all=False 的佔位值 [0,1,2,3,4] 是 id 加 AL、AK、AZ、AR 四州，全部不是有用的特徵 | utils.py:34 | ch02 §2.4 |
+| 15 | docstring 寫成 `""""`（4 個引號），`__doc__` 開頭多一個 `"` | utils.py:8 | ch02 §2.2 |
+| 16 | same_seed 沒有設定 Python 內建 random；cuDNN 兩行在 HW01 沒有作用對象；cuda seed 那兩行跟 torch.manual_seed 重複 | utils.py:7–14 | ch02 §2.2 |
+| 17 | 重複 `from tqdm import tqdm`；import 了 random_split 但沒用到 | train.py:9、train.py:21、train.py:12 | ch02 §2.3（random_split）；tqdm 重複見本檔「程式事實」 |
+| 18 | `.detach()` 多餘（.item() 本來就脫離計算圖；no_grad 裡本來就沒有計算圖） | train.py:61、train.py:65、predict.py:17 | ch05 §5.5、ch06 §6.5 |
+| 19 | 舊式寫法：`torch.FloatTensor`、`super(My_Model, self)`、先 isdir 再 mkdir | data_loader.py:18–19、model.py:12、train.py:40–41 | ch03 §3.2、ch04 §4.2、ch05 §5.7 |
+| 20 | Jupyter 筆記本拆檔留下的字串 `"""# Dataset"""`、`"""# Training Loop"""` 等 | data_loader.py:5、train.py:24、model.py:4–7 | ch03 §3.2、ch04 §4.1 |
+
+### 關鍵數字一覽（建議分組；數字都已在書中出現）
+- 資料：train 2699 × 118、test 1078 × 117；切分 2160／539（int 截斷）；按時間切分 2143／556；每個 epoch 的 batch 數：train 9、valid 3、test 5（最後一批 112／27／54）；缺號 id 2239。
+- 模型：117→16→8→1，2,033 個參數（第一層 1,888，佔 92.9%）；model.ckpt 11,005 bytes；初始化範圍 ±1/√in（第一層 0.0925）。
+- 原版訓練：34.2 秒；最佳印出 1.6611，第 1483 個 epoch；第 1883 個 epoch early stop；存檔 49 次；第 1 個 batch 的 loss 508.85；第 1 個 epoch train 134.2442 / valid 107.2155；TensorBoard 最後的 step 是 16947 = 1883 × 9。
+- 真實 MSE（539 筆一次算完）：原版 DNN 2.0685（印出 1.661）；拿掉 id 1.2403（ch02 的那次，印出 0.982）；抄第 4 天 1.313；線性迴歸 4 欄 1.303、116 欄 1.166、117 欄 1.172；量法修正後的原版 1.7174。
+- 偏差的證據：同一個 checkpoint 換 200 種分組，範圍 1.7069–2.8467；第 1483 個 epoch 的分組在 1883 組裡排第 7；lr 1e-6 的訓練也選中第 1483 個 epoch。
+- 模型內部：第一層 10/16 個單元沒在工作；id 欄的 |w·x| 約為其他欄的 400 倍；第一步更新時 id 欄的梯度約為其他欄的 108 倍，權重移動 0.0869，幾乎等於整個初始化範圍。
+- 學習率與 momentum：lr 1e-4 讓 16 個單元全死，只輸出常數 9.731，真實 MSE 44.51；lr 1e-6 是 2.2601；momentum 0 是 2.9992。
+- 測試集：第 4 天陽性率平均 15.17、最大 46.95（訓練集 9.77、30.30）；61 筆預測超過 30.3046；pred.csv 1079 行、15,799 bytes、行尾 CRLF；打亂 id 後 MSE(預測, 第 4 天) 從 1.0045 變成 120.0056。
+- 改良（ch07，隨機切分）：拿掉 id 1.1848 → 標準化＋lr 1e-3 1.0715 → ＋wd 1e-2 1.041 → 64-32 架構 0.9805（4 個 seed 平均）。按時間切分：64-32 是 1.7336，corr DNN 1.1430，線性 corr 1.1334。LightGBM 隨機切分 1.28、時間切分 1.36–1.38，預測最大只到約 28。
+- Kaggle 基準線（測試集 MSE，**不能**跟上面的驗證集數字比）：simple 2.28371、medium 1.49430、strong 1.05728、boss 0.86161。
