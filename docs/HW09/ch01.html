@@ -620,7 +620,9 @@ opt = ck[\"optimizer_state_dict\"]
 print(list(opt.keys()), len(opt[\"state\"]))
 print({k: v for k, v in opt[\"param_groups\"][0].items() if k != \"params\"})
 "</code></pre>
-<p>這段只讀檔、印內容，沒有任何 <code>.cuda()</code>。如果你的機器沒有 GPU、而 <code>torch.load</code> 報錯說找不到 CUDA，就把它改成 <code>torch.load(\"checkpoint.pth\", map_location=\"cpu\")</code>，強制把張量讀到 CPU。<!-- TODO(本機實測): 在沒有 GPU 的狀態下（例如 CUDA_VISIBLE_DEVICES="" ../.venv/bin/python -c "..."）跑這段，確認 torch.load 不加 map_location 也能載入；如果 checkpoint 裡的張量是存成 CUDA 張量，沒有 GPU 時會報錯，要改寫成 torch.load("checkpoint.pth", map_location="cpu") --> 實測輸出：</p>
+<p>這段程式裡沒有 <code>.cuda()</code>，但<strong>還是需要 GPU</strong>：checkpoint 裡的張量當初是在 GPU 上存的，記錄的裝置是 <code>cuda:0</code>，<code>torch.load</code> 預設會把它們放回原來的裝置。實測用 <code>CUDA_VISIBLE_DEVICES=""</code> 假裝沒有 GPU 再跑，會停在 <code>torch.load</code>：</p>
+<pre class="shell"><code>RuntimeError: Attempting to deserialize object on a CUDA device but torch.cuda.is_available() is False. If you are running on a CPU-only machine, please use torch.load with map_location=torch.device('cpu') to map your storages to the CPU.</code></pre>
+<p>錯誤訊息已經給了解法：改成 <code>torch.load(\"checkpoint.pth\", map_location=\"cpu\")</code>，強制把張量讀到 CPU，實測這樣就能在沒有 GPU 時載入。<code>explain_cnn.py:289</code> 沒有加 <code>map_location</code>，這也是 Part 1 離不開 GPU 的原因之一。有 GPU 時的實測輸出：</p>
 <pre class="shell"><code>dict ['epoch', 'model_state_dict', 'optimizer_state_dict']  «1»
 epoch 208  «2»
 81 ['cnn.0.weight', 'cnn.0.bias', 'cnn.1.weight', 'cnn.1.bias', 'cnn.1.running_mean', 'cnn.1.running_var']  «3»
@@ -1028,7 +1030,7 @@ for i in range(10):
 <p>第 2 名的機率除了圖 2 是 0.0007，其他圖四捨五入到小數 4 位都是 0.0000。圖 1、6、8 的 1 − p 是 0：它們的機率在 float32 裡<strong>剛好等於 1</strong>。float32 只有大約 7 位有效數字，緊鄰 1 的下一個比較小的數是 1 − 2<sup>−24</sup> ≈ 1 − 6 × 10<sup>−8</sup>；真正的 1 − p 比這個間距還小時，就只能存成 1。表裡的 1.19e-07 是 2 × 2<sup>−24</sup>，也就是只差兩格。</p>
 <p>為什麼 logit 差一點點，機率就差這麼多？softmax 的分子是 e<sup>z</sup>，所以兩個類別的機率比是 e 的「logit 差」次方。第二名分到的機率，大約是第一名的 e<sup>−差</sup> 倍。用表上的數字手算：</p>
 <div class="eq">圖 2：e<sup>−7.262</sup> ≈ 0.0007，和表上第 2 名 Dessert 的 0.0007 一致<br>圖 6：e<sup>−37.930</sup> ≈ 3 × 10<sup>−17</sup>，遠小於 float32 在 1 附近的間距 6 × 10<sup>−8</sup>，所以 p 存成剛好 1</div>
-<p>圖 2 的 1 − p 是 1.38e-03，大約是第 2 名 0.0007 的兩倍：剩下的一半由其他 9 個類別分掉。即使是最沒把握的圖 2，第一名也領先第二名 7 個以上的 logit；而 logit 差 7 就代表機率差上千倍（e<sup>7</sup> ≈ 1,100）。畫成長條圖：</p>
+<p>圖 2 的 1 − p 是 1.38e-03，大約是第 2 名 0.0007 的兩倍：剩下的一半由其他 9 個類別分掉，其中第 3 名 Vegetable/Fruit 就有約 0.0007。即使是最沒把握的圖 2，第一名也領先第二名 7 個以上的 logit；而 logit 差 7 就代表機率差上千倍（e<sup>7</sup> ≈ 1,100）。畫成長條圖：</p>
 
 <figure class="fig">
 <svg viewBox="0 0 900 400" role="img" aria-label="10 張圖第一名與第二名的 logit 差長條圖：最小是圖 2 的 7.262，最大是圖 6 的 37.930，其餘在 12.8 到 24.3 之間；虛線標出 logit 差 7 的位置">
@@ -1077,7 +1079,7 @@ for i in range(10):
 </figure>
 
 <h3 id="batch-effect">同一張圖，logit 的小數第 3 位會變</h3>
-<p>本書引用 logit 時都會註明「10 張一起算」，原因是：<strong>同一張圖，跟誰一起算，logit 的小數第 3 位會不一樣</strong>。實測圖 0 的標籤 logit，10 張一起算是 10.3332，單獨一張算是 10.3312。<!-- TODO(本機實測): FACTS 記「差 8.3e-03」，但 10.3332 − 10.3312 = 0.0020；請核對兩個 logit 的完整數值與差值 -->這不是 bug：GPU 會依批次大小選用不同的卷積演算法，浮點數的加總順序不同，尾數就不同（浮點數加法有捨入誤差，(a + b) + c 不一定等於 a + (b + c)）。同一個批次重算兩次則逐位元相同。第 5 章 Integrated Gradients 的表裡也會出現這幾個 logit，那邊是一張一張算的，所以和本節的數字在小數第 2–3 位對不上（例如圖 3：本節 9.011，第 5 章 9.024），兩邊都是對的。</p>
+<p>本書引用 logit 時都會註明「10 張一起算」，原因是：<strong>同一張圖，跟誰一起算，logit 的小數第 3 位會不一樣</strong>。實測圖 0 的標籤 logit，10 張一起算是 10.3332，單獨一張算是 10.3312。完整數值是 10.333248 與 10.331242，差 0.0020；把 11 個 logit 都比一遍，差最多的一個是 0.0083，10 張圖各自單獨算，每張的 11 個 logit 最多差 0.0076 到 0.0505。這不是 bug：GPU 會依批次大小選用不同的卷積演算法，浮點數的加總順序不同，尾數就不同（浮點數加法有捨入誤差，(a + b) + c 不一定等於 a + (b + c)）。同一個批次重算兩次則逐位元相同。第 5 章 Integrated Gradients 的表裡也會出現這幾個 logit，那邊是一張一張算的，所以和本節的數字在小數第 2–3 位對不上（例如圖 3：本節 9.011，第 5 章 9.024），兩邊都是對的。</p>
 
 <div class="warn"><h4>這 10 張圖是訓練集的圖嗎？只能推測</h4>
 <p>一個在 HW3 訓練出來的模型，對 10 張圖全對、而且幾乎都是 100% 確定，很容易讓人懷疑這些圖本來就在它的訓練集裡，被它「背」過。間接的線索有兩個：程式把 dataset 變數取名為 <code>train_set</code>、<code>train_paths</code>（<code>explain_cnn.py:293–294</code>，原版 Colab 也叫 <code>train_set</code>）；以及模型極度自信。但是<strong>沒有直接證據</strong>：變數名稱可能只是沿用 HW3 的寫法，repo 裡也沒有 HW3 的訓練集清單可以比對。本書把它當作推測，不當作事實。不論圖從哪來，「模型對這 10 張圖極度自信」都是實測確認的，後面各章依賴的是這一點。</p>
@@ -1117,7 +1119,7 @@ for i in range(10):
 
 <h2 id="quiz">自我測驗</h2>
 <details class="quiz"><summary>1. 如果在 <code>food/</code> 裡多放一張 <code>10_10.jpg</code>（Vegetable/Fruit），用 <code>my_key</code> 排序後它會是第幾張？如果把第 53 行改成普通的 <code>imgnames.sort()</code> 呢？</summary>
-<p>用 <code>my_key</code>：它的 key 是 10 × 1,000,000 + 10 = 10,000,010，比其他 10 張都大，排在最後，成為圖 10；圖 0–9 不受影響，<code>labels</code> 變成 <code>[0, 1, 1, 2, 2, 3, 5, 6, 8, 9, 10]</code>。用字串排序：<code>10_10.jpg</code> 和 <code>1_1.jpg</code> 比到第二個字元時，<code>'0'</code> 比 <code>'_'</code> 小，所以它會排在 <code>0_0.jpg</code> 之後、<code>1_1.jpg</code> 之前，變成圖 1，原本的圖 1–9 全部往後挪一號，題目的編號就全錯了。（由 1.3 節的排序規則推得，本書沒有實際放檔案去跑。）</p></details>
+<p>用 <code>my_key</code>：它的 key 是 10 × 1,000,000 + 10 = 10,000,010，比其他 10 張都大，排在最後，成為圖 10；圖 0–9 不受影響，<code>labels</code> 變成 <code>[0, 1, 1, 2, 2, 3, 5, 6, 8, 9, 10]</code>。用字串排序：<code>10_10.jpg</code> 和 <code>1_1.jpg</code> 比到第二個字元時，<code>'0'</code> 比 <code>'_'</code> 小，所以它會排在 <code>0_0.jpg</code> 之後、<code>1_1.jpg</code> 之前，變成圖 1，原本的圖 1–9 全部往後挪一號，題目的編號就全錯了。（實測：在 <code>food/</code> 的複本裡多放一張 <code>10_10.jpg</code>，<code>my_key</code> 版把它排在第 10 個、<code>labels</code> 是 <code>[0, 1, 1, 2, 2, 3, 5, 6, 8, 9, 10]</code>；改成 <code>imgnames.sort()</code> 之後它排在第 1 個，<code>labels</code> 變成 <code>[0, 10, 1, 1, 2, 2, 3, 5, 6, 8, 9]</code>。）</p></details>
 <details class="quiz"><summary>2. 如果把 checkpoint 改存成只有 <code>model.state_dict()</code>，檔案大約多大？<code>explain_cnn.py</code> 要改哪一行才讀得進去？</summary>
 <p>大約 56.7 MB（model_state_dict 的 56,671,876 bytes，再加上一點存檔格式的開銷），約原本的三分之一（由 1.2 節的表推得）。第 290 行 <code>checkpoint['model_state_dict']</code> 要改成直接用 <code>checkpoint</code>，因為讀回來的已經是 state_dict 本身，不再是外面包一層的 dict。</p></details>
 <details class="quiz"><summary>3. 圖 2 的 p(標籤) 是 0.9986，第 2 名 Dessert 是 0.0007。為什麼 1 − p 是 1.38e-03，而不是 0.0007？</summary>
