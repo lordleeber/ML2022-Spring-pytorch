@@ -764,7 +764,7 @@ id,tested_positive  «3»
 <p>這三樣都被 <code>HW01/.gitignore</code> 排除，不會被 git 追蹤。這個檔案只有三行（<code>cat .gitignore</code> 可看）：<code>models/*</code>、<code>runs/*</code>、<code>*.csv</code>。注意最後一條 <code>*.csv</code> 照字面也涵蓋 <code>covid.train.csv</code> 與 <code>covid.test.csv</code>，但這兩個資料檔在加上這條規則之前就已經 commit 進 repo，git 會繼續追蹤已追蹤的檔案，所以 clone 下來資料檔都在；被擋掉的只有新產生的 <code>pred.csv</code>。</p>
 <p>想看訓練曲線，在 <code>HW01/</code> 裡啟動 TensorBoard，再用瀏覽器打開它印出的網址（預設 <code>http://localhost:6006</code>）：</p>
 <pre class="shell"><code>$ ../.venv/bin/tensorboard --logdir runs</code></pre>
-<p>你會看到 <code>Loss/train</code> 與 <code>Loss/valid</code> 兩條曲線：驗證 loss 從第 1 個 epoch 的 107 急降，第 100 個 epoch 已到 4.28，之後在 2～4 之間上下震盪、緩慢走低（例如第 300 個 epoch 2.63、第 1000 個 epoch 3.86；這幾個精確數字是從 stdout 的 log 查的，例如 <code>grep "Epoch \[300/"</code>，TensorBoard 上則把游標停在曲線上看）。這兩條曲線怎麼被寫進去，第 5 章會講。</p>
+<p>你會看到 <code>Loss/train</code> 與 <code>Loss/valid</code> 兩條曲線：驗證 loss 從第 1 個 epoch 的 107 急降，第 100 個 epoch 已到 4.28，之後在 2～4 之間上下震盪、緩慢走低（例如第 300 個 epoch 2.63、第 1000 個 epoch 3.86；這幾個精確數字是從 stdout 的 log 查的，例如 <code>grep "Epoch \[300/"</code>，TensorBoard 上則把游標停在曲線上看）。TensorBoard 會一直佔住這個終端機，看完回到終端機按 Ctrl+C 結束，再接著執行下一個指令。這兩條曲線怎麼被寫進去，第 5 章會講。</p>
 
 <div class="lab"><h4>動手做：親手驗證本章的三個說法</h4>
 <p>以下指令都在 <code>HW01/</code> 裡執行。每一個都只要幾秒到半分鐘，做完你就不必相信本書，而是相信自己的終端機。</p>
