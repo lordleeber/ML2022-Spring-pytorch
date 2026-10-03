@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>附錄　名詞對照與速查 — HW01 COVID-19 確診率預測</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW01 讀碼教材</p>
+  <h1>附錄　名詞對照與速查</h1>
+  <p class="chap-lead">讀完正文之後回來查東西的地方：名詞、超參數、函式、指令、關鍵數字，以及讀程式時挖出的 20 個 repo 問題。每一列都連回書中講它的那一節。附錄沒有新的實測，所有內容與數字都取自第 0～7 章與目錄頁。</p>
+</header>
+<main>
+
+<div class="note"><h4>怎麼用這份附錄</h4>
+<ul>
+  <li><strong>六個部分</strong>：A.1 名詞對照、A.2 超參數速查、A.3 函式速查、A.4 指令速查、A.5 關鍵數字一覽、A.6 repo 問題清單。上方的目錄可以直接跳過去；找特定的字，用瀏覽器的頁內搜尋（Ctrl+F）最快。</li>
+  <li><strong>出處欄的連結</strong>寫成節號，例如「3.5」就是第 3 章 3.5 節，「第 5 章測驗」是該章最後的自我測驗，「目錄頁」是〈先說在前面〉那一節。名詞連到它<em>第一次被解釋</em>的地方；同一列有兩個連結時，第一個是第一次出現，第二個是講得最完整的地方。</li>
+  <li><strong>數字要分清兩種</strong>：訓練時「印出的 valid loss」和把 checkpoint 拿到驗證集的全部 539 筆上一次算完的「真實 MSE」。原版印出 1.661，真實是 2.0685（第 3 章 3.5 節）。A.5 把兩者分欄列；不同量法的數字不要互相比。</li>
+  <li><strong>指令</strong>都逐字取自書中，並註明在哪個目錄執行。大部分在 <code>HW01/</code>，Python 一律是 <code>../.venv/bin/python</code>（第 0 章 0.3 節在 repo 根目錄建立的 venv）。</li>
+</ul>
+</div>
+
+<h2 id="glossary">A.1　名詞對照</h2>
+<p>依主題分成六組，組內大致依書中出現的順序排列。「說明」只是一句提示，完整的解釋請點出處。</p>
+<h3>任務、評估與實驗方法</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>中文</th><th>英文</th><th>說明</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>迴歸</td><td>regression</td><td>輸出是連續的實數（第 5 天的陽性率），不是類別</td><td><a href="ch00.html#task">0.1</a></td></tr>
+<tr><td>均方誤差</td><td>MSE, Mean Squared Error</td><td>預測與真實值的差平方後取平均，越小越好；作業的評分指標</td><td><a href="ch00.html#task">0.1</a></td></tr>
+<tr><td>Kaggle、基準線</td><td>Kaggle, baseline</td><td>Kaggle 是放作業排行榜的競賽網站；助教設了 simple／medium／strong／boss 四條分數門檻</td><td><a href="ch00.html#task">0.1</a></td></tr>
+<tr><td>public／private 排行榜</td><td>public / private leaderboard</td><td>Kaggle 把測試集分成兩半，比賽期間只公布 public 那一半的分數</td><td><a href="ch07.html#hints">7.2</a></td></tr>
+<tr><td>線性迴歸、最小平方法</td><td>linear regression, least squares</td><td>線性迴歸：預測＝各欄乘上權重再相加，加一個常數；最小平方法一次解出讓訓練資料 MSE 最小的那組權重，不必一步步訓練</td><td><a href="index.html#now">目錄頁</a></td></tr>
+<tr><td>基準（baseline）</td><td>baseline</td><td>先建立的簡單方法（例如抄第 4 天、線性迴歸），用來判斷模型的數字是好是壞</td><td><a href="index.html#now">目錄頁</a></td></tr>
+<tr><td>訓練集／驗證集／測試集</td><td>training / validation / test set</td><td>模型只從訓練集學；驗證集有答案但不拿來學，專門打分數；測試集是沒有答案的 1078 筆</td><td><a href="ch00.html#config">0.4</a></td></tr>
+<tr><td>超參數</td><td>hyperparameter</td><td>由人決定、不靠訓練學出來的設定（config 字典裡那些）</td><td><a href="ch00.html#config">0.4</a></td></tr>
+<tr><td>亂數種子</td><td>seed</td><td>亂數產生器的起點；固定它，每次抽出的亂數序列就相同</td><td><a href="ch00.html#config">0.4</a></td></tr>
+<tr><td>epoch</td><td>epoch</td><td>把整個訓練集看過一遍</td><td><a href="ch00.html#train">0.5</a></td></tr>
+<tr><td>batch</td><td>batch</td><td>一次餵給模型的一小批資料（HW01 是 256 筆）</td><td><a href="ch00.html#train">0.5</a></td></tr>
+<tr><td>early stopping</td><td>early stopping</td><td>驗證 loss 連續好幾個 epoch 沒有創新低就停止訓練</td><td><a href="ch00.html#train">0.5</a>、<a href="ch05.html#earlystop">5.8</a></td></tr>
+<tr><td>權重／參數</td><td>weights / parameters</td><td>模型裡由訓練學出來的那些數字</td><td><a href="ch00.html#artifacts">0.7</a></td></tr>
+<tr><td>checkpoint</td><td>checkpoint (.ckpt)</td><td>存到磁碟上的模型權重檔，HW01 是 models/model.ckpt</td><td><a href="ch00.html#artifacts">0.7</a></td></tr>
+<tr><td>推論</td><td>inference</td><td>拿訓練好的模型只做 forward 產生預測，不算梯度、不改權重</td><td><a href="ch06.html#where">6.1</a></td></tr>
+<tr><td>量法修正</td><td>fixed validation measurement</td><td>驗證集不打亂，累加每個 batch 的平方誤差總和、最後除以總筆數 539，印出的就是真實 MSE；第 7 章的實驗都用這個量法</td><td><a href="ch03.html#bias">3.5</a>、<a href="ch03.html#lab">3.6</a></td></tr>
+<tr><td>系統性偏差／雜訊</td><td>bias / noise</td><td>每次都往同一方向偏 vs. 每次上下亂跳但平均在真值附近</td><td><a href="ch03.html#bias">3.5</a></td></tr>
+<tr><td>選擇偏差（贏家的詛咒）</td><td>selection bias, winner's curse</td><td>從一堆有雜訊的量測裡挑最小的，挑中的數字系統性偏低</td><td><a href="ch03.html#bias">3.5</a></td></tr>
+<tr><td>百分位、中位數</td><td>percentile, median</td><td>由小排到大，有 5% 比它小的值是第 5 百分位；排在正中間的是中位數</td><td><a href="ch03.html#bias">3.5</a></td></tr>
+<tr><td>變異數</td><td>variance</td><td>每個值和平均的差平方後再平均；也等於「每筆都猜平均」的 MSE</td><td><a href="ch06.html#save-pred">6.6</a></td></tr>
+<tr><td>標準差</td><td>standard deviation</td><td>變異數開根號，單位和原值相同</td><td><a href="ch06.html#extrapolate">6.9</a></td></tr>
+<tr><td>MSE(預測, 第 4 天)</td><td>—</td><td>測試集沒有答案時借用的替代尺：拿預測和測試集第 4 天的陽性率算 MSE；不是成績</td><td><a href="ch06.html#save-pred">6.6</a></td></tr>
+<tr><td>外推／內插</td><td>extrapolation / interpolation</td><td>在訓練資料涵蓋的範圍之外／之內做預測</td><td><a href="ch06.html#extrapolate">6.9</a></td></tr>
+<tr><td>相關係數</td><td>Pearson correlation</td><td>介於 −1 到 1，絕對值越大兩欄的線性關係越強</td><td><a href="ch01.html#corr">1.7</a></td></tr>
+<tr><td>permutation importance</td><td>permutation importance</td><td>把某一欄隨機打亂，看驗證 MSE 變差多少，衡量模型多依賴那一欄</td><td><a href="ch01.html#corr">1.7</a>、<a href="ch07.html#bank">7.13</a></td></tr>
+<tr><td>標準化</td><td>standardization</td><td>每欄減平均、除以標準差；統計量只能從訓練部分算</td><td><a href="ch01.html#values">1.4</a>、<a href="ch07.html#scale">7.5</a></td></tr>
+<tr><td>按時間切分</td><td>time-based split</td><td>每州依 id 排序，前 80% 訓練、後 20% 驗證，用過去預測未來</td><td><a href="ch01.html#window">1.6</a>、<a href="ch07.html#time">7.10</a></td></tr>
+<tr><td>過擬合</td><td>overfitting</td><td>貼合訓練資料的細節（含雜訊），代價是在新資料上變差</td><td><a href="ch07.html#time">7.10</a></td></tr>
+<tr><td>正則化、L2 正則化</td><td>regularization, L2</td><td>在 loss 之外另加限制；L2 是加上 (λ/2)×權重平方和，λ 是控制強度的係數（越大權重越小），每個權重的梯度因此多出 λw</td><td><a href="ch07.html#l2">7.8</a></td></tr>
+<tr><td>梯度提升樹</td><td>gradient boosting (XGBoost, LightGBM)</td><td>一棵接一棵的決策樹，每棵修正前面剩下的誤差；表格資料常用的強基準</td><td><a href="index.html#now">目錄頁</a>、<a href="ch07.html#predict">7.12</a></td></tr>
+<tr><td>特徵組合 noid／survey／corr／tp4</td><td>—</td><td>第 7 章給特徵組合取的短名：拿掉 id／只留問卷／|相關係數|>0.5／前 4 天陽性率</td><td><a href="ch07.html#method">7.3</a></td></tr>
+</tbody>
+</table></div>
+<h3>資料與前處理</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>中文</th><th>英文</th><th>說明</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>one-hot 編碼</td><td>one-hot encoding</td><td>37 州開 37 欄，每列只有自己那州是 1</td><td><a href="ch01.html#onehot">1.3</a></td></tr>
+<tr><td>16 個指標、問卷</td><td>features per day, survey</td><td>每天 16 欄：15 個問卷指標（類 COVID 症狀、行為、心理，數值是當天該州受訪者中符合描述的百分比，例如 cli）＋當天的陽性率 tested_positive；連續 5 天，第 5 天的陽性率是答案</td><td><a href="ch01.html#layout">1.2</a></td></tr>
+<tr><td>滑動視窗</td><td>sliding window</td><td>每州的每日序列用 5 天的視窗一次滑一天切出來；相鄰兩列共享 4 天</td><td><a href="ch01.html#window">1.6</a></td></tr>
+<tr><td>NumPy 陣列</td><td>NumPy array (ndarray)</td><td>型別統一的多維數字陣列；.values 把 DataFrame 轉成它（float64），之後切分、選欄都在它上面做</td><td><a href="ch01.html#readcsv">1.5</a></td></tr>
+<tr><td>DataFrame</td><td>pandas DataFrame</td><td>帶欄名的二維表格</td><td><a href="ch01.html#shell">1.1</a></td></tr>
+<tr><td>0 起算／1 起算</td><td>0-based / 1-based index</td><td>shell 的行號從 1 起算，Python 索引從 0 起算，同一欄差 1</td><td><a href="ch01.html#shell">1.1</a></td></tr>
+<tr><td>重複欄名後綴</td><td>duplicate column suffix</td><td>pandas 把重複的欄名改成 cli.1…cli.4；後綴比天數少 1</td><td><a href="ch01.html#readcsv">1.5</a></td></tr>
+<tr><td>特徵 x／目標 y</td><td>features / target</td><td>模型的輸入叫 x，要預測的答案叫 y</td><td><a href="ch02.html#feat">2.4</a></td></tr>
+<tr><td>偽亂數</td><td>pseudo-random</td><td>演算法從起始狀態算出的「看起來亂」的序列；起點相同序列就相同</td><td><a href="ch02.html#seed">2.2</a></td></tr>
+<tr><td>全域產生器</td><td>global generator</td><td>每個函式庫各有一個，沒有另外指定產生器時大家共用它</td><td><a href="ch02.html#seed">2.2</a></td></tr>
+<tr><td>cuDNN、cuBLAS</td><td>cuDNN, cuBLAS</td><td>NVIDIA 的 GPU 函式庫：cuDNN 管卷積這類運算，Linear 的矩陣乘法由 cuBLAS 處理</td><td><a href="ch02.html#seed">2.2</a></td></tr>
+<tr><td>確定性演算法</td><td>deterministic algorithm</td><td>同樣的輸入保證得到逐位元相同的輸出</td><td><a href="ch02.html#seed">2.2</a></td></tr>
+<tr><td>docstring</td><td>docstring</td><td>寫在函式第一行的說明字串，存在 __doc__</td><td><a href="ch02.html#seed">2.2</a></td></tr>
+<tr><td>Subset</td><td>Subset</td><td>random_split 的回傳：只記原始資料的參照與一串列號 indices，不複製資料</td><td><a href="ch02.html#split">2.3</a></td></tr>
+<tr><td>duck typing</td><td>duck typing</td><td>不檢查「是不是某個類別」，只看「會不會做這些動作」</td><td><a href="ch02.html#split">2.3</a></td></tr>
+<tr><td>整數陣列索引</td><td>fancy indexing</td><td>中括號裡放一串列號（或欄號），依序取出那些列（或欄）</td><td><a href="ch02.html#split">2.3</a></td></tr>
+</tbody>
+</table></div>
+<h3>PyTorch 的資料：tensor、Dataset、DataLoader</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>中文</th><th>英文</th><th>說明</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>shape（形狀）</td><td>shape</td><td>每一維的長度寫成 tuple：(117,) 是 117 個數字的一維、(256, 117) 是 256 列 × 117 欄、() 是 0 維；文中 (B, 1) 的 B 是 batch 的筆數</td><td><a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td>tensor</td><td>tensor</td><td>PyTorch 的多維陣列；可以放在 GPU 上，可以自動算梯度</td><td><a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td>float32／float64</td><td>float32 / float64</td><td>32 位元（4 bytes，約 7 位有效數字）／64 位元浮點數；模型參數預設 float32</td><td><a href="ch01.html#readcsv">1.5</a>、<a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td>dtype</td><td>dtype</td><td>tensor 或陣列的資料型別</td><td><a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td>繼承</td><td>inheritance</td><td>class X(Dataset)：新類別自動擁有父類別的一切，並且「算是一種」父類別</td><td><a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td>特殊方法（dunder）</td><td>special method</td><td>__init__、__getitem__、__len__ 這類前後兩條底線的方法，由 Python 在對應語法出現時代為呼叫</td><td><a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td>tuple</td><td>tuple</td><td>逗號隔開的幾個值，不可修改的序列</td><td><a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td>0 維 tensor</td><td>0-d tensor</td><td>只裝一個數字、shape 為 () 的 tensor；用 .item() 取出 Python 數字</td><td><a href="ch03.html#dataset">3.2</a>、<a href="ch03.html#bias">3.5</a></td></tr>
+<tr><td>Dataset</td><td>Dataset</td><td>能用 len() 問長度、能用 [i] 取第 i 筆的資料容器</td><td><a href="ch02.html#split">2.3</a>、<a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td>TensorDataset</td><td>TensorDataset</td><td>PyTorch 內建、可取代 COVID19Dataset 的 Dataset；回傳永遠是 tuple</td><td><a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td>DataLoader</td><td>DataLoader</td><td>把 Dataset 一批一批交出去：決定索引、逐筆取資料、疊成一批</td><td><a href="ch03.html#loader">3.3</a></td></tr>
+<tr><td>sampler</td><td>sampler</td><td>產生索引順序的物件；shuffle=True 時是 RandomSampler</td><td><a href="ch03.html#loader">3.3</a></td></tr>
+<tr><td>collate</td><td>collate</td><td>把 256 個單筆疊成一個 batch 的步驟；疊出來的型別是 list</td><td><a href="ch03.html#loader">3.3</a></td></tr>
+<tr><td>drop_last</td><td>drop_last</td><td>是否丟掉最後不滿一批的零頭；預設 False</td><td><a href="ch03.html#loader">3.3</a></td></tr>
+<tr><td>num_workers、行程</td><td>num_workers, process</td><td>另開幾個行程準備資料；0 表示都在主程式的行程裡做</td><td><a href="ch03.html#loader">3.3</a></td></tr>
+<tr><td>pinned memory</td><td>pinned (page-locked) memory</td><td>不會被換頁的主記憶體，資料可以直接傳上 GPU；pin_memory=True 用它</td><td><a href="ch03.html#shuffle">3.4</a></td></tr>
+<tr><td>non_blocking</td><td>non_blocking</td><td>搭配 pinned memory，讓傳上 GPU 和 CPU 的其他工作同時進行</td><td><a href="ch03.html#shuffle">3.4</a></td></tr>
+<tr><td>「份量」</td><td>weight (in an average)</td><td>平均時每筆的加權比例；本書刻意不叫「權重」，以免和模型權重混淆</td><td><a href="ch03.html#bias">3.5</a></td></tr>
+</tbody>
+</table></div>
+<h3>模型</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>中文</th><th>英文</th><th>說明</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>全連接層</td><td>fully connected layer, nn.Linear</td><td>每個輸出都連到全部輸入：輸出 ＝ x · Wᵀ ＋ b</td><td><a href="ch00.html#model">0.2</a>、<a href="ch04.html#linear">4.3</a></td></tr>
+<tr><td>輸出單元、層的寬度</td><td>unit, layer width</td><td>Linear 的每一個輸出叫一個單元；117 → 16 → 8 → 1 表示各層的單元數（寬度），第一層 16 個</td><td><a href="ch04.html#linear">4.3</a></td></tr>
+<tr><td>偏差</td><td>bias</td><td>Linear 每個輸出各加一個的常數，也是參數</td><td><a href="ch00.html#model">0.2</a></td></tr>
+<tr><td>激活函數、ReLU</td><td>activation function, ReLU</td><td>ReLU 是 max(0, x)；少了激活函數，疊幾層 Linear 都等於一層</td><td><a href="ch00.html#model">0.2</a></td></tr>
+<tr><td>多層感知器、DNN</td><td>MLP, DNN</td><td>Linear 與激活函數交替堆疊的網路；書中把範例的神經網路稱為 DNN</td><td><a href="index.html#now">目錄頁</a>、<a href="ch00.html#model">0.2</a></td></tr>
+<tr><td>forward</td><td>forward</td><td>定義「資料進來之後怎麼算」的方法；寫 model(x) 時由 __call__ 代為呼叫</td><td><a href="ch04.html#forward">4.5</a></td></tr>
+<tr><td>nn.Module</td><td>nn.Module</td><td>所有模型與層的父類別；提供 parameters()、to()、state_dict() 等</td><td><a href="ch04.html#module">4.2</a></td></tr>
+<tr><td>子模組名冊</td><td>_modules</td><td>指定屬性時 nn.Module 自動登記子模組的字典；由 nn.Module.__init__ 建立</td><td><a href="ch04.html#module">4.2</a></td></tr>
+<tr><td>nn.Sequential</td><td>nn.Sequential</td><td>容器模組：依序登記子模組（名字 0、1、2…），呼叫時把資料依序傳過去</td><td><a href="ch04.html#linear">4.3</a></td></tr>
+<tr><td>轉置</td><td>transpose</td><td>列與欄互換；Linear 的 weight 存成 (輸出, 輸入)，計算時用 Wᵀ</td><td><a href="ch04.html#linear">4.3</a></td></tr>
+<tr><td>state_dict</td><td>state_dict</td><td>「參數名稱 → tensor」的字典；名稱就是名冊路徑，例如 layers.0.weight</td><td><a href="ch04.html#linear">4.3</a></td></tr>
+<tr><td>requires_grad</td><td>requires_grad</td><td>告訴 PyTorch 之後要替這個 tensor 算梯度；參數有、資料沒有</td><td><a href="ch04.html#linear">4.3</a></td></tr>
+<tr><td>初始化</td><td>initialization</td><td>nn.Linear 預設從均勻分布 U(−1/√in, 1/√in)（這個範圍內每個值機率相同）抽初始權重；in 是輸入個數</td><td><a href="ch04.html#init">4.4</a></td></tr>
+<tr><td>__call__、hook</td><td>__call__, hook</td><td>model(x) 實際呼叫 nn.Module.__call__，它先執行 hook（使用者掛在模組上、在 forward 前後自動執行的函式）再呼叫 forward</td><td><a href="ch04.html#forward">4.5</a></td></tr>
+<tr><td>廣播</td><td>broadcasting</td><td>形狀不同的 tensor 逐元素運算時，長度 1（或缺少）的維度被複製展開</td><td><a href="ch04.html#squeeze">4.6</a></td></tr>
+<tr><td>squeeze／unsqueeze</td><td>squeeze / unsqueeze</td><td>拿掉／插入一個長度 1 的維度；squeeze(1) 把 (B, 1) 變 (B,)</td><td><a href="ch04.html#squeeze">4.6</a></td></tr>
+<tr><td>UserWarning</td><td>UserWarning</td><td>PyTorch 印在 stderr 的警告，程式不會停</td><td><a href="ch04.html#squeeze">4.6</a></td></tr>
+<tr><td>沒在工作的單元（dying ReLU）</td><td>dying ReLU</td><td>對所有資料都輸出 0 的 ReLU 單元；梯度是 0，回不來</td><td><a href="ch04.html#trained">4.7</a></td></tr>
+<tr><td>容量</td><td>capacity</td><td>參數量是模型能表達多複雜關係的上限，不是實際用上的量</td><td><a href="ch04.html#trained">4.7</a></td></tr>
+<tr><td>LeakyReLU、GELU</td><td>LeakyReLU, GELU</td><td>LeakyReLU 在負數區保留小斜率；GELU 形狀接近 ReLU、在 0 附近平滑</td><td><a href="ch04.html#trained">4.7</a>、<a href="ch07.html#arch">7.7</a></td></tr>
+<tr><td>Dropout</td><td>Dropout</td><td>訓練時以機率 p 把單元輸出設 0、其餘乘 1/(1−p)；由 train()／eval() 切換</td><td><a href="ch07.html#arch">7.7</a></td></tr>
+</tbody>
+</table></div>
+<h3>訓練</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>中文</th><th>英文</th><th>說明</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>損失函數、criterion</td><td>loss function, criterion</td><td>量「錯多少」的尺；HW01 是 nn.MSELoss 物件，用 criterion(pred, y) 呼叫</td><td><a href="ch05.html#setup">5.2</a></td></tr>
+<tr><td>reduction='mean'／'sum'</td><td>reduction</td><td>對 batch 裡的平方誤差取平均／取總和</td><td><a href="ch03.html#bias">3.5</a></td></tr>
+<tr><td>優化器</td><td>optimizer</td><td>依梯度修改參數的物件；只改交給它的參數</td><td><a href="ch05.html#setup">5.2</a></td></tr>
+<tr><td>SGD</td><td>stochastic gradient descent</td><td>隨機梯度下降；「隨機」指每一步只看一個 batch</td><td><a href="ch05.html#setup">5.2</a></td></tr>
+<tr><td>學習率</td><td>learning rate (lr)</td><td>每一步走多大</td><td><a href="ch05.html#setup">5.2</a></td></tr>
+<tr><td>Parameter Group</td><td>parameter group</td><td>共用同一組優化器設定的一群參數</td><td><a href="ch05.html#setup">5.2</a></td></tr>
+<tr><td>梯度</td><td>gradient</td><td>loss 對每個參數的斜率，存在 .grad，形狀和參數相同</td><td><a href="ch04.html#linear">4.3</a>、<a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td>偏導數</td><td>partial derivative</td><td>只動一個參數時 loss 變化的斜率</td><td><a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td>梯度下降</td><td>gradient descent</td><td>w ← w − lr × g，每個參數往斜率的反方向走一小步</td><td><a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td>momentum、momentum buffer</td><td>momentum</td><td>buf ← 0.9·buf ＋ grad、w ← w − lr·buf；buffer 記在 optimizer 身上</td><td><a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td>自動微分</td><td>autograd</td><td>forward 時記下每一步運算，backward 時倒著走一次算出全部梯度</td><td><a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td>計算圖、grad_fn</td><td>computational graph, grad_fn</td><td>forward 時建立的運算紀錄；grad_fn 指向產生該 tensor 的節點</td><td><a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td>連鎖律、反向傳播</td><td>chain rule, backpropagation</td><td>斜率一層一層相乘；沿計算圖倒著算梯度的方法</td><td><a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td>梯度累加、zero_grad</td><td>gradient accumulation</td><td>backward 把梯度加到 .grad 上，所以每步前要清掉；清掉是設成 None</td><td><a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td>梯度裁剪</td><td>gradient clipping</td><td>梯度總範數超過上限時等比例縮小（clip_grad_norm_）</td><td><a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td>weight decay</td><td>weight decay</td><td>每一步順便把權重往 0 拉一點；SGD 內建的 L2</td><td><a href="ch05.html#setup">5.2</a>、<a href="ch07.html#l2">7.8</a></td></tr>
+<tr><td>訓練模式／評估模式</td><td>train() / eval()</td><td>只切換模型的 training 旗標；影響 Dropout、BatchNorm 這類層</td><td><a href="ch05.html#epoch">5.3</a></td></tr>
+<tr><td>no_grad、inference_mode</td><td>torch.no_grad, torch.inference_mode</td><td>區塊內不建計算圖；inference_mode 關得更徹底</td><td><a href="ch05.html#eval">5.6</a></td></tr>
+<tr><td>TensorBoard、SummaryWriter</td><td>TensorBoard</td><td>記錄並顯示訓練曲線；SummaryWriter 把資料點寫進 runs/</td><td><a href="ch00.html#env">0.3</a>、<a href="ch05.html#setup">5.2</a></td></tr>
+<tr><td>step（TensorBoard 橫軸）</td><td>global step</td><td>到目前為止更新了幾次權重（每個 epoch 9 次），不是 epoch</td><td><a href="ch05.html#tensorboard">5.9</a></td></tr>
+<tr><td>Adam</td><td>Adam</td><td>依梯度平方的移動平均替每個參數各自決定步幅</td><td><a href="ch07.html#optim">7.6</a></td></tr>
+<tr><td>AdamW</td><td>AdamW (decoupled weight decay)</td><td>Adam 的變形，權重衰減另外直接做，不經過 Adam 的縮放；不寫 weight_decay 時預設 0.01</td><td><a href="ch05.html#steps">5.4</a>、<a href="ch07.html#l2">7.8</a></td></tr>
+</tbody>
+</table></div>
+<h3>環境、檔案與工具</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>中文</th><th>英文</th><th>說明</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>PyTorch</td><td>PyTorch (torch)</td><td>建立與訓練神經網路的 Python 函式庫</td><td><a href="ch00.html#env">0.3</a></td></tr>
+<tr><td>CUDA</td><td>CUDA</td><td>NVIDIA 讓程式在顯卡上運算的平台；cu128 = CUDA 12.8 編譯的版本</td><td><a href="ch00.html#env">0.3</a></td></tr>
+<tr><td>compute capability、sm</td><td>compute capability, sm_120</td><td>顯卡架構世代的版本號；Blackwell 是 12.0，即 sm_120</td><td><a href="ch00.html#env">0.3</a></td></tr>
+<tr><td>kernel</td><td>kernel</td><td>事先針對特定 sm 版本編譯好的 GPU 程式</td><td><a href="ch00.html#env">0.3</a></td></tr>
+<tr><td>venv、uv</td><td>virtual environment, uv</td><td>和系統 Python 隔開的獨立套件目錄；uv 是比 pip 快的安裝工具</td><td><a href="ch00.html#env">0.3</a></td></tr>
+<tr><td>環境變數前綴</td><td>VAR=x cmd</td><td>只替後面這一條指令設定環境變數</td><td><a href="ch00.html#env">0.3</a></td></tr>
+<tr><td>fail fast</td><td>fail fast and loud</td><td>config.py 的設計：沒有 CUDA 就在 import 時立刻失敗</td><td><a href="ch00.html#config">0.4</a></td></tr>
+<tr><td>stdout／stderr</td><td>standard output / error</td><td>print 走 stdout，tqdm 進度條走 stderr</td><td><a href="ch00.html#train">0.5</a></td></tr>
+<tr><td>2> 重導</td><td>redirect</td><td>把第 2 號輸出（stderr）寫進檔案；2>/dev/null 是丟掉</td><td><a href="ch00.html#train">0.5</a></td></tr>
+<tr><td>from X import *</td><td>wildcard import</td><td>把模組 X 所有公開的名字倒進目前的命名空間</td><td><a href="ch00.html#map">0.8</a></td></tr>
+<tr><td>Jupyter 筆記本</td><td>Jupyter / Colab notebook (.ipynb)</td><td>把程式切成一格一格、在瀏覽器依序執行的檔案；官方原版的格式</td><td><a href="ch00.html#map">0.8</a></td></tr>
+<tr><td>python -c</td><td>python -c</td><td>直接執行引號裡的程式，不必另存成 .py</td><td><a href="ch01.html#shell">1.1</a></td></tr>
+<tr><td>if __name__ == '__main__'</td><td>main guard</td><td>只有直接執行這個檔案時才跑這段</td><td><a href="ch01.html#readcsv">1.5</a></td></tr>
+<tr><td>map_location</td><td>map_location</td><td>torch.load 時指定把 tensor 載入到哪個裝置</td><td><a href="ch04.html#predict">4.8</a></td></tr>
+<tr><td>pickle、weights_only</td><td>pickle, weights_only</td><td>torch.save 用 pickle 序列化；weights_only 只放行 tensor、數字、字串、list、dict 這類純資料</td><td><a href="ch06.html#better">6.3</a></td></tr>
+<tr><td>OrderedDict</td><td>OrderedDict</td><td>會記住 key 插入順序的 dict；model.ckpt 的型別</td><td><a href="ch06.html#better">6.3</a></td></tr>
+<tr><td>md5</td><td>md5</td><td>檔案內容的指紋，差一個位元組就完全不同</td><td><a href="ch06.html#detour">6.2</a></td></tr>
+<tr><td>host memory</td><td>host memory</td><td>主記憶體，相對於 GPU 這個 device</td><td><a href="ch06.html#predict-fn">6.5</a></td></tr>
+<tr><td>行尾 LF／CRLF</td><td>line ending</td><td>\n（Linux、macOS）／\r\n（Windows、CSV 規範 RFC 4180）</td><td><a href="ch06.html#crlf">6.8</a></td></tr>
+<tr><td>newline=''</td><td>newline=''</td><td>開檔時要求文字模式不轉換行尾；用 csv 模組寫檔的固定搭配</td><td><a href="ch06.html#crlf">6.8</a></td></tr>
+<tr><td>bytes</td><td>bytes</td><td>b'...'：檔案裡原原本本的位元組</td><td><a href="ch06.html#crlf">6.8</a></td></tr>
+<tr><td>float32 最短表示</td><td>shortest round-trip repr</td><td>能唯一還原成同一個 float32 的最短十進位字串；位數不代表精度</td><td><a href="ch06.html#float">6.7</a></td></tr>
+</tbody>
+</table></div>
+<h2 id="hparams">A.2　超參數速查</h2>
+<p>前八項是 <code>config.py</code> 的 <code>config</code> 字典，後兩項屬於 <code>train.py</code> 第 34 行建立的優化器：momentum 寫死在那一行，weight_decay 沒寫、取預設值。「改了會怎樣」只列書中實際跑過或手算過的結果；沒標註的都是本機實測，「手算」表示是照規則算出來的，沒有實際訓練。除非另外註明，都是只改那一項、其餘照原版。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>超參數</th><th>位置與預設值</th><th>意義</th><th>改了會怎樣（書中的結果）</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td><code>seed</code></td><td>config.py:10<br><code>5201314</code></td><td>亂數起點。<code>same_seed</code>（train.py:101）與切分（train.py:106）讀的是同一個值</td><td>改成別的數字，停止的 epoch 會變、最佳也不再是 1.661（<a href="ch00.html#artifacts">0.7 動手做</a>）。直接改它會連切分一起換（<a href="ch07.html#method">7.3</a>）。固定切分、只換 seed（量法修正後）：seed 1、2、3 是 1.7243、<b>12.7959</b>、1.7467（<a href="ch07.html#seed">7.11</a>）</td><td><a href="ch00.html#config">0.4</a>、<a href="ch02.html#seed">2.2</a>、<a href="ch02.html#split">2.3</a></td></tr>
+<tr><td><code>select_all</code></td><td>config.py:11<br><code>True</code></td><td>True：答案以外的 117 欄全拿，<b>含 id</b>；False：用 utils.py:34 的 feat_idx</td><td>False 時 feat_idx 是 [0, 1, 2, 3, 4]，也就是 id 加 AL、AK、AZ、AR，x_train 變成 (2160, 5)（形狀實測，書中沒有拿這 5 欄訓練，<a href="ch02.html#feat">2.4</a>）。False 搭配第 34 行改成 tp4 的 4 欄：真實 1.3561（<a href="ch07.html#feature">7.4</a>）</td><td><a href="ch02.html#feat">2.4</a>、<a href="ch07.html#feature">7.4</a></td></tr>
+<tr><td><code>valid_ratio</code></td><td>config.py:12<br><code>0.2</code></td><td>驗證集比例：int(0.2 × 2699) = 539（截斷），訓練 2160。乘的是切分前的全部資料，不是註解寫的 train_size</td><td>改成 0.25：驗證 674、訓練 2025（<a href="ch02.html#quiz">第 2 章測驗</a>，手算）</td><td><a href="ch02.html#split">2.3</a></td></tr>
+<tr><td><code>n_epochs</code></td><td>config.py:13<br><code>3000</code></td><td>最多跑幾個 epoch；是硬上限，不是一定跑完</td><td>原版在第 1883 個 epoch early stop，碰不到上限；量法修正後一直到第 3000 個 epoch 都還在創新低，跑滿才停（<a href="ch03.html#lab">3.6</a>）</td><td><a href="ch05.html#setup">5.2</a>、<a href="ch05.html#earlystop">5.8</a></td></tr>
+<tr><td><code>batch_size</code></td><td>config.py:14<br><code>256</code></td><td>一批幾筆。train／valid／test 每輪 9／3／5 個 batch，最後一批 112／27／54 筆</td><td>也決定 TensorBoard 橫軸 step 與 epoch 的比例（每個 epoch 9 個 step，<a href="ch05.html#tensorboard">5.9</a>）。改 100：22／6／11 個 batch（<a href="ch03.html#quiz">第 3 章測驗</a>，手算）；改 128：每個 epoch 17 個（<a href="ch05.html#quiz">第 5 章測驗</a>，手算）。書中沒有用其他 batch_size 訓練</td><td><a href="ch03.html#loader">3.3</a></td></tr>
+<tr><td><code>learning_rate</code></td><td>config.py:15<br><code>1e-5</code></td><td>學習率；這麼小的值是被 id 欄的大梯度逼出來的</td><td>不標準化：1e-4 → 第一層 16 個單元全死，只輸出 9.731，真實 44.5095；1e-6 → 2.2601（<a href="ch05.html#hparams">5.10</a>）；1e-3 → 第 1 個 epoch train loss 約 6.7 × 10<sup>11</sup>，最佳 44.3461、輸出常數（<a href="ch07.html#bank">7.13</a>）。拿掉 id（noid）並標準化後：1e-5 → 1.2915、1e-4 → 1.0722、1e-3 → 1.0715、1e-2 → 6.669（<a href="ch07.html#scale">7.5</a>）</td><td><a href="ch05.html#setup">5.2</a>、<a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td><code>early_stop</code></td><td>config.py:16<br><code>400</code></td><td>耐心：連續這麼多個 epoch 驗證 loss 沒創新低就停</td><td>改 200：最佳停在第 1260 個 epoch（Valid loss 1.7165），第 1460 個 epoch 停止，存檔 48 次（<a href="ch05.html#earlystop">5.8</a>，實測）</td><td><a href="ch05.html#earlystop">5.8</a></td></tr>
+<tr><td><code>save_path</code></td><td>config.py:17<br><code>'./models/model.ckpt'</code></td><td>最佳權重的存檔路徑；相對於執行時所在的目錄</td><td>每次創新低都覆寫同一個檔（<a href="ch05.html#save">5.7</a>）；predict.py 從同一路徑載入，檔案不在就 <code>FileNotFoundError</code>（<a href="ch06.html#load">6.4</a>）</td><td><a href="ch05.html#setup">5.2</a></td></tr>
+<tr><td><code>momentum</code></td><td>train.py:34<br><code>0.9</code>（寫死）</td><td>動量：每一步帶著前幾步的方向；不在 config 裡</td><td>改 0：印出最佳 2.463、真實 2.9992，3000 個 epoch 都沒 early stop（<a href="ch05.html#hparams">5.10</a>）</td><td><a href="ch05.html#setup">5.2</a>、<a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td><code>weight_decay</code></td><td>train.py:34<br><code>0</code>（沒寫，取 SGD 預設）</td><td>L2 正則化的強度；<code>print(optimizer)</code> 實測是 0</td><td>noid＋標準化＋SGD lr 1e-3：wd 1e-3 → 1.0584、1e-2 → 1.041；同樣 wd 1e-2，Adam 1.1181、AdamW 1.1909（<a href="ch07.html#l2">7.8</a>）</td><td><a href="ch05.html#setup">5.2</a>、<a href="ch07.html#l2">7.8</a></td></tr>
+</tbody>
+</table></div>
+<p><code>config.py</code> 裡還有一項不在 <code>config</code> 字典中：第 4 行的 <code>device = "cuda"</code>，配合第 6–7 行印出 GPU 狀態。這是刻意的設計：沒有可用的 NVIDIA 顯卡時，第 7 行的 <code>torch.cuda.current_device()</code> 在 import config 的當下就拋出 RuntimeError，不會默默退回 CPU（<a href="ch00.html#config">0.4</a>）。</p>
+<h2 id="functions">A.3　函式速查</h2>
+<h3>repo 裡的函式</h3>
+<p>HW01 的六個檔案裡，<code>config.py</code> 沒有函式，其餘的全部在這裡。位置是 <code>檔名:起–迄行</code>，和正文引用程式碼時的標示方式相同。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>函式</th><th>位置</th><th>做什麼</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td><code>same_seed(seed)</code></td><td>utils.py:7–14</td><td>設 cuDNN 兩個旗標，以及 NumPy、PyTorch（含 GPU）的全域 seed；不設 Python 的 random。train.py:101 呼叫</td><td><a href="ch02.html#seed">2.2</a></td></tr>
+<tr><td><code>train_valid_split(data_set, valid_ratio, seed)</code></td><td>utils.py:17–23</td><td>用自帶 <code>torch.Generator</code> 的 <code>random_split</code> 切成 2160／539，回傳兩個 NumPy 陣列。train.py:106、predict.py:26 呼叫</td><td><a href="ch02.html#split">2.3</a></td></tr>
+<tr><td><code>select_feat(train_data, valid_data, test_data, select_all=True)</code></td><td>utils.py:26–36</td><td>最後一欄當 y、其餘當 x，依 <code>feat_idx</code> 選欄，回傳五個陣列。train.py:114、predict.py:34 呼叫</td><td><a href="ch02.html#feat">2.4</a></td></tr>
+<tr><td><code>save_pred(preds, file)</code></td><td>utils.py:39–45</td><td>寫出表頭 <code>id,tested_positive</code> 與 1078 列，id 用 <code>enumerate</code> 從 0 數起。predict.py:42 呼叫</td><td><a href="ch06.html#save-pred">6.6</a></td></tr>
+<tr><td><code>class COVID19Dataset(Dataset)</code></td><td>data_loader.py:8–28</td><td>把 NumPy 陣列包成 Dataset</td><td><a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td>　<code>__init__(self, x, y=None)</code></td><td>data_loader.py:14–19</td><td>用 <code>torch.FloatTensor</code> 轉成（並複製成）float32；沒給 y 時 <code>self.y</code> 是 None</td><td><a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td>　<code>__getitem__(self, idx)</code></td><td>data_loader.py:21–25</td><td>有 y 回傳 <code>(x, y)</code> 的 tuple，沒有 y 只回傳 x</td><td><a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td>　<code>__len__(self)</code></td><td>data_loader.py:27–28</td><td>回傳 <code>len(self.x)</code>，也就是列數</td><td><a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td><code>class My_Model(nn.Module)</code></td><td>model.py:10–25</td><td>117 → 16 → 8 → 1 的全連接網路，2,033 個參數</td><td><a href="ch00.html#model">0.2</a>、<a href="ch04.html#module">4.2</a></td></tr>
+<tr><td>　<code>__init__(self, input_dim)</code></td><td>model.py:11–20</td><td>先 <code>super(My_Model, self).__init__()</code>，再用 <code>nn.Sequential</code> 串五個元件</td><td><a href="ch04.html#module">4.2</a>、<a href="ch04.html#linear">4.3</a></td></tr>
+<tr><td>　<code>forward(self, x)</code></td><td>model.py:22–25</td><td>交給 <code>self.layers</code>，再 <code>squeeze(1)</code> 把 (B, 1) 壓成 (B,)；由 <code>model(x)</code> 經 <code>__call__</code> 呼叫</td><td><a href="ch04.html#forward">4.5</a>、<a href="ch04.html#squeeze">4.6</a></td></tr>
+<tr><td><code>trainer(train_loader, valid_loader, model, config, device)</code></td><td>train.py:27–96</td><td>準備 MSELoss、SGD、SummaryWriter、models/；每個 epoch 訓練 9 個 batch、驗證、創新低就存檔、連續 400 次沒進步就停。沒有回傳值</td><td><a href="ch05.html#where">5.1</a>、<a href="ch05.html#setup">5.2</a></td></tr>
+<tr><td>train.py 主程式</td><td>train.py:99–127</td><td>same_seed → 讀 CSV → 切分 → 印大小 → select_feat → Dataset／DataLoader → 建模型 → trainer</td><td><a href="ch01.html#readcsv">1.5</a>、<a href="ch02.html#where">2.1</a>、<a href="ch03.html#where">3.1</a>、<a href="ch05.html#where">5.1</a></td></tr>
+<tr><td><code>predict(test_loader, model, device)</code></td><td>predict.py:10–19</td><td><code>model.eval()</code>，在 <code>no_grad</code> 裡逐批預測、搬回 CPU，<code>torch.cat</code> 接成 (1078,) 的 float32 NumPy 陣列</td><td><a href="ch06.html#predict-fn">6.5</a></td></tr>
+<tr><td>predict.py 主程式</td><td>predict.py:22–42</td><td>重讀訓練資料並切分（只為了算出 117）→ 建 test loader → 重建模型、載入權重 → predict → save_pred</td><td><a href="ch06.html#detour">6.2</a>、<a href="ch06.html#load">6.4</a>、<a href="ch06.html#where">6.1</a></td></tr>
+</tbody>
+</table></div>
+<p>各章的 <code>python -c</code> 指令與第 7 章的實驗腳本（<code>docs/tools/</code>）不是 HW01 的一部分，不列在這張表裡。</p>
+<h3>書中用到的 PyTorch API</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>寫法</th><th>書中的用途</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td><code>torch.manual_seed(seed)</code></td><td>設定 PyTorch 全域產生器（現在的 PyTorch 已涵蓋所有 GPU）</td><td><a href="ch02.html#seed">2.2</a></td></tr>
+<tr><td><code>torch.cuda.manual_seed_all(seed)</code></td><td>設定每張 GPU 的產生器；在 HW01 與上一行重複</td><td><a href="ch02.html#seed">2.2</a></td></tr>
+<tr><td><code>torch.backends.cudnn.deterministic／benchmark</code></td><td>cuDNN 只用確定性演算法／不試跑挑最快的；HW01 沒有卷積，不起作用</td><td><a href="ch02.html#seed">2.2</a></td></tr>
+<tr><td><code>torch.use_deterministic_algorithms(True)</code></td><td>所有運算都要求確定性，沒有確定性版本就報錯</td><td><a href="ch02.html#seed">2.2</a></td></tr>
+<tr><td><code>torch.Generator().manual_seed(seed)</code></td><td>建立獨立的產生器，不受全域 seed 影響</td><td><a href="ch02.html#split">2.3</a></td></tr>
+<tr><td><code>random_split(data, [n1, n2], generator=…)</code></td><td>打亂列號再依序切開，回傳兩個 <code>Subset</code>；也可以傳比例 <code>[0.8, 0.2]</code></td><td><a href="ch02.html#split">2.3</a></td></tr>
+<tr><td><code>torch.FloatTensor(x)</code></td><td>float64 → float32，並複製一份（舊式寫法）</td><td><a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td><code>torch.from_numpy(x)</code>、<code>torch.tensor(x, dtype=…)</code></td><td>前者和 NumPy 共用記憶體、dtype 不變；後者一定複製、dtype 寫在明處</td><td><a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td><code>Dataset</code>、<code>TensorDataset</code></td><td>自訂資料集的父類別／現成的 tensor 資料集</td><td><a href="ch03.html#dataset">3.2</a></td></tr>
+<tr><td><code>DataLoader(ds, batch_size, shuffle, pin_memory)</code></td><td>分批與打亂；另有 <code>drop_last</code>、<code>num_workers</code>（預設 False、0）</td><td><a href="ch03.html#loader">3.3</a>、<a href="ch03.html#shuffle">3.4</a></td></tr>
+<tr><td><code>nn.Module</code>、<code>super().__init__()</code></td><td>模型的父類別；必須先呼叫父類別的 <code>__init__</code> 再指定子模組</td><td><a href="ch04.html#module">4.2</a></td></tr>
+<tr><td><code>nn.Sequential(…)</code>、<code>nn.Linear(in, out)</code></td><td>依序串接；全連接層，weight 形狀 (out, in)</td><td><a href="ch04.html#linear">4.3</a></td></tr>
+<tr><td><code>nn.ReLU()</code>、<code>nn.LeakyReLU()</code>、<code>nn.GELU()</code></td><td>激活函數</td><td><a href="ch00.html#model">0.2</a>、<a href="ch07.html#arch">7.7</a></td></tr>
+<tr><td><code>nn.Dropout(p)</code></td><td>訓練時隨機丟單元</td><td><a href="ch07.html#arch">7.7</a></td></tr>
+<tr><td><code>model.parameters()</code>、<code>named_parameters()</code>、<code>p.numel()</code></td><td>列出參數（含名稱）；一個參數 tensor 的元素個數</td><td><a href="ch00.html#model">0.2</a>、<a href="ch04.html#linear">4.3</a></td></tr>
+<tr><td><code>model.state_dict()</code>、<code>load_state_dict(sd)</code></td><td>取出「名稱 → tensor」字典；依名稱複製回模型，形狀不符就報錯</td><td><a href="ch04.html#predict">4.8</a></td></tr>
+<tr><td><code>model.to(device)</code>、<code>x.to(device)</code></td><td>模組是原地搬移；tensor 是回傳一個新的複本</td><td><a href="ch04.html#forward">4.5</a></td></tr>
+<tr><td><code>.cuda()</code>、<code>.cpu()</code>、<code>.numpy()</code></td><td>搬上 GPU／搬回主記憶體／轉成 NumPy（只能用在 CPU tensor）</td><td><a href="ch03.html#shuffle">3.4</a>、<a href="ch06.html#predict-fn">6.5</a></td></tr>
+<tr><td><code>.item()</code>、<code>.detach()</code></td><td>0 維 tensor 取成 Python 數字；取出不連著計算圖的版本</td><td><a href="ch03.html#bias">3.5</a>、<a href="ch05.html#trainloss">5.5</a></td></tr>
+<tr><td><code>squeeze(1)</code>、<code>unsqueeze(1)</code></td><td>拿掉／插入第 1 維的長度 1 維度</td><td><a href="ch04.html#squeeze">4.6</a></td></tr>
+<tr><td><code>torch.cat(tensors, dim=0)</code></td><td>沿第 0 維首尾相接</td><td><a href="ch06.html#predict-fn">6.5</a></td></tr>
+<tr><td><code>torch.equal</code>、<code>torch.allclose</code></td><td>完全相同／在浮點誤差內相等</td><td><a href="ch04.html#forward">4.5</a>、<a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td><code>nn.MSELoss(reduction='mean')</code></td><td>均方誤差；HW01 的 criterion</td><td><a href="ch05.html#setup">5.2</a></td></tr>
+<tr><td><code>nn.functional.mse_loss(pred, y, reduction='sum')</code></td><td>一個 batch 的平方誤差總和；修正 valid loss 量法時用</td><td><a href="ch03.html#bias">3.5</a></td></tr>
+<tr><td><code>torch.optim.SGD(params, lr, momentum, weight_decay)</code></td><td>HW01 的優化器</td><td><a href="ch05.html#setup">5.2</a></td></tr>
+<tr><td><code>torch.optim.Adam</code>、<code>torch.optim.AdamW</code></td><td>自適應步幅的優化器；AdamW 的 weight_decay 預設 0.01</td><td><a href="ch07.html#optim">7.6</a></td></tr>
+<tr><td><code>optimizer.zero_grad()</code>、<code>loss.backward()</code>、<code>optimizer.step()</code></td><td>清梯度／反向算梯度／依梯度改權重</td><td><a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td><code>torch.nn.utils.clip_grad_norm_(params, max_norm)</code></td><td>梯度裁剪</td><td><a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td><code>model.train()</code>、<code>model.eval()</code></td><td>切換 training 旗標</td><td><a href="ch05.html#epoch">5.3</a>、<a href="ch05.html#eval">5.6</a></td></tr>
+<tr><td><code>with torch.no_grad():</code>、<code>torch.inference_mode()</code></td><td>區塊內不建計算圖</td><td><a href="ch05.html#eval">5.6</a></td></tr>
+<tr><td><code>torch.save(obj, path)</code></td><td>用 pickle 序列化寫檔，每次覆寫同一個檔</td><td><a href="ch05.html#save">5.7</a></td></tr>
+<tr><td><code>torch.load(path, map_location=…, weights_only=…)</code></td><td>讀回存檔；torch 2.11 的 weights_only 實際效果為 True</td><td><a href="ch04.html#predict">4.8</a>、<a href="ch06.html#better">6.3</a></td></tr>
+<tr><td><code>SummaryWriter()</code>、<code>add_scalar(tag, value, step)</code>、<code>close()</code></td><td>在 runs/ 開目錄、寫一個純量資料點、收尾</td><td><a href="ch05.html#tensorboard">5.9</a></td></tr>
+<tr><td><code>torch.cuda.is_available()</code>、<code>current_device()</code></td><td>config.py 第 6–7 行印出的兩個值</td><td><a href="ch00.html#config">0.4</a></td></tr>
+<tr><td><code>torch.cuda.get_device_name／get_device_capability／get_arch_list</code></td><td>顯卡名稱、compute capability、這份 PyTorch 內建哪些架構的 kernel</td><td><a href="ch00.html#env">0.3</a></td></tr>
+<tr><td><code>tensor.is_pinned()</code></td><td>是否在 pinned memory</td><td><a href="ch03.html#shuffle">3.4</a></td></tr>
+</tbody>
+</table></div>
+<h3>書中用到的 pandas API</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>寫法</th><th>書中的用途</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td><code>pd.read_csv(path)</code></td><td>把 CSV 讀成 DataFrame</td><td><a href="ch01.html#shell">1.1</a></td></tr>
+<tr><td><code>.values</code></td><td>DataFrame → NumPy 陣列（float64），欄名消失</td><td><a href="ch01.html#readcsv">1.5</a></td></tr>
+<tr><td><code>d['col']</code>、<code>d.iloc[列, 欄]</code></td><td>用欄名取一欄／用位置取值</td><td><a href="ch01.html#shell">1.1</a></td></tr>
+<tr><td><code>d[d['FL'] == 1]</code>、<code>sort_values('id')</code></td><td>布林篩選／排序</td><td><a href="ch01.html#window">1.6</a></td></tr>
+<tr><td><code>groupby</code>、<code>idxmax(axis=1)</code>、<code>value_counts</code></td><td>分組彙總／每列最大值的欄名（把 one-hot 轉回州名）／數各值出現幾次</td><td><a href="ch01.html#onehot">1.3</a></td></tr>
+<tr><td><code>describe()</code>、<code>isna()</code></td><td>各欄統計摘要／每格是不是缺值</td><td><a href="ch01.html#values">1.4</a></td></tr>
+<tr><td><code>corr()</code></td><td>每兩欄之間的相關係數</td><td><a href="ch01.html#corr">1.7</a></td></tr>
+<tr><td><code>rank(pct=True)</code></td><td>換成 0～1 的百分位名次；按時間切分時用</td><td><a href="ch01.html#window">1.6</a></td></tr>
+<tr><td><code>DataFrame.plot</code></td><td>呼叫 matplotlib 畫折線</td><td><a href="ch01.html#corr">1.7</a></td></tr>
+<tr><td><code>to_csv(…, index=False)</code></td><td>用 pandas 寫 CSV（示意，書中未實測）</td><td><a href="ch06.html#crlf">6.8</a></td></tr>
+</tbody>
+</table></div>
+<h3>書中用到的 NumPy API</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>寫法</th><th>書中的用途</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td><code>np.array(Subset)</code>、<code>data[subset.indices]</code></td><td>把 Subset 逐筆取出疊成新陣列／直接依列號取列，結果相同</td><td><a href="ch02.html#split">2.3</a></td></tr>
+<tr><td><code>a[:, feat_idx]</code></td><td>整數陣列索引取欄</td><td><a href="ch02.html#feat">2.4</a></td></tr>
+<tr><td><code>np.isclose</code>、<code>np.allclose</code>、<code>np.array_equal</code></td><td>容許極小誤差的逐元素比較／整個陣列版本／逐個完全相同</td><td><a href="ch01.html#window">1.6</a>、<a href="ch06.html#save-pred">6.6</a></td></tr>
+<tr><td><code>np.random.seed</code>、<code>np.random.default_rng(seed)</code></td><td>舊式全域 seed／建立自己的產生器（官方建議）</td><td><a href="ch02.html#seed">2.2</a></td></tr>
+<tr><td><code>rng.permutation(p)</code></td><td>回傳重新排列過的複本</td><td><a href="ch06.html#lab">6.10</a></td></tr>
+<tr><td><code>np.corrcoef(a, b)[0, 1]</code></td><td>兩組數字的相關係數</td><td><a href="ch07.html#feature">7.4</a></td></tr>
+<tr><td><code>np.linalg.lstsq</code>、<code>np.c_</code></td><td>最小平方法解線性迴歸／接上一欄常數 1</td><td><a href="index.html#now">目錄頁</a></td></tr>
+<tr><td><code>mean(axis=0)</code>、<code>std(axis=0)</code>、<code>.var()</code></td><td>每欄的平均、標準差（標準化用）；變異數</td><td><a href="ch07.html#scale">7.5</a>、<a href="ch06.html#lab">6.10</a></td></tr>
+</tbody>
+</table></div>
+<h3>書中用到的 Python 標準函式庫與其他工具</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>寫法</th><th>書中的用途</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td><code>csv.writer(fp)</code>、<code>writerow</code>、<code>csv.excel.lineterminator</code></td><td>寫 CSV；預設行尾是 <code>'\r\n'</code></td><td><a href="ch06.html#save-pred">6.6</a>、<a href="ch06.html#crlf">6.8</a></td></tr>
+<tr><td><code>open(file, 'w', newline='')</code></td><td>寫入模式開檔（清空重寫）；<code>newline=''</code> 不轉換行尾</td><td><a href="ch06.html#crlf">6.8</a></td></tr>
+<tr><td><code>enumerate(seq)</code></td><td>依序給出 (0, 第 0 個)、(1, 第 1 個)…</td><td><a href="ch03.html#shuffle">3.4</a></td></tr>
+<tr><td><code>int(x)</code></td><td>直接截掉小數部分，不是四捨五入</td><td><a href="ch02.html#split">2.3</a></td></tr>
+<tr><td><code>math.inf</code></td><td>無限大；best_loss 的初值</td><td><a href="ch05.html#setup">5.2</a></td></tr>
+<tr><td><code>os.path.isdir</code>、<code>os.mkdir</code>、<code>os.makedirs(path, exist_ok=True)</code></td><td>先檢查再建目錄（原程式）／一行完成（現在的做法）</td><td><a href="ch05.html#save">5.7</a></td></tr>
+<tr><td><code>tqdm(it, position, leave)</code>、<code>set_description</code>、<code>set_postfix</code></td><td>進度條；左邊文字；右邊的 loss=…</td><td><a href="ch05.html#epoch">5.3</a>、<a href="ch05.html#trainloss">5.5</a></td></tr>
+<tr><td><code>__doc__</code>、<code>help()</code></td><td>函式的 docstring</td><td><a href="ch02.html#seed">2.2</a></td></tr>
+<tr><td><code>repr()</code></td><td>印出字串的原始寫法（看得見 \r\n）</td><td><a href="ch06.html#lab">6.10</a></td></tr>
+</tbody>
+</table></div>
+<h2 id="commands">A.4　指令速查</h2>
+<p>書中讓讀者執行過的指令，逐字照抄。「在哪裡執行」寫 <code>HW01/</code> 的，就是先 <code>cd</code> 進 repo 裡的 <code>HW01/</code> 目錄再執行；寫 <code>HW01-lab/</code> 的是第 7 章題庫的複本。會覆寫 <code>models/model.ckpt</code> 的實驗（改了設定再跑 train.py），做完都要還原並重跑一次原版，讓它回到 1.661 那一份。</p>
+<h3>建環境（第 0 章）</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>指令</th><th>在哪裡執行</th><th>做什麼</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td><code>cd ~/poyi/GitHubPoyi/ML2022-Spring-pytorch</code></td><td>—</td><td>進 repo 根目錄（作者機器上的路徑，換成你 clone 的位置）</td><td><a href="ch00.html#env">0.3</a></td></tr>
+<tr><td><code>uv venv .venv --python 3.12</code></td><td>repo 根目錄</td><td>建立 venv</td><td><a href="ch00.html#env">0.3</a></td></tr>
+<tr><td><code>UV_HTTP_TIMEOUT=600 uv pip install --python .venv -r requirements.txt</code></td><td>repo 根目錄</td><td>安裝套件，下載逾時放寬到 600 秒</td><td><a href="ch00.html#env">0.3</a></td></tr>
+<tr><td><code>.venv/bin/python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0), torch.cuda.get_device_capability(0)); print(torch.cuda.get_arch_list())"</code></td><td>repo 根目錄</td><td>確認看得到顯卡、kernel 清單裡有 sm_120</td><td><a href="ch00.html#env">0.3</a></td></tr>
+<tr><td><code>uv init --bare --python 3.12</code></td><td>新的空目錄</td><td>新專案建議的做法：pyproject.toml ＋ uv.lock（下兩條同）。本書其餘指令仍用上面依 requirements.txt 建在 repo 根目錄的 .venv</td><td><a href="ch00.html#env">0.3</a></td></tr>
+<tr><td><code>uv add "torch==2.11.0" --index pytorch-cu128=https://download.pytorch.org/whl/cu128</code></td><td>同上</td><td>加入 torch 與它的套件來源</td><td><a href="ch00.html#env">0.3</a></td></tr>
+<tr><td><code>uv sync</code></td><td>同上</td><td>依 lock 檔建出 .venv</td><td><a href="ch00.html#env">0.3</a></td></tr>
+</tbody>
+</table></div>
+<h3>訓練、預測與 TensorBoard</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>指令</th><th>在哪裡執行</th><th>做什麼</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td><code>cd ~/poyi/GitHubPoyi/ML2022-Spring-pytorch/HW01</code></td><td>—</td><td>所有程式都用相對路徑，一定要先進 HW01/</td><td><a href="ch00.html#train">0.5</a></td></tr>
+<tr><td><code>time ../.venv/bin/python train.py</code></td><td><code>HW01/</code></td><td>訓練並量時間（約 34 秒）</td><td><a href="ch00.html#train">0.5</a></td></tr>
+<tr><td><code>../.venv/bin/python train.py 2&gt;train.err</code></td><td><code>HW01/</code></td><td>把 stderr（進度條）寫進檔案，畫面只剩 stdout</td><td><a href="ch00.html#train">0.5</a></td></tr>
+<tr><td><code>../.venv/bin/python train.py 2&gt;/dev/null | grep -c Saving</code></td><td><code>HW01/</code></td><td>數存檔次數（原版 49）</td><td><a href="ch00.html#train">0.5</a></td></tr>
+<tr><td><code>../.venv/bin/python train.py 2&gt;/dev/null | tail -3</code></td><td><code>HW01/</code></td><td>看最後三行（可重現性：應是 Epoch [1883/3000]）</td><td><a href="ch00.html#artifacts">0.7</a></td></tr>
+<tr><td><code>../.venv/bin/python train.py 2&gt;/dev/null | grep -B1 Saving | tail -2</code></td><td><code>HW01/</code></td><td>最後一次存檔與它的前一行；也用來確認 model.ckpt 回到 1.661 那一份</td><td><a href="ch00.html#artifacts">0.7</a></td></tr>
+<tr><td><code>CUDA_VISIBLE_DEVICES="" ../.venv/bin/python -c "import config"</code></td><td><code>HW01/</code></td><td>模擬沒有 GPU：先印 False，再 RuntimeError</td><td><a href="ch00.html#artifacts">0.7</a></td></tr>
+<tr><td><code>../.venv/bin/python predict.py</code></td><td><code>HW01/</code></td><td>產生 pred.csv</td><td><a href="ch00.html#predict">0.6</a></td></tr>
+<tr><td><code>../.venv/bin/python predict.py 2&gt;/dev/null</code></td><td><code>HW01/</code></td><td>同上，丟掉進度條</td><td><a href="ch06.html#lab">6.10</a></td></tr>
+<tr><td><code>../.venv/bin/tensorboard --logdir runs</code></td><td><code>HW01/</code></td><td>啟動 TensorBoard，瀏覽器開 http://localhost:6006；它會佔住終端機，看完按 Ctrl+C 結束</td><td><a href="ch00.html#artifacts">0.7</a></td></tr>
+</tbody>
+</table></div>
+<h3>把 log 存檔再查</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>指令</th><th>在哪裡執行</th><th>做什麼</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td><code>../.venv/bin/python train.py 2&gt;/dev/null &gt; noid.log</code></td><td><code>HW01/</code>、<code>HW01-lab/</code></td><td>stdout 存成檔（檔名依實驗取：noid.log、fixed.log、lr4.log、es200.log、run.log）</td><td><a href="ch02.html#lab">2.5</a></td></tr>
+<tr><td><code>grep features noid.log</code></td><td><code>HW01/</code>、<code>HW01-lab/</code></td><td>特徵數那一行</td><td><a href="ch02.html#lab">2.5</a></td></tr>
+<tr><td><code>grep -B1 Saving noid.log | tail -2</code></td><td><code>HW01/</code>、<code>HW01-lab/</code></td><td>最後一次存檔的 epoch 與 loss，也就是最佳</td><td><a href="ch02.html#lab">2.5</a></td></tr>
+<tr><td><code>tail -1 fixed.log</code></td><td><code>HW01/</code></td><td>最後一行：跑滿上限還是 early stop</td><td><a href="ch03.html#lab">3.6</a></td></tr>
+<tr><td><code>grep "Epoch \[1/3000\]" lr4.log</code></td><td><code>HW01/</code></td><td>第 1 個 epoch 那行（<code>\[</code> 讓方括號照字面比對）</td><td><a href="ch05.html#lab">5.11</a></td></tr>
+<tr><td><code>grep -c Saving lr4.log</code></td><td><code>HW01/</code></td><td>存檔次數</td><td><a href="ch05.html#lab">5.11</a></td></tr>
+<tr><td><code>grep Saving lr4.log | tail -1</code></td><td><code>HW01/</code></td><td>最後一次存檔</td><td><a href="ch05.html#lab">5.11</a></td></tr>
+<tr><td><code>grep "Epoch \[798/3000\]" lr4.log</code></td><td><code>HW01/</code></td><td>確認停在哪個 epoch</td><td><a href="ch05.html#lab">5.11</a></td></tr>
+<tr><td><code>grep Epoch es200.log | tail -1</code></td><td><code>HW01/</code></td><td>最後一個 epoch</td><td><a href="ch05.html#quiz">第 5 章測驗</a></td></tr>
+</tbody>
+</table></div>
+<h3>看資料檔與產物</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>指令</th><th>在哪裡執行</th><th>做什麼</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td><code>wc -l covid.train.csv covid.test.csv</code></td><td><code>HW01/</code></td><td>數行數：2700（含表頭）與 1079</td><td><a href="ch01.html#shell">1.1</a></td></tr>
+<tr><td><code>head -1 covid.train.csv | tr ',' '\n' | wc -l</code></td><td><code>HW01/</code></td><td>數欄數：118</td><td><a href="ch01.html#shell">1.1</a></td></tr>
+<tr><td><code>head -1 covid.train.csv | tr ',' '\n' | sed -n '1,3p;37,40p;53,56p;117,118p'</code></td><td><code>HW01/</code></td><td>跳著看關鍵位置的欄名</td><td><a href="ch01.html#shell">1.1</a></td></tr>
+<tr><td><code>head -4 pred.csv</code></td><td><code>HW01/</code></td><td>表頭與前三筆預測</td><td><a href="ch00.html#predict">0.6</a></td></tr>
+<tr><td><code>tail -2 pred.csv</code></td><td><code>HW01/</code></td><td>最後兩筆（id 1076、1077）</td><td><a href="ch06.html#save-pred">6.6</a></td></tr>
+<tr><td><code>wc -l pred.csv</code></td><td><code>HW01/</code></td><td>1079 行</td><td><a href="ch06.html#lab">6.10</a></td></tr>
+<tr><td><code>md5sum pred.csv</code></td><td><code>HW01/</code></td><td>檔案指紋；本書環境下是 46a0484b…</td><td><a href="ch06.html#lab">6.10</a></td></tr>
+<tr><td><code>../.venv/bin/python -c "print(open('pred.csv', 'rb').read(30))"</code></td><td><code>HW01/</code></td><td>看前 30 個位元組（行尾是 \r\n）</td><td><a href="ch06.html#lab">6.10</a></td></tr>
+<tr><td><code>../.venv/bin/python -c "import csv; print(repr(csv.excel.lineterminator))"</code></td><td><code>HW01/</code></td><td>csv.writer 的預設行尾</td><td><a href="ch06.html#lab">6.10</a></td></tr>
+<tr><td><code>ls -l models/</code></td><td><code>HW01/</code></td><td>model.ckpt 的大小（11,005 bytes）</td><td><a href="ch00.html#artifacts">0.7</a></td></tr>
+<tr><td><code>cat .gitignore</code></td><td><code>HW01/</code></td><td>三條規則：models/*、runs/*、*.csv</td><td><a href="ch00.html#artifacts">0.7</a></td></tr>
+<tr><td><code>explorer.exe fl.png</code></td><td><code>HW01/</code></td><td>在 WSL 裡用 Windows 的看圖程式開圖</td><td><a href="ch01.html#corr">1.7</a></td></tr>
+</tbody>
+</table></div>
+<h3>備份與還原（做完實驗務必還原）</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>指令</th><th>在哪裡執行</th><th>做什麼</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td><code>cp train.py train.py.bak</code></td><td><code>HW01/</code></td><td>改 train.py 之前先備份</td><td><a href="ch03.html#lab">3.6</a></td></tr>
+<tr><td><code>mv train.py.bak train.py</code></td><td><code>HW01/</code></td><td>還原；之後再跑一次 train.py 讓 model.ckpt 回到 1.661</td><td><a href="ch03.html#lab">3.6</a></td></tr>
+<tr><td><code>cp config.py config.py.bak</code></td><td><code>HW01/</code></td><td>改 config.py 之前先備份</td><td><a href="ch05.html#lab">5.11</a></td></tr>
+<tr><td><code>mv config.py.bak config.py</code></td><td><code>HW01/</code></td><td>還原</td><td><a href="ch05.html#lab">5.11</a></td></tr>
+</tbody>
+</table></div>
+<h3>第 7 章題庫的複本</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>指令</th><th>在哪裡執行</th><th>做什麼</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td><code>cp -r HW01 HW01-lab</code></td><td>repo 根目錄</td><td>建一份複本，題目都在裡面做</td><td><a href="ch07.html#bank">7.13</a></td></tr>
+<tr><td><code>cd HW01-lab</code></td><td>repo 根目錄</td><td>進複本；Python 照樣用 ../.venv/bin/python</td><td><a href="ch07.html#bank">7.13</a></td></tr>
+<tr><td><code>rm -rf HW01-lab &amp;&amp; cp -r HW01 HW01-lab</code></td><td>repo 根目錄</td><td>換下一題時重建一份乾淨的複本</td><td><a href="ch07.html#bank">7.13</a></td></tr>
+<tr><td><code>rm -rf HW01-lab</code></td><td>repo 根目錄</td><td>做完整個刪掉（不要 commit）</td><td><a href="ch07.html#bank">7.13</a></td></tr>
+<tr><td><code>../.venv/bin/python train.py 2&gt;/dev/null &gt; run.log</code></td><td><code>HW01-lab/</code></td><td>每一題的執行方式；接著用下面兩條看結果</td><td><a href="ch07.html#bank">7.13</a></td></tr>
+<tr><td><code>grep features run.log</code></td><td><code>HW01-lab/</code></td><td>特徵數</td><td><a href="ch07.html#bank">7.13</a></td></tr>
+<tr><td><code>grep -B1 Saving run.log | tail -2</code></td><td><code>HW01-lab/</code></td><td>最佳的那一次</td><td><a href="ch07.html#bank">7.13</a></td></tr>
+<tr><td><code>tail -1 run.log</code></td><td><code>HW01-lab/</code></td><td>最後一行</td><td><a href="ch07.html#bank">7.13</a></td></tr>
+</tbody>
+</table></div>
+<h3>反例：在錯的目錄執行</h3>
+<p>在 repo 根目錄執行 <code>.venv/bin/python HW01/predict.py</code>，第一個失敗的就是讀訓練資料：<code>FileNotFoundError: [Errno 2] No such file or directory: './covid.train.csv'</code>（<a href="ch06.html#detour">6.2</a>）。所有程式都要在 <code>HW01/</code> 裡執行。</p>
+<h3>多行的 python -c 檢查腳本</h3>
+<p>這些腳本都在 <code>HW01/</code> 執行（目錄頁那一段前面先 <code>cd HW01</code>），開頭是 <code>../.venv/bin/python -c "</code>，跨好幾行。這裡只列用途，全文請到出處那一節複製，不要手打。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>用途</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>同一驗證集上的三個 baseline：抄第 4 天 1.313、線性迴歸 4 欄 1.303、116 欄 1.166</td><td><a href="index.html#now">目錄頁</a></td></tr>
+<tr><td>印出模型結構與參數總數 2033</td><td><a href="ch00.html#model">0.2</a></td></tr>
+<tr><td>每列恰好一個州是 1；每州 53～91 列</td><td><a href="ch01.html#onehot">1.3</a></td></tr>
+<tr><td>各州答案平均的最低（CT）與最高（MS）</td><td><a href="ch01.html#onehot">1.3</a></td></tr>
+<tr><td>第 1 天 16 個指標的平均、最小、最大</td><td><a href="ch01.html#values">1.4</a></td></tr>
+<tr><td>缺值總數 0</td><td><a href="ch01.html#values">1.4</a></td></tr>
+<tr><td>只用訓練集統計量標準化：訓練 0.0／1.0，驗證 0.011／1.002</td><td><a href="ch01.html#values">1.4</a></td></tr>
+<tr><td>重複欄名被改成 cli.1…</td><td><a href="ch01.html#readcsv">1.5</a></td></tr>
+<tr><td>.values 之後是 float64 的 (2699, 118)</td><td><a href="ch01.html#readcsv">1.5</a></td></tr>
+<tr><td>FL 按 id 排序，看出滑動視窗</td><td><a href="ch01.html#window">1.6</a></td></tr>
+<tr><td>37 州有幾州的列完全接得上（29）</td><td><a href="ch01.html#window">1.6</a></td></tr>
+<tr><td>按時間切分 2143／556，線性迴歸 1.21、抄第 4 天 1.241</td><td><a href="ch01.html#window">1.6</a></td></tr>
+<tr><td>id 範圍與缺號 2239</td><td><a href="ch01.html#window">1.6</a></td></tr>
+<tr><td>測試集第 1 天的問卷只有 36 列出現在訓練集</td><td><a href="ch01.html#window">1.6</a></td></tr>
+<tr><td>和答案最相關的欄位</td><td><a href="ch01.html#corr">1.7</a></td></tr>
+<tr><td>畫出 FL 的陽性率曲線</td><td><a href="ch01.html#corr">1.7</a></td></tr>
+<tr><td>切分大小與驗證集前 10 個 id</td><td><a href="ch02.html#lab">2.5</a></td></tr>
+<tr><td>一筆資料的形狀與 dtype</td><td><a href="ch03.html#lab">3.6</a></td></tr>
+<tr><td>同一個模型：一次算完 2.0685、不打亂 2.0690、打亂後每次不同</td><td><a href="ch03.html#lab">3.6</a></td></tr>
+<tr><td>名冊裡的六個參數與 state_dict 的 key</td><td><a href="ch04.html#lab">4.9</a></td></tr>
+<tr><td>忘了 super().__init__() 的錯誤訊息</td><td><a href="ch04.html#lab">4.9</a></td></tr>
+<tr><td>逐層形狀，以及有無 squeeze 的 loss（1.7758 vs 89.0963）</td><td><a href="ch04.html#lab">4.9</a></td></tr>
+<tr><td>印出 SGD 的全部設定</td><td><a href="ch05.html#lab">5.11</a></td></tr>
+<tr><td>親手走一次訓練五步驟的第一步</td><td><a href="ch05.html#lab">5.11</a></td></tr>
+<tr><td>預測的分布、MSE(預測, 第 4 天)、打亂 id 的代價</td><td><a href="ch06.html#lab">6.10</a></td></tr>
+<tr><td>從權重形狀讀出 input_dim：OrderedDict 6 117</td><td><a href="ch06.html#lab">6.10</a></td></tr>
+</tbody>
+</table></div>
+<h2 id="numbers">A.5　關鍵數字一覽</h2>
+<p>都是正文裡出現過的數字，出處欄連回第一次報告它（或報告得最完整）的那一節。除非另外註明，模型都是 <code>models/model.ckpt</code> 那一份（印出 1.661 的原版），驗證集是 seed 5201314 隨機切出的 539 筆。</p>
+<h3>資料</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>項目</th><th>數字</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>covid.train.csv</td><td>2699 列 × 118 欄（id ＋ 37 州 ＋ 16 指標 × 5 天）</td><td><a href="ch01.html#layout">1.2</a></td></tr>
+<tr><td>covid.test.csv</td><td>1078 列 × 117 欄（少了答案欄）</td><td><a href="ch01.html#layout">1.2</a>、<a href="ch00.html#train">0.5</a></td></tr>
+<tr><td>隨機切分</td><td>訓練 2160／驗證 539（int(0.2 × 2699)，截斷）</td><td><a href="ch02.html#split">2.3</a></td></tr>
+<tr><td>按時間切分</td><td>訓練 2143／驗證 556</td><td><a href="ch01.html#window">1.6</a></td></tr>
+<tr><td>每個 epoch 的 batch 數</td><td>train 9、valid 3、test 5；最後一批 112、27、54 筆</td><td><a href="ch03.html#loader">3.3</a></td></tr>
+<tr><td>訓練集 id</td><td>0～2699，缺號 2239；測試集 id 是另一套 0～1077</td><td><a href="ch01.html#window">1.6</a></td></tr>
+<tr><td>訓練集答案（第 5 天）</td><td>全部 2,699 列：平均 9.8193、最大 30.3046</td><td><a href="ch06.html#extrapolate">6.9</a></td></tr>
+</tbody>
+</table></div>
+<h3>模型</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>項目</th><th>數字</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>架構</td><td>117 → 16 → 8 → 1</td><td><a href="ch00.html#model">0.2</a></td></tr>
+<tr><td>參數量</td><td>2,033（第一層 1,888，佔 92.9%）；116 欄時 2,017</td><td><a href="ch04.html#linear">4.3</a></td></tr>
+<tr><td>model.ckpt</td><td>11,005 bytes（參數本身 2,033 × 4 = 8,132 bytes）</td><td><a href="ch04.html#linear">4.3</a></td></tr>
+<tr><td>初始化範圍</td><td>±1/√in；第一層 1/√117 = 0.0925</td><td><a href="ch04.html#init">4.4</a></td></tr>
+</tbody>
+</table></div>
+<h3>原版訓練（config 不改，直接跑 train.py）</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>項目</th><th>數字</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>時間</td><td>real 0m34.167s（約 34 秒）</td><td><a href="ch00.html#train">0.5</a></td></tr>
+<tr><td>第 1 個 batch 的 loss</td><td>508.8512（進度條上短暫顯示 loss=509）</td><td><a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td>第 1 個 epoch</td><td>Train loss 134.2442、Valid loss 107.2155</td><td><a href="ch00.html#train">0.5</a></td></tr>
+<tr><td>印出的最佳</td><td>Valid loss 1.6611（Saving 那行印 1.661），第 1483 個 epoch</td><td><a href="ch00.html#train">0.5</a></td></tr>
+<tr><td>停止</td><td>第 1883 個 epoch early stop（1483 ＋ 400）</td><td><a href="ch00.html#train">0.5</a></td></tr>
+<tr><td>存檔次數</td><td>49 次；前 100 個 epoch 就存了 26 次</td><td><a href="ch05.html#save">5.7</a></td></tr>
+<tr><td>TensorBoard</td><td>每條曲線 1,883 個點；最後一點在 step 16,947 ＝ 1,883 × 9</td><td><a href="ch05.html#tensorboard">5.9</a></td></tr>
+</tbody>
+</table></div>
+<h3>驗證集 MSE：印出的 vs. 真實的</h3>
+<p>「印出的」是訓練時 stdout 上最佳的那個 valid loss（各 batch 平均再平均、驗證集打亂、再挑最小值，系統性偏低）；「真實」是同一個 checkpoint 在 539 筆上一次算完的 MSE。不需要訓練的方法本來就是一次算完，只有真實值。<strong>比較時只用「真實」那一欄。</strong></p>
+<div class="tablewrap"><table>
+<thead><tr><th>方法</th><th>印出的最佳 valid loss</th><th>真實 valid MSE</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>範例 DNN 原版（117 欄含 id）</td><td>1.661</td><td>2.0685</td><td><a href="ch03.html#bias">3.5</a></td></tr>
+<tr><td>DNN 拿掉 id（第 2 章動手做）</td><td>0.982</td><td>1.2403</td><td><a href="ch03.html#bias">3.5</a></td></tr>
+<tr><td>DNN id 除以 2699</td><td>1.003</td><td>1.2588</td><td><a href="ch03.html#bias">3.5</a></td></tr>
+<tr><td>原版＋量法修正</td><td>1.717（＝真實）</td><td>1.7174</td><td><a href="ch03.html#lab">3.6</a></td></tr>
+<tr><td>直接抄第 4 天</td><td>—</td><td>1.313</td><td><a href="index.html#now">目錄頁</a></td></tr>
+<tr><td>線性迴歸 4 欄（最小平方法）</td><td>—</td><td>1.303</td><td><a href="index.html#now">目錄頁</a></td></tr>
+<tr><td>線性迴歸 116 欄（最小平方法）</td><td>—</td><td>1.166</td><td><a href="index.html#now">目錄頁</a></td></tr>
+<tr><td>線性迴歸 117 欄含 id（最小平方法）</td><td>—</td><td>1.172</td><td><a href="ch02.html#feat">2.4</a></td></tr>
+</tbody>
+</table></div>
+<h3>偏差的證據</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>項目</th><th>數字</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>同一個 checkpoint 換 200 種分組（驗證集打亂後被分進哪些 batch）</td><td>最小 1.7069、中位數 2.0528、最大 2.8467（印出的 1.661 比最小值還低）</td><td><a href="ch03.html#bias">3.5</a></td></tr>
+<tr><td>第 1483 個 epoch 的分組</td><td>在 1,883 組裡排第 7 低（最低 1.6103、中位數 2.0471）</td><td><a href="ch05.html#save">5.7</a></td></tr>
+<tr><td>lr 1e-6 的訓練</td><td>最佳也落在第 1483 個 epoch（印出 1.818），也在第 1883 個 epoch 停止</td><td><a href="ch05.html#save">5.7</a></td></tr>
+</tbody>
+</table></div>
+<h3>模型內部（model.ckpt）</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>項目</th><th>數字</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>第一層沒在工作的單元</td><td>10 / 16（剛初始化時 2 / 16）；第一層輸出 81.5% 是 0</td><td><a href="ch04.html#trained">4.7</a></td></tr>
+<tr><td>id 欄在第一層的份量</td><td>平均 |w·x|：id 309.13，其他欄 0.7558，約 400 倍</td><td><a href="ch04.html#trained">4.7</a></td></tr>
+<tr><td>第一步的梯度</td><td>id 欄平均 |g| 2602.08，其他欄 24.13，約 108 倍</td><td><a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td>第一步的權重移動</td><td>第一層最大的 |Δw| 0.0869（最大的 |g| 8688.2920 × lr 1e-5），就在 id 欄；幾乎等於整個初始化範圍 ±0.0925</td><td><a href="ch05.html#steps">5.4</a></td></tr>
+</tbody>
+</table></div>
+<h3>學習率與 momentum 的對照（各改一處）</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>項目</th><th>數字</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>lr 1e-4</td><td>印出最佳 36.157；第一層 16 / 16 全死，只輸出 9.731；真實 44.5095</td><td><a href="ch05.html#hparams">5.10</a></td></tr>
+<tr><td>lr 1e-6</td><td>印出最佳 1.818；真實 2.2601</td><td><a href="ch05.html#hparams">5.10</a></td></tr>
+<tr><td>momentum 0</td><td>印出最佳 2.463；真實 2.9992；跑滿 3000</td><td><a href="ch05.html#hparams">5.10</a></td></tr>
+<tr><td>「永遠猜訓練集平均」</td><td>真實 44.5021；驗證集答案的變異數 44.346</td><td><a href="ch05.html#hparams">5.10</a></td></tr>
+</tbody>
+</table></div>
+<h3>測試集與 pred.csv</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>項目</th><th>數字</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>測試集第 4 天陽性率</td><td>平均 15.1686、最大 46.9521（訓練集同一欄：9.7698、30.3046）</td><td><a href="ch06.html#extrapolate">6.9</a></td></tr>
+<tr><td>測試集的預測</td><td>平均 15.1763、最大 44.7035；61 筆超過訓練集答案最大值 30.3046</td><td><a href="ch06.html#extrapolate">6.9</a></td></tr>
+<tr><td>pred.csv</td><td>1,079 行（表頭 ＋ 1,078）、15,799 bytes、行尾 CRLF</td><td><a href="ch06.html#save-pred">6.6</a>、<a href="ch06.html#crlf">6.8</a></td></tr>
+<tr><td>MSE(預測, 第 4 天)</td><td>照順序 1.0045；打亂 id 後 120.0056（第 4 天的變異數 59.6773）</td><td><a href="ch06.html#save-pred">6.6</a></td></tr>
+</tbody>
+</table></div>
+<h3>第 7 章的改良（全部用修正後的量法，數字＝真實 valid MSE）</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>項目</th><th>數字</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>隨機切分：拿掉 id</td><td>1.1848</td><td><a href="ch07.html#feature">7.4</a></td></tr>
+<tr><td>　＋標準化＋SGD lr 1e-3</td><td>1.0715</td><td><a href="ch07.html#scale">7.5</a></td></tr>
+<tr><td>　＋weight_decay 1e-2</td><td>1.041</td><td><a href="ch07.html#l2">7.8</a></td></tr>
+<tr><td>　116→64→32→1（不加 wd），4 個 seed 平均</td><td>0.9805（seed 5201314 單次 0.9909）</td><td><a href="ch07.html#seed">7.11</a></td></tr>
+<tr><td>時間切分：64-32，4 個 seed 平均</td><td>1.7336</td><td><a href="ch07.html#seed">7.11</a></td></tr>
+<tr><td>時間切分：corr DNN（標準化＋Adam＋wd 1e-2），4 個 seed 平均</td><td>1.1430（標準差 0.0171）</td><td><a href="ch07.html#seed">7.11</a></td></tr>
+<tr><td>時間切分：線性 corr，4 個 seed 平均</td><td>1.1334（標準差 0.0002）</td><td><a href="ch07.html#seed">7.11</a></td></tr>
+<tr><td>換 seed 的波動（DNN）</td><td>標準差 0.01～0.06；小於這個差距的比較不算數</td><td><a href="ch07.html#seed">7.11</a></td></tr>
+<tr><td>LightGBM（noid 116 欄）</td><td>隨機切分 1.2808／1.2802；時間切分 1.3759／1.3602；測試集預測最大只到約 28</td><td><a href="ch07.html#bank">7.13</a></td></tr>
+</tbody>
+</table></div>
+<h3>Kaggle 基準線</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>基準線</th><th>Kaggle public MSE</th></tr></thead>
+<tbody>
+<tr><td>simple</td><td>2.28371</td></tr>
+<tr><td>medium</td><td>1.49430</td></tr>
+<tr><td>strong</td><td>1.05728</td></tr>
+<tr><td>boss</td><td>0.86161</td></tr>
+</tbody>
+</table></div>
+<div class="warn"><h4>不能和上面的驗證集 MSE 比</h4><p>這四個數字是 Kaggle 用<strong>測試集</strong>的答案算出的 MSE（作業投影片第 14 頁的排行榜截圖）。測試集是陽性率更高的時期，本書也沒有上傳任何 pred.csv，所以驗證集上的 0.98 小於 1.05728，不代表上傳後也會小於它（<a href="ch07.html#hints">7.2</a>）。</p></div>
+<h2 id="issues">A.6　repo 問題清單</h2>
+<p>讀程式時挖出的 20 個問題，依影響分三級。都已在正文講過，這裡只是彙整；位置是問題所在的原始碼行，出處連回講它的那幾節。<code>config.py</code> 第 4 行的 <code>device = "cuda"</code> 與第 6–7 行的 fail fast 是刻意的設計，不在清單上（A.2 末段）；第 10 項只談那兩行 print 對 stdout 的影響。</p>
+<h3>一、會影響結果的</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>#</th><th>問題</th><th>位置</th><th>書中出處</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>id 被當成特徵：<code>select_all=True</code> 時 feat_idx 是 range(117)，包含第 0 欄 id。id 大到 2699，在第一層的貢獻約是其他欄的 400 倍、第一步的梯度約 108 倍；測試集的 id 又是另一套 0–1077</td><td>utils.py:32</td><td><a href="ch01.html#window">1.6</a>、<a href="ch02.html#feat">2.4</a>、<a href="ch04.html#trained">4.7</a>、<a href="ch05.html#steps">5.4</a></td></tr>
+<tr><td>2</td><td>印出的 valid loss 偏低：valid_loader 也 shuffle=True，加上各 batch 平均再平均（256／256／27），再從約 1900 個量測裡挑最小。印出 1.661，真實 MSE 2.069</td><td>train.py:123、train.py:81（挑最小：train.py:85）</td><td><a href="ch03.html#bias">3.5</a>、<a href="ch05.html#save">5.7</a></td></tr>
+<tr><td>3</td><td>train loss 也是各 batch 平均再平均，而且一邊更新權重一邊記錄，不是任何一個固定模型的 MSE</td><td>train.py:67</td><td><a href="ch03.html#bias">3.5</a>、<a href="ch05.html#trainloss">5.5</a></td></tr>
+<tr><td>4</td><td>沒有標準化：學習率只能壓到 1e-5；設定對 seed 敏感（量法修正版 seed 2 是 12.80，原版 train.py seed 2 的真實 MSE 是 13.24）</td><td>（原程式沒有這一步；要加在 train.py:114 之後）</td><td><a href="ch01.html#values">1.4</a>、<a href="ch05.html#steps">5.4</a>、<a href="ch07.html#scale">7.5</a>、<a href="ch07.html#seed">7.11</a>、<a href="ch07.html#bank">7.13</a></td></tr>
+<tr><td>5</td><td>隨機切分不符合滑動視窗的時間序列資料：驗證集會偷看到相鄰的日子，挑出的模型偏向過擬合</td><td>train.py:106（utils.py:17–23）</td><td><a href="ch01.html#window">1.6</a>、<a href="ch02.html#split">2.3</a>、<a href="ch06.html#extrapolate">6.9</a>、<a href="ch07.html#time">7.10</a></td></tr>
+</tbody>
+</table></div>
+<h3>二、潛在錯誤（目前碰巧沒出事，換個情況就會出錯）</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>#</th><th>問題</th><th>位置</th><th>書中出處</th></tr></thead>
+<tbody>
+<tr><td>6</td><td>save_pred 開檔沒有加 <code>newline=''</code>：csv.writer 一律寫 CRLF，在 Windows 上會變成 <code>\r\r\n</code></td><td>utils.py:41</td><td><a href="ch06.html#crlf">6.8</a></td></tr>
+<tr><td>7</td><td>save_pred 用 enumerate 的 i 當 id，不讀測試集的 id 欄。剛好成立，是因為測試集的 id 正好是 0–1077 依序，而且 test loader 沒有打亂</td><td>utils.py:44–45</td><td><a href="ch06.html#save-pred">6.6</a>、<a href="ch03.html#shuffle">3.4</a></td></tr>
+<tr><td>8</td><td>predict.py 為了拿到 input_dim 而重讀訓練資料並切分：預測依賴訓練資料；117 是執行當下重算的，和訓練時用的特徵之間沒有任何檢查（欄位換了不會報錯）</td><td>predict.py:25–34、predict.py:39</td><td><a href="ch00.html#predict">0.6</a>、<a href="ch04.html#predict">4.8</a>、<a href="ch06.html#detour">6.2</a></td></tr>
+<tr><td>9</td><td>checkpoint 只存 state_dict，沒有存 input_dim、feat_idx、標準化的統計量</td><td>train.py:88</td><td><a href="ch06.html#better">6.3</a>、<a href="ch07.html#predict">7.12</a></td></tr>
+<tr><td>10</td><td>config.py 被 import 時會印出 <code>True</code> 與 <code>0</code>，每支程式的 stdout 開頭都多兩行。書中把這兩行說明為設計的一部分（確認 GPU 確實在）；讀輸出、用 grep 或 tail 處理 stdout 時要記得它們。不要為了乾淨刪掉第 7 行：沒有 GPU 時就是它讓程式立刻失敗</td><td>config.py:6–7</td><td><a href="ch00.html#config">0.4</a></td></tr>
+<tr><td>11</td><td>SummaryWriter 從頭到尾沒有呼叫 <code>close()</code>／<code>flush()</code>；本機實測紀錄檔是完整的，但依賴程式結束時的自動處理</td><td>train.py:37</td><td><a href="ch05.html#tensorboard">5.9</a></td></tr>
+</tbody>
+</table></div>
+<h3>三、註解、文件與遺留寫法（不影響執行）</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>#</th><th>問題</th><th>位置</th><th>書中出處</th></tr></thead>
+<tbody>
+<tr><td>12</td><td>註解 <code>validation_size = train_size * valid_ratio</code> 算錯對象：實際是切分前的全部 2699 × 0.2 = 539，不是 2160 × 0.2 = 432</td><td>config.py:12</td><td><a href="ch00.html#config">0.4</a>、<a href="ch02.html#split">2.3</a></td></tr>
+<tr><td>13</td><td>docstring「Selects useful features」其實什麼都沒挑</td><td>utils.py:27</td><td><a href="ch02.html#feat">2.4</a></td></tr>
+<tr><td>14</td><td><code>select_all=False</code> 的佔位值 [0, 1, 2, 3, 4] 是 id 加 AL、AK、AZ、AR 四州，全部不是有用的特徵</td><td>utils.py:34</td><td><a href="ch02.html#feat">2.4</a></td></tr>
+<tr><td>15</td><td>docstring 寫成 <code>""""</code>（4 個引號），<code>__doc__</code> 開頭多一個 <code>"</code></td><td>utils.py:8</td><td><a href="ch02.html#seed">2.2</a></td></tr>
+<tr><td>16</td><td>same_seed 沒有設定 Python 內建的 random；cuDNN 兩行在 HW01 沒有作用對象；cuda seed 那兩行和 <code>torch.manual_seed</code> 重複</td><td>utils.py:7–14</td><td><a href="ch02.html#seed">2.2</a></td></tr>
+<tr><td>17</td><td>重複 <code>from tqdm import tqdm</code>；import 了 <code>random_split</code> 但沒用到</td><td>train.py:9、train.py:21；train.py:12</td><td><a href="ch00.html#map">0.8</a>、<a href="ch02.html#split">2.3</a></td></tr>
+<tr><td>18</td><td><code>.detach()</code> 多餘：<code>.item()</code> 本來就和計算圖無關；no_grad 裡本來就沒有計算圖</td><td>train.py:61、predict.py:17</td><td><a href="ch05.html#trainloss">5.5</a>、<a href="ch06.html#predict-fn">6.5</a></td></tr>
+<tr><td>19</td><td>舊式寫法：<code>torch.FloatTensor</code>、<code>super(My_Model, self)</code>、先 <code>isdir</code> 再 <code>mkdir</code></td><td>data_loader.py:18–19、model.py:12、train.py:40–41</td><td><a href="ch03.html#dataset">3.2</a>、<a href="ch04.html#module">4.2</a>、<a href="ch05.html#save">5.7</a></td></tr>
+<tr><td>20</td><td>Jupyter 筆記本拆檔留下的字串 <code>"""# Dataset"""</code>、<code>"""# Training Loop"""</code> 等</td><td>data_loader.py:5、train.py:24、model.py:4–7</td><td><a href="ch03.html#dataset">3.2</a>、<a href="ch04.html#where">4.1</a></td></tr>
+</tbody>
+</table></div>
+<h2 id="further">延伸閱讀</h2>
+<p>各章末的延伸閱讀已經針對該章主題列了資源；查 API 時最常用的是下面幾份官方參考文件。</p>
+<ul>
+  <li><a href="https://pytorch.org/docs/stable/index.html">PyTorch documentation</a>：torch、torch.nn、torch.optim、torch.utils.data 的完整 API。</li>
+  <li><a href="https://pandas.pydata.org/docs/reference/index.html">pandas API reference</a>：read_csv、DataFrame 的各個方法。</li>
+  <li><a href="https://numpy.org/doc/stable/reference/index.html">NumPy reference</a>：陣列、索引、亂數產生器。</li>
+  <li><a href="https://docs.python.org/3/library/csv.html">Python 文件 — csv 模組</a>：csv.writer、lineterminator 與 newline=''。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a></nav>
+<footer class="chap-footer">ML2022 Spring HW01 讀碼教材 · 對應 commit 717528b · 本附錄的內容與數字全部取自第 0～7 章與目錄頁，沒有新的實測</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py；本教材的原始碼全是 .py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>
