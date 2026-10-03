@@ -601,7 +601,7 @@ footer.chap-footer {
 <div class="tablewrap"><table>
 <thead><tr><th>原版 notebook（2022）</th><th>本 repo（2026）</th><th>為什麼要改</th></tr></thead>
 <tbody>
-<tr><td><code>lime==0.1.1.37</code>（投影片第 7 頁指定）、<code>transformers==4.5.0</code></td><td><code>lime==0.2.0.1</code>、<code>transformers==5.18.0</code></td><td>舊版裝不進 Python 3.12 的新環境；版本都 pin 在 <code>requirements.txt</code></td></tr>
+<tr><td><code>lime==0.1.1.37</code>（投影片第 7 頁指定）、<code>transformers==4.5.0</code></td><td><code>lime==0.2.0.1</code>、<code>transformers==5.18.0</code></td><td><code>transformers==4.5.0</code> 在 Python 3.12 裝不起來（它依賴的 <code>tokenizers</code> 0.10.3 編譯失敗）；舊版 lime 其實還裝得起來、跑出的結果也相同，本 repo 統一改用目前的版本。版本都 pin 在 <code>requirements.txt</code></td></tr>
 <tr><td><code>from torch.autograd import Variable</code>，用 <code>Variable(...)</code> 包住 tensor</td><td>直接對 tensor 呼叫 <code>requires_grad_()</code></td><td>PyTorch 0.4（2018）起 tensor 本身就能追蹤梯度，<code>Variable</code> 只剩相容用的空殼</td></tr>
 <tr><td><code>x.grad.data</code>、<code>.data.numpy()</code></td><td><code>.detach()</code></td><td><code>.data</code> 會繞過自動微分的檢查，現在建議用 <code>.detach()</code></td></tr>
 <tr><td><code>torch.FloatTensor(1, n).zero_().cuda()</code></td><td><code>torch.zeros(1, n).cuda()</code></td><td>同一件事，新寫法一步到位</td></tr>
