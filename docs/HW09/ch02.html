@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 2 章　LIME：遮住一塊，看分數怎麼變 — HW09 Explainable AI</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch01.html">← 第 1 章</a><a href="ch03.html">第 3 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW09 讀碼教材</p>
+  <h1>第 2 章　LIME：遮住一塊，看分數怎麼變</h1>
+  <p class="chap-lead">第一種解釋方法完全不碰梯度，只做 forward：把圖切成一小塊一小塊，隨機遮掉其中一些，看模型的分數怎麼變，再用一條直線去擬合「哪幾塊沒遮」和「分數」的關係。本章把 <code>explain_cnn.py</code> 的 LIME 段落（Q1–4）和 lime 套件在背後做的事一步一步拆開，並用實測數字看兩個藏在程式裡的問題：餵給 LIME 的是 logits 而不是機率，以及 superpixel 的編號差了一號。</p>
+</header>
+<main>
+
+<h2 id="start">2.1　起點：lime.png</h2>
+<p>第 0 章 <a href="ch00.html#run-cnn">0.5 節</a>執行 <code>explain_cnn.py</code> 後，stdout 的第 4 行是 <code>saved ./output/lime.png</code>。這是五種方法的第一張結果圖，也是本章的主角：</p>
+<figure class="fig">
+<img src="img/lime.png" alt="10 張食物圖排成一列，每張圖上有幾塊被染成亮黃綠色的不規則區域；圖 9 的碗上方可以看到一小塊紅色">
+<figcaption>圖 2.1 — <code>lime.png</code>：LIME 對 10 張圖各自的解釋。被染成亮綠色的區域是「支持模型判斷」的 superpixel，紅色是「反對」的。由左到右是圖 0 到圖 9，類別順序和第 1 章 <a href="ch01.html#labels">1.3 節</a>的表相同。</figcaption>
+</figure>
+<p>先只用眼睛看：大部分的圖上都有幾塊亮綠色的不規則區域，例如圖 0 的披薩上半部、圖 4 的鬆餅、圖 7 炒麵的左半邊。紅色很少見，最明顯的是圖 9 碗的上方那一小塊。兩張 Dairy product（圖 1 奶油塊、圖 2 牛奶壺）上色的面積很小，圖 1 只有奶油右下方一小片，圖 2 幾乎看不出來。</p>
+<p>讀完本章，你要能回答這張圖背後的幾個問題：那些不規則的區域是怎麼切出來的？「支持」與「反對」是怎麼算出來的？為什麼每張圖最多只上色 11 塊？為什麼圖 1、圖 2 看起來幾乎沒有上色，實際上卻有好幾塊被標成紅色？</p>
+<p>關於作業題目：投影片第 7 頁只寫了三件事：安裝 lime 套件（指定 <code>pip install lime==0.1.1.37</code>）、lime 的 GitHub 網址、一個參考連結。Q1–4 的題目本身在 Gradescope 上，不在 repo 裡（第 0 章 <a href="ch00.html#questions">0.1 節〈30 題在問什麼〉</a>），所以本書不逐題作答，而是把回答這類問題需要的觀念與觀察講清楚。本 repo 用的是 lime 0.2.0.1，不是投影片指定的 0.1.1.37；兩個版本對圖 0 跑出的結果完全相同，目錄頁的<a href="index.html#now">〈第一層〉</a>已經說明過，這裡不重複。</p>
+
+<h2 id="idea">2.2　LIME 的想法：遮住一塊，看分數怎麼變</h2>
+<p>LIME 是 <em>Local Interpretable Model-agnostic Explanations</em> 的縮寫，出自 Ribeiro 等人 2016 年的論文。名字裡的三個字各有意思：</p>
+<ul>
+  <li><strong>Model-agnostic（不挑模型）</strong>：LIME 只需要一個「給輸入、吐分數」的函式，不需要知道模型內部長什麼樣，也不需要梯度。對它來說，我們的 CNN 就是一個黑盒子。這和第 3–5 章的方法很不一樣：那些方法都要對輸入取梯度，必須打開模型。</li>
+  <li><strong>Interpretable（看得懂）</strong>：LIME 不直接解釋 128 × 128 × 3 = 49,152 個像素值，而是先把圖切成一百多個小塊，每一塊只問「留著」或「遮掉」兩種狀態。解釋的單位是這些小塊。</li>
+  <li><strong>Local（局部）</strong>：整個 CNN 是極度非線性的函式，沒有辦法用一條直線描述。但如果只看「這一張圖附近」，也就是只在這張圖上遮遮掩掩，就可以用一個簡單的線性模型去近似它。這個近似只對這一張圖成立，換一張圖就要重新算一次。</li>
+</ul>
+<p>這種「用一個簡單模型在局部模仿複雜模型」的做法，稱為<strong>代理模型</strong>（surrogate model）。LIME 的代理模型是線性的：每一塊一個權重，權重越大，代表留著這一塊時模型的分數越高。所以權重為正的塊「支持」這個類別（畫成綠色），權重為負的塊「反對」（畫成紅色）。</p>
+<p>整個流程畫成圖如下。<code>explain_cnn.py</code> 自己只寫了兩個小函式（切塊用的 <code>segmentation</code>、跑模型用的 <code>predict</code>），其餘步驟都在 lime 套件裡：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 360" role="img" aria-label="LIME 的流程：原圖先切成 superpixel，取樣 1000 組 0/1 向量，把 0 的塊換成平均色，送進模型得到 logits，用核權重做加權 Ridge 回歸，得到每塊一個權重，最後 get_image_and_mask 把前 11 塊正權重塗綠、負權重塗紅">
+  <defs>
+    <marker id="ar21" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#93a1af"/>
+    </marker>
+  </defs>
+  <text class="s-sm" x="25" y="26">explain_instance（lime 套件）：每張圖跑一次</text>
+  <rect x="25" y="40" width="190" height="110" rx="10" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-lbl" x="120" y="68" text-anchor="middle" font-weight="700">原圖 x</text>
+  <text class="s-mono" x="120" y="92" text-anchor="middle">(128, 128, 3) float64</text>
+  <text class="s-sm" x="120" y="114" text-anchor="middle">圖 0：Bread（披薩）</text>
+  <rect x="245" y="40" width="190" height="110" rx="10" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-lbl" x="340" y="68" text-anchor="middle" font-weight="700">① 切 superpixel</text>
+  <text class="s-mono" x="340" y="92" text-anchor="middle">segmentation → slic</text>
+  <text class="s-sm" x="340" y="114" text-anchor="middle">圖 0 切出 107 塊</text>
+  <rect x="465" y="40" width="190" height="110" rx="10" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-lbl" x="560" y="68" text-anchor="middle" font-weight="700">② 取樣 0/1</text>
+  <text class="s-mono" x="560" y="92" text-anchor="middle">1000 列 × 107 個 0/1</text>
+  <text class="s-sm" x="560" y="114" text-anchor="middle">第 0 列全是 1 ＝ 原圖</text>
+  <text class="s-sm" x="560" y="134" text-anchor="middle">每塊各自 50% 機率是 0</text>
+  <rect x="685" y="40" width="190" height="110" rx="10" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-lbl" x="780" y="68" text-anchor="middle" font-weight="700">③ 換成平均色</text>
+  <text class="s-sm" x="780" y="92" text-anchor="middle">是 0 的塊 → 該塊的平均色</text>
+  <text class="s-sm" x="780" y="114" text-anchor="middle">每張約遮掉一半</text>
+  <text class="s-sm" x="780" y="134" text-anchor="middle">不是塗黑</text>
+  <line x1="217" y1="95" x2="241" y2="95" stroke="#93a1af" stroke-width="2" marker-end="url(#ar21)"/>
+  <line x1="437" y1="95" x2="461" y2="95" stroke="#93a1af" stroke-width="2" marker-end="url(#ar21)"/>
+  <line x1="657" y1="95" x2="681" y2="95" stroke="#93a1af" stroke-width="2" marker-end="url(#ar21)"/>
+  <line x1="780" y1="152" x2="780" y2="186" stroke="#93a1af" stroke-width="2" marker-end="url(#ar21)"/>
+
+  <rect x="685" y="190" width="190" height="110" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="780" y="218" text-anchor="middle" font-weight="700">④ 模型 predict</text>
+  <text class="s-sm" x="780" y="242" text-anchor="middle">每批 10 張，共呼叫 100 次</text>
+  <text class="s-mono" x="780" y="264" text-anchor="middle">回傳 logits (10, 11)</text>
+  <rect x="465" y="190" width="190" height="110" rx="10" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-lbl" x="560" y="218" text-anchor="middle" font-weight="700">⑤ 加權 Ridge 回歸</text>
+  <text class="s-sm" x="560" y="242" text-anchor="middle">0/1 向量 → 某一類的 logit</text>
+  <text class="s-sm" x="560" y="264" text-anchor="middle">越像原圖的樣本權重越大</text>
+  <text class="s-sm" x="560" y="286" text-anchor="middle">前 5 名的類別各擬合一次</text>
+  <rect x="245" y="190" width="190" height="110" rx="10" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-lbl" x="340" y="218" text-anchor="middle" font-weight="700">⑥ 每塊一個權重</text>
+  <text class="s-mono" x="340" y="242" text-anchor="middle">local_exp[label]</text>
+  <text class="s-sm" x="340" y="264" text-anchor="middle">圖 0 第 1 名：21 號 5.52</text>
+  <rect x="25" y="190" width="190" height="110" rx="10" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-lbl" x="120" y="218" text-anchor="middle" font-weight="700">⑦ 上色</text>
+  <text class="s-key" x="120" y="242" text-anchor="middle" style="fill:#dde5ec">get_image_and_mask</text>
+  <text class="s-sm" x="120" y="264" text-anchor="middle">前 11 塊、|w| ≥ 0.05</text>
+  <text class="s-sm" x="120" y="286" text-anchor="middle">正 → 綠、負 → 紅</text>
+  <line x1="683" y1="245" x2="659" y2="245" stroke="#93a1af" stroke-width="2" marker-end="url(#ar21)"/>
+  <line x1="463" y1="245" x2="439" y2="245" stroke="#93a1af" stroke-width="2" marker-end="url(#ar21)"/>
+  <line x1="243" y1="245" x2="219" y2="245" stroke="#93a1af" stroke-width="2" marker-end="url(#ar21)"/>
+  <text class="s-sm" x="25" y="334">①④ 是 explain_cnn.py 自己寫的函式，由 lime 呼叫；②③⑤⑥ 在 explain_instance 裡；⑦ 是 explain_cnn.py 另外呼叫的方法。</text>
+</svg>
+<figcaption>圖 2.2 — LIME 從頭到尾只做 forward：模型（綠）只被當成「給圖、吐分數」的黑盒子，其餘紫色的步驟都是 LIME 自己的取樣與擬合。最後畫在圖上的，是線性代理模型的權重，不是模型內部的任何東西。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#58a6ff"></i>輸入資料</span>
+  <span><i style="background:#3fb950"></i>模型的 forward</span>
+  <span><i style="background:#a371f7"></i>解釋方法自己的步驟（切塊、取樣、擬合、上色）</span>
+</div>
+<p>接下來 2.3 節先讀 <code>explain_cnn.py</code> 的程式，2.4–2.7 節依圖上的編號，一步一步看每個步驟實際做了什麼、圖 0 的數字是多少。</p>
+
+<h2 id="code">2.3　lime_explain 的程式</h2>
+<p>LIME 段落從一段 docstring 開始，它是原版 notebook 的 Markdown 儲存格搬過來的，只交代 lime 是什麼套件：</p>
+<figure class="listing"><figcaption>explain_cnn.py:35–37 — LIME 段落的標題</figcaption>
+<pre class="py"><code>"""# Lime (Q1~4)
+[Lime](https://github.com/marcotcr/lime) is a package about explaining what machine learning classifiers are doing.
+"""</code></pre></figure>
+<p>接著是 <code>lime_explain</code> 的前半段，兩個內部函式，就是圖 2.2 裡的 ① 和 ④：</p>
+<figure class="listing"><figcaption>explain_cnn.py:39–50 — predict 與 segmentation：交給 lime 呼叫的兩個函式</figcaption>
+<pre class="py" data-hot="43,45,46,50"><code>def lime_explain(model, images, labels):
+    def predict(input):
+        # input: numpy array, (batches, height, width, channels)
+        model.eval()
+        input = torch.FloatTensor(input).permute(0, 3, 1, 2)
+        # pytorch tensor, (batches, channels, height, width)
+        output = model(input.cuda())
+        return output.detach().cpu().numpy()
+
+    def segmentation(input):
+        # split the image into 200 pieces with the help of segmentaion from skimage
+        return slic(input, n_segments=200, compactness=1, sigma=1, start_label=1)</code></pre></figure>
+<p><strong><code>predict</code></strong> 是 lime 說的 <code>classifier_fn</code>：lime 會把一批「遮過的圖」用 NumPy 陣列交給它，形狀是 <code>(批次, 高, 寬, 通道)</code>，也就是第 1 章講過的 HWC 排法。第 43 行做兩件事：<code>torch.FloatTensor(...)</code> 把 NumPy 的 float64 轉成 PyTorch 的 float32，<code>permute(0, 3, 1, 2)</code> 把通道換到第 1 維，變成模型要的 <code>(N, C, H, W)</code>。第 45 行搬上 GPU、送進模型，第 46 行把結果拿回 CPU、轉回 NumPy 交還給 lime。第 42 行的 <code>model.eval()</code> 每呼叫一次就設一次，多餘但無害（第 1 章 <a href="ch01.html#mode">1.7 節</a>：這是每個解釋方法開頭都會做的保險）。</p>
+<p>值得注意的有兩點：</p>
+<ul>
+  <li><strong>回傳的是 logits。</strong>第 45 行的 <code>model(...)</code> 直接就是最後一層 Linear 的輸出（第 0 章 <a href="ch00.html#shapes">0.2 節</a>），沒有經過 softmax。lime 的文件預期 <code>classifier_fn</code> 回傳的是每一類的機率。這件事的影響在 2.8 節實測。</li>
+  <li><strong>沒有 <code>torch.no_grad()</code>。</strong>所以每次 forward，PyTorch 都會記錄計算過程，準備給一個永遠不會發生的 backward；第 46 行的 <code>.detach()</code> 是在記錄之後才把結果切斷。這只浪費記憶體與時間，不影響數值：本書用一段包了 <code>torch.no_grad()</code> 的程式重跑圖 0（2.6 節的指令），結果和 <code>explain_cnn.py</code> 裡同一張圖完全相同。</li>
+</ul>
+<p><strong><code>segmentation</code></strong> 是 lime 說的 <code>segmentation_fn</code>：給一張 HWC 的圖，回傳一張同樣高寬的整數陣列，每個像素標上它屬於第幾塊。第 50 行用 scikit-image 的 <code>slic</code>，2.4 節細看。第 49 行註解說「切成 200 塊」，這只是目標，實際並不是 200；最後一個參數 <code>start_label=1</code> 則是 2.9 節差一錯誤的源頭。（註解裡的 <code>segmentaion</code> 是原版的拼字，程式照原樣保留。）</p>
+<p>然後是主迴圈：</p>
+<figure class="listing"><figcaption>explain_cnn.py:52–59 — 固定亂數種子，對 10 張圖各跑一次 explain_instance</figcaption>
+<pre class="py" data-hot="54,58,59"><code>    fig, axs = plt.subplots(1, len(images), figsize=(15, 8))
+    # fix the random seed to make it reproducible
+    np.random.seed(16)
+    for idx, (image, label) in enumerate(zip(images.permute(0, 2, 3, 1).numpy(), labels)):
+        x = image.astype(np.double)
+        # numpy array for lime
+        explainer = lime_image.LimeImageExplainer()
+        explaination = explainer.explain_instance(image=x, classifier_fn=predict, segmentation_fn=segmentation)</code></pre></figure>
+<p>第 52 行開一張 1 列 10 欄的畫布，和第 1 章畫 <code>images.png</code> 的寫法相同。第 54 行固定 NumPy 的亂數種子，2.10 節再談它管到哪裡、管不到哪裡。第 55 行先把 <code>(10, 3, 128, 128)</code> 的張量 <code>permute</code> 成 <code>(10, 128, 128, 3)</code> 再轉 NumPy，因為 lime 吃 HWC；<code>zip</code> 讓每一圈同時拿到一張圖和它的標籤（標籤是 0 維的張量，所以後面要 <code>.item()</code>）。第 56 行轉成 float64（<code>np.double</code>）。</p>
+<p>第 58–59 行是重點：每張圖新建一個 <code>LimeImageExplainer</code>，呼叫 <code>explain_instance</code>，只給了三個參數：圖、<code>predict</code>、<code>segmentation</code>。其他參數全部用預設值，而預設值決定了 LIME 的行為。以下是 lime 0.2.0.1 的預設值（本書讀 lime 套件的原始碼 <code>lime_image.py</code> 確認；lime 不在本 repo 裡，安裝後在 Python 的套件目錄下）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>參數</th><th>預設值</th><th>意思</th></tr></thead>
+<tbody>
+<tr><td><code>num_samples</code></td><td>1000</td><td>每張圖產生 1000 個樣本（含原圖本身）</td></tr>
+<tr><td><code>batch_size</code></td><td>10</td><td>每湊滿 10 個樣本呼叫一次 <code>predict</code>，所以每張圖呼叫 100 次</td></tr>
+<tr><td><code>top_labels</code></td><td>5</td><td>只替原圖分數最高的 5 個類別算解釋</td></tr>
+<tr><td><code>hide_color</code></td><td><code>None</code></td><td>被遮的塊換成那一塊自己的平均色</td></tr>
+<tr><td><code>distance_metric</code></td><td><code>'cosine'</code></td><td>用 cosine 距離衡量樣本和原圖有多像</td></tr>
+<tr><td><code>LimeImageExplainer(kernel_width=…)</code></td><td>0.25</td><td>距離換成樣本權重時的寬度（2.6 節）</td></tr>
+<tr><td><code>LimeImageExplainer(random_state=…)</code></td><td><code>None</code></td><td>用 NumPy 的全域亂數（2.10 節）</td></tr>
+</tbody>
+</table></div>
+<p>變數名稱 <code>explaination</code> 也是原版的拼字。它是一個 <code>ImageExplanation</code> 物件，裝著每塊的權重；2.7 節看它怎麼變成圖。</p>
+
+<h2 id="slic">2.4　① 切塊：superpixel</h2>
+<p><a href="index.html#toc">目錄頁</a>用一句話介紹過 superpixel：LIME 把圖切成的小塊。更完整地說，<strong>superpixel</strong> 是一群位置相鄰、顏色相近的像素，被當成一個整體處理。把 16,384 個像素（128 × 128）合併成一百多塊，有兩個好處：解釋的單位變少，人看得懂；而且一塊通常對應圖上某個有意義的區域（餅皮、盤子邊緣），比單一像素更像「人會說的理由」。</p>
+<p><code>slic</code> 是 SLIC（Simple Linear Iterative Clustering）演算法的實作。它的做法類似 k-means 分群：先在圖上均勻撒下大約 <code>n_segments</code> 個中心點，然後反覆把每個像素分給「顏色和位置綜合起來」最近的中心，再更新中心。三個參數的意思：</p>
+<ul>
+  <li><code>n_segments=200</code>：想切幾塊。這只是撒中心點時的目標，實際塊數由演算法收斂的結果決定。</li>
+  <li><code>compactness=1</code>：顏色和位置誰比較重要。值越大，位置越重要，塊就越接近整齊的方格；值越小，顏色越重要，塊就越貼著顏色邊界、形狀越不規則。1 是偏小的值。</li>
+  <li><code>sigma=1</code>：分群前先用寬度 1 的高斯模糊把圖抹平一點，減少雜訊造成的破碎小塊。</li>
+</ul>
+<p>實際切出幾塊？在 <code>HW09/</code> 裡跑下面這段（只用到 scikit-image 與 <code>food/</code>，<strong>不需要 GPU</strong>，也不需要 checkpoint）。它用和 <code>explain_cnn.py</code> 相同的方式讀圖、轉成 HWC 的 float64，再呼叫同樣參數的 <code>slic</code>：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+import numpy as np
+from skimage.segmentation import slic
+from dataset import FoodDataset, get_paths_labels
+paths, labels = get_paths_labels('./food/')
+images, labels = FoodDataset(paths, labels, mode='eval').getbatch(range(10))
+for i, image in enumerate(images.permute(0, 2, 3, 1).numpy()):
+    s = slic(image.astype(np.double), n_segments=200, compactness=1, sigma=1, start_label=1)
+    print(i, len(np.unique(s)), s.min(), s.max())
+"</code></pre>
+<p>實測輸出（欄位：圖編號、塊數、最小編號、最大編號）：</p>
+<pre class="shell"><code>0 107 1 107  «1»
+1 141 1 141
+2 151 1 151  «2»
+3 101 1 101
+4 66 1 66  «3»
+5 120 1 120
+6 108 1 108
+7 94 1 94
+8 128 1 128
+9 109 1 109</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>圖 0 切出 107 塊，編號從 1 到 107。<strong>編號從 1 開始</strong>，這就是 <code>start_label=1</code> 的作用。本章的例子都用圖 0，記住這兩個數字：107 塊、編號 1..107。</li>
+  <li><span class="mk">2</span>最多的是圖 2，151 塊。</li>
+  <li><span class="mk">3</span>最少的是圖 4（鬆餅），只有 66 塊。10 張圖的塊數在 66 到 151 之間，沒有一張是 200。</li>
+</ol>
+<p>每塊有多大？128 × 128 = 16,384 個像素分給一百多塊，平均一塊一百多個像素。本書另外量了每塊的像素數：圖 0 最小的一塊 43 個像素、中位數 127、最大 667；其他圖每塊的最小值在 41–47、中位數在 96–150 之間。例外是圖 4：最大的一塊有 2,985 個像素（中位數 139），佔了整張圖的六分之一以上，所以它只切出 66 塊。</p>
+<figure class="fig">
+<img src="img/ch02_segments.png" alt="10 張圖疊上黃色的 superpixel 邊界，每張上方標著塊數：107、141、151、101、66、120、108、94、128、109">
+<figcaption>圖 2.3 — 10 張圖的 superpixel 邊界（黃線），每格上方是塊數。圖 1 的白色背景被切成相當規則的格子；其他圖在食物上的塊則沿著顏色邊界彎曲。</figcaption>
+</figure>
+<p>圖 2.3 看得出 <code>compactness=1</code> 的效果：在食物上，塊的邊界沿著顏色變化彎來彎去，形狀很不規則。圖 1 的白色背景則被切成接近方格的小塊：背景幾乎沒有顏色差異，能拿來分群的只剩位置，結果就退回成均勻的格子。這也預告了一件事：<strong>背景佔了很多塊</strong>，而這些背景塊在 LIME 眼裡和食物上的塊地位相同，都是一個特徵。</p>
+<p>切塊這一步沒有任何亂數：同一張圖每次切出來都一樣。2.9 節還會用到一個實測：把 <code>start_label=1</code> 改成 <code>0</code>，切出來的是<strong>同一個分割</strong>，只是每一塊的編號整體減 1（圖 0 變成 0..106，逐像素比對「改後的編號 + 1 等於原本的編號」全部成立）。</p>
+
+<h2 id="sample">2.5　②③④ 取樣 1000 次：遮掉一半，看 logit 怎麼變</h2>
+<p>切好塊之後，lime 把每一塊當成一個<strong>特徵</strong>，n 塊就是 n 個特徵。一個樣本就是一個長度 n 的 0/1 向量：第 z 個位置是 1，代表第 z 塊保持原樣；是 0，代表把那一塊「遮掉」。本書讀了 lime 0.2.0.1 的原始碼（<code>lime_image.py</code>），<code>explain_instance</code> 的取樣是這樣做的：</p>
+<ol>
+  <li>用 NumPy 的亂數產生一個 1000 × n 的矩陣，每個元素各自獨立、各有一半機率是 0 或 1。</li>
+  <li>把第 0 列整列設成 1：<strong>第 0 個樣本就是原圖</strong>，什麼都沒遮。所以「1000 個樣本」是 1 張原圖加 999 張隨機遮過的圖。</li>
+  <li>對每一列，把值為 0 的塊換成「遮住用的圖」上同一個位置的像素，得到一張新的圖。</li>
+  <li>每湊滿 <code>batch_size=10</code> 張就呼叫一次 <code>predict</code>，把模型的輸出收集起來。</li>
+</ol>
+<p>第 3 步的「遮住用的圖」很重要：<code>hide_color=None</code>（預設）時，lime 事先把每一塊都換成<strong>那一塊自己的 RGB 平均色</strong>，做成一張「全部都是平均色」的圖。所以「遮住」不是塗黑，而是把一塊的細節抹平成一個單色。看圖 0：</p>
+<figure class="fig">
+<img src="img/ch02_perturb.png" alt="五格圖：原本的披薩；每一塊都換成平均色的版本，像是色塊拼貼；以及三個隨機樣本，部分區域是平均色、部分保留原圖，標題分別是 logit 3.0、1.7、-2.4">
+<figcaption>圖 2.4 — 圖 0 的「遮住」長什麼樣。第 2 格是所有塊都換成平均色的圖，形狀和顏色大致還在，只是紋理不見了。第 3–5 格是 LIME 實際送進模型的樣本 1、2、3，分別遮了 50、49、48 塊，Bread 的 logit 是 2.970、1.749、−2.365（標題四捨五入到 1 位）。</figcaption>
+</figure>
+<p>第 2 格說明了「換成平均色」的意思：披薩還是一塊三角形的黃褐色，盤子還是灰白色，但起司的紋理、叉子的細節都沒了。樣本 1–3 則是一半保留、一半抹平的拼貼。原圖的 Bread logit 是 10.333（10 張一起算的值，第 1 章 <a href="ch01.html#predict">1.6 節</a>），三個樣本掉到 2.970、1.749、−2.365：<strong>只是把一半的塊抹平，模型對「麵包」的分數就掉了 7 到 13</strong>。</p>
+<p>本書重播了 <code>explain_instance</code> 的亂數，重建圖 0 的 1000 個樣本（並核對過和真正傳進 <code>predict</code> 的 1000 張圖完全相同）。統計結果：</p>
+<ul>
+  <li><strong>每次大約遮一半</strong>：除了第 0 個樣本，每個樣本被遮的塊數最少 36、平均 53.6、最多 72。107 塊各有一半機率被遮，平均正好是一半左右。LIME 不是一次遮一小塊，而是每次都把整張圖抹掉一半。</li>
+  <li><strong>Bread 的 logit 掉得很兇</strong>：1000 個樣本上，最小 −21.274、中位數 −4.030、最大 10.333（就是原圖本身）。換成機率，p(Bread) 的中位數只有 0.0009；仍然 ≥ 0.99 的樣本只有 5.2%，≤ 0.01 的有 62.3%；遮完之後模型仍然預測成 Bread 的，只有 18.3%。</li>
+  <li><strong>predict 被呼叫 100 次</strong>，每次拿到 10 張 <code>(128, 128, 3)</code> 的圖（2.6 節的指令會印出來）。</li>
+</ul>
+<p>第 0 章 <a href="ch00.html#run-cnn">0.5 節</a>說，執行 <code>explain_cnn.py</code> 時 stderr 會出現 10 條數到 <code>1000/1000</code> 的 tqdm 進度條。現在可以完整解釋：<code>explain_instance</code> 預設會顯示取樣的進度，一張圖一條、每條數 1000 個樣本，10 張圖就是 10 條。本書另外計時，每張圖約 1.3–1.6 秒（圖 1 是 2.81 秒）；第 0 章 <a href="ch00.html#run-cnn">0.5 節</a>的逐段計時量到 LIME 整段 14.7 秒。</p>
+
+<h3 id="sample-all">10 張圖：遮掉一半之後，模型還認得出來嗎</h3>
+<p>同樣的統計對 10 張圖都做一次（照原程式的順序，同一個 seed 16 連續跑，所以樣本就是 <code>explain_cnn.py</code> 實際用的那些）。表裡的 logit 都是標籤那一類的：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>原圖 logit</th><th>樣本 logit 最小</th><th>樣本 logit 中位數</th><th>p(標籤) 中位數</th><th>p ≥ 0.99 的樣本</th><th>p ≤ 0.01 的樣本</th><th>仍預測正確</th></tr></thead>
+<tbody>
+<tr><td>0 Bread</td><td>10.33</td><td>−21.27</td><td>−4.03</td><td>0.0009</td><td>5.2%</td><td>62.3%</td><td>18.3%</td></tr>
+<tr><td>1 Dairy product</td><td>19.79</td><td>18.84</td><td><b>21.38</b></td><td>1.0000</td><td><b>100%</b></td><td>0%</td><td>100%</td></tr>
+<tr><td>2 Dairy product</td><td>7.81</td><td>7.32</td><td><b>10.30</b></td><td>1.0000</td><td><b>100%</b></td><td>0%</td><td>100%</td></tr>
+<tr><td>3 Dessert</td><td>9.01</td><td>3.95</td><td>8.94</td><td>1.0000</td><td><b>99.3%</b></td><td>0%</td><td>100%</td></tr>
+<tr><td>4 Dessert</td><td>12.21</td><td>−2.60</td><td>6.67</td><td>0.9997</td><td>62.4%</td><td>16.1%</td><td>75.5%</td></tr>
+<tr><td>5 Egg</td><td>12.39</td><td>1.38</td><td>6.69</td><td>0.9999</td><td><b>95.5%</b></td><td>0%</td><td>99.8%</td></tr>
+<tr><td>6 Meat</td><td>22.96</td><td>−9.18</td><td>8.30</td><td>1.0000</td><td>82.3%</td><td>5.8%</td><td>88.8%</td></tr>
+<tr><td>7 Noodles/Pasta</td><td>11.45</td><td>−60.85</td><td>−24.08</td><td>0.0000</td><td>0.2%</td><td>96.2%</td><td>1.4%</td></tr>
+<tr><td>8 Seafood</td><td>13.01</td><td>−11.18</td><td>3.16</td><td>0.8570</td><td>43.2%</td><td>34.3%</td><td>55.5%</td></tr>
+<tr><td>9 Soup</td><td>14.12</td><td>−6.51</td><td>4.47</td><td>0.7799</td><td>31.5%</td><td>15.6%</td><td>59.2%</td></tr>
+</tbody>
+</table></div>
+<p>這張表把 10 張圖分成很不一樣的幾群，後面幾節會一再回來看它：</p>
+<ul>
+  <li><strong>圖 1、2、3、5：機率頂住了。</strong>遮掉一半，p(標籤) 幾乎都還在 0.99 以上（95.5% 到 100% 的樣本）。從機率看，遮哪幾塊都沒差。但 logit 仍在變：圖 1 的樣本 logit 從 18.84 到中位數 21.38，圖 3 最小掉到 3.95。這就是第 1 章 <a href="ch01.html#ahead">1.8 節</a>預告的：看機率分不出哪一塊重要，看 logits 還分得出來。</li>
+  <li><strong>圖 0、7：遮一半就認不出來。</strong>圖 7 的炒麵只剩 1.4% 的樣本預測正確，樣本 logit 最低到 −60.85。</li>
+  <li><strong>圖 1、2：遮了反而更確定。</strong>兩張 Dairy product 的樣本 logit 中位數（21.38、10.30）都<strong>高於原圖</strong>（19.79、7.81）。把一些塊抹成平均色，模型反而更相信這是乳製品。記住這件事，2.7 節會看到它在解釋圖上的樣子。</li>
+</ul>
+<p>原圖 logit 一欄是 lime 取樣時算的：原圖和 9 個遮過的樣本同一批送進模型，取 2 位小數。它和第 1 章「10 張一起算」是不同的批次，所以小數第 2–3 位不保證相同（第 1 章<a href="ch01.html#batch-effect">〈同一張圖，logit 的小數第 3 位會變〉</a>）。</p>
+
+<h2 id="ridge">2.6　⑤⑥ 加權 Ridge 回歸：每一塊一個權重</h2>
+<p>現在手上有 1000 組資料：每組是一個 0/1 向量（哪幾塊沒遮）和模型的 11 個 logit。LIME 的最後一步，是對某一個類別，找一組權重 w<sub>0</sub>, …, w<sub>n−1</sub> 和截距 b，讓下面這條直線盡量貼近模型：</p>
+<div class="eq">那一類的 logit ≈ b + w<sub>0</sub>·z<sub>0</sub> + w<sub>1</sub>·z<sub>1</sub> + … + w<sub>n−1</sub>·z<sub>n−1</sub>　　（z<sub>k</sub> = 1 表示第 k 塊沒遮，0 表示遮掉）</div>
+<p>這就是代理模型。w<sub>k</sub> 的意思是：在這個近似裡，<strong>第 k 塊從「遮掉」變成「保留」，logit 平均上升多少</strong>。因為擬合的對象是 logit，權重的單位也是 logit。擬合有兩個細節：</p>
+<h3 id="kernel">樣本的權重：越像原圖越重要</h3>
+<p>LIME 要的是「原圖附近」的近似，所以遮得少、比較像原圖的樣本要比較重要。它先算每個樣本的 0/1 向量和原圖（全 1 向量）的 <strong>cosine 距離</strong>：1 減掉兩個向量夾角的 cosine，方向越一致距離越小，完全相同是 0。再用<strong>核函數</strong>（kernel，一個把距離換成 0 到 1 之間權重的函數：距離 0 時是 1，距離越大越接近 0）把距離換成樣本權重。注意這裡的「樣本權重」是每個樣本一個，用來決定擬合時誰比較重要；它和最後畫成綠／紅的「每塊的權重」是兩回事：</p>
+<div class="eq">樣本權重 = √( exp( −d² ÷ 0.25² ) )　　（d 是 cosine 距離，0.25 是 <code>kernel_width</code>）</div>
+<p>對 0/1 向量，這個距離有簡單的形式。一個保留 k 塊的樣本，和全 1 向量的 cosine 是 k ÷ (√k · √n) = √(k ÷ n)。圖 0 平均遮掉 53.6 塊、保留約 53.4 塊，手算 d ≈ 1 − √(53.4 ÷ 107) ≈ 0.29，樣本權重 ≈ 0.50。實測的中位數是 d = 0.296、權重 0.496，對得上。遮得最多的樣本（72 塊）d = 0.428、權重 0.231；遮得最少的（36 塊）d = 0.185、權重 0.760；原圖本身 d = 0、權重 1。所以 LIME 對樣本的偏好並不極端：最像原圖的樣本，分量也只是最不像的 3 倍左右。</p>
+<h3 id="ridge-fit">Ridge：加一點懲罰的線性回歸</h3>
+<p>有了樣本權重，lime 用 scikit-learn 的 <strong>Ridge 回歸</strong>（<code>alpha=1</code>）擬合。Ridge 是一般的最小平方法再加一項懲罰：要最小化的是「誤差平方和 + alpha × 每塊權重的平方和」，權重越大，懲罰越多，讓權重不要為了貼合雜訊而變得很誇張；<code>alpha</code> 就是懲罰的強度，0 時退回普通的最小平方法。「加權」則是每個樣本的誤差平方先乘上它的樣本權重再加總。</p>
+<p>擬合的好壞用 <strong>R²</strong>（決定係數）衡量：1 減掉「殘差平方和 ÷ 總變異」（殘差是直線預測和真實 logit 的差；總變異是真實 logit 離它們平均值的平方和），代表 logit 的變化有多少比例被這條直線解釋了。1 是完美擬合，0 代表直線不比「永遠猜平均值」好。lime 在這裡算的是加權的 R²（每一項平方先乘上樣本權重），存在 <code>exp.score</code>。</p>
+<p>還有一個細節：<code>top_labels=5</code> 讓 lime 只替原圖分數最高的 5 個類別各擬合一次，每個類別得到自己的一組權重與截距，存在 <code>exp.local_exp[類別]</code> 與 <code>exp.intercept[類別]</code>。<strong>但 <code>exp.score</code> 只有一個值</strong>：5 個類別的迴圈每一圈都會覆寫它，最後留下的是最後一圈，也就是原圖分數最高的那一類。本作業 10 張都預測正確（第 1 章），所以 <code>exp.score</code> 剛好就是標籤那一類的 R²。如果某張圖預測錯了，它就變成「預測類別」的 R²，而不是標籤的。</p>
+
+<h3 id="run-img0">實際跑一次圖 0</h3>
+<p>下面的指令重現 <code>explain_cnn.py</code> 對圖 0 的那一次 <code>explain_instance</code>：同樣的 <code>predict</code>（多包了 <code>torch.no_grad()</code>，並用 <code>calls</code> 記下每次被呼叫時拿到的形狀）、同樣的 <code>segmentation</code>、同樣的 seed 16，而圖 0 是迴圈的第一張，所以亂數狀態也相同。和 2.4 節一樣在 <code>HW09/</code> 裡跑（<code>../.venv</code> 是第 0 章 <a href="ch00.html#env">0.3 節</a>建立的環境）。它要載入模型，<strong>需要 GPU</strong>、<code>checkpoint.pth</code> 與 <code>food/</code>。最後的 <code>2&gt;/dev/null</code> 把 stderr 丟掉，也就是把 tqdm 進度條藏起來：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+import numpy as np, torch
+from skimage.segmentation import slic
+from lime import lime_image
+from model import Classifier
+from dataset import FoodDataset, get_paths_labels
+model = Classifier().cuda()
+model.load_state_dict(torch.load('checkpoint.pth')['model_state_dict'])
+model.eval()
+paths, labels = get_paths_labels('./food/')
+images, labels = FoodDataset(paths, labels, mode='eval').getbatch(range(10))
+calls = []
+def predict(input):
+    calls.append(input.shape)
+    with torch.no_grad():
+        return model(torch.FloatTensor(input).permute(0, 3, 1, 2).cuda()).cpu().numpy()
+def segmentation(input):
+    return slic(input, n_segments=200, compactness=1, sigma=1, start_label=1)
+np.random.seed(16)
+x = images[0].permute(1, 2, 0).numpy().astype(np.double)
+exp = lime_image.LimeImageExplainer().explain_instance(image=x, classifier_fn=predict, segmentation_fn=segmentation)
+print(len(calls), calls[0])
+print(exp.top_labels)
+print([(int(s), round(float(w), 3)) for s, w in exp.local_exp[0][:5]])
+print(round(exp.score, 4))
+w = dict(exp.local_exp[0])
+print(len(w), round(w[0], 3), 107 in w)
+" 2&gt;/dev/null</code></pre>
+<p>實測輸出：</p>
+<pre class="shell"><code>100 (10, 128, 128, 3)  «1»
+[np.int64(0), np.int64(4), np.int64(3), np.int64(2), np.int64(5)]  «2»
+[(21, 5.522), (25, 3.59), (38, 3.125), (27, 3.023), (40, 2.944)]  «3»
+0.8423  «4»
+107 0.158 False  «5»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span><code>predict</code> 被呼叫 100 次，每次拿到 10 張 128 × 128 × 3 的圖（HWC）。1000 個樣本 ÷ 每批 10 張 = 100 次。</li>
+  <li><span class="mk">2</span><code>top_labels</code>：原圖分數最高的 5 類，由高到低是 Bread(0)、Fried food(4)、Egg(3)、Dessert(2)、Meat(5)。第 2 名 Fried food 和第 1 章 1.6 節表上圖 0 的第 2 名一致。<code>np.int64(...)</code> 是 NumPy 2 印出整數純量的樣子，就是普通的 0、4、3…。</li>
+  <li><span class="mk">3</span>Bread 這一類權重的前 5 名，格式是 (特徵編號, 權重)，依 |權重| 由大到小排好。第 21 號特徵（第 21 塊）的權重 5.522 最大：在線性近似裡，保留這一塊，Bread 的 logit 平均上升約 5.5。</li>
+  <li><span class="mk">4</span><code>exp.score</code>：最後一圈（Bread）的加權 R²，0.8423。直線解釋了 Bread logit 變化的八成多。</li>
+  <li><span class="mk">5</span>Bread 一共有 107 個權重，對應特徵 0 到 106。<strong>特徵 0 也有權重（0.158），而 107 號不在裡面</strong>。圖 0 的塊編號是 1..107（2.4 節），所以特徵 0 對不到任何一塊，第 107 塊又沒有對應的特徵。這兩件事是同一個差一錯誤，2.9 節拆開來看。</li>
+</ol>
+<p>本書另外印出了這一次的截距與 <code>exp.local_pred</code>：截距 −21.383，<code>local_pred</code>（線性模型對原圖的預測）12.543，107 個權重加總 33.926。三個數字可以互相核對：原圖的 0/1 向量全是 1，所以線性模型對它的預測就是「截距 + 全部權重」：</p>
+<div class="eq">−21.383 + 33.926 = 12.543 ＝ <code>local_pred</code>　　（模型實際給原圖的 logit 是 10.333）</div>
+<p>直線對原圖的預測（12.543）比真實值（10.333）高了 2.2，R² 0.84 的意思就是「大致貼近，但不完全」。截距 −21.383 則是直線外插到「107 塊全部遮掉」的預測；取樣裡從來沒有全遮的樣本（最多遮 72 塊），所以它只是直線的延伸，不是模型真的對全平均色的圖給出的分數。</p>
+
+<h2 id="mask">2.7　⑦ 上色：get_image_and_mask 與綠／紅</h2>
+<p>有了權重，主迴圈的後半段把它畫成圖：</p>
+<figure class="listing"><figcaption>explain_cnn.py:62–72 — 取出要畫的塊、畫到第 idx 格、存檔</figcaption>
+<pre class="py" data-hot="63-67,71,72"><code>        lime_img, mask = explaination.get_image_and_mask(
+            label=label.item(),
+            positive_only=False,
+            hide_rest=False,
+            num_features=11,
+            min_weight=0.05
+        )
+        # turn the result from explainer to the image
+        # doc: https://lime-ml.readthedocs.io/en/latest/lime.html#lime.lime_image.ImageExplanation.get_image_and_mask
+        axs[idx].imshow(lime_img)
+    save_fig(fig, 'lime.png')</code></pre></figure>
+<p><code>get_image_and_mask</code> 回傳兩樣東西：上好色的圖 <code>lime_img</code>，和一張與圖同樣高寬的 <code>mask</code>（被畫成綠的塊標 1、紅的標 −1、其他 0）。程式只用到前者，第 71 行把它畫在第 idx 格，迴圈結束後第 72 行用第 1 章看過的 <code>save_fig</code> 存成 <code>lime.png</code>。五個參數的意思：</p>
+<ul>
+  <li><code>label=label.item()</code>：畫哪一類的解釋。這裡用標籤。只有 <code>top_labels</code> 的 5 類有權重；本作業 10 張都預測正確，標籤一定是第 1 名，所以一定有權重可畫。</li>
+  <li><code>positive_only=False</code>：正、負權重都畫。</li>
+  <li><code>hide_rest=False</code>：沒被選中的部分保留原圖（<code>True</code> 的話會把其餘部分蓋掉）。</li>
+  <li><code>num_features=11</code>：最多畫 11 塊。</li>
+  <li><code>min_weight=0.05</code>：|權重| 小於 0.05 的不畫。</li>
+</ul>
+<p>依 lime 0.2.0.1 的原始碼（<code>lime_image.py</code> 的 <code>get_image_and_mask</code>），<code>positive_only=False</code> 時的選法是：<strong>先依 |權重| 取前 <code>num_features</code> 名，再丟掉其中 |權重| &lt; <code>min_weight</code> 的</strong>。所以畫幾塊由兩個參數一起決定，最多 11 塊，可能更少。選中的每一塊這樣上色：</p>
+<ul>
+  <li>權重為<strong>正</strong>：把那一塊的 <strong>G（綠）通道</strong>設成整張圖的最大值（本書另外量：圖 0 是 0.9961），R、B 通道保留原圖。</li>
+  <li>權重為<strong>負</strong>：把那一塊的 <strong>R（紅）通道</strong>設成最大值，G、B 通道保留原圖。</li>
+</ul>
+<p>所以綠與紅是<strong>疊色</strong>，不是用純綠、純紅把那一塊蓋掉。這解釋了圖 2.1 上的幾個現象：圖 0 披薩本來偏紅黃，R 通道已經不低，再把 G 拉滿，看起來就是亮黃綠色而不是純綠。反過來，一塊本來就很亮、R 通道已經接近最大值的區域（例如白色背景），把 R 設成最大值幾乎沒有變化，<strong>紅色疊上去也看不出來</strong>。<!-- TODO(本機實測): 圖 1、圖 2 被標成負權重（紅）的那幾塊，原圖 R 通道的平均值與整張圖最大值各是多少，用來確認「紅色疊在亮處看不出來」 --></p>
+
+<h3 id="lime-table">10 張圖的權重</h3>
+<p>下表列出每張圖的塊數、|權重| ≥ 0.05 的塊數（正／負）、實際畫出的那最多 11 塊（正／負），以及權重前 3 名。數字來自 <code>explain_cnn.py</code> 的同一次執行：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>塊數</th><th>|w| ≥ 0.05（正／負）</th><th>畫出的塊（綠／紅）</th><th>前 3 名（塊, 權重）</th><th>R²</th></tr></thead>
+<tbody>
+<tr><td>0 Bread</td><td>107</td><td>83（47／36）</td><td>11／0</td><td>(21, 5.52) (25, 3.59) (38, 3.12)</td><td>0.842</td></tr>
+<tr><td>1 Dairy product</td><td>141</td><td>33（16／17）</td><td><b>4／7</b></td><td>(55, −1.16) (25, −0.39) (42, −0.34)</td><td>0.874</td></tr>
+<tr><td>2 Dairy product</td><td>151</td><td>30（14／16）</td><td><b>2／9</b></td><td>(95, −1.77) (128, −0.95) (75, −0.78)</td><td>0.956</td></tr>
+<tr><td>3 Dessert</td><td>101</td><td>60（31／29）</td><td>7／4</td><td>(40, 1.06) (57, 0.94) (86, −0.80)</td><td>0.794</td></tr>
+<tr><td>4 Dessert</td><td>66</td><td>52（32／20）</td><td>10／1</td><td>(5, 3.56) (15, 1.75) (26, 1.60)</td><td>0.796</td></tr>
+<tr><td>5 Egg</td><td>120</td><td>76（54／22）</td><td>10／1</td><td>(92, 1.00) (109, 0.89) (12, 0.87)</td><td>0.814</td></tr>
+<tr><td>6 Meat</td><td>108</td><td>88（63／25）</td><td>11／0</td><td>(30, 5.22) (15, 4.97) (40, 4.19)</td><td>0.925</td></tr>
+<tr><td>7 Noodles/Pasta</td><td>94</td><td>83（58／25）</td><td>11／0</td><td>(48, 14.02) (28, 12.87) (51, 8.74)</td><td>0.951</td></tr>
+<tr><td>8 Seafood</td><td>128</td><td>91（49／42）</td><td>11／0</td><td>(58, 8.27) (78, 4.93) (69, 2.69)</td><td>0.961</td></tr>
+<tr><td>9 Soup</td><td>109</td><td>84（52／32）</td><td>8／3</td><td>(22, 6.63) (5, 3.50) (15, 2.26)</td><td>0.908</td></tr>
+</tbody>
+</table></div>
+<p>對照圖 2.1 讀這張表：</p>
+<ul>
+  <li><strong>大部分的圖幾乎全綠</strong>：圖 0、6、7、8 畫出的 11 塊全是正權重。這些圖的最強權重都是正的，而且數值很大（圖 7 第 1 名 14.02）。</li>
+  <li><strong>兩張 Dairy product 是例外</strong>：圖 1、圖 2 的前 3 名<strong>全部是負權重</strong>，畫出的塊紅多於綠（4／7、2／9）。這和 2.5 節的表方向一致：遮掉某些塊，這兩張圖的 logit 反而<strong>上升</strong>，那些塊在線性近似裡就得到負權重（留著它會讓 logit 下降）。但在圖 2.1 上，這兩張幾乎看不到紅色：它們的背景與主體都很亮，紅色疊上去不明顯（上面的上色規則）。表上的數字比圖上的顏色可靠。</li>
+  <li><strong>權重的大小差很多</strong>：圖 1 的第 1 名只有 −1.16，圖 7 是 14.02。權重的單位是 logit，所以這反映了各張圖遮掉一半後 logit 變動的幅度（2.5 節表：圖 1 的樣本 logit 只在 18.84 以上變動，圖 7 從 −60.85 到 11.45）。</li>
+  <li><strong>R² 從 0.794 到 0.961</strong>：線性近似對每張圖都不完美，但都解釋了大部分的變化。</li>
+</ul>
+
+<h3 id="mask-params">改參數看看：畫幾塊由誰決定</h3>
+<p>同一個圖 0 的解釋，改 <code>get_image_and_mask</code> 的參數，被標成正（綠）／負（紅）的塊數如下（本書另外實測，數的是回傳的 <code>mask</code>）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>參數</th><th>正（綠）</th><th>負（紅）</th><th>說明</th></tr></thead>
+<tbody>
+<tr><td>程式原樣</td><td>11 塊</td><td>0</td><td>3,077 個像素被上色</td></tr>
+<tr><td><code>positive_only=True</code></td><td>11 塊</td><td>0</td><td>前 11 名本來就都是正的，所以一樣</td></tr>
+<tr><td><code>num_features=5</code></td><td>5 塊</td><td>0</td><td>1,386 個像素</td></tr>
+<tr><td><code>min_weight=0.0</code></td><td>11 塊</td><td>0</td><td>前 11 名都遠大於 0.05，門檻沒有作用</td></tr>
+<tr><td><code>num_features=200</code></td><td>46 塊</td><td>36 塊</td><td>等於「全部」；綠 8,476、紅 5,074 個像素，其餘 |w| &lt; 0.05 的不畫</td></tr>
+</tbody>
+</table></div>
+<!-- TODO(本機實測): positive_only=True 時回傳的 lime_img 上是否仍有綠色疊色（上表只數了 mask） -->
+<p>最後一列可以和上面 10 張圖的表核對：圖 0 有 83 塊 |w| ≥ 0.05，其中 47 正、36 負。負的 36 塊全部畫出來了，正的卻只有 46 塊，少了一塊。少的是<strong>特徵 0</strong>：它的權重 0.158 是正的、也超過 0.05，但它對不到任何像素（2.6 節輸出第 5 行），選中了也沒有地方可畫。這個「幽靈特徵」是下一個主題之一。</p>
+<p>對程式原樣的設定來說，<code>min_weight=0.05</code> 在圖 0 上完全沒有作用：權重的單位是 logit，前 11 名都在 2 以上。這個門檻是不是一直這麼無關緊要？那要看餵給 LIME 的是什麼。</p>
+
+<h2 id="softmax">2.8　餵 logits 還是機率</h2>
+<p>2.3 節說過，lime 預期 <code>classifier_fn</code> 回傳的是每一類的<strong>機率</strong>，而 <code>predict</code> 回傳的是 logits。換成機率，只要在 <code>predict</code> 的最後加一次 softmax。本書把圖 0 用兩種版本各跑一次（同樣 seed 16），比較如下：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>logits（程式原樣）</th><th>softmax 機率</th></tr></thead>
+<tbody>
+<tr><td>權重前 5 名</td><td>(21, 5.52) (25, 3.59) (38, 3.12) (27, 3.02) (40, 2.94)</td><td>(21, 0.219) (40, 0.198) (25, 0.191) (27, 0.145) (23, 0.127)</td></tr>
+<tr><td>|w| ≥ 0.05 的塊</td><td><b>83</b></td><td><b>13</b></td></tr>
+<tr><td>R²（<code>exp.score</code>）</td><td>0.842</td><td>0.541</td></tr>
+<tr><td>截距</td><td>−21.383</td><td>−0.6451</td></tr>
+</tbody>
+</table></div>
+<p>前幾名的塊大致相同（21、25、27、40 兩邊都在前 5），差別在兩個地方：</p>
+<ul>
+  <li><strong><code>min_weight=0.05</code> 的意義完全不同。</strong>用 logits 時，權重的單位是 logit，0.05 是一個小到可以忽略的門檻，83 塊都過關。用機率時，權重的單位是機率，0.05 代表「保留這一塊讓機率平均上升 5 個百分點」，只剩 13 塊過關。同一行 <code>min_weight=0.05</code>，在兩種版本裡是兩個完全不同的標準：0.05 放在機率尺度上才有分量，放在 logit 尺度上幾乎擋不掉任何一塊。</li>
+  <li><strong>R² 從 0.842 掉到 0.541。</strong>softmax 是一條 S 形的非線性曲線：機率在 0 附近和 1 附近都很平，中間變化很陡。2.5 節看過，圖 0 的樣本 p(Bread) 有 62.3% ≤ 0.01、5.2% ≥ 0.99，大多數擠在兩端，直線很難貼合這種形狀。logit 則沒有被壓扁，線性近似比較好做。</li>
+</ul>
+<figure class="fig">
+<img src="img/ch02_img0_compare.png" alt="三格圖：圖 0 的披薩在三種設定下的 LIME 上色。第一格 logits（repo 原樣）與第三格 logits 加 start_label=0 的綠色區域幾乎相同，涵蓋披薩上半部到右上的餅皮；第二格 softmax 機率的綠色區域相近，但披薩尖端附近多了一塊紅色">
+<figcaption>圖 2.5 — 圖 0 在三種設定下的解釋：logits（程式原樣）、softmax 機率、logits 加上 <code>start_label=0</code>。綠色的主要區域三者都在披薩上半部到右上的餅皮；機率版在披薩尖端附近多了一塊紅色。第三格在 2.9 節回來看。</figcaption>
+</figure>
+<p>圖 0 上兩種版本看起來差不多，因為它是那種「遮一半就認不出來」的圖，機率在樣本間有充分的變化。真正的差別出現在機率頂住的那幾張。把 10 張都改用 softmax（同樣 seed 16、同樣順序）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>R²</th><th>|w| ≥ 0.05（正／負）</th><th>畫出的塊（綠／紅）</th><th>對照：logits 版畫出的塊</th></tr></thead>
+<tbody>
+<tr><td>0 Bread</td><td>0.541</td><td>13（12／1）</td><td>10／1</td><td>11／0</td></tr>
+<tr><td>1 Dairy product</td><td>1.000</td><td><b>0</b></td><td><b>0／0</b></td><td>4／7</td></tr>
+<tr><td>2 Dairy product</td><td>0.563</td><td><b>0</b></td><td><b>0／0</b></td><td>2／9</td></tr>
+<tr><td>3 Dessert</td><td>0.099</td><td><b>0</b></td><td><b>0／0</b></td><td>7／4</td></tr>
+<tr><td>4 Dessert</td><td>0.566</td><td>12（12／0）</td><td>11／0</td><td>10／1</td></tr>
+<tr><td>5 Egg</td><td>0.180</td><td><b>0</b></td><td><b>0／0</b></td><td>10／1</td></tr>
+<tr><td>6 Meat</td><td>0.396</td><td>9（9／0）</td><td>9／0</td><td>11／0</td></tr>
+<tr><td>7 Noodles/Pasta</td><td>0.267</td><td><b>0</b></td><td><b>0／0</b></td><td>11／0</td></tr>
+<tr><td>8 Seafood</td><td>0.840</td><td>8（8／0）</td><td>8／0</td><td>11／0</td></tr>
+<tr><td>9 Soup</td><td>0.760</td><td>16（11／5）</td><td>9／2</td><td>8／3</td></tr>
+</tbody>
+</table></div>
+<figure class="fig">
+<img src="img/ch02_lime_softmax.png" alt="10 張圖的 LIME 結果改用 softmax 機率：圖 0、4、6、8、9 有綠色區域，圖 0 與圖 9 有少量紅色；圖 1、2、3、5、7 完全沒有上色，和原圖一樣">
+<figcaption>圖 2.6 — 改用 softmax 機率後的 <code>lime.png</code>。圖 1、2、3、5、7 這 5 張完全沒有上色：每一塊的 |權重| 都小於 0.05。對照圖 2.1 的 logits 版，10 張都有上色。</figcaption>
+</figure>
+<p>5 張圖沒有上色，原因分兩種，都可以回到 2.5 節的取樣表找到：</p>
+<ul>
+  <li><strong>圖 1、2、3、5：機率頂在 1。</strong>遮掉一半，p(標籤) 仍然 ≥ 0.99 的樣本佔 95.5% 到 100%。要擬合的值幾乎不動，沒有一塊的權重大得起來。圖 1 的 R² 是 1.000，聽起來像完美擬合，其實是因為要擬合的值幾乎是常數，一條水平線就貼合了，權重全部接近 0。R² 高不代表解釋有內容。</li>
+  <li><strong>圖 7：機率壓在 0。</strong>p(Noodles/Pasta) ≤ 0.01 的樣本佔 96.2%，大部分的樣本機率都貼在 0，同樣沒什麼可解釋的變化。</li>
+</ul>
+<p>這就是第 1 章「太有把握」在 LIME 上的後果。模型對原圖的機率幾乎都是 1.0000，而 softmax 把 logit 上的大幅變化壓成機率上幾乎看不出來的差異。程式餵 logits 給 LIME，雖然不符合 lime 的預期，卻意外地讓 10 張圖都畫得出東西；代價是 <code>min_weight=0.05</code> 失去了原本的意義，而且權重的大小要用 logit 的尺度去讀。兩種版本各回答一個不同的問題：logits 版問「哪幾塊讓 Bread 的分數變高」，機率版問「哪幾塊讓模型相信這是 Bread 而不是別類」。</p>
+
+<h2 id="offbyone">2.9　差一錯誤：start_label=1</h2>
+<p>2.6 節的輸出第 5 行留下一個問題：特徵 0 有權重，第 107 塊卻沒有特徵。原因在兩邊的編號規則對不上：</p>
+<ul>
+  <li><code>slic(..., start_label=1)</code> 把塊編成 <strong>1, 2, …, n</strong>（圖 0：1..107，2.4 節輸出）。</li>
+  <li>lime 0.2.0.1 把特徵的個數設成「有幾種編號」，也就是 n 個；然後把第 z 個特徵對應到 <code>segments == z</code> 的像素，<strong>z = 0, 1, …, n−1</strong>。</li>
+</ul>
+<p>兩邊各差一號，像下面這樣錯開：</p>
+<figure class="fig">
+<svg viewBox="0 0 900 296" role="img" aria-label="SLIC 的塊編號是 1 到 107，LIME 的特徵編號是 0 到 106，特徵 z 對應編號 z 的塊。特徵 0 找不到 0 號塊，是對不到任何像素的假特徵；第 107 塊沒有對應的特徵，永遠不會被遮">
+  <text class="s-lbl" x="20" y="60" font-weight="700">SLIC 的塊</text>
+  <text class="s-mono" x="20" y="80">start_label=1</text>
+  <text class="s-lbl" x="20" y="190" font-weight="700">LIME 的特徵 z</text>
+  <text class="s-mono" x="20" y="210">0 .. n−1</text>
+  <rect x="150" y="45" width="64" height="40" rx="6" fill="none" stroke="#ff7b72" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text class="s-sm" x="182" y="70" text-anchor="middle">沒有 0 號</text>
+  <rect x="235" y="45" width="64" height="40" rx="6" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="267" y="70" text-anchor="middle">1</text>
+  <rect x="320" y="45" width="64" height="40" rx="6" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="352" y="70" text-anchor="middle">2</text>
+  <rect x="405" y="45" width="64" height="40" rx="6" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="437" y="70" text-anchor="middle">3</text>
+  <text class="s-lbl" x="522" y="70" text-anchor="middle">…</text>
+  <rect x="575" y="45" width="64" height="40" rx="6" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="607" y="70" text-anchor="middle">105</text>
+  <rect x="660" y="45" width="64" height="40" rx="6" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="692" y="70" text-anchor="middle">106</text>
+  <rect x="745" y="45" width="64" height="40" rx="6" class="s-box" style="stroke:#ff7b72"/>
+  <text class="s-mono" x="777" y="70" text-anchor="middle">107</text>
+
+  <rect x="150" y="175" width="64" height="40" rx="6" class="s-box" style="stroke:#ff7b72"/>
+  <text class="s-mono" x="182" y="200" text-anchor="middle">0</text>
+  <rect x="235" y="175" width="64" height="40" rx="6" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-mono" x="267" y="200" text-anchor="middle">1</text>
+  <rect x="320" y="175" width="64" height="40" rx="6" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-mono" x="352" y="200" text-anchor="middle">2</text>
+  <rect x="405" y="175" width="64" height="40" rx="6" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-mono" x="437" y="200" text-anchor="middle">3</text>
+  <text class="s-lbl" x="522" y="200" text-anchor="middle">…</text>
+  <rect x="575" y="175" width="64" height="40" rx="6" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-mono" x="607" y="200" text-anchor="middle">105</text>
+  <rect x="660" y="175" width="64" height="40" rx="6" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-mono" x="692" y="200" text-anchor="middle">106</text>
+  <rect x="745" y="175" width="64" height="40" rx="6" fill="none" stroke="#ff7b72" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text class="s-sm" x="777" y="200" text-anchor="middle">沒有 107</text>
+
+  <line x1="267" y1="87" x2="267" y2="173" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="352" y1="87" x2="352" y2="173" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="437" y1="87" x2="437" y2="173" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="607" y1="87" x2="607" y2="173" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="692" y1="87" x2="692" y2="173" stroke="#93a1af" stroke-width="1.5"/>
+  <text class="s-mono" x="522" y="126" text-anchor="middle">segments == z</text>
+  <text class="s-sm" x="522" y="146" text-anchor="middle">1..106 正常對上</text>
+  <line x1="182" y1="173" x2="182" y2="87" stroke="#ff7b72" stroke-width="1.5" stroke-dasharray="3 3"/>
+  <line x1="777" y1="87" x2="777" y2="173" stroke="#ff7b72" stroke-width="1.5" stroke-dasharray="3 3"/>
+  <text class="s-sm" x="150" y="240">特徵 0：遮了等於沒遮，</text>
+  <text class="s-sm" x="150" y="258">權重是雜訊（圖 0：0.158）</text>
+  <text class="s-sm" x="870" y="240" text-anchor="end">第 107 塊（圖 0：87 個像素）：</text>
+  <text class="s-sm" x="870" y="258" text-anchor="end">永遠不被遮、不會出現在解釋裡</text>
+  <text class="s-sm" x="20" y="282">數字以圖 0 為例（n = 107）；其他 9 張圖同理，最後一塊的編號就是 2.4 節輸出的最大編號。</text>
+</svg>
+<figcaption>圖 2.7 — 兩邊的編號錯開一號。中間 106 對正常；左邊的特徵 0 找不到像素，右邊的最後一塊找不到特徵。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#58a6ff"></i>SLIC 切出的塊（圖上的像素）</span>
+  <span><i style="background:#a371f7"></i>LIME 的特徵</span>
+  <span><i style="background:#ff7b72"></i>對不上的那一個</span>
+</div>
+<p>後果有兩個，都實測確認過：</p>
+<ul>
+  <li><strong>特徵 0 是假特徵。</strong>取樣時它照樣有一半機率是 0（圖 0 的 1000 個樣本中有 478 個），但遮了等於沒遮，因為沒有任何像素屬於 0 號塊。它的 0/1 和模型的輸出毫無關係，Ridge 卻還是給了它一個權重：圖 0 是 0.158，純粹是雜訊。這個權重在 <code>get_image_and_mask</code> 裡會佔掉一個名額（2.7 節「少了一塊」），只是畫不出來。</li>
+  <li><strong>最後一塊永遠不被解釋。</strong>圖 0 的第 107 塊（87 個像素）沒有對應的特徵，在 1000 個樣本裡<strong>從來沒有被遮過</strong>，也不會出現在權重表裡。如果它剛好是關鍵區域，LIME 永遠不會告訴你。每張圖都有一塊這樣的盲點。</li>
+</ul>
+<p>修法是把 <code>start_label</code> 改成 <code>0</code>，讓兩邊都從 0 開始。2.4 節說過，這樣切出來是同一個分割，只是編號整體減 1。實測圖 0 改成 <code>start_label=0</code>：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>start_label=1（程式原樣）</th><th>start_label=0</th></tr></thead>
+<tbody>
+<tr><td>權重前 5 名</td><td>(21, 5.52) (25, 3.59) (38, 3.12) (27, 3.02) (40, 2.94)</td><td>(20, 5.27) (24, 3.41) (37, 3.32) (39, 3.16) (26, 3.11)</td></tr>
+<tr><td>R²</td><td>0.842</td><td>0.862</td></tr>
+</tbody>
+</table></div>
+<p>新版的編號整體小 1：舊的 21 號塊就是新的 20 號塊，25 → 24、38 → 37、27 → 26、40 → 39。前 5 名是同一批塊，排名大致相同，權重的數值略有不同：少了一個雜訊特徵、多了一塊真的會被遮的區域，取樣出來的 0/1 對應到的像素也就不同。圖 2.5 的第三格就是這個版本，綠色區域和原樣幾乎一樣。所以這個 bug 對圖 0 的「結論」影響不大，但它是一個結構上的錯：任何一張圖的最後一塊都被系統性地排除在解釋之外。原版 notebook 也是 <code>start_label=1</code>，本 repo 照原樣保留（<a href="outline.html#findings">教學大綱〈讀 code 不盡信文件〉</a>的第 1 項）。</p>
+<h2 id="seed">2.10　亂數：seed 16 與順序</h2>
+<p>LIME 的結果有隨機性：2.5 節的 1000 個 0/1 向量是亂數產生的，換一批樣本，權重就會不同。<code>explain_cnn.py:54</code> 用 <code>np.random.seed(16)</code> 讓它可以重現。這一行管到哪裡，值得說清楚。</p>
+<p>電腦的「亂數」其實是<strong>偽亂數</strong>：一個從某個起始狀態出發、照固定公式一個接一個算出來的數列，看起來沒有規律，但起始狀態一樣，算出來的數列就完全一樣。這個起始狀態就是<strong>種子</strong>（seed）。<code>np.random.seed(16)</code> 設定的是 NumPy 的<strong>全域</strong>亂數產生器：之後任何地方呼叫 <code>np.random.randint</code> 這類函式，都從這同一條數列往下取數。</p>
+<p>lime 用的正是這條全域數列。<code>LimeImageExplainer()</code> 沒有給 <code>random_state</code> 參數，lime 就改用 NumPy 的全域亂數。而 <code>explain_instance</code> 每次會從裡面取數：先抽一個 0–999 的整數（給 lime 內建的切塊函式當種子，只在沒有給 <code>segmentation_fn</code> 時才用得到，本作業有給，所以這一個是白抽的，但仍然消耗了數列），再抽 1000 × n 個 0/1。實測同一個 seed 重跑兩次，權重完全相同。於是：</p>
+<ul>
+  <li><strong>整段可以重現</strong>：seed 一樣、順序一樣，10 張圖的權重每次都一樣（第 0 章 <a href="ch00.html#outputs">0.6 節</a>：重跑後 <code>lime.png</code> 逐位元相同）。</li>
+  <li><strong>但第 i 張圖的結果依賴前面</strong>：種子只在迴圈之前設一次。第 0 張圖從 seed 16 的起點開始取數，第 1 張從第 0 張用剩的地方接著取……每張圖的塊數 n 不同，取走的數量也不同。所以圖 3 拿到的那 1000 個樣本，取決於圖 0、1、2 各切出了幾塊。</li>
+</ul>
+<p>影響有多大？兩個實測：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>實驗</th><th>權重前 5 名（塊編號）</th><th>和原程式的前 11 名重疊</th></tr></thead>
+<tbody>
+<tr><td>圖 3，照原程式排在第 4 個跑</td><td>40, 57, 86, 52, 48</td><td>（原程式）</td></tr>
+<tr><td>圖 3，seed 16 後單獨第一個跑</td><td>40, 57, 86, 52, <b>39</b></td><td>10 塊</td></tr>
+<tr><td>圖 0，seed 16（原程式）</td><td>21, 25, 38, 27, 40</td><td>（原程式）</td></tr>
+<tr><td>圖 0，改成 seed 0</td><td>21, 25, 38, <b>40</b>, <b>27</b>（R² 0.8453）</td><td>10 塊</td></tr>
+</tbody>
+</table></div>
+<p>換 seed 或換順序，最重要的幾塊大致不變，前 11 名有 10 塊相同；但排名後段會換人，權重的數值也會變（圖 0 換 seed 0 後第 1 名 21 號是 5.158，原本 5.522）。這給讀這本書（或對照投影片、助教答案）的人一個實際的提醒：<strong>本書引用的塊編號與權重，只有在 seed 16、照原程式順序跑 10 張圖時才對得上</strong>。如果你為了省時間只跑一張圖，或者改了迴圈順序，看到第 5 名不一樣是正常的，不代表程式壞了。也因此，LIME 的權重不該被讀到小數第二位：它本身就帶有取樣誤差。</p>
+
+<div class="note"><h4>現在的做法</h4>
+<ul>
+  <li><strong>回傳機率</strong>：照 lime 的介面，<code>classifier_fn</code> 應回傳機率（在 <code>predict</code> 最後做 softmax）。如果刻意要解釋 logits（例如本作業這種機率頂住的模型），就把 <code>min_weight</code> 改成 logit 尺度上有意義的值，並在報告裡說清楚解釋的是哪一種分數。</li>
+  <li><strong>編號從 0 開始</strong>：<code>slic(..., start_label=0)</code>，讓 superpixel 編號和 lime 的特徵編號一致。</li>
+  <li><strong>推論包在 <code>torch.no_grad()</code> 裡</strong>，不必記錄用不到的計算過程。</li>
+  <li><strong>每個 explainer 自己的亂數</strong>：<code>LimeImageExplainer(random_state=16)</code> 讓 explainer 用自己的亂數產生器，不受全域亂數和前面幾張圖的影響。<!-- TODO(本機實測): 改成 LimeImageExplainer(random_state=16)、不呼叫 np.random.seed，圖 3 單獨跑與在迴圈中第 4 個跑的權重是否完全相同 -->（這一點本書沒有實測，是依 lime 的參數說明推論的。）</li>
+  <li><strong>用現成的工具</strong>：目錄頁<a href="index.html#now">〈先說在前面〉</a>提到的 Captum（PyTorch 官方的模型解釋套件）也內建 LIME，介面直接吃 PyTorch 模型與張量，不必自己在 NumPy 與 tensor 之間轉換形狀。</li>
+</ul>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>LIME 不看模型內部，只做 forward：把圖切成 superpixel，隨機遮掉一些，用加權 Ridge 回歸擬合「哪幾塊沒遮」與「某一類的分數」，每塊一個權重。正權重畫綠、負權重畫紅。</li>
+  <li><code>slic(n_segments=200, …)</code> 的 200 只是目標，10 張圖實際切出 66–151 塊；圖 0 是 107 塊。</li>
+  <li>每張圖取樣 1000 次（含原圖），每批 10 張，<code>predict</code> 被呼叫 100 次；每個樣本大約遮掉一半的塊。「遮住」是換成那一塊的平均色，不是塗黑。stderr 的 10 條 tqdm 進度條就是這 10 × 1000 個樣本。</li>
+  <li>樣本權重由 cosine 距離決定：越像原圖越重要（圖 0 中位數 0.496）。<code>exp.score</code> 只有一個值，是原圖分數最高那一類的 R²；本作業剛好等於標籤那一類。</li>
+  <li><code>get_image_and_mask</code> 先取 |權重| 前 11 名，再丟掉 |w| &lt; 0.05 的；綠、紅是把 G、R 通道設成影像最大值的疊色，亮的區域上紅色看不出來。兩張 Dairy product 的最強權重都是負的。</li>
+  <li><code>predict</code> 回傳 logits：<code>min_weight=0.05</code> 因此幾乎失效（圖 0：83 塊對機率版的 13 塊）。改用機率後，機率頂住或壓在 0 的圖 1、2、3、5、7 完全沒有上色。</li>
+  <li><code>start_label=1</code> 造成差一錯誤：特徵 0 是對不到像素的假特徵，最後一塊永遠不被遮、不被解釋。改成 0 後圖 0 的結果大致相同（編號平移 1，R² 0.862）。</li>
+  <li><code>np.random.seed(16)</code> 設的是全域亂數，只設一次；每張圖的結果依賴前面用掉多少亂數。換 seed 或順序，前 11 名約有 10 塊相同。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 同學說：「<code>exp.score</code> 是 5 個類別各自的 R²，取第一個就是標籤的。」這句話哪裡不對？本作業為什麼仍然可以把 <code>exp.score</code> 當成標籤那一類的 R²？</summary>
+<p><code>exp.score</code> 只有一個值。lime 對 <code>top_labels</code> 的 5 個類別各擬合一次，每一次都覆寫 <code>exp.score</code>，最後留下的是迴圈最後一圈，也就是原圖分數最高的那一類（各類別自己的權重與截距則分別存在 <code>local_exp</code> 與 <code>intercept</code>）。本作業 10 張圖都預測正確，分數最高的類別就是標籤，所以剛好等於標籤那一類的 R²。如果某張圖預測錯了，它就變成預測類別的 R²。</p></details>
+<details class="quiz"><summary>2. 把 <code>predict</code> 改成回傳 softmax 機率，為什麼圖 1（奶油塊）在 <code>lime.png</code> 上完全沒有上色，R² 卻是 1.000？</summary>
+<p>圖 1 遮掉一半的塊，p(Dairy product) 仍然 ≥ 0.99 的樣本是 100%（2.5 節表）。要擬合的值幾乎是常數，Ridge 擬合出的權重全部接近 0，沒有一塊的 |權重| 達到 <code>min_weight=0.05</code>，所以什麼都不畫。也因為目標幾乎不變，一條水平線就能貼合，R² 才會是 1.000：R² 高只代表直線貼得好，不代表解釋有內容。用 logits 時，圖 1 的樣本 logit 仍在 18.84 以上變動，所以畫得出 4 綠 7 紅。</p></details>
+<details class="quiz"><summary>3. 圖 0 有 83 塊 |w| ≥ 0.05（47 正、36 負）。把 <code>num_features</code> 改成 200，<code>mask</code> 裡卻只有 46 塊綠、36 塊紅。少掉的那一塊是誰？</summary>
+<p>是特徵 0。<code>start_label=1</code> 讓塊編號從 1 開始，而 lime 把特徵 z 對應到 <code>segments == z</code>，所以特徵 0 對不到任何像素。它的權重 0.158 是正的、超過 0.05，有被選中，但沒有像素可畫，綠色就少了一塊。</p></details>
+<details class="quiz"><summary>4. 把第 50 行改成 <code>start_label=0</code>，圖 0 的解釋會有什麼變化？</summary>
+<p>SLIC 切出的分割不變，只是編號從 0..106 開始，和 lime 的特徵編號對齊：不再有假特徵，第 107 塊（新編號 106）也會被取樣與解釋。實測前 5 名變成 (20, 5.27)、(24, 3.41)、(37, 3.32)、(39, 3.16)、(26, 3.11)，對應的是原本的 21、25、38、40、27 號塊，排名大致相同；R² 從 0.842 變成 0.862。上色的區域和原樣幾乎一樣（圖 2.5 第三格）。</p></details>
+<details class="quiz"><summary>5. 你為了省時間，只對圖 3 跑 LIME（先 <code>np.random.seed(16)</code> 再跑），發現權重第 5 名和書上不同。程式寫錯了嗎？</summary>
+<p>不一定。<code>np.random.seed(16)</code> 在原程式裡只在迴圈前設一次，圖 3 是第 4 個跑的，它拿到的亂數是圖 0、1、2 用剩的那一段。單獨跑時，圖 3 從 seed 16 的起點取數，樣本不同，權重也就不同。實測單獨跑的前 5 名是 40、57、86、52、39，原程式是 40、57、86、52、48，前 11 名有 10 塊相同。要逐塊對照書上的數字，必須照原程式的 seed 與順序跑完前面的圖。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://arxiv.org/abs/1602.04938">Ribeiro, Singh, Guestrin, 2016, “Why Should I Trust You?”: Explaining the Predictions of Any Classifier</a>：LIME 的原始論文，包含局部代理模型、核權重與 superpixel 的設計理由。</li>
+  <li><a href="https://github.com/marcotcr/lime">marcotcr/lime</a>：lime 套件的 GitHub（投影片第 7 頁附的網址），<code>lime/lime_image.py</code> 就是本章 ②–⑦ 步驟的實作。</li>
+  <li><a href="https://lime-ml.readthedocs.io/en/latest/lime.html">lime 文件</a>：<code>explain_instance</code> 與 <code>get_image_and_mask</code> 的參數說明（<code>explain_cnn.py</code> 第 60 行的註解連到 <code>explain_instance</code> 的說明、第 70 行連到 <code>get_image_and_mask</code> 的說明）。</li>
+  <li><a href="https://scikit-image.org/docs/stable/api/skimage.segmentation.html">scikit-image — skimage.segmentation</a>：<code>slic</code> 的參數（<code>n_segments</code>、<code>compactness</code>、<code>sigma</code>、<code>start_label</code>）與範例圖。</li>
+  <li><a href="https://christophm.github.io/interpretable-ml-book/lime.html">Christoph Molnar, Interpretable Machine Learning — LIME</a>：用圖解說明 LIME 的流程，並討論它的弱點，例如核寬度與取樣造成的不穩定。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch01.html">← 第 1 章</a><a href="ch03.html">第 3 章 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW09 讀碼教材 · 對應 commit b2dbe4c · 程式碼引用取自本 repo 的 HW09/；實測輸出取自 2026-10-03／04 本機執行</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>

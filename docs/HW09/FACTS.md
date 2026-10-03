@@ -376,6 +376,13 @@
   - 本章手算（由 FACTS 推得，非另外量）：e^−7.262 ≈ 0.0007（= 圖 2 第 2 名機率）、e^−37.930 ≈ 3e-17、e^7 ≈ 1,100、1.19e-07 = 2×2^−24；只存 model_state_dict 約 56.7 MB。
   - **雲端發現的 FACTS 疑點**：(1)「ch01 實測 → FoodDataset」說圖 1、3「看起來被壓扁、變寬」：寬圖被擠成正方形，內容其實是**變窄、變高**，ch01 照後者寫。(2)「logit 的小數第 3 位會隨 batch 組成變」：10.3332 − 10.3312 = 0.0020，不是 8.3e-03；ch01 已拿掉差值並標 TODO。(3)「差 7 以上時 softmax 機率就超過 0.999」只看第 2 名；10 類一起算的下界約 0.993，ch01 沒有引用這句。
 
+- ch02（第 2 章，2026-10-03 雲端）：
+  - 圖號：圖 2.1（img/lime.png）、圖 2.2（LIME 流程 SVG：原圖 → ①切 superpixel → ②取樣 0/1 → ③換平均色 → ④模型 predict → ⑤加權 Ridge → ⑥每塊一個權重 → ⑦get_image_and_mask 上色；藍＝輸入、綠＝forward、紫＝LIME 步驟）、圖 2.3（img/ch02_segments.png）、圖 2.4（img/ch02_perturb.png）、圖 2.5（img/ch02_img0_compare.png）、圖 2.6（img/ch02_lime_softmax.png）、圖 2.7（差一錯誤 SVG：SLIC 塊 1..107 vs 特徵 0..106，紅＝對不上）。
+  - 本章正式定義的名詞：LIME（Local Interpretable Model-agnostic Explanations，三個字各自的意思）、model-agnostic、代理模型（surrogate model）、superpixel（完整定義）、SLIC 與 `n_segments`／`compactness`／`sigma`／`start_label`、特徵（每塊一個）、樣本（0/1 向量，第 0 列＝原圖）、「遮住」＝換成該塊平均色（`hide_color=None`）、`explain_instance` 的預設值（num_samples、batch_size、top_labels、hide_color、distance_metric、kernel_width、random_state）、cosine 距離、核函數（kernel）與樣本權重（≠ 每塊的權重）、Ridge 回歸與 alpha、R²（含加權）、截距、`local_exp`／`intercept`／`exp.score`（只有一個值）／`local_pred`、`top_labels`、`get_image_and_mask` 五個參數與 mask、疊色、差一錯誤（off-by-one）、偽亂數／種子／NumPy 全域亂數產生器、`2>/dev/null`。
+  - 本章手算（由本 FACTS 推得）：0/1 向量與全 1 向量的 cosine = √(k/n)；圖 0 平均保留 53.4 塊 → d ≈ 0.29、樣本權重 ≈ 0.50；最像原圖的樣本權重約為最不像的 3 倍（0.760／0.231）；−21.383 + 33.926 = 12.543 = local_pred；num_features=200 的 46 綠 = 47 正 − 特徵 0。
+  - 推論（未實測，ch02 標了 TODO）：紅色疊在亮處（R 已接近最大值）看不出來，用來解釋圖 1、2 在 lime.png 上幾乎看不到紅色；`LimeImageExplainer(random_state=16)` 可讓每張圖的結果不依賴順序。
+  - 回指（不重講）：ch00 的 logits／softmax、tqdm、逐段計時 14.7 s、0.6 節重跑逐位元相同；ch01 的預測表、批次 vs 單張 logit、model.eval()、HWC／permute、save_fig；index 的 lime 0.1.1.37 vs 0.2.0.1。
+
 ## index／outline 審稿補測（2026-10-03，本機）
 - 舊版套件能不能裝（用 `uv pip install --target <scratch>` 試，不動 .venv）：
   - `lime==0.1.1.37`：**裝得起來**，在 Python 3.12 上也能跑。它另外依賴 `progressbar`（2.5），pip 會一起裝。舊版的進度條是 `progressbar` 的 `|####|` 樣式，不是 tqdm。用它對圖 0 跑同一段 LIME（seed 16、start_label=1、logits）：前 5 名 (21, 5.5216)、(25, 3.5899)、(38, 3.1247)、(27, 3.0233)、(40, 2.9437)，R² 0.8423，**和 0.2.0.1 完全相同**。所以換版本不影響 Q1–4 的結果。
