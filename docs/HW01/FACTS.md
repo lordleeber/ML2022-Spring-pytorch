@@ -120,3 +120,11 @@ select_feat：
 - select_all=True：x_train (2160,117)、x_valid (539,117)、x_test (1078,117)、y_train (2160,)、y_valid (539,)。
 - select_all=False：feat_idx [0,1,2,3,4] = 欄名 ['id','AL','AK','AZ','AR']，也就是 id 加 4 個州的 one-hot，全部不是有用的特徵。shape 分別是 (2160,5) (539,5) (1078,5)。
 - test 沒有答案欄，所以 `raw_x_test = test_data` 直接使用全部 117 欄。train[:, :-1] 也是 117 欄，兩邊對齊；第 116 欄是 worried_finances.4。
+
+## ch02 審稿補測（2026-10-03 本機）
+- y_train：平均 9.7404、範圍 0.4545–30.3046。
+- 動手做第 1 題逐字輸出：`(2160, 118) (539, 118)`，接著 `[1995. 1042.   86. 1667.  464.  481. 1040.   85.  423.  788.]`。
+- 先執行 `torch.manual_seed(0)` 再切，valid 前 10 個 id 不變。seed 1 時 valid 前 10 個 id：`[1265. 2071.  158. 1588. 1822. 1955. 1547.  969.  476.  856.]`。
+- **拿掉 id**（utils.py:32 改成 `feat_idx = list(range(1, raw_x_train.shape[1]))`）：116 個特徵；最佳 valid loss 0.982，出現在 `Epoch [1369/3000]: Train loss: 1.0857, Valid loss: 0.9820`；第 1769 個 epoch early stop；共存檔 55 次。
+- **保留 id 但除以 2699**（117 欄）：最佳 valid loss 1.003，在第 1367 個 epoch。結論：id 拖累的主因是數值尺度太大（id 最大 2699，次大的欄位是 wearing_mask 的 89.8），程式又沒有做標準化。
+- 這兩組實驗都在暫存複本裡跑，repo 的 models/model.ckpt 沒有被動到。
