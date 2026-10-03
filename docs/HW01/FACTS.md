@@ -410,3 +410,11 @@ train_data size: (2160, 118)
 - 這版 torch 的 `torch.load` 簽名中，weights_only 的預設值是 `None`，執行時的效果是 **True**：載入含自訂類別的檔案會報 `UnpicklingError: Weights only load failed. ...`，加 `weights_only=False` 才能載入。`collections.Counter` 這類在白名單裡的型別照樣能載入。model.ckpt（OrderedDict，6 個 key）和 `{'input_dim': 117, 'state_dict': ...}` 這種字典，用預設值都能載入。
 - 把 models/model.ckpt 移走再執行：`FileNotFoundError: [Errno 2] No such file or directory: './models/model.ckpt'`
 - 在 repo 根目錄執行 `.venv/bin/python HW01/predict.py`：`FileNotFoundError: [Errno 2] No such file or directory: './covid.train.csv'`，在讀 CSV 時就失敗，不會留下 pred.csv。
+
+## ch06 審稿補測（2026-10-03 本機）
+- 動手做第 1 題：`wc -l pred.csv` 輸出 `1079 pred.csv`，`md5sum pred.csv` 輸出 `46a0484b5d4eff1d72c9dd06923e65bb  pred.csv`。
+- 動手做第 2 題：`repr(csv.excel.lineterminator)` 輸出 `'\r\n'`。
+- 動手做第 3 題：輸出 `61 44.7035 67`、`1.0045 59.6773`、`120.0056`。`np.random.default_rng(0).permutation(p)`（直接打亂陣列）跟原本實測用的 `arr[rng.permutation(1078)]`（打亂索引）結果相同。
+- 動手做第 4 題：輸出 `OrderedDict 6 117`。
+- 自我測驗第 1 題（刪掉 predict.py 第 26 行，並改成 `My_Model(input_dim=train_data.shape[1])`）**已實測**：走不到第 39 行。第 26 行是 valid_data 唯一被定義的地方，所以在 f-string 的 `valid_data size:` 那一行（原檔第 30 行）就報 `NameError: name 'valid_data' is not defined`。
+- predict.py 第 23–34 行與 train.py 第 103–114 行逐字相同（diff 沒有差異）。

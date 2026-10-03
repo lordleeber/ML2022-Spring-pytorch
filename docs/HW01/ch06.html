@@ -1018,14 +1018,12 @@ $ wc -l pred.csv
 1079 pred.csv
 $ md5sum pred.csv
 46a0484b5d4eff1d72c9dd06923e65bb  pred.csv</code></pre>
-  <!-- TODO(本機實測): 確認 wc -l pred.csv 與 md5sum pred.csv 的逐字輸出（FACTS 只有 1079 行與 md5 值，沒有記錄這兩個指令的原樣輸出） -->
   <code>2&gt;/dev/null</code> 丟掉 stderr 的進度條（第 0 章 0.5 節）。<code>wc -l</code> 數換行字元，1,079 行；<code>md5sum</code> 印出檔案指紋，和 6.2 節的值相同，表示這次的 pred.csv 和之前每一次都一位元組不差。這個指紋只在本書的環境（第 0 章的 torch 版本、這份 model.ckpt）下成立，換了套件版本或 GPU，最後幾位小數可能不同，指紋也就不同。</li>
   <li><strong>看行尾的位元組</strong>：
 <pre class="shell"><code>$ ../.venv/bin/python -c "print(open('pred.csv', 'rb').read(30))"
 b'id,tested_positive\r\n0,8.850631'
 $ ../.venv/bin/python -c "import csv; print(repr(csv.excel.lineterminator))"
 '\r\n'</code></pre>
-  <!-- TODO(本機實測): 確認第二個指令 repr(csv.excel.lineterminator) 的逐字輸出（FACTS 只記載 lineterminator 預設為 '\r\n'） -->
   <code>'rb'</code> 是二進位讀取模式，不做任何行尾轉換，<code>read(30)</code> 讀前 30 個位元組（表頭 18 個字元、<code>\r\n</code> 2 個、<code>0,8.850631</code> 10 個），就是 6.8 節的那串。第二個指令用 <code>repr</code> 印出字串的原始寫法（直接 print 的話，換行字元會變成真的換行而看不見），內容是 csv.writer 預設格式（名叫 excel 的格式設定）的行尾：在 Linux 上也是 <code>\r\n</code>。</li>
   <li><strong>預測的分布與打亂的代價</strong>：
 <pre class="shell"><code>$ ../.venv/bin/python -c "
@@ -1036,17 +1034,19 @@ print((p &gt; 30.3046).sum(), round(p.max(), 4), (d4 &gt; 30.3046).sum())
 print(round(((p - d4) ** 2).mean(), 4), round(d4.var(), 4))
 s = np.random.default_rng(0).permutation(p)
 print(round(((s - d4) ** 2).mean(), 4))
-"</code></pre>
-  <!-- TODO(本機實測): 這段指令的逐字輸出；並確認 default_rng(0).permutation 的重排方式是否重現 120.0056 -->
-  第一行依序是超過 30.3046 的預測筆數、預測的最大值、第 4 天超過 30.3046 的筆數，應該對得上 6.9 節的 61、44.7035、67；第二行是 MSE(預測, 第 4 天) 與第 4 天的變異數，對應 6.6 節的 1.0045 與 59.6773；第三行是打亂之後的 MSE(預測, 第 4 天)，如果和本機用的是同一種重排方式，應該正好是 6.6 節的 120.0056；換一種重排方式（例如改打亂索引），數字會略有不同，但都在變異數的 2 倍附近。<code>tested_positive.3</code> 是 pandas 給第 4 天陽性率的欄名（第 1 章的後綴規則）。<code>.var()</code> 算變異數，<code>permutation</code> 回傳一個重新排列過的複本，原本的 <code>p</code> 不動。</li>
+"
+61 44.7035 67
+1.0045 59.6773
+120.0056</code></pre>
+  第一行依序是超過 30.3046 的預測筆數、預測的最大值、第 4 天超過 30.3046 的筆數，就是 6.9 節的 61、44.7035、67；第二行是 MSE(預測, 第 4 天) 與第 4 天的變異數，6.6 節的 1.0045 與 59.6773；第三行是打亂之後的 MSE(預測, 第 4 天)，正好是 6.6 節的 120.0056。把 <code>default_rng(0)</code> 的 0 換成別的 seed，排列不同，數字會略有不同，但都在變異數的 2 倍附近。<code>tested_positive.3</code> 是 pandas 給第 4 天陽性率的欄名（第 1 章的後綴規則）。<code>.var()</code> 算變異數，<code>permutation</code> 回傳一個重新排列過的複本，原本的 <code>p</code> 不動。</li>
   <li><strong>從權重形狀讀出 input_dim</strong>（6.3 節的折衷做法）：
 <pre class="shell"><code>$ ../.venv/bin/python -c "
 import torch
 sd = torch.load('models/model.ckpt')
 print(type(sd).__name__, len(sd), sd['layers.0.weight'].shape[1])
-"</code></pre>
-  <!-- TODO(本機實測): 這段指令的逐字輸出（預期 OrderedDict 6 117） -->
-  應該印出 state_dict 的型別 <code>OrderedDict</code>、6 個 key，以及第一層權重的第二個維度 117：不讀任何 CSV，就拿到了 predict.py 第 25–34 行花力氣算出的那個數字。這裡沒寫 <code>weights_only</code>，用的是 6.3 節驗證過的預設（效果為 True）。</li>
+"
+OrderedDict 6 117</code></pre>
+  印出的是 state_dict 的型別 <code>OrderedDict</code>、6 個 key，以及第一層權重的第二個維度 117：不讀任何 CSV，就拿到了 predict.py 第 25–34 行花力氣算出的那個數字。這裡沒寫 <code>weights_only</code>，用的是 6.3 節驗證過的預設（效果為 True）。</li>
 </ol>
 </div>
 
@@ -1064,7 +1064,8 @@ print(type(sd).__name__, len(sd), sd['layers.0.weight'].shape[1])
 
 <h2 id="quiz">自我測驗</h2>
 <details class="quiz"><summary>1. 有人想省掉切分，把 predict.py 第 26 行刪掉，第 39 行改成 <code>My_Model(input_dim=train_data.shape[1])</code>。會發生什麼事？</summary>
-<p>第 25 行讀進來的 train_data 是 2699 × 118，包含最後一欄答案，所以 <code>shape[1]</code> 是 118，不是 117。第 39 行建出 <code>My_Model(118)</code>，第 40 行載入時，<code>layers.0.weight</code> 的形狀 checkpoint 是 (16, 117)、模型是 (16, 118)，報第 4 章 4.8 節那種 size mismatch 錯誤（這是依 4.8 節的實測推論，118 這個版本本書沒有實際執行）。input_dim 是「選完特徵之後」的欄數，所以 predict.py 才非得把 select_feat 也跑一遍。</p></details>
+<p>根本走不到第 39 行。第 26 行除了切分，也是 <code>valid_data</code> 唯一被定義的地方；刪掉它，第 29–31 行的 print 一用到 <code>valid_data</code> 就失敗。本機實測照題目改完執行，前兩行 <code>True</code>、<code>0</code> 之後，Traceback 的最後一行是 <code>NameError: name 'valid_data' is not defined</code>，指向那段 f-string 裡 <code>valid_data size:</code> 那一行。第 34 行的 <code>select_feat</code> 也要 valid_data，所以就算把 print 一起刪掉，還是會在那裡失敗。</p>
+<p>假設把這些都處理掉，讓程式走到第 39 行：第 25 行讀進來的 train_data 是 2699 × 118，包含最後一欄答案，<code>shape[1]</code> 是 118，不是 117。<code>My_Model(118)</code> 載入 (16, 117) 的權重，會報第 4 章 4.8 節那種 size mismatch 錯誤。這題的教訓有兩層：一是程式裡一行常常不只做一件事（第 26 行既切分、又定義了 valid_data），刪之前要看清楚它產生的每個變數在哪裡被用到；二是 input_dim 是「選完特徵之後」的欄數，所以 predict.py 才非得把 select_feat 也跑一遍。</p></details>
 <details class="quiz"><summary>2. 把 predict.py 第 17 行改成 <code>preds.append(pred)</code>（不 detach、不 cpu），哪一行會出錯？錯誤訊息怎麼說？</summary>
 <p>第 17 行與 torch.cat 都不會出錯：5 個 GPU 上的 tensor 照樣能接起來，結果也在 GPU 上。出錯的是第 18 行的 <code>.numpy()</code>：<code>TypeError: can't convert cuda:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first.</code>。少了 detach 則不會有任何影響，因為 no_grad 裡算出的 pred 本來就沒有計算圖。</p></details>
 <details class="quiz"><summary>3. 為什麼把預測打亂之後，MSE(預測, 第 4 天) 會接近第 4 天變異數的 2 倍，而不是 1 倍？</summary>
