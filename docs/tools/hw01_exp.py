@@ -33,6 +33,7 @@ ap.add_argument('--seed', type=int, default=5201314)
 ap.add_argument('--epochs', type=int, default=3000)
 ap.add_argument('--es', type=int, default=400)
 ap.add_argument('--bs', type=int, default=256)
+ap.add_argument('--perm', type=int, default=0)       # 1: permutation importance on valid, np.random.default_rng(0)
 a = ap.parse_args()
 dev = 'cuda'
 t0 = time.time()
@@ -133,4 +134,12 @@ out = dict(name=a.name, feat=a.feat, nfeat=len(idx), std=a.std, opt=a.opt, lr=a.
            test_pred_mean=round(float(pte.mean()), 4), test_pred_max=round(float(pte.max()), 4),
            n_valid=len(yva), n_train=len(ytr), secs=round(time.time() - t0, 1))
 if a.feat == 'corr': out['corr_idx'] = idx
+if a.perm:
+    names = list(df.columns)
+    base = float(((pv - yva) ** 2).mean()); rng = np.random.default_rng(0); imp = []
+    with torch.no_grad():
+        for j in range(len(idx)):
+            Xp = Xva.copy(); Xp[:, j] = rng.permutation(Xp[:, j])
+            imp.append((round(float(((f(Xp) - yva) ** 2).mean()) - base, 4), names[idx[j]]))
+    out['perm_top'] = sorted(imp, reverse=True)[:8]; out['perm_bottom'] = sorted(imp)[:3]
 print(json.dumps(out))

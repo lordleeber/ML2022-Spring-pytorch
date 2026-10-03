@@ -615,12 +615,12 @@ footer.chap-footer {
 <p>要比較「改了之後有沒有變好」，第一個條件是量尺可信。第 3 章 3.5 節已經看到，範例程式印出的 valid loss 有三層偏差：最後一個 27 筆的 batch 份量被放大、valid 每個 epoch 重新打亂造成雜訊、再從雜訊裡挑最小值。拿這樣的數字比較兩個設定，差距可能只是運氣。所以本章所有改良實驗都<strong>先套用第 3 章的修法</strong>（3.6 節動手做第 4 項：train.py 第 123 行 <code>shuffle=False</code>、第 79 行乘上 <code>len(y)</code>、第 81 行除以總筆數）。這樣印出的最佳 valid loss，就等於那個 checkpoint 在 539 筆上一次算完的真實 MSE，可以直接和目錄頁的線性迴歸 1.166 比。</p>
 
 <h3>實驗腳本，以及它可不可信</h3>
-<p>約 70 次訓練是用一支照 train.py 流程重寫的腳本在本機 GPU 上跑的：same_seed → 切分 → 選特徵 →（標準化）→ DataLoader → 建模型 → trainer 的五步驟、存最佳、early stop，每一步都和 train.py 相同，只是把「選哪些欄、要不要標準化、用哪個優化器、模型長什麼樣」做成可切換的設定。這支腳本沒有放進 repo，所以先說它怎麼被驗證過：</p>
+<p>約 70 次訓練是用一支照 train.py 流程重寫的腳本在本機 GPU 上跑的：same_seed → 切分 → 選特徵 →（標準化）→ DataLoader → 建模型 → trainer 的五步驟、存最佳、early stop，每一步都和 train.py 相同，只是把「選哪些欄、要不要標準化、用哪個優化器、模型長什麼樣」做成可切換的設定。腳本放在 repo 的 <code>docs/tools/hw01_exp.py</code>，全部設定列在 <code>docs/tools/hw01_ch07_runs.txt</code>（需要 GPU；用法見腳本開頭的說明）。它怎麼被驗證過：</p>
 <ul>
   <li>用原版設定跑，<strong>逐位元重現</strong>了第 0、3、4、5 章的數字：印出的最佳 1.6611、在第 1483 個 epoch、第 1883 個 epoch 停止、存檔 49 次、checkpoint 的真實 MSE 2.0685、第一層 10 個單元沒在工作。</li>
   <li>用修正量法的設定跑，也重現了第 3 章動手做的結果：最佳 1.7174、在第 2968 個 epoch、跑滿 3000 個 epoch、存檔 187 次。</li>
 </ul>
-<p>所以照本章的方式直接改 train.py，應該得到同樣的數字。這是從「腳本逐位元重現原版」推論的；本書沒有把每一組改法都再用改過的 train.py 跑一次。</p>
+<p>另外，7.13 節題庫裡用到的設定，本機也<strong>照題目的寫法直接改 train.py</strong> 實際跑過（拿掉 id、tp4、標準化＋lr 1e-3、時間切分、線性 corr、原版 seed 2 的量法修正版），印出的最佳 valid loss 與最佳 epoch 都和腳本逐位相同。所以照本章的方式改 train.py，會得到本章表格裡的數字。</p>
 
 <h3>固定不變的設定</h3>
 <p>除非另外註明，每組實驗都照原版：batch_size 256、n_epochs 3000、early_stop 400、模型 輸入→16→8→1、seed 5201314，驗證集是範例程式的隨機切分（用 seed 5201314 切出的 2160／539，第 2 章 2.3 節）。7.11 節換 seed 時，<strong>切分仍固定用 5201314 那一份</strong>，換的 seed 只影響初始權重與 batch 的打亂順序，所以每一組比的都是同一批 539 筆。注意原版 train.py 第 101、106 行讀的是同一個 <code>config['seed']</code>，直接改 config 的 seed 會連切分一起換掉。</p>
@@ -795,7 +795,18 @@ footer.chap-footer {
             nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(64, 32),</code></pre>
-<p>train.py 第 47 行每個 epoch 開頭的 <code>model.train()</code>、第 71 行與 predict.py 第 11 行的 <code>model.eval()</code>，這時就決定了 Dropout 有沒有作用：少了 eval()，驗證與預測也會隨機丟單元，每次結果都不同；少了 train()，第一個 epoch 之後的訓練全部沒有 Dropout。本書的實驗沒有包含 Dropout，它對 HW01 有沒有幫助、幫多少，沒有實測數字。<!-- TODO(本機實測): 116→64→32→1＋標準化＋SGD lr 1e-3，每個 ReLU 後加 nn.Dropout(0.2)（量法修正後、seed 5201314），量真實 valid／train MSE、最佳 epoch、停止 epoch；最好再跑時間切分一次 --></p>
+<p>train.py 第 47 行每個 epoch 開頭的 <code>model.train()</code>、第 71 行與 predict.py 第 11 行的 <code>model.eval()</code>，這時就決定了 Dropout 有沒有作用：少了 eval()，驗證與預測也會隨機丟單元，每次結果都不同；少了 train()，第一個 epoch 之後的訓練全部沒有 Dropout。本機在 64-32 架構的兩個 ReLU 後各加 <code>nn.Dropout(0.2)</code>（noid＋標準化＋SGD lr 1e-3，量法修正後，seed 5201314），直接改 model.py 實跑：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th>真實 valid MSE</th><th>真實 train MSE</th><th>最佳 epoch</th><th>停止</th></tr></thead>
+<tbody>
+<tr><td>64-32，沒有 Dropout（隨機切分，上表）</td><td>0.9909</td><td>0.3769</td><td>390</td><td>790</td></tr>
+<tr><td>64-32＋Dropout(0.2)（隨機切分）</td><td>1.0094</td><td>0.5353</td><td>845</td><td>1245</td></tr>
+<tr><td>64-32＋Dropout(0.2)，刪掉第 47 行 <code>model.train()</code>（隨機切分）</td><td>0.9969</td><td>0.3130</td><td>494</td><td>894</td></tr>
+<tr><td>64-32，沒有 Dropout（時間切分，7.10 節）</td><td>1.7157</td><td>0.7048</td><td>81</td><td>481</td></tr>
+<tr><td>64-32＋Dropout(0.2)（時間切分）</td><td>1.7219</td><td>0.5415</td><td>645</td><td>1045</td></tr>
+</tbody>
+</table></div>
+<p>（真實 train MSE 是在 <code>model.eval()</code> 下量的，Dropout 不起作用，所以可以和沒有 Dropout 的那列直接比。）Dropout 讓隨機切分下的 train MSE 從 0.3769 升到 0.5353，「背熟」的程度確實降低了，但 valid 沒有因此變好（0.9909 → 1.0094），時間切分下也一樣（1.7157 → 1.7219）。刪掉 <code>model.train()</code> 那一列正是第 5 章 5.3 節說的情況：第 1 個 epoch 結束時 <code>model.eval()</code> 把旗標切成 False，之後再也沒切回來，Dropout 從第 2 個 epoch 起就不再丟任何單元，結果（train 0.3130、valid 0.9969）幾乎回到沒有 Dropout 的樣子，而程式不會報任何錯。</p>
 
 <h2 id="l2">7.8　boss：L2 正則化（weight_decay）與多試參數</h2>
 <p><strong>L2 正則化</strong>是在 loss 上加一項懲罰「權重太大」的項：總 loss ＝ MSE ＋ (λ/2) × (所有權重的平方和)。λ 越大，模型越傾向用小的權重。為什麼小權重比較好？權重小，輸入稍微改變時輸出也只會稍微改變，模型就比較難為了貼合訓練資料裡的個別雜訊而把函數扭得很彎；這類「在 loss 之外另加限制、讓模型不要太貼合訓練資料」的做法統稱<strong>正則化（regularization）</strong>，目的和 7.7 節的 Dropout 一樣是抑制背熟。對某個權重 w 微分，多出來的那一項梯度就是 λw，所以每一步更新變成 w ← w − lr × (g ＋ λw)：除了照梯度走，還順便把權重往 0 拉一點。這就是 train.py 第 33 行 TODO 寫的兩種做法：「optimizer(weight decay...)」是讓優化器替你加這一項，「implement by your self」是自己把平方和加進 loss。</p>
@@ -1129,13 +1140,13 @@ test_data = pd.read_csv('./covid.test.csv').values
 x_test = (test_data[:, ckpt['feat_idx']] - np.array(ckpt['mean'])) / np.array(ckpt['std'])
 model = My_Model(input_dim=len(ckpt['feat_idx'])).to(device)
 model.load_state_dict(ckpt['state_dict'])</code></pre>
-<p>平均與標準差用 <code>.tolist()</code> 轉成 Python 的 list 再存，是因為第 6 章 6.3 節的 <code>weights_only</code> 只放行 tensor、數字、字串、list、dict 這類純資料，NumPy 陣列不在那份清單裡。（依 6.3 節的規則推論；直接存 NumPy 陣列會不會被擋，本書沒有實測。）不存成 tensor 還有一個好處：<code>map_location=device</code> 會把 checkpoint 裡的 tensor 都放到 GPU 上，GPU 上的 tensor 不能直接 <code>.numpy()</code>（第 6 章 6.5 節），list 就沒有這個問題。這樣一來，predict.py 不需要讀訓練資料、不需要切分，也不可能用錯特徵或錯尺度。input_dim 直接是 feat_idx 的長度，不必另外存。</p>
+<p>平均與標準差用 <code>.tolist()</code> 轉成 Python 的 list 再存，是因為第 6 章 6.3 節的 <code>weights_only</code> 只放行 tensor、數字、字串、list、dict 這類純資料，NumPy 陣列不在那份清單裡。本機實測：把 NumPy 陣列直接存進字典，用 <code>weights_only=True</code> 載入時會報 <code>UnpicklingError: Weights only load failed. ...</code>；轉成 list 的版本則能正常載入。不存成 tensor 還有一個好處：<code>map_location=device</code> 會把 checkpoint 裡的 tensor 都放到 GPU 上，GPU 上的 tensor 不能直接 <code>.numpy()</code>（第 6 章 6.5 節），list 就沒有這個問題。這樣一來，predict.py 不需要讀訓練資料、不需要切分，也不可能用錯特徵或錯尺度。input_dim 直接是 feat_idx 的長度，不必另外存。</p>
 
 <div class="note"><h4>現在的做法：把前處理和模型綁在一起，用時間序列的交叉驗證挑設定</h4>
 <ul>
   <li><strong>前處理和模型是一體的。</strong>選欄、標準化這類「訓練時從資料學到參數」的步驟，今天通常和模型包成同一個物件一起存、一起載入（例如 scikit-learn 的 <code>Pipeline</code>）。上面那個字典是手工版本。原則是一樣的：預測端不該重新計算任何訓練時決定的東西。</li>
   <li><strong>時間序列用滾動式的驗證。</strong>本章的時間切分只切一刀（前 80%／後 20%）。更穩的做法是切好幾刀：用前 1 段訓練、第 2 段驗證，用前 2 段訓練、第 3 段驗證……每一刀都是「用過去預測未來」，再把幾刀的結果平均（scikit-learn 的 <code>TimeSeriesSplit</code>）。它同時處理了 7.10 節的驗證方式問題與 7.11 節「一次說了不算」的問題。</li>
-  <li><strong>小型表格資料，先跑梯度提升樹。</strong>目錄頁說過，這類資料上常用的強基準是 XGBoost、LightGBM 這類梯度提升樹。它不是神經網路：模型是一棵接一棵的決策樹（一連串「某欄是否大於某值」的分岔，最後落到一個預測值），每一棵新樹專門修正前面所有樹加起來還剩下的誤差。它們是另外的套件，有自己的 API，也支援用驗證集做 early stop（樹加到驗證誤差不再下降就停）。本書沒有實測它們在 HW01 上的成績，三級題庫的挑戰題留給你。</li>
+  <li><strong>小型表格資料，先跑梯度提升樹。</strong>目錄頁說過，這類資料上常用的強基準是 XGBoost、LightGBM 這類梯度提升樹。它不是神經網路：模型是一棵接一棵的決策樹（一連串「某欄是否大於某值」的分岔，最後落到一個預測值），每一棵新樹專門修正前面所有樹加起來還剩下的誤差。它們是另外的套件，有自己的 API，也支援用驗證集做 early stop（樹加到驗證誤差不再下降就停）。挑戰題第 4 題附了本機用 LightGBM 量的參考結果：它有一個神經網路沒有的限制，<strong>預測不會超出訓練時見過的答案範圍</strong>，在 HW01 這種測試集是更高陽性率時期的資料上，這一點很關鍵。</li>
 </ul>
 </div>
 
@@ -1153,13 +1164,20 @@ $ grep -B1 Saving run.log | tail -2</code></pre>
 <div class="lab"><h4>入門：一次只改一個地方</h4>
 <ol>
   <li><strong>拿掉 id，用修正後的量法。</strong>把 utils.py 第 32 行改成 <code>feat_idx = list(range(1, raw_x_train.shape[1]))</code>，訓練一次。
-  <p>判準：<code>number of features: 116</code>；最佳在第 2977 個 epoch，該行結尾是 <code>Valid loss: 1.1848</code>，下一行 <code>Saving model with loss 1.185...</code>；沒有 early stop，<code>tail -1 run.log</code> 是第 3000 個 epoch 那一行（7.4 節）。和第 2 章動手做的 0.982 不同，原因在 7.4 節最後一小節。<!-- TODO(本機實測): 這組（noid、量法修正後、seed 5201314）用改過的 train.py 實跑，`grep -B1 Saving run.log | tail -2` 與 `tail -1 run.log` 的逐字輸出（含印出的 Train loss） --></p></li>
+  <p>判準：<code>number of features: 116</code>；最佳在第 2977 個 epoch，該行結尾是 <code>Valid loss: 1.1848</code>，下一行 <code>Saving model with loss 1.185...</code>；沒有 early stop，<code>tail -1 run.log</code> 是第 3000 個 epoch 那一行（7.4 節）。和第 2 章動手做的 0.982 不同，原因在 7.4 節最後一小節。本機照題目改過 train.py 實跑的輸出：</p>
+<pre class="shell"><code>$ grep features run.log
+number of features: 116
+$ grep -B1 Saving run.log | tail -2
+Epoch [2977/3000]: Train loss: 1.0820, Valid loss: 1.1848
+Saving model with loss 1.185...
+$ tail -1 run.log
+Epoch [3000/3000]: Train loss: 1.0893, Valid loss: 1.1888</code></pre></li>
   <li><strong>只用前 4 天的陽性率。</strong>config.py 第 11 行改成 <code>'select_all': False</code>，utils.py 第 34 行改成 <code>feat_idx = [53, 69, 85, 101]</code>。
   <p>判準：<code>number of features: 4</code>；最佳在第 2996 個 epoch，<code>Valid loss: 1.3561</code>（<code>Saving model with loss 1.356...</code>），跑滿 3000 個 epoch（7.4 節）。比抄第 4 天（1.313）還差一點，想一想為什麼：模型有 225 個參數，卻沒學到比「照抄」更好的關係，lr 1e-5 下它到第 3000 個 epoch 都還沒訓練完。</p></li>
   <li><strong>算參數量。</strong>不跑程式，算出 116→64→32→1 與 116→8→1 的參數總數，再算「沒有隱藏層」的 <code>nn.Linear(116, 1)</code>。
   <p>答案：9,601、945、117（7.7、7.9 節）。算法：每個 Linear 是 輸入×輸出＋輸出（第 4 章 4.3 節）。想確認的話，照第 4 章動手做的方式建出模型，把 <code>p.numel()</code> 加總。</p></li>
   <li><strong>不標準化，直接把學習率調大到 1e-3</strong>（只改 config.py 第 15 行，117 欄含 id，SGD 不動）。會發生什麼事？先預測，再跑。
-  <p>判準：本書沒有實測這一組。推算：第 5 章 5.10 節的 lr 1e-4 已經讓第一層 16 個單元全死、輸出常數 9.731；1e-3 再大 10 倍，第一步 id 欄的權重移動量也再大 10 倍（第 5 章 5.4 節：第一步就是 lr × grad），預期同樣崩壞成常數輸出，真實 MSE 落在「永遠猜訓練集平均」的 44.5 附近（第 5 章 5.10 節）。這是推算，請以實測為準。<!-- TODO(本機實測): 117 欄、不標準化、SGD lr 1e-3 momentum 0.9、量法修正後、seed 5201314：真實 valid MSE、最佳 epoch、停止 epoch、第一層沒在工作的單元數、預測標準差 --></p></li>
+  <p>判準：先寫下預測。推算的思路是：第 5 章 5.10 節的 lr 1e-4 已經讓第一層 16 個單元全死、輸出常數 9.731；1e-3 再大 10 倍，第一步 id 欄的權重移動量也再大 10 倍（第 5 章 5.4 節：第一步就是 lr × grad），預期同樣崩壞成常數輸出，真實 MSE 落在「永遠猜訓練集平均」的 44.5 附近（第 5 章 5.10 節）。本機實測，推算是對的，而且壞得更徹底：第 1 個 epoch 印出 <code>Train loss: 673668052737.8724</code>（約 6.7 × 10<sup>11</sup>）；最佳是第 52 個 epoch 的 <code>Valid loss: 44.3461</code>，第 452 個 epoch early stop；第一層 16 個單元全部沒在工作，驗證集預測的標準差是 0（每一筆都輸出同一個數字）。</p></li>
   <li><strong>判讀題。</strong>同學說：「我在驗證集上量到 0.98，比 strong 的 1.05728 還低，所以我過了 strong。」這句話哪裡有問題？
   <p>判準：答出兩點。一、1.05728 是 Kaggle 測試集上的 MSE，0.98 是驗證集上的，測試集是陽性率更高的時期（第 6 章 6.9 節），兩者不能直接比（7.2 節）。二、0.98 是在隨機切分上量的，7.10 節看到同一個 64-32 架構換成時間切分是 1.7157，隨機切分很可能高估了它在未來日子上的表現。唯一能回答「過了沒有」的，是把 pred.csv 上傳到 Kaggle。</p></li>
 </ol>
@@ -1170,13 +1188,17 @@ $ grep -B1 Saving run.log | tail -2</code></pre>
   <li><strong>加上標準化，學習率改成 1e-3。</strong>先照入門第 1 題把 utils.py 第 32 行改成 noid（116 欄），再照 7.5 節在 train.py 第 114 行之後加標準化，config 的 learning_rate 改成 1e-3。
   <p>判準：最佳在第 543 個 epoch，<code>Valid loss: 1.0715</code>，第 943 個 epoch early stop（最後一行是 <code>Model is not improving, so we halt the training session.</code>，第 5 章 5.8 節）。再照第 4 章動手做的方式數第一層沒在工作的單元，應該是 0。</p></li>
   <li><strong>讓 predict.py 跟上。</strong>接著上一題，照 7.12 節把 feat_idx、平均、標準差和 state_dict 一起存進 checkpoint，改寫 predict.py 載入它們，產生 pred.csv。最省事的接法：存檔端不動 trainer，而是在 train.py 第 127 行 <code>trainer(...)</code> 之後加幾行，用 <code>torch.load</code> 讀回 trainer 存下的最佳 state_dict，和主程式手上的 <code>feat_idx</code>（noid 就是 <code>list(range(1, 117))</code>）、<code>mean</code>、<code>std</code> 包成 7.12 節的字典，覆寫同一個檔。載入端用 7.12 節的五行取代 predict.py 第 25–34 行與第 39–40 行，第 36–37 行（建 test loader）和第 41–42 行（預測、寫檔）照舊，它們只用到 <code>x_test</code> 與 <code>model</code>。
-  <p>判準：predict.py 不再讀 covid.train.csv；用第 6 章 6.10 節動手做第 3 項的指令量，MSE(預測, 第 4 天) 應該是 4.1104，預測最大值 55.4179（7.5 節）。如果量到的數字很不一樣，最可能是測試集沒有用訓練時的那一組平均與標準差。<!-- TODO(本機實測): 依 7.12 節示意改寫 train.py 存檔與 predict.py 載入後，實際產生的 pred.csv 用 §6.10 第 3 項指令量出的三行輸出（確認是否為 MSE 4.1104、max 55.4179）；並確認 weights_only=True 能載入含 list 化 mean/std 的字典 --></p></li>
+  <p>判準：predict.py 不再讀 covid.train.csv；用第 6 章 6.10 節動手做第 3 項的指令量，MSE(預測, 第 4 天) 應該是 4.1104，預測最大值 55.4179（7.5 節）。如果量到的數字很不一樣，最可能是測試集沒有用訓練時的那一組平均與標準差。本機照這題的寫法實做，第 6 章 6.10 節第 3 項指令的輸出是：</p>
+<pre class="shell"><code>85 55.4179 67
+4.1104 59.6773
+140.3394</code></pre>
+  <p>第一行：85 筆預測超過 30.3046（原版是 61），最大 55.4179；第二行：MSE(預測, 第 4 天) 4.1104，和 7.5 節一致；第三行是打亂之後的值。checkpoint 用 <code>weights_only=True</code> 讀得回來，key 依序是 feat_idx、mean、std、state_dict，mean 是長度 116 的 list。改寫後的 predict.py 只讀 covid.test.csv。</p></li>
   <li><strong>換成按時間切分。</strong>照 7.10 節取代 train.py 第 106 行，其餘照原版、只拿掉 id。
   <p>判準：印出的 <code>train_data size</code> 是 (2143, 118)、<code>valid_data size</code> 是 (556, 118)；最佳 <code>Valid loss: 1.1784</code>，在第 2950 個 epoch，跑滿 3000（7.10 節）。</p></li>
   <li><strong>線性模型。</strong>把 model.py 的 <code>nn.Sequential</code> 換成只有一個 <code>nn.Linear(input_dim, 1)</code>，配標準化、Adam lr 1e-3、corr 特徵（7.4 節的示意寫法），在隨機切分上訓練。
   <p>判準：最佳 <code>Valid loss: 1.1422</code>，在第 2991 個 epoch，跑滿 3000（7.9 節）。forward 的 <code>squeeze(1)</code> 不必改：<code>nn.Linear(input_dim, 1)</code> 的輸出一樣是 (B, 1)（第 4 章 4.6 節）。</p></li>
   <li><strong>加 Dropout。</strong>在 64-32 架構的兩個 ReLU 後面各加 <code>nn.Dropout(0.2)</code>（7.7 節），配標準化、SGD lr 1e-3，隨機切分與時間切分各跑一次。和沒有 Dropout 的 0.9909、1.7157 比，哪一邊的改變比較大？
-  <p>判準：本書沒有實測，沒有標準答案。要回報的是：兩種切分下的真實 valid MSE、真實 train MSE、最佳 epoch。判斷 Dropout 有沒有發揮「抑制背熟」的作用，看的是 train MSE 和 valid 的差距有沒有縮小，而不只是 valid 有沒有變好。再做一個對照：把 train.py 第 47 行的 <code>model.train()</code> 刪掉，結果和有 Dropout 的那次比會怎樣（5.3 節說的「悄悄變成沒有 Dropout 的訓練」）。<!-- TODO(本機實測): 64-32＋Dropout(0.2)＋標準化＋SGD 1e-3、量法修正後、seed 5201314，隨機切分與時間切分各一次的真實 valid／train MSE、最佳 epoch；以及刪掉 model.train() 的對照組 --></p></li>
+  <p>判準：本書沒有實測，沒有標準答案。要回報的是：兩種切分下的真實 valid MSE、真實 train MSE、最佳 epoch。判斷 Dropout 有沒有發揮「抑制背熟」的作用，看的是 train MSE 和 valid 的差距有沒有縮小，而不只是 valid 有沒有變好。再做一個對照：把 train.py 第 47 行的 <code>model.train()</code> 刪掉，結果和有 Dropout 的那次比會怎樣（5.3 節說的「悄悄變成沒有 Dropout 的訓練」）。本機的參考結果在 7.7 節 Dropout 那張表：隨機切分 1.0094、時間切分 1.7219，train MSE 從 0.3769 升到 0.5353（差距縮小，但 valid 沒變好）；刪掉 <code>model.train()</code> 後是 0.9969、train 0.3130，幾乎回到沒有 Dropout 的樣子。</p></li>
 </ol>
 </div>
 
@@ -1185,11 +1207,38 @@ $ grep -B1 Saving run.log | tail -2</code></pre>
   <li><strong>寫一個多 seed 的評估迴圈。</strong>把 train.py 主程式包成函式，接收 seed 與設定，回傳最佳 checkpoint 的真實 valid MSE；對同一個設定跑 seed 5201314、1、2、3。切分要固定：隨機切分的 <code>train_valid_split</code> 一律傳 5201314，只把 same_seed 換成新的 seed（7.3 節）。
   <p>判準：時間切分下，線性 corr 的 4 個值是 1.1337、1.1333、1.1332、1.1333（平均 1.1334），corr＋標準化＋Adam＋wd 1e-2 是 1.1525、1.1605、1.137、1.1219（平均 1.1430），重現 7.11 節「線性模型平均略好」的結論。小心：same_seed 要在每次訓練開頭呼叫；同一個行程裡先建了別的模型，會消耗全域亂數，順序就對不上（第 5 章 5.7 節的提醒）。</p></li>
   <li><strong>重現 seed 2 的失敗，再看原版 train.py 會不會一樣。</strong>先在量法修正後的設定、117 欄、seed 2 下訓練（config 的 seed 改成 2，第 106 行的 <code>config['seed']</code> 改成 <code>5201314</code>，讓切分不變），確認真實 MSE 是 12.7959、第一個 epoch 印出 train 164.9592、valid 153.3218（7.11 節）。再在<strong>沒有</strong>量法修正的原版 train.py 上用 seed 2 訓練：seed 與切分的改法同前。
-  <p>判準：第一部分照 7.11 節。第二部分本書沒有實測：7.11 節的警告框說，valid 打亂會改變 batch 順序，所以結果不一定一樣；你的任務是量出來，並用第 5 章 5.10 節的方法（預測值的標準差、第一層沒在工作的單元）判斷它是否也卡在常數輸出。<!-- TODO(本機實測): 原版 train.py（無量法修正）config seed 改成 2：印出的最佳、最佳 epoch、停止 epoch、checkpoint 真實 valid MSE、第一層沒在工作的單元、預測標準差 --></p></li>
+  <p>判準：第一部分照 7.11 節。第二部分本書沒有實測：7.11 節的警告框說，valid 打亂會改變 batch 順序，所以結果不一定一樣；你的任務是量出來，並用第 5 章 5.10 節的方法（預測值的標準差、第一層沒在工作的單元）判斷它是否也卡住了。</p>
+<details class="quiz"><summary>看答案：本機實測結果</summary>
+<p>第一部分照 7.11 節重現：真實 MSE 12.7959，第一個 epoch <code>Train loss: 164.9592, Valid loss: 153.3218</code>。第二部分（原版 train.py，沒有量法修正）：第一個 epoch 是 <code>Train loss: 164.9592, Valid loss: 152.6497</code>（train 相同，因為第 1 個 epoch 的訓練在 valid 打亂之前就做完了；valid 不同，因為打亂改變了分組）。印出的最佳是第 2954 個 epoch 的 <code>Valid loss: 10.3637</code>，跑滿 3000 個 epoch 沒有 early stop，存檔 83 次；checkpoint 一次算完的真實 MSE 是 <strong>13.2407</strong>，第一層 16 個單元有 6 個沒在工作。所以原版 train.py 用 seed 2 也一樣失敗。訓練結束時它已經不是常數輸出（驗證集預測的標準差 4.22），而是在前段卡住、之後爬得太慢：量法修正版也一樣（結束時標準差 4.18）。</p></details></li>
   <li><strong>permutation importance。</strong>第 1 章 1.7 節介紹過：訓練好模型後，把某一欄的值在驗證集上隨機打亂，看真實 MSE 變差多少。對時間切分下的 corr＋標準化＋Adam＋wd 1e-2 模型，算出 38 欄各自的重要性，和第 1 章的相關係數排名比較。
-  <p>判準：本書沒有實測，沒有標準答案。要回報前 5 名的欄名與 MSE 增加量。一個可以先寫下來再驗證的預測（推測，非實測）：tested_positive.3（第 4 天陽性率）會排第一，因為它和答案的相關係數 0.985 最高（第 1 章 1.7 節）。打亂要用固定 seed 的產生器（第 6 章 6.6 節的 <code>np.random.default_rng</code>），不然每次結果都不同。<!-- TODO(本機實測): 時間切分 corr＋標準化＋Adam＋wd 1e-2 模型的 permutation importance 前 5 名欄名與 MSE 增加量（default_rng(0)） --></p></li>
+  <p>判準：本書沒有實測，沒有標準答案。要回報前 5 名的欄名與 MSE 增加量。一個可以先寫下來再驗證的預測（推測，非實測）：tested_positive.3（第 4 天陽性率）會排第一，因為它和答案的相關係數 0.985 最高（第 1 章 1.7 節）。打亂要用固定 seed 的產生器（第 6 章 6.6 節的 <code>np.random.default_rng</code>），不然每次結果都不同。</p>
+<details class="quiz"><summary>看答案：本機的參考結果</summary>
+<p>本機的做法：用 seed 5201314 訓練這個模型（真實 valid MSE 1.1219，和 7.10 節相同），建一個 <code>np.random.default_rng(0)</code>，依欄位順序逐欄把標準化後的驗證集那一欄打亂、量 MSE 增加多少。前 5 名：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>名次</th><th>欄位</th><th>打亂後 MSE 增加</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>tested_positive.3（第 4 天陽性率）</td><td><strong>81.314</strong></td></tr>
+<tr><td>2</td><td>cli.4</td><td>2.4311</td></tr>
+<tr><td>3</td><td>cli.3</td><td>2.1536</td></tr>
+<tr><td>4</td><td>hh_cmnty_cli.4</td><td>1.9466</td></tr>
+<tr><td>5</td><td>hh_cmnty_cli.3</td><td>1.2411</td></tr>
+</tbody>
+</table></div>
+<p>預測對了：第 4 天陽性率排第一，而且遠遠領先。值得對照的是第 1 章的相關係數排名：tested_positive.2（0.970）、tested_positive.1（0.953）都沒進前 5，前 8 名裡只有第 1 天的 tested_positive（0.7045，第 8 名）。原因是這幾欄彼此高度相關，第 4 天已經帶著前幾天的資訊，模型不需要再靠它們；打亂其中一欄，模型還有其他欄可用。<strong>相關係數看的是單一欄和答案的關係，permutation importance 看的是「拿掉這一欄、模型還剩下什麼」</strong>，兩者回答的是不同的問題。重要性最低的 3 欄是 ili.1、anxious.4、depressed.4，打亂後只增加 0.02～0.03。</p></details></li>
   <li><strong>梯度提升樹的基準。</strong>用 LightGBM 或 XGBoost（需要另外安裝套件）在 noid 116 欄上訓練，隨機切分與時間切分各量一次真實 valid MSE，放進 7.9 節與 7.10 節的表裡。
-  <p>判準：本書沒有實測，沒有標準答案。要回報兩種切分下的 MSE，並回答：它在兩種切分下的名次是像 64-32 那樣翻轉，還是像線性 corr 那樣穩定？訓練時同樣只能用訓練部分，early stop 用的驗證集也必須是同一份。<!-- TODO(本機實測): LightGBM（預設參數或註明參數）noid 116 欄，隨機切分與時間切分的真實 valid MSE --></p></li>
+  <p>判準：本書沒有實測，沒有標準答案。要回報兩種切分下的 MSE，並回答：它在兩種切分下的名次是像 64-32 那樣翻轉，還是像線性 corr 那樣穩定？訓練時同樣只能用訓練部分，early stop 用的驗證集也必須是同一份。</p>
+<details class="quiz"><summary>看答案：本機的參考結果</summary>
+<p>本機用 LightGBM 4.7.0，noid 116 欄、不標準化（樹不在乎欄位的尺度），兩種設定：預設參數（100 棵樹），以及 <code>n_estimators=10000</code> 加上「驗證誤差連續 100 棵沒進步就停」的 early stop：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th>真實 valid MSE</th><th>真實 train MSE</th><th>樹的數量</th><th>測試集：MSE(預測, 第 4 天)</th><th>測試集預測最大值</th></tr></thead>
+<tbody>
+<tr><td>隨機切分，預設</td><td>1.2808</td><td>0.1684</td><td>100</td><td>4.8417</td><td>28.0957</td></tr>
+<tr><td>隨機切分，early stop</td><td>1.2802</td><td>0.2481</td><td>75</td><td>4.8705</td><td>27.9937</td></tr>
+<tr><td>時間切分，預設</td><td>1.3759</td><td>0.1613</td><td>100</td><td>5.1995</td><td>28.1781</td></tr>
+<tr><td>時間切分，early stop</td><td>1.3602</td><td>0.5149</td><td>37</td><td>5.5735</td><td>27.1906</td></tr>
+</tbody>
+</table></div>
+<p>名次相對穩定：隨機切分下輸給 DNN 與線性迴歸，時間切分下排在中段（贏過過擬合的 64-32、輸給 corr 系列），沒有像 64-32 那樣翻轉。但最右欄才是重點：<strong>預測最大值只有 28 左右，連訓練集答案的最大值 30.3046 都不到</strong>，而測試集第 4 天陽性率最高到 46.95（第 6 章 6.9 節）。決策樹的每一個預測值都是某一群訓練樣本答案的組合，所以預測永遠落在訓練時見過的範圍內，不會外推。第 6 章看到神經網路會沿著直線往外延伸；樹則被卡在範圍裡。在測試集是「更高陽性率的未來」的 HW01 上，這是梯度提升樹的一個實際弱點，「表格資料先跑梯度提升樹」這條經驗法則在這裡要打折。</p></details></li>
   <li><strong>設計你自己的選模流程。</strong>只准用時間切分（或 7.12 節框裡的滾動式驗證）挑設定，每個設定至少 4 個 seed，最後選出一組，用它產生 pred.csv。
   <p>判準：流程本身。有三條必須做到：挑選時完全不看測試集（包括 MSE(預測, 第 4 天) 這把替代尺：它只能當事後的警示，拿來挑設定就等於用測試集挑模型）；用平均而不是單一 seed 比較，差距小於 7.11 節那個範圍的不算贏；predict.py 依 7.12 節帶著同一組特徵與統計量。若你決定上傳 Kaggle，記下 public 與 private 分數，和你的時間切分 MSE 一起看，就能親自回答本章留下的那個問題：時間切分的排名是否真的比較能預告測試集。</p></li>
 </ol>
