@@ -69,6 +69,9 @@
 - ch03：tensor（PyTorch 多維陣列，可上 GPU、可算梯度）、float32 vs float64（4 vs 8 bytes、約 7 位有效數字）、`torch.FloatTensor` 會複製 vs `torch.from_numpy` 共用記憶體、繼承（class X(Dataset)）、`__init__`／`self`、特殊方法（dunder：`__getitem__`、`__len__`）、tuple、0 維 tensor、`.item()`、sampler（RandomSampler）、collate（batch 是 list）、`len(loader)` 無條件進位、`drop_last`、`num_workers`、行程（process）、DataLoader 的 shuffle 用 PyTorch 全域產生器（每 epoch 新順序、每次執行相同）、pinned（page-locked）memory、`non_blocking`、GPU 有自己的記憶體（搬上 GPU = 複製）、`enumerate` 與 test loader 必須不打亂、`reduction='mean'/'sum'`、「份量」（平均時的加權比例，刻意不叫權重以免和模型權重混淆）、系統性偏差 vs 雜訊、第 5 百分位／中位數、選擇偏差（winner's curse）、TensorDataset。
   ch03 圖號：圖 3.1 Dataset／DataLoader 資料流、圖 3.2 三個 loader 的 batch 切法、圖 3.3 同一 checkpoint 的驗證 loss 量測分布（1.661 vs 2.0685）。
   ch03 已完整解釋 1.661 vs 2.069（§3.5「三層」：份量放大 → valid 打亂造成雜訊 → 挑最小值）；後面章節回指 3.5 節即可。
+- ch04：`nn.Module`（所有模型與層的父類別）、「名冊」＝指定屬性時自動登記子模組（`__setattr__`、`_modules`）、`super(My_Model, self).__init__()` 與 `super().__init__()`（同義，後者是 Python 3 簡寫）、`nn.Sequential`（容器模組，子模組名為 0、1、2…）、`nn.Linear` 的 weight 形狀 (輸出, 輸入) 與計算式 x·Wᵀ+b、轉置、`named_parameters()`、參數名稱（`layers.0.weight`）＝名冊路徑＝state_dict key、`requires_grad`（一句帶過，梯度在 ch05）、預設初始化 U(−1/√in, 1/√in) 與「按輸入個數縮放」的理由、`__call__`（`model(x)` → `nn.Module.__call__` → `forward`）、hook（一句）、`Module.to` 原地搬移 vs `tensor.to` 回傳新 tensor、`squeeze(1)` vs `squeeze()`、`unsqueeze`、廣播（broadcasting）、UserWarning、dying ReLU（永遠輸出 0 的單元）、「參數量是容量上限，不是實際用上的量」、`torch.load` + `load_state_dict`（依名字複製）、mat1/mat2 錯誤訊息的讀法、LeakyReLU／GELU（一句）、`map_location`、`weights_only`（回指目錄頁）。
+  ch04 圖號：圖 4.1 layers.0.weight (16,117) 與 x·Wᵀ+b、圖 4.2 model(x) 的呼叫鏈與逐層形狀、圖 4.3 少了 squeeze 的廣播 (256,256)、圖 4.4 id 欄的 |w| 與 |w·x| 對照。
+  ch04 已講完 dead ReLU 與 id 約 400 倍（§4.7），後面章節回指即可；predict.py 為了 input_dim 重讀資料只在 §4.8 帶過，細節留給 ch06。
 
 ## Baseline 實測（2026-10-03，與範例同一驗證集：random_split seed 5201314）
 - 抄第 4 天 tested_positive（第 101 欄）：MSE 1.313
@@ -231,3 +234,13 @@ forward 時各層的形狀（valid 第一個 batch，shuffle=False，256 筆，�
 - 輸入 float64：`RuntimeError: mat1 and mat2 must have the same dtype, but got Double and Float`
 - 輸入 116 欄給 117 欄的模型：`RuntimeError: mat1 and mat2 shapes cannot be multiplied (4x116 and 117x16)`
 - 自訂 nn.Module 時沒呼叫 `super().__init__()` 就指定子模組：`AttributeError: cannot assign module before Module.__init__() call`
+
+## ch04 審稿補測（2026-10-03 本機）
+- 沒在工作的單元，用 train＋valid 合併的 2,699 筆判定（分開判定的單元數也一樣）：
+  - 初始化：第一層 2/16，0 的比例 46.6%；第二層 0/8。
+  - model.ckpt：第一層 10/16，0 的比例 81.5%；第二層 1/8。
+  - 拿掉 id：第一層 7/16，0 的比例 56.2%（train 和 valid 分開算也都是 56.2%）；第二層 2/8。
+- `My_Model(116)` 的 state_dict 載入 `My_Model(117)`，錯誤訊息最後兩行：`RuntimeError: Error(s) in loading state_dict for My_Model:`，接著 `size mismatch for layers.0.weight: copying a param with shape torch.Size([16, 116]) from checkpoint, the shape in current model is torch.Size([16, 117]).`（開頭是 tab）。
+- 沒呼叫 super().__init__() 時，traceback 最後三行指向 `torch/nn/modules/module.py` 第 2005 行的 `__setattr__`。
+- 動手做第 3 題在真正的終端機裡跑（tty），UserWarning 的兩行（`.../torch/nn/modules/loss.py:626: UserWarning: ...`，下一行是 `  return F.mse_loss(input, target, reduction=self.reduction)`）出現在 `with squeeze 1.7758` 和 `without      89.0963` 之間。輸出接到管線時，stdout 會被緩衝，警告反而出現在最前面。
+- 動手做第 4 題：`dead units 10 / 16`、`zero ratio 0.815`。

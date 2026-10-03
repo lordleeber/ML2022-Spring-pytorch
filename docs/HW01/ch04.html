@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 4 章　模型：117 → 16 → 8 → 1 — HW01 COVID-19 確診率預測</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW01 讀碼教材</p>
+  <h1>第 4 章　模型：117 → 16 → 8 → 1</h1>
+  <p class="chap-lead">第 0 章 0.2 節已經畫過這個模型的架構、算過 2,033 個參數。本章逐行讀 <code>model.py</code>，回答前面幾章延後的四個問題：為什麼要呼叫 <code>super().__init__()</code>、<code>forward</code> 是誰呼叫的、<code>squeeze(1)</code> 少了會怎樣、117 這個數字怎麼決定第一層的 1,888 個參數。最後打開訓練好的模型，看兩件只有實測才看得到的事：第一層 16 個輸出單元裡有 10 個從不輸出，以及 id 這一欄在第一層裡壓過其他欄約 400 倍。</p>
+</header>
+<main>
+
+<h2 id="where">4.1　本章在流程中的位置</h2>
+<p>第 3 章結束時，DataLoader 每次交出一個 batch：x 是 <code>(256, 117)</code>、y 是 <code>(256,)</code>，都還在 CPU 上。本章看接住這個 batch 的東西。<code>model.py</code> 整個檔案 26 行，只定義一個類別 <code>My_Model</code>；真正「用」它的地方在別的檔案，只有三處：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>位置</th><th>做什麼</th><th>本章哪一節</th></tr></thead>
+<tbody>
+<tr><td><code>train.py:126</code></td><td>建立模型，搬上 GPU</td><td>4.3、4.4、4.5</td></tr>
+<tr><td><code>predict.py:39–40</code></td><td>建立同樣形狀的模型，再把 model.ckpt 的權重填回去</td><td>4.8</td></tr>
+<tr><td><code>train.py:56</code>、<code>76</code>，<code>predict.py:16</code></td><td><code>pred = model(x)</code>：把一個 batch 送進模型</td><td>4.5（呼叫機制）；迴圈本身在第 5、6 章</td></tr>
+</tbody>
+</table></div>
+<p>先看檔案開頭：</p>
+
+<figure class="listing"><figcaption>model.py:1–7 — import 與一段不做事的字串</figcaption>
+<pre class="py" data-hot="1"><code>import torch.nn as nn
+
+
+"""
+# Neural Network Model
+Try out different model architectures by modifying the class below.
+"""</code></pre></figure>
+<p>第 1 行是整個檔案唯一的 import：<code>torch.nn</code> 是 PyTorch 裡放神經網路元件的模組，慣例上縮寫成 <code>nn</code>。model.py 用到的 <code>nn.Module</code>、<code>nn.Sequential</code>、<code>nn.Linear</code>、<code>nn.ReLU</code> 都從這裡來。第 0 章 0.8 節提過，train.py 用的 <code>nn.MSELoss</code> 也是經由 <code>from model import *</code> 借用這一行的 <code>nn</code>。第 4–7 行和第 3 章看過的 <code>"""# Dataset"""</code> 一樣，是原版 Jupyter 筆記本的 Markdown 說明格，拆成 .py 之後變成一個沒被使用的字串，執行時什麼都不做。它那句「改下面這個類別來嘗試不同的架構」倒是真話：第 7 章要改模型時，改的就是第 10–25 行。</p>
+
+<h2 id="module">4.2　類別外殼：nn.Module 與 super().__init__()</h2>
+
+<figure class="listing"><figcaption>model.py:10–12 — 類別宣告與 super().__init__()</figcaption>
+<pre class="py" data-hot="10,12"><code>class My_Model(nn.Module):
+    def __init__(self, input_dim):
+        super(My_Model, self).__init__()</code></pre></figure>
+
+<p>第 10 行和第 3 章的 <code>class COVID19Dataset(Dataset)</code> 是同一個句型：定義新類別 <code>My_Model</code>，<strong>繼承</strong> <code>nn.Module</code>。第 3 章說過，PyTorch 的 <code>Dataset</code> 幾乎是空的，繼承它主要是表明身分；<code>nn.Module</code> 正好相反，它是 PyTorch 裡最有份量的類別之一，<strong>所有模型、所有層</strong>（包括等一下的 <code>nn.Linear</code>、<code>nn.ReLU</code>、<code>nn.Sequential</code>）都是它的子類別。繼承它，<code>My_Model</code> 就免費得到一整套能力：</p>
+<ul>
+  <li><code>model.parameters()</code>、<code>model.named_parameters()</code>：列出模型裡所有要學的參數（第 0 章用它數出 2,033；第 5 章交給優化器的也是它）。</li>
+  <li><code>model.to(device)</code>：把所有參數一次搬到 GPU（4.5 節）。</li>
+  <li><code>model.state_dict()</code>／<code>model.load_state_dict()</code>：把全部參數打包成一個字典存檔、再填回來（4.3、4.8 節）。</li>
+  <li><code>model.train()</code>／<code>model.eval()</code>：切換訓練／評估模式（第 5 章）。這個開關只影響訓練與評估時行為不同的層（例如之後作業會用到的 Dropout）；HW01 只有 Linear 與 ReLU，兩種模式算出的結果相同。</li>
+  <li><code>print(model)</code>：印出第 0 章看過的那個樹狀結構。</li>
+  <li><code>model(x)</code>：讓物件可以像函式一樣被呼叫，背後再去呼叫 <code>forward</code>（4.5 節）。</li>
+</ul>
+<p>這些方法要能運作，有一個前提：<strong>模型得知道自己有哪些子元件</strong>。<code>My_Model</code> 只寫了 <code>self.layers = …</code> 一行指定，<code>parameters()</code> 是怎麼找到藏在 <code>layers</code> 裡面那 2,033 個數字的？</p>
+
+<h3>指定屬性時，nn.Module 會順手登記</h3>
+<p>答案在 <code>nn.Module</code> 改寫了「指定屬性」這個動作。一般的 Python 物件，<code>self.layers = 某個東西</code> 就只是把東西存起來；<code>nn.Module</code> 則攔下每一次指定（它改寫了 <code>__setattr__</code> 這個特殊方法，第 3 章說過，特殊方法是 Python 在對應語法出現時代為呼叫的方法），檢查被指定的值：如果是另一個 <code>nn.Module</code>，就把它<strong>登記</strong>到自己內部的一本「子模組名冊」（名叫 <code>_modules</code> 的字典）裡，名字就是屬性名 <code>layers</code>；如果是參數（<code>nn.Parameter</code>，一種專門裝模型參數的 tensor，4.3 節），就登記到參數名冊。之後 <code>parameters()</code>、<code>to()</code>、<code>state_dict()</code>、<code>print()</code> 全都是沿著這本名冊一層一層往下走。</p>
+<p>名冊要先存在，才能往裡登記。建立名冊的工作，就在 <code>nn.Module</code> 自己的 <code>__init__</code> 裡。這就是第 12 行的用途：<strong>在指定任何子模組之前，先執行父類別 <code>nn.Module</code> 的 <code>__init__</code></strong>，把名冊這些內部結構準備好。</p>
+<p>忘了這一行會怎樣？本機實測，自訂一個 <code>nn.Module</code> 子類別、不呼叫 <code>super().__init__()</code> 就指定子模組，建立物件的當下就會失敗：</p>
+<pre class="shell"><code>AttributeError: cannot assign module before Module.__init__() call</code></pre>
+<p>訊息說得很直白：「在 <code>Module.__init__()</code> 被呼叫之前，不能指定 module」——名冊還不存在，登記無處可記。這是好事：PyTorch 選擇在建立物件時就大聲失敗，而不是讓你得到一個 <code>parameters()</code> 是空的、怎麼訓練都不會變的模型。</p>
+
+<h3>super(My_Model, self) 與 super()</h3>
+<p><code>super(…)</code> 回傳一個代理物件，透過它呼叫的方法會去父類別找，所以 <code>super(My_Model, self).__init__()</code> 的意思是「對 <code>self</code> 執行 <code>My_Model</code> 的父類別（也就是 <code>nn.Module</code>）的 <code>__init__</code>」。第 0 章寫的 <code>super().__init__()</code> 是 Python 3 的簡寫，在類別裡面寫時，Python 會自動補上「目前這個類別」與 <code>self</code>，兩者意思完全相同。原程式這種把類別名稱寫出來的形式，是從 Python 2 時代沿用下來的寫法（Python 2 必須這樣寫）。</p>
+
+<div class="note"><h4>現在的做法：super().__init__()</h4>
+<p>今天的 PyTorch 官方教學與大部分程式碼都寫成 <code>super().__init__()</code>。除了短，它還少一個出錯點：類別改名時，帶名字的寫法要跟著改兩處，忘了改舊名字就會出錯；簡寫則永遠指向「目前這個類別」。功能上兩者沒有差別，本書引用時保持原樣。</p>
+</div>
+
+<h3>第 11 行：input_dim 從哪裡來</h3>
+<p><code>__init__(self, input_dim)</code> 比 <code>nn.Module</code> 多要一個參數 <code>input_dim</code>：輸入有幾欄。模型自己不知道資料長什麼樣，得由建立它的人告訴它。告訴它的就是 train.py 第 126 行：</p>
+
+<figure class="listing"><figcaption>train.py:126 — 建立模型並搬上 GPU</figcaption>
+<pre class="py" data-hot="126"><code>    model = My_Model(input_dim=x_train.shape[1]).to(device)  # put your model and data on the same computation device.</code></pre></figure>
+<p><code>x_train.shape[1]</code> 是 x_train 的欄數。第 2 章 2.4 節看過，<code>select_all=True</code> 時它是 117，train.py 第 117 行印出的 <code>number of features: 117</code> 也是這個值。這一行先做 <code>My_Model(input_dim=117)</code>，Python 建立物件、呼叫 <code>__init__</code>，然後對建好的模型呼叫 <code>.to(device)</code>。<code>.to(device)</code> 留到 4.5 節；先看 <code>__init__</code> 剩下的部分，117 是在那裡被用掉的。</p>
+
+<h2 id="linear">4.3　nn.Sequential 與 nn.Linear：117 怎麼變成 1,888 個參數</h2>
+
+<figure class="listing"><figcaption>model.py:13–20 — 用 nn.Sequential 串起五個元件</figcaption>
+<pre class="py" data-hot="14-15,17,19"><code>        # TODO: modify model's structure, be aware of dimensions.
+        self.layers = nn.Sequential(
+            nn.Linear(input_dim, 16),
+            nn.ReLU(),
+            nn.Linear(16, 8),
+            nn.ReLU(),
+            nn.Linear(8, 1)
+        )</code></pre></figure>
+
+<p><code>nn.Sequential</code> 是一個「容器模組」：建立時依序傳入幾個模組，它就依序把它們登記成自己的子模組，名字是 <code>0</code>、<code>1</code>、<code>2</code>…；被呼叫時，把輸入交給第 0 個，第 0 個的輸出交給第 1 個，一路傳到最後（4.5 節）。第 0 章 <code>print(model)</code> 印出的 <code>(0): Linear(…)</code>、<code>(1): ReLU()</code> 就是這些名字。本機實測 <code>len(model.layers)</code> 是 5，也可以用 <code>model.layers[0]</code> 這樣的索引取出單一元件。</p>
+<p>第 13 行的 TODO 是給學生的提醒：改結構時「注意維度」。所謂維度，就是相鄰兩個 <code>Linear</code> 的大小必須接得上：<code>Linear(input_dim, 16)</code> 輸出 16 個數字，下一個 <code>Linear</code> 的第一個參數就必須是 16；它輸出 8 個，再下一個就得是 8。ReLU 逐個數字作用、不改變個數，所以可以夾在中間不影響維度。最後一層輸出 1 個數字，因為我們只要預測一個值。</p>
+
+<h3>nn.Linear 裡面存了什麼</h3>
+<p>第 0 章說 <code>Linear(a, b)</code> 有 a × b 個權重加 b 個偏差（bias）。本機用 <code>named_parameters()</code>（列出每個參數的名字與內容）實測，它們實際的存放方式是：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>參數名稱</th><th>形狀</th><th>個數</th></tr></thead>
+<tbody>
+<tr><td><code>layers.0.weight</code></td><td><code>(16, 117)</code></td><td>1,872</td></tr>
+<tr><td><code>layers.0.bias</code></td><td><code>(16,)</code></td><td>16</td></tr>
+<tr><td><code>layers.2.weight</code></td><td><code>(8, 16)</code></td><td>128</td></tr>
+<tr><td><code>layers.2.bias</code></td><td><code>(8,)</code></td><td>8</td></tr>
+<tr><td><code>layers.4.weight</code></td><td><code>(1, 8)</code></td><td>8</td></tr>
+<tr><td><code>layers.4.bias</code></td><td><code>(1,)</code></td><td>1</td></tr>
+<tr><td colspan="2">合計</td><td><strong>2,033</strong>（第一層佔 92.9%）</td></tr>
+</tbody>
+</table></div>
+<p>這張表有三個值得停下來的地方。</p>
+<p><strong>第一，名字就是名冊的路徑。</strong><code>layers.0.weight</code> 讀作「<code>layers</code> 這個子模組裡、名叫 <code>0</code> 的子模組裡、名叫 <code>weight</code> 的參數」。名字裡跳過了 1 和 3：那兩個位置是 ReLU，本機實測 <code>layers[1]</code> 的參數數量是 0。ReLU 只是一條固定的規則 max(0, x)，沒有東西要學，但它仍佔一個編號。</p>
+<p><strong>第二，weight 的形狀是 <code>(輸出, 輸入)</code>，不是 <code>(輸入, 輸出)</code>。</strong><code>nn.Linear(117, 16)</code> 的參數順序是「先輸入、後輸出」，存起來的 weight 卻是 <code>(16, 117)</code>。這不是隨便排的：weight 的<strong>每一列</strong>就是<strong>一個輸出單元</strong>的全部權重。第 0 列的 117 個數字，決定第 0 個輸出怎麼由 117 欄加權而成；第 1 列決定第 1 個輸出；共 16 列。一次處理一整個 batch 時，<code>nn.Linear</code> 算的是</p>
+<div class="eq">輸出 ＝ x · W<sup>T</sup> ＋ b<br>
+<span style="font-size:.9em">(256, 117) · (117, 16) ＋ (16,) → (256, 16)；W<sup>T</sup> 是 W 的轉置（列與欄互換：原本的第 j 列變成第 j 欄），b 對每一筆都加一次</span></div>
+<p>所以 117 決定的是每一列有多長：16 列 × 117 個 = 1,872 個權重，加上 16 個 bias，就是第 0 章圖 0.1 的 1,888。input_dim 每多一欄，第一層就多 16 個參數。本機實測：拿掉 id、輸入改成 116 欄時，模型總參數是 2,017，正好少 16 個。這也是第 2 章那句「改 <code>feat_idx</code> 會自動改變模型第一層的大小」的具體意思。</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 270" role="img" aria-label="layers.0.weight 是 16 列 117 欄的矩陣，每一列是一個輸出單元的 117 個權重，第 0 欄對應 id；一個 batch 的計算是 x 乘以 W 的轉置加上 b，形狀 (256,117) 乘 (117,16) 得 (256,16)">
+  <text class="s-key" x="20" y="26" style="fill:#3fb950">layers.0.weight　(16, 117)</text>
+  <rect x="20" y="40" width="330" height="160" class="s-box" style="stroke:#3fb950"/>
+  <rect x="20" y="40" width="330" height="10" fill="#3fb950" opacity="0.55"/>
+  <line x1="20" y1="50" x2="350" y2="50" stroke="#93a1af" stroke-width="0.6"/>
+  <line x1="20" y1="60" x2="350" y2="60" stroke="#93a1af" stroke-width="0.6"/>
+  <line x1="20" y1="70" x2="350" y2="70" stroke="#93a1af" stroke-width="0.6"/>
+  <line x1="20" y1="80" x2="350" y2="80" stroke="#93a1af" stroke-width="0.6"/>
+  <line x1="20" y1="90" x2="350" y2="90" stroke="#93a1af" stroke-width="0.6"/>
+  <line x1="20" y1="100" x2="350" y2="100" stroke="#93a1af" stroke-width="0.6"/>
+  <line x1="20" y1="110" x2="350" y2="110" stroke="#93a1af" stroke-width="0.6"/>
+  <line x1="20" y1="120" x2="350" y2="120" stroke="#93a1af" stroke-width="0.6"/>
+  <line x1="20" y1="130" x2="350" y2="130" stroke="#93a1af" stroke-width="0.6"/>
+  <line x1="20" y1="140" x2="350" y2="140" stroke="#93a1af" stroke-width="0.6"/>
+  <line x1="20" y1="150" x2="350" y2="150" stroke="#93a1af" stroke-width="0.6"/>
+  <line x1="20" y1="160" x2="350" y2="160" stroke="#93a1af" stroke-width="0.6"/>
+  <line x1="20" y1="170" x2="350" y2="170" stroke="#93a1af" stroke-width="0.6"/>
+  <line x1="20" y1="180" x2="350" y2="180" stroke="#93a1af" stroke-width="0.6"/>
+  <line x1="20" y1="190" x2="350" y2="190" stroke="#93a1af" stroke-width="0.6"/>
+  <rect x="20" y="40" width="4" height="160" fill="#a371f7"/>
+  <text class="s-sm" x="20" y="218">← 第 0 欄（紫）乘的是 id</text>
+  <text class="s-sm" x="350" y="218" text-anchor="end">117 欄：每欄對應一個輸入特徵 →</text>
+  <text class="s-sm" x="20" y="240">16 列：每一列 = 一個輸出單元的 117 個權重</text>
+  <text class="s-sm" x="20" y="258">第 0 列（綠）的前 5 個初始值：0.0081、0.0874、0.0613、−0.0031、0.0789…</text>
+
+  <text class="s-lbl" x="420" y="60">第 j 個輸出（第 n 筆資料）：</text>
+  <text class="s-mono" x="420" y="84">out[n, j] = Σ x[n, i] · W[j, i] + b[j]</text>
+  <text class="s-sm" x="420" y="104">i 從 0 加到 116：第 j 列的 117 個權重各乘一欄</text>
+  <text class="s-lbl" x="420" y="144">一次算整個 batch：</text>
+  <text class="s-mono" x="420" y="168">x @ W.T + b</text>
+  <text class="s-mono" x="420" y="190">(256, 117) @ (117, 16) → (256, 16)</text>
+  <text class="s-sm" x="420" y="214">W.T 是 W 轉置後的 (117, 16)；錯誤訊息裡看得到它</text>
+</svg>
+<figcaption>圖 4.1 — weight 依「一列一個輸出單元」存放，所以形狀是 (輸出, 輸入) = (16, 117)；input_dim 決定每一列的長度，也就決定了第一層的 1,872 個權重。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#3fb950"></i>模型參數（在 GPU 上運算）</span>
+  <span><i style="background:#a371f7"></i>乘在 id 欄上的那一欄權重</span>
+</div>
+
+<p><strong>第三，名字也是存檔時的鑰匙。</strong>本機實測 <code>model.state_dict()</code> 的 key 依序是 <code>'layers.0.weight'</code>、<code>'layers.0.bias'</code>、<code>'layers.2.weight'</code>、<code>'layers.2.bias'</code>、<code>'layers.4.weight'</code>、<code>'layers.4.bias'</code>——和上表一模一樣。train.py 第 88 行存檔時存的就是這個字典（第 5 章），所以 model.ckpt 裡面是「名字 → tensor」的對照。第 0 章 0.7 節看過這個檔案是 11,005 bytes；其中參數本身佔 2,033 × 4 = 8,132 bytes（每個 float32 佔 4 bytes，第 3 章），其餘是 key 名稱、形狀等格式資訊。</p>
+<p>全部參數都是 float32，而且 <code>requires_grad=True</code>：這個旗標告訴 PyTorch「之後要替這個 tensor 算梯度」。梯度簡單說就是「這個參數往哪個方向改一點，loss 會降多少」，訓練時優化器就是依梯度修改參數（第 5 章細講）。資料的 tensor 預設沒有這個旗標，參數有，這是兩者在 PyTorch 眼中的根本差別。</p>
+
+<h3>維度接不上、型別對不上：兩個錯誤訊息</h3>
+<p>形狀 <code>(輸出, 輸入)</code> 與「x · W<sup>T</sup>」這個算法，在錯誤訊息裡看得最清楚。本機實測兩種故意寫錯的情況：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>怎麼寫錯</th><th>錯誤訊息（逐字）</th></tr></thead>
+<tbody>
+<tr><td>把 116 欄的輸入（4 筆）餵給 117 欄的模型</td><td><code>RuntimeError: mat1 and mat2 shapes cannot be multiplied (4x116 and 117x16)</code></td></tr>
+<tr><td>輸入是 float64</td><td><code>RuntimeError: mat1 and mat2 must have the same dtype, but got Double and Float</code></td></tr>
+</tbody>
+</table></div>
+<p>mat1、mat2 是矩陣乘法的左右兩個矩陣。第一個訊息裡，mat1 是輸入 <code>4x116</code>，mat2 是 <code>117x16</code>——正是 W<sup>T</sup>，不是存起來的 <code>(16, 117)</code>。矩陣乘法要求左邊的欄數等於右邊的列數，116 ≠ 117，所以失敗。這就是第 13 行 TODO 要你「注意維度」的原因，也是 predict.py 必須用和訓練時同一個 input_dim 建模型的原因（4.8 節）。</p>
+<p>第二個訊息兌現了第 3 章 3.2 節的說法：把 float64 的輸入直接餵給 float32 的模型，PyTorch 不會自動轉換，而是報錯。Double 是 float64、Float 是 float32。COVID19Dataset 在一開始就用 <code>torch.FloatTensor</code> 把資料轉成 float32，所以 HW01 不會碰到這個錯誤。</p>
+
+<h2 id="init">4.4　初始權重：2,033 個數字從哪裡來</h2>
+<p><code>__init__</code> 執行完，模型已經有 2,033 個參數，而且每個都有值——還沒訓練，值是哪來的？<code>nn.Linear</code> 在建立時就替自己的 weight 與 bias 抽亂數，預設從均勻分布 U(−1/√in, 1/√in) 抽，in 是這一層的輸入個數。本機照 train.py 的順序先呼叫 <code>same_seed(5201314)</code> 再建立模型，所以下面就是 train.py 開始訓練那一刻的權重：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>層</th><th>in</th><th>範圍上限 1/√in</th><th>實測</th></tr></thead>
+<tbody>
+<tr><td>第一層 <code>layers[0]</code></td><td>117</td><td>0.0925</td><td>weight −0.0924～0.0924；bias −0.0891～0.065</td></tr>
+<tr><td>第二層 <code>layers[2]</code></td><td>16</td><td>0.25</td><td>weight −0.2459～0.2499</td></tr>
+<tr><td>第三層 <code>layers[4]</code></td><td>8</td><td>0.3536</td><td>8 個 weight：0.1932、−0.168、0.1907、0.1301、−0.2984、−0.0179、−0.3317、0.1277；bias 0.0609</td></tr>
+</tbody>
+</table></div>
+<p>實測值都落在各自的範圍內，而且第一層的 1,872 個 weight 多到幾乎碰到兩端。第一層 weight 第 0 列的前 5 個是 0.0081、0.0874、0.0613、−0.0031、0.0789（圖 4.1 那一列）。</p>
+<p><strong>為什麼範圍要隨 in 縮小？</strong>一個輸出單元是 in 個「輸入 × 權重」的總和。如果每個輸入的大小都差不多，加總的項越多，總和就越容易變大；把權重的範圍按 1/√in 縮小，可以讓不同寬度的層，輸出的大小落在差不多的範圍，訊號不會一層一層放大或縮小。所以 117 個輸入的第一層，權重比只有 8 個輸入的最後一層小得多。</p>
+<p>注意這個推論的前提：「每個輸入的大小差不多」。HW01 的輸入不滿足它。第 1 章 1.4 節看過，州別欄只有 0 和 1，<code>cli</code> 在 0～3 之間，id 卻從 0 到 2699（2,699 列，中間缺一號，第 1 章 1.6 節）。初始權重只按「有幾欄」縮放，管不到「每欄有多大」；id 乘上一個 0.09 量級的權重，一筆資料就可能貢獻兩百多（2699 × 0.0924），其他欄加起來都比不上。4.7 節會看到，訓練之後這個失衡不但沒消失，還更嚴重。</p>
+<p>這些亂數抽自第 2 章表格裡的 <strong>PyTorch 全域產生器</strong>：<code>My_Model</code> 先在 CPU 上建立、在建立時抽亂數，再由 <code>.to(device)</code> 搬上 GPU。第 3 章 3.4 節提過後果：建立模型時抽走多少亂數，決定了 DataLoader 從哪裡接著抽，所以改了模型的層數或寬度，連每個 epoch 的 batch 順序都會跟著變。</p>
+
+<h2 id="forward">4.5　forward：model(x) 怎麼走到這裡</h2>
+
+<figure class="listing"><figcaption>model.py:22–25 — forward()</figcaption>
+<pre class="py" data-hot="23-24"><code>    def forward(self, x):
+        x = self.layers(x)
+        x = x.squeeze(1) # (B, 1) -&gt; (B)
+        return x</code></pre></figure>
+
+<p><code>forward</code> 定義「資料進來之後怎麼算」：第 23 行交給 <code>self.layers</code>，第 24 行用 <code>squeeze(1)</code> 改形狀（4.6 節），第 25 行回傳。奇怪的是，整個 HW01 沒有任何一行寫 <code>model.forward(x)</code>。訓練與預測都寫 <code>pred = model(x)</code>（train.py 第 56、76 行，predict.py 第 16 行）——把<strong>物件</strong>當成函式呼叫。</p>
+<p>這也是一個特殊方法：Python 看到 <code>model(x)</code>，實際呼叫的是 <code>model.__call__(x)</code>。<code>My_Model</code> 沒有定義 <code>__call__</code>，所以用的是從 <code>nn.Module</code> 繼承來的那一個。<code>nn.Module.__call__</code> 做一些準備（最重要的是執行 hook：使用者可以掛在模組上、在 forward 前後自動執行的函式，常用來印出中間結果或做除錯），然後呼叫 <code>self.forward(x)</code>，把結果交回來。</p>
+<p>本機實測，在同一個 batch 上 <code>model(x)</code> 和 <code>model.forward(x)</code> 的結果完全相同（<code>torch.equal</code> 為 <code>True</code>）——HW01 沒有掛任何 hook，<code>__call__</code> 那層準備工作沒有改變結果。但慣例永遠寫 <code>model(x)</code>：直接呼叫 <code>forward</code> 會跳過那層機制，在有 hook 的程式裡就會出現「同一個模型，兩種呼叫結果不同」的怪事。</p>
+<p>第 23 行的 <code>self.layers(x)</code> 也是同樣的機制：<code>nn.Sequential</code> 也是 <code>nn.Module</code>，呼叫它一樣經過 <code>__call__</code>，再進到 Sequential 自己的 <code>forward</code>。Sequential 的 forward 就是一個迴圈：依名冊順序，把資料交給每個子模組，再把輸出交給下一個。每個子模組被呼叫時，又各自經過自己的 <code>__call__</code> 與 <code>forward</code>。本機拿驗證集的第一個 batch（<code>shuffle=False</code>，256 筆，在 GPU 上）逐層記錄形狀：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 290" role="img" aria-label="model(x) 的呼叫鏈：model(x) 經 nn.Module.__call__ 呼叫 My_Model.forward；forward 第 23 行呼叫 Sequential，依序經過 Linear、ReLU、Linear、ReLU、Linear，形狀從 (256,117) 變成 (256,16)、(256,16)、(256,8)、(256,8)、(256,1)，最後第 24 行 squeeze(1) 變成 (256,)">
+  <defs>
+    <marker id="ar4" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#93a1af"/>
+    </marker>
+  </defs>
+  <rect x="20" y="30" width="200" height="66" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-key" x="120" y="55" text-anchor="middle">pred = model(x)</text>
+  <text class="s-mono" x="120" y="74" text-anchor="middle">x (256, 117)</text>
+  <text class="s-sm" x="120" y="89" text-anchor="middle">train.py、predict.py</text>
+
+  <rect x="330" y="30" width="230" height="66" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-key" x="445" y="55" text-anchor="middle">nn.Module.__call__</text>
+  <text class="s-sm" x="445" y="76" text-anchor="middle">PyTorch 內建：hook 等準備工作</text>
+  <line x1="220" y1="63" x2="326" y2="63" stroke="#93a1af" stroke-width="2" marker-end="url(#ar4)"/>
+
+  <rect x="660" y="30" width="220" height="66" rx="8" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-key" x="770" y="55" text-anchor="middle">My_Model.forward(x)</text>
+  <text class="s-sm" x="770" y="76" text-anchor="middle">model.py:22–25</text>
+  <line x1="560" y1="63" x2="656" y2="63" stroke="#93a1af" stroke-width="2" marker-end="url(#ar4)"/>
+
+  <path d="M770,96 L770,118 L84,118 L84,146" fill="none" stroke="#93a1af" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ar4)"/>
+  <text class="s-sm" x="430" y="136" text-anchor="middle">第 23 行 self.layers(x)：Sequential 依序呼叫 5 個子模組（各自也經過 __call__）</text>
+
+  <rect x="20" y="150" width="128" height="70" rx="6" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-key" x="84" y="171" text-anchor="middle" style="fill:#3fb950">layers[0]</text>
+  <text class="s-mono" x="84" y="190" text-anchor="middle">Linear 117→16</text>
+  <text class="s-mono" x="84" y="209" text-anchor="middle">(256, 16)</text>
+
+  <rect x="164" y="150" width="128" height="70" rx="6" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-key" x="228" y="171" text-anchor="middle" style="fill:#3fb950">layers[1]</text>
+  <text class="s-mono" x="228" y="190" text-anchor="middle">ReLU</text>
+  <text class="s-mono" x="228" y="209" text-anchor="middle">(256, 16)</text>
+
+  <rect x="308" y="150" width="128" height="70" rx="6" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-key" x="372" y="171" text-anchor="middle" style="fill:#3fb950">layers[2]</text>
+  <text class="s-mono" x="372" y="190" text-anchor="middle">Linear 16→8</text>
+  <text class="s-mono" x="372" y="209" text-anchor="middle">(256, 8)</text>
+
+  <rect x="452" y="150" width="128" height="70" rx="6" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-key" x="516" y="171" text-anchor="middle" style="fill:#3fb950">layers[3]</text>
+  <text class="s-mono" x="516" y="190" text-anchor="middle">ReLU</text>
+  <text class="s-mono" x="516" y="209" text-anchor="middle">(256, 8)</text>
+
+  <rect x="596" y="150" width="128" height="70" rx="6" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-key" x="660" y="171" text-anchor="middle" style="fill:#3fb950">layers[4]</text>
+  <text class="s-mono" x="660" y="190" text-anchor="middle">Linear 8→1</text>
+  <text class="s-mono" x="660" y="209" text-anchor="middle">(256, 1)</text>
+
+  <rect x="740" y="150" width="140" height="70" rx="6" class="s-box" style="stroke:#f85149"/>
+  <text class="s-key" x="810" y="171" text-anchor="middle" style="fill:#f85149">squeeze(1)</text>
+  <text class="s-sm" x="810" y="190" text-anchor="middle">第 24 行</text>
+  <text class="s-mono" x="810" y="209" text-anchor="middle">(256,)</text>
+
+  <line x1="148" y1="185" x2="160" y2="185" stroke="#93a1af" stroke-width="2" marker-end="url(#ar4)"/>
+  <line x1="292" y1="185" x2="304" y2="185" stroke="#93a1af" stroke-width="2" marker-end="url(#ar4)"/>
+  <line x1="436" y1="185" x2="448" y2="185" stroke="#93a1af" stroke-width="2" marker-end="url(#ar4)"/>
+  <line x1="580" y1="185" x2="592" y2="185" stroke="#93a1af" stroke-width="2" marker-end="url(#ar4)"/>
+  <line x1="724" y1="185" x2="736" y2="185" stroke="#93a1af" stroke-width="2" marker-end="url(#ar4)"/>
+
+  <text class="s-sm" x="20" y="250">方框最後一行是該步的輸出形狀，取自驗證集第一個 batch（256 筆）的實測。</text>
+  <text class="s-sm" x="20" y="270">squeeze 之後的 (256,) 才和第 3 章 DataLoader 交出的 y 形狀相同。</text>
+</svg>
+<figcaption>圖 4.2 — 程式裡只寫 model(x)，forward 是由 nn.Module.__call__ 代為呼叫的；Sequential 再把資料依序傳過五個子模組，形狀只在 Linear 與 squeeze 改變。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#a371f7"></i>控制：呼叫機制</span>
+  <span><i style="background:#3fb950"></i>GPU 上的運算（模型的層）</span>
+  <span><i style="background:#f85149"></i>預測值</span>
+</div>
+
+<p>這個 batch 用的是訓練好的 model.ckpt。前 5 筆的預測是 15.9939、5.0906、9.6055、3.0774、8.2978，對應的真值是 13.4923、3.7415、11.25、1.875、8.8235：大方向對了，每筆差了 0.5～2.5 個百分點不等，和真實 MSE 2.069 的量級相符。</p>
+
+<h3>train.py:126 的 .to(device)</h3>
+<p>回到第 126 行後半的 <code>.to(device)</code>。它把模型的所有參數搬到 <code>device</code>，也就是 config.py 的 <code>"cuda"</code>；本機實測搬完之後參數的 device 是 <code>cuda:0</code>（第 0 張 GPU）。它能「一次搬全部」，靠的又是 4.2 節的名冊：<code>.to()</code> 沿著名冊走遍每一個子模組，把每個參數都搬過去。</p>
+<p>有一個和第 3 章不同的地方要注意。第 3 章說搬上 GPU 是「複製」：<code>x.to(device)</code> 對 <strong>tensor</strong> 回傳一個在 GPU 上的新 tensor，原本的 x 還留在 CPU，所以訓練迴圈要寫 <code>x = x.to(device)</code> 把結果接住。<code>model.to(device)</code> 對 <strong>模組</strong>則是<strong>原地</strong>搬移：模型自己的參數被換成 GPU 上的版本，回傳的是同一個模型物件。第 126 行把回傳值指定給 <code>model</code>，寫法和 tensor 的版本一樣，但就算不接回傳值，模型也已經搬過去了。</p>
+<p>行尾的註解「把模型和資料放在同一個計算裝置上」點出了規則：一次運算的所有 tensor 必須在同一個裝置上，模型在 GPU、資料在 CPU 時，PyTorch 會報錯而不是自動搬。所以模型在這裡搬一次，資料則在訓練迴圈裡每個 batch 搬一次（第 5 章）。</p>
+
+<h2 id="squeeze">4.6　squeeze(1)：少了它，loss 從 1.78 變成 89</h2>
+<p>第 0 章、第 2 章、第 3 章都說過同一件事：最後一層輸出 <code>(B, 1)</code>，第 24 行把它壓成 <code>(B,)</code>，為的是和 y 的形狀一致。<code>squeeze(1)</code> 的意思是「如果第 1 維（0 起算）的長度是 1，就把這一維拿掉」：<code>(256, 1)</code> 變成 <code>(256,)</code>，數值完全不動，只是少了一層包裝。第 24 行的註解 <code># (B, 1) -&gt; (B)</code> 寫的就是這件事，B 代表 batch 大小。</p>
+<p>為什麼 Linear 會輸出 <code>(256, 1)</code>？因為 Linear 對每一筆輸出 <code>out_features</code>（建立時的第二個參數）個數字，這一層是 1 個，所以每筆是長度 1 的向量，256 筆疊起來是 <code>(256, 1)</code>。而 y 是第 2 章取 <code>train_data[:, -1]</code> 得到的一維陣列，經過第 3 章的 collate 疊成 <code>(256,)</code>。兩者裝的都是「每筆一個數字」，差別只在有沒有那一層長度 1 的維度。</p>
+<p>看起來只是形狀的潔癖。本機拿同一個 batch、同一個 model.ckpt 做了對照：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>送進 <code>MSELoss</code> 的預測</th><th>和 y <code>(256,)</code> 相減後的形狀</th><th>loss</th></tr></thead>
+<tbody>
+<tr><td>有 squeeze：<code>(256,)</code></td><td><code>(256,)</code></td><td><strong>1.7758</strong></td></tr>
+<tr><td>沒有 squeeze：<code>(256, 1)</code></td><td><code>(256, 256)</code></td><td><strong>89.0963</strong></td></tr>
+</tbody>
+</table></div>
+<p>同一組預測，loss 差了 50 倍。原因是 PyTorch 的<strong>廣播（broadcasting）</strong>規則：兩個形狀不同的 tensor 做逐元素運算時，PyTorch 會從最後一維開始對齊，長度為 1 的維度（或缺少的維度）會被「複製展開」去配合對方。<code>(256, 1)</code> 與 <code>(256,)</code> 對齊後是 <code>(256, 1)</code> 對 <code>(1, 256)</code>，兩邊各自展開，相減的結果就成了 <code>(256, 256)</code>：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 300" role="img" aria-label="廣播示意：預測 (256,1) 是一行、y (256,) 被視為一列 (1,256)，相減展開成 256 乘 256 的方格；只有對角線的 256 格是同一筆的預測減同一筆的答案，其餘 65280 格都是錯配；有 squeeze 時 loss 1.7758，沒有時 89.0963">
+  <text class="s-key" x="330" y="26" style="fill:#58a6ff">y (256,) → 視為 (1, 256)</text>
+  <rect x="330" y="36" width="200" height="16" fill="#58a6ff" opacity="0.55"/>
+  <text class="s-key" x="300" y="160" text-anchor="end" style="fill:#f85149">pred</text>
+  <text class="s-mono" x="300" y="178" text-anchor="end">(256, 1)</text>
+  <rect x="306" y="60" width="16" height="200" fill="#f85149" opacity="0.55"/>
+  <rect x="330" y="60" width="200" height="200" class="s-box" style="stroke:#93a1af"/>
+  <line x1="330" y1="60" x2="530" y2="260" stroke="#3fb950" stroke-width="4"/>
+  <text class="s-mono" x="430" y="282" text-anchor="middle">相減 → (256, 256)</text>
+  <text class="s-sm" x="345" y="225">p₂₅₅ − y₀</text>
+  <text class="s-sm" x="445" y="90">p₀ − y₂₅₅</text>
+
+  <text class="s-lbl" x="570" y="80" style="fill:#3fb950">對角線 256 格：p<tspan baseline-shift="sub" font-size="9">i</tspan> − y<tspan baseline-shift="sub" font-size="9">i</tspan></text>
+  <text class="s-sm" x="570" y="100">同一筆的預測減同一筆的答案，這才是要的</text>
+  <text class="s-lbl" x="570" y="136">其餘 65,280 格：p<tspan baseline-shift="sub" font-size="9">i</tspan> − y<tspan baseline-shift="sub" font-size="9">j</tspan></text>
+  <text class="s-sm" x="570" y="156">第 i 筆的預測去比第 j 筆（別州、別時間）的答案</text>
+  <text class="s-mono" x="570" y="200">有 squeeze　 MSE 1.7758</text>
+  <text class="s-mono" x="570" y="222">沒有 squeeze MSE 89.0963</text>
+  <text class="s-sm" x="570" y="248">MSELoss 對全部 65,536 格取平均</text>
+
+  <text class="s-sm" x="20" y="40">pred 的每一列（一個數字）</text>
+  <text class="s-sm" x="20" y="58">被橫向複製 256 次；</text>
+  <text class="s-sm" x="20" y="76">y 的那一列被縱向複製</text>
+  <text class="s-sm" x="20" y="94">256 次，兩邊才對得起來。</text>
+</svg>
+<figcaption>圖 4.3 — 少了 squeeze，(256, 1) 與 (256,) 經廣播變成 256 × 256 個差值，正確的配對只佔對角線；平均下來的 89 量的是「預測和隨便一筆答案差多少」，不是模型的誤差。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#f85149"></i>預測值</span>
+  <span><i style="background:#58a6ff"></i>答案 y（CPU 端資料搬上來的）</span>
+  <span><i style="background:#3fb950"></i>正確的配對</span>
+</div>
+
+<p>1.7758 是正確的值：這 256 筆的預測誤差平方平均。89.0963 是 65,536 個差值的平方平均，其中 65,280 個是「第 i 筆的預測減第 j 筆的答案」——等於問「這個預測和驗證集裡隨便一筆答案差多少」。答案本身在 0.3～30 之間散得很開，這個量自然很大，而且和模型好不好幾乎無關。</p>
+<p>更麻煩的是，<strong>這不會讓程式停下來</strong>。本機實測，PyTorch 只跳出一則警告（UserWarning），逐字是：</p>
+<pre class="shell"><code>UserWarning: Using a target size (torch.Size([256])) that is different to the input size (torch.Size([256, 1])). This will likely lead to incorrect results due to broadcasting. Please ensure they have the same size.</code></pre>
+<p>「target 的大小和 input 不同，這很可能因為廣播導致錯誤的結果，請確保兩者大小相同。」程式照常往下跑：loss 照算、梯度照算、權重照更新，只是優化的目標變成了「讓每個預測都接近所有答案」——最好的策略是讓每筆都預測同一個數字（大約是所有答案的平均）。警告印在 stderr，而第 0 章的跑法常用 <code>2&gt;/dev/null</code> 把 stderr 丟掉，連這唯一的線索都會看不到。</p>
+
+<h3>為什麼是 squeeze(1) 而不是 squeeze()</h3>
+<p>不帶參數的 <code>squeeze()</code> 會拿掉<strong>所有</strong>長度為 1 的維度。平常這和 <code>squeeze(1)</code> 結果一樣，但 batch 只有 1 筆時就不同了。本機實測，只送 1 筆資料時：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>形狀</th></tr></thead>
+<tbody>
+<tr><td>最後一層的原始輸出</td><td><code>(1, 1)</code></td></tr>
+<tr><td><code>squeeze(1)</code></td><td><code>(1,)</code>：一筆、一個數字，仍是一維</td></tr>
+<tr><td><code>squeeze()</code></td><td><code>()</code>：0 維 tensor（第 3 章），batch 那一維也被拿掉了</td></tr>
+</tbody>
+</table></div>
+<p>指定維度 1，只拿掉「每筆一個數字」的那一維，batch 維永遠保留，所以比較安全。HW01 的每個 batch 最少也有 27 筆（第 3 章，valid 的最後一批），實際上碰不到這個情況；但同一段模型程式拿去做單筆預測時就會碰到。</p>
+
+<div class="note"><h4>現在的做法：讓形狀不符變成錯誤，而不是警告</h4>
+<ul>
+  <li><strong>在算 loss 前檢查形狀。</strong>在自己的訓練迴圈裡加一行 <code>assert pred.shape == y.shape, (pred.shape, y.shape)</code>，形狀一不對就當場停下，而不是靠一則可能被丟掉的警告。</li>
+  <li><strong>或者讓兩邊都保持 <code>(B, 1)</code>。</strong>另一個常見的做法是不 squeeze 模型輸出，改把 y 變成 <code>(B, 1)</code>（例如 <code>y.unsqueeze(1)</code>，<code>unsqueeze</code> 是 squeeze 的反向操作，在指定位置插入一個長度 1 的維度）。重點不是選哪一種，而是兩邊一致，並且有一行程式負責確認。</li>
+  <li>HW01 的寫法把這個責任放在模型的 forward 裡，這也沒錯，只要記得：<strong>改模型時如果動到第 24 行，loss 不會報錯，只會悄悄變大</strong>。</li>
+</ul>
+</div>
+
+<h2 id="trained">4.7　打開訓練好的模型：沒在工作的單元與壓倒性的 id</h2>
+<p>前面幾節講的都是模型的「形狀」。這一節打開 model.ckpt（訓練時印出 1.661、真實 MSE 2.069 的那一份，第 3 章 3.5 節），看訓練完的 2,033 個數字長什麼樣。先看整體輸出：本機實測，模型在驗證集上的預測落在 1.8327～28.2623，真值落在 0.3448～29.8157，範圍大致對得上。接下來的兩個發現，從 stdout 的 loss 完全看不出來。</p>
+
+<h3>16 個單元裡，有 10 個從不輸出</h3>
+<p>第一層 Linear 有 16 個輸出單元，每個都接著一個 ReLU。ReLU 把負數變成 0：某個單元的加權總和只要是負的，這一筆在這個單元上的輸出就是 0。偶爾是 0 很正常；但如果一個單元<strong>對所有資料</strong>的加權總和都是負的，它就永遠輸出 0，下游完全收不到它的訊息。這種單元常被稱為<strong>死掉的 ReLU（dying ReLU）</strong>。</p>
+<p>本機實測，把訓練集與驗證集全部送進訓練好的模型：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>模型</th><th>第一層：永遠輸出 0 的單元</th><th>第一層輸出中 0 的比例</th><th>第二層：永遠輸出 0 的單元</th></tr></thead>
+<tbody>
+<tr><td>剛初始化（訓練前）</td><td>2 / 16</td><td>46.6%（train＋valid）</td><td>0 / 8</td></tr>
+<tr><td><strong>訓練好的 model.ckpt</strong></td><td><strong>10 / 16</strong></td><td>81.5%（train）、81.7%（valid）</td><td>1 / 8</td></tr>
+<tr><td>拿掉 id 後訓練的模型（第 2 章動手做）</td><td>7 / 16</td><td>56.2%（train）、56.2%（valid）</td><td>2 / 8</td></tr>
+</tbody>
+</table></div>
+<p>（「永遠輸出 0」以訓練集加驗證集全部 2,699 筆資料判定；分開用訓練集或驗證集判定，單元數也完全相同。）</p>
+<p>訓練好的模型，第一層 16 個單元只剩 6 個在工作；第一層所有輸出裡超過八成是 0。剛初始化時只有 2 個這樣的單元，所以大部分是<strong>訓練過程中</strong>才變成這樣的。</p>
+<p>為什麼死了就回不來？訓練時，每個權重依「改動它能讓 loss 降多少」來調整（這個量叫梯度，第 5 章）。ReLU 在輸入為負時輸出固定是 0，輸入稍微變大或變小輸出都還是 0，所以對一個在所有資料上都輸入為負的單元來說，改動它的權重不會讓 loss 有任何變化，梯度是 0，權重就不再被資料推動。它停在那裡，參數還在，卻不貢獻任何東西。</p>
+<p>這帶出一個實際的意思：0.2 節算的「第一層 1,888 個參數」，在訓練好的模型裡有 10 列（10 個單元的權重與 bias）對輸出毫無影響，卻照樣存在 model.ckpt 裡、照樣佔參數量。<strong>參數量是模型能表達多複雜關係的上限（容量），不是它實際用上的量。</strong>拿掉 id 的模型死得少一些（7 / 16），但仍將近一半；單憑這兩組數字，還不能說 id 是唯一的原因。第 7 章換模型結構、調學習率時，這是值得回頭量的指標。</p>
+
+<h3>id 這一欄，在第一層裡大了約 400 倍</h3>
+<p>第 2 章的結論是：id 拖累訓練的主因是<strong>數值尺度</strong>，id 最大到 2699，其他欄最大不到 90，程式又沒有標準化，所以 id 在第一層的加權總和裡壓過其他欄。當時那是從「拿掉 id、或把 id 除以 2699，loss 都大幅改善」推出來的。現在可以直接打開權重驗證。本機實測訓練好的第一層 weight（也就是圖 4.1 那個 (16, 117) 矩陣）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>id 欄（第 0 欄）</th><th>其他 116 欄的平均</th><th>比值</th></tr></thead>
+<tbody>
+<tr><td>weight 的平均絕對值 |w|</td><td>0.22643</td><td>0.05002</td><td>約 4.5 倍</td></tr>
+<tr><td>乘上驗證集該欄的平均值後的平均 |w·x|</td><td><strong>309.13</strong></td><td><strong>0.7558</strong></td><td><strong>約 400 倍</strong>（309.13 ÷ 0.7558 ≈ 409）</td></tr>
+</tbody>
+</table></div>
+
+<figure class="fig">
+<svg viewBox="0 0 900 250" role="img" aria-label="訓練好的第一層：id 欄權重的平均絕對值 0.22643，超過初始化上限 0.0925，其他欄平均 0.05002；乘上輸入的平均值後，id 欄平均貢獻 309.13，其他欄只有 0.7558，在同一個比例尺上幾乎看不見">
+  <text class="s-lbl" x="20" y="26">權重的平均絕對值 |w|（比例尺：0.1 = 200 單位寬）</text>
+  <text class="s-sm" x="150" y="56" text-anchor="end">id 欄</text>
+  <rect x="160" y="42" width="453" height="20" rx="3" fill="#a371f7"/>
+  <text class="s-mono" x="621" y="57">0.22643</text>
+  <text class="s-sm" x="150" y="86" text-anchor="end">其他欄平均</text>
+  <rect x="160" y="72" width="100" height="20" rx="3" fill="#58a6ff" opacity="0.8"/>
+  <text class="s-mono" x="268" y="87">0.05002</text>
+  <line x1="345" y1="36" x2="345" y2="100" stroke="#dde5ec" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text class="s-sm" x="351" y="108">初始化上限 1/√117 = 0.0925</text>
+
+  <text class="s-lbl" x="20" y="146">平均 |w·x|：權重乘上該欄在驗證集的平均值（比例尺：309.13 = 700 單位寬）</text>
+  <text class="s-sm" x="150" y="176" text-anchor="end">id 欄</text>
+  <rect x="160" y="162" width="700" height="20" rx="3" fill="#a371f7"/>
+  <text class="s-mono" x="850" y="177" text-anchor="end">309.13</text>
+  <text class="s-sm" x="150" y="206" text-anchor="end">其他欄平均</text>
+  <rect x="160" y="192" width="2" height="20" fill="#58a6ff"/>
+  <text class="s-mono" x="170" y="207">0.7558（同一比例尺下不到 2 單位寬）</text>
+  <text class="s-sm" x="20" y="238">id 的權重本身只大 4.5 倍；乘上它動輒上千的數值，差距就放大到約 400 倍。</text>
+</svg>
+<figcaption>圖 4.4 — 訓練並沒有把 id 的權重壓小，反而推到初始化範圍之外；第一層每個單元的加權總和，主要由 id 這一欄決定。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#a371f7"></i>id 欄</span>
+  <span><i style="background:#58a6ff"></i>其他 116 欄（州別與問卷）</span>
+  <span><i style="background:#dde5ec"></i>初始化範圍的上限</span>
+</div>
+
+<p>兩個觀察：</p>
+<ul>
+  <li><strong>訓練把 id 的權重推大了，不是壓小。</strong>4.4 節看過，第一層的初始權重落在 ±0.0925 之內，均勻分布在這個範圍內的平均絕對值大約是上限的一半（約 0.046）。其他欄的 0.05002 和這差不多，表示它們在訓練中沒怎麼動；id 欄的 0.22643 則是初始範圍上限 0.0925 的兩倍多。第 1 章 1.4 節說過，一欄的梯度和它的數值大小成正比，數值大的欄位權重被推得猛——這張表就是那句話的結果。</li>
+  <li><strong>真正壓倒其他欄的是「權重 × 數值」。</strong>權重只大 4.5 倍，但 id 的數值動輒上千，其他欄多半是個位數到幾十，相乘之後 id 對第一層的平均貢獻是其他欄的約 400 倍。對第一層的每個單元來說，加權總和幾乎就是「id × 某個係數」加上一點點其他資訊。</li>
+</ul>
+<p>回想第 1 章：id 在訓練集裡隱含時間，在測試集裡卻是從 0 重新編號的另一套。一個主要靠 id 做判斷的第一層，學到的東西有很大一部分換到測試集就失效了。這也從另一個方向解釋了第 2 章的實驗：拿掉 id（或把它縮到 0～1），其他 116 欄才有機會被第一層「聽見」，真實 MSE 從 2.069 降到 1.24～1.26。</p>
+
+<div class="note"><h4>現在的做法：先處理輸入的尺度，再談模型</h4>
+<ul>
+  <li><strong>標準化輸入。</strong>第 1 章「現在的做法」框裡的標準化（只用訓練集的平均與標準差），正好滿足 4.4 節初始化公式的前提「每個輸入大小差不多」。這是今天訓練神經網路的固定前處理，比調任何模型細節都優先。</li>
+  <li><strong>量一下有多少單元沒在工作。</strong>像本節這樣數「永遠輸出 0 的單元」花不了幾行程式，訓練完順手量一次，比只看 loss 多知道很多。</li>
+  <li><strong>需要時換激活函數。</strong>LeakyReLU（負數時保留一個很小的斜率）、GELU（形狀接近 ReLU、但在 0 附近是平滑曲線）等激活函數在負數區不會讓梯度完全變成 0，比較不容易出現整個單元死掉的情況。但在輸入沒有標準化之前換激活函數是治標；HW01 的情況，先處理 id 與尺度才是根本。第 7 章會實際比較。</li>
+</ul>
+</div>
+
+<h2 id="predict">4.8　predict.py：重建同樣的模型，再填回權重</h2>
+<p>第 0 章 0.8 節說過，train.py 結束時 Python 行程也結束了，記憶體裡的模型跟著消失。predict.py 要用模型，只能重建一個，再把 model.ckpt 的數字填回去：</p>
+
+<figure class="listing"><figcaption>predict.py:39–40 — 重建模型並載入權重</figcaption>
+<pre class="py" data-hot="39-40"><code>    model = My_Model(input_dim=x_train.shape[1]).to(device)
+    model.load_state_dict(torch.load(config['save_path']))</code></pre></figure>
+<p>兩行各做一件事：</p>
+<ul>
+  <li><strong>第 39 行</strong>和 train.py 第 126 行幾乎一字不差（少了行尾註解）：建立一個 <code>My_Model</code>，搬上 GPU。這時模型裡是 4.4 節那種初始化的亂數權重——predict.py 沒有呼叫 <code>same_seed</code>，所以每次執行抽到的都不一樣，但沒關係，下一行會全部蓋掉。</li>
+  <li><strong>第 40 行</strong>先用 <code>torch.load</code> 讀出存檔的字典，也就是 4.3 節那個「名字 → tensor」的 state_dict；再用 <code>load_state_dict</code> 依名字把每個 tensor 的數值複製進模型裡同名的參數。</li>
+</ul>
+<p>「依名字對應」決定了這兩行的前提：<strong>重建的模型必須和存檔時的模型有同樣的名字、同樣的形狀</strong>。名字由 model.py 的結構決定（<code>self.layers</code> 與 Sequential 裡的順序），形狀由 input_dim 與各層大小決定。predict.py 第 39 行為了拿到 input_dim，用的是 <code>x_train.shape[1]</code>：它必須和 train.py 一樣讀進訓練資料、切分、選特徵，才能算出 117——第 0 章 0.6 節說的「多餘的步驟」就是為了這一個數字，第 6 章會討論更好的做法。</p>
+<p>如果兩邊對不上，例如訓練時用了 116 欄、預測時用 117 欄建模型，<code>load_state_dict</code> 會在載入時報錯，指出哪個參數的形狀不符，而不會默默載入錯的權重。本機實測，把 <code>My_Model(input_dim=116)</code> 的 state_dict 載入 <code>My_Model(input_dim=117)</code>，錯誤訊息的最後兩行是：</p>
+<pre class="shell"><code>RuntimeError: Error(s) in loading state_dict for My_Model:
+	size mismatch for layers.0.weight: copying a param with shape torch.Size([16, 116]) from checkpoint, the shape in current model is torch.Size([16, 117]).</code></pre>
+<p>它指名道姓地說出是 <code>layers.0.weight</code>，也就是 4.3 節的名冊路徑：checkpoint 裡是 <code>(16, 116)</code>，目前的模型是 <code>(16, 117)</code>。只有第一層不符，因為 input_dim 只影響第一層每一列的長度。</p>
+<p>載入之後，predict.py 在 <code>predict()</code> 裡呼叫 <code>model.eval()</code>，再對每個 batch 做 <code>model(x)</code>——和 4.5 節的呼叫鏈完全相同，只是這次 forward 裡用的是填回去的權重。預測迴圈與 pred.csv 的格式是第 6 章的內容。</p>
+
+<div class="note"><h4>現在的做法：載入時把裝置與安全性寫清楚</h4>
+<ul>
+  <li><strong><code>torch.load(path, map_location=device, weights_only=True)</code>。</strong>目錄頁提過，PyTorch 2.6 起 <code>weights_only</code> 預設為 <code>True</code>：只允許載入 tensor 與基本容器，不執行檔案裡夾帶的任意 Python 物件。state_dict 正好只有 tensor，所以 HW01 的 model.ckpt 在新版照樣能載入；明寫出來，換版本時行為不會變。<code>map_location</code> 指定載入到哪個裝置，讓在 GPU 上存的檔案也能在別台機器上讀。</li>
+  <li><strong>把建模型需要的設定一起存。</strong>常見做法是存成 <code>{'input_dim': 117, 'state_dict': model.state_dict()}</code> 這樣的字典，預測時先讀出 input_dim 再建模型，就不必為了一個數字重讀訓練資料（第 6 章）。</li>
+</ul>
+</div>
+
+<h2 id="lab">4.9　動手做</h2>
+<div class="lab"><h4>動手做：親手看名冊、形狀與 squeeze</h4>
+<p>以下指令都在 <code>HW01/</code> 裡執行。第 1、2 項只 import <code>model</code> 或 <code>torch.nn</code>，不 import <code>config</code>，所以輸出開頭<strong>不會</strong>有 <code>True</code>、<code>0</code> 兩行，也不需要 GPU；第 3、4 項要載入 model.ckpt、在 GPU 上算，會 import config。第 3、4 項需要 <code>models/model.ckpt</code> 是 1.661 那一份（第 2、3 章動手做的提醒）。</p>
+<ol>
+  <li><strong>名冊裡有什麼</strong>：
+<pre class="shell"><code>$ ../.venv/bin/python -c "
+from model import My_Model
+m = My_Model(input_dim=117)
+for name, p in m.named_parameters():
+    print(name, tuple(p.shape), p.numel(), p.dtype, p.requires_grad)
+print(len(m.layers), sum(p.numel() for p in m.layers[1].parameters()))
+print(list(m.state_dict().keys()))
+print(sum(p.numel() for p in My_Model(input_dim=116).parameters()))
+"
+layers.0.weight (16, 117) 1872 torch.float32 True
+layers.0.bias (16,) 16 torch.float32 True
+layers.2.weight (8, 16) 128 torch.float32 True
+layers.2.bias (8,) 8 torch.float32 True
+layers.4.weight (1, 8) 8 torch.float32 True
+layers.4.bias (1,) 1 torch.float32 True
+5 0
+['layers.0.weight', 'layers.0.bias', 'layers.2.weight', 'layers.2.bias', 'layers.4.weight', 'layers.4.bias']
+2017</code></pre>
+  對照 4.3 節：前六行是六個參數，第一個的形狀是 <code>(16, 117)</code>、1872 個，全部是 <code>torch.float32</code>、<code>True</code>；<code>5 0</code> 是 Sequential 有 5 個元件、ReLU 沒有參數；再來是和 named_parameters 同順序的六個 key；最後一行是 116 欄模型的參數總數 2017。</li>
+  <li><strong>忘了 super().__init__()</strong>：
+<pre class="shell"><code>$ ../.venv/bin/python -c "
+import torch.nn as nn
+class Bad(nn.Module):
+    def __init__(self):
+        self.layers = nn.Linear(117, 16)
+Bad()
+"</code></pre>
+  會印出一段 Traceback，最後三行是：
+<pre class="shell"><code>  File ".../torch/nn/modules/module.py", line 2005, in __setattr__
+    raise AttributeError(
+AttributeError: cannot assign module before Module.__init__() call</code></pre>
+  （路徑的開頭依你的環境而不同，這裡省略成 <code>...</code>。）錯誤是在 <code>__setattr__</code> 裡丟出的，正是 4.2 節說的「指定屬性時登記」那一步。在 <code>self.layers = …</code> 之前補一行 <code>super().__init__()</code>，再跑一次就不會有任何輸出——物件順利建好了。</li>
+  <li><strong>逐層形狀與 squeeze 的對照</strong>：
+<pre class="shell"><code>$ ../.venv/bin/python -c "
+import pandas as pd, torch
+from torch.utils.data import DataLoader
+from utils import train_valid_split, select_feat
+from data_loader import COVID19Dataset
+from model import My_Model
+from config import config
+tr, te = pd.read_csv('covid.train.csv').values, pd.read_csv('covid.test.csv').values
+tr, va = train_valid_split(tr, config['valid_ratio'], config['seed'])
+x_tr, x_va, x_te, y_tr, y_va = select_feat(tr, va, te, config['select_all'])
+model = My_Model(input_dim=x_tr.shape[1]).to('cuda')
+model.load_state_dict(torch.load(config['save_path']))
+model.eval()
+x, y = next(iter(DataLoader(COVID19Dataset(x_va, y_va), batch_size=256, shuffle=False)))
+x, y = x.cuda(), y.cuda()
+mse = torch.nn.MSELoss()
+with torch.no_grad():
+    h = x
+    for layer in model.layers:
+        h = layer(h)
+        print(type(layer).__name__, tuple(h.shape))
+    pred = model(x)
+    print(tuple(pred.shape), torch.equal(pred, model.forward(x)))
+    print('with squeeze', round(mse(pred, y).item(), 4))
+    print('without     ', round(mse(model.layers(x), y).item(), 4))
+"
+True
+0
+Linear (256, 16)
+ReLU (256, 16)
+Linear (256, 8)
+ReLU (256, 8)
+Linear (256, 1)
+(256,) True
+with squeeze 1.7758
+.../torch/nn/modules/loss.py:626: UserWarning: Using a target size (torch.Size([256])) that is different to the input size (torch.Size([256, 1])). This will likely lead to incorrect results due to broadcasting. Please ensure they have the same size.
+  return F.mse_loss(input, target, reduction=self.reduction)
+without      89.0963</code></pre>
+  <code>True</code>、<code>0</code> 之後，前五行是圖 4.2 的五個形狀；<code>(256,) True</code> 表示 <code>model(x)</code> 和 <code>model.forward(x)</code> 相同；最後是 4.6 節的 1.7758 與 89.0963。UserWarning 的兩行來自 stderr，出現在 <code>with squeeze</code> 和 <code>without</code> 之間：最後一行的 loss 要先算完才印得出來，警告在計算的當下就印了。如果把輸出接到管線或檔案（例如加 <code>| cat</code>），stdout 會被緩衝，警告反而跑到最前面。加上 <code>2&gt;/dev/null</code> 再跑一次，警告就完全消失，這就是 4.6 節說的「唯一的線索也看不到」。<code>next(iter(…))</code> 是「只從 loader 拿第一個 batch」的寫法；<code>with torch.no_grad():</code> 與 <code>model.eval()</code> 和第 3 章動手做第 3 項一樣，是只做預測、不訓練時的固定寫法（第 5 章）。</li>
+  <li><strong>數一數沒在工作的單元</strong>：在第 3 項的 Python 程式碼最後、收尾的 <code>"</code> <strong>之前</strong>加這幾行再跑（縮排從行首開始）：
+<pre class="py"><code>xs = torch.cat([COVID19Dataset(x_tr).x, COVID19Dataset(x_va).x]).cuda()
+with torch.no_grad():
+    h1 = model.layers[1](model.layers[0](xs))
+print('dead units', (h1 == 0).all(dim=0).sum().item(), '/ 16')
+print('zero ratio', round((h1 == 0).float().mean().item(), 3))</code></pre>
+  <code>torch.cat</code> 把 train 的 2160 列與 valid 的 539 列上下接成一個 (2699, 117) 的 tensor；<code>h1</code> 是第一層 ReLU 之後的輸出，形狀 (2699, 16)。<code>(h1 == 0).all(dim=0)</code> 對每個單元（每一欄）問「是不是所有資料都等於 0」，加總就是永遠輸出 0 的單元數。前面那段輸出照舊，最後多出兩行：
+<pre class="shell"><code>dead units 10 / 16
+zero ratio 0.815</code></pre>
+  10 就是 4.7 節的 10；0.815 是 train 與 valid 合在一起算的 0 的比例，因為 train 佔了八成（2160 筆），結果和 train 的 81.5% 相同。</li>
+</ol>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li><code>My_Model</code> 繼承 <code>nn.Module</code>，因而有 <code>parameters()</code>、<code>to()</code>、<code>state_dict()</code>、<code>eval()</code> 等能力。它們都靠「指定屬性時自動登記子模組」的名冊運作；名冊由 <code>nn.Module.__init__</code> 建立，所以第 12 行的 <code>super().__init__()</code> 必須在指定子模組之前呼叫，忘了會得到 <code>cannot assign module before Module.__init__() call</code>。</li>
+  <li><code>nn.Linear(117, 16)</code> 的 weight 形狀是 <code>(輸出, 輸入)</code> = <code>(16, 117)</code>，每一列是一個輸出單元的權重；計算是 x · W<sup>T</sup> + b。input_dim 決定每列的長度：117 → 1,872 + 16 = 1,888 個參數；改成 116 欄，總數變成 2,017。</li>
+  <li>參數名稱（<code>layers.0.weight</code>…）就是名冊路徑，也是 state_dict 與 model.ckpt 的 key；ReLU 沒有參數，所以沒有 <code>layers.1</code>、<code>layers.3</code>。初始值從 U(−1/√in, 1/√in) 抽，來自 PyTorch 全域產生器。</li>
+  <li>程式只寫 <code>model(x)</code>，由 <code>nn.Module.__call__</code> 呼叫 <code>forward</code>；Sequential 再依序呼叫五個子模組，形狀 (256,117) → (256,16) → (256,8) → (256,1)，<code>squeeze(1)</code> 壓成 (256,) 以對齊 y。<code>model.to(device)</code> 是原地搬移所有參數。</li>
+  <li>少了 squeeze，(256,1) 與 (256,) 經廣播變成 (256,256)，同一個 batch 的 loss 從 1.7758 變成 89.0963，PyTorch 只給一則 UserWarning。用 <code>squeeze(1)</code> 而不用 <code>squeeze()</code>，batch 只有 1 筆時才不會連 batch 維一起拿掉。</li>
+  <li>訓練好的模型第一層有 10/16 個 ReLU 單元在所有資料上都輸出 0（初始化時只有 2/16）；id 欄對第一層的平均貢獻約是其他欄的 400 倍，實際印證第 2 章「數值尺度」的結論。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 把第 15、17 行改成 <code>nn.Linear(input_dim, 32)</code> 與 <code>nn.Linear(32, 8)</code>，其他不動，輸入仍是 117 欄。模型有幾個參數？<code>layers.0.weight</code> 的形狀是什麼？</summary>
+<p>第一層 117 × 32 + 32 = 3,776；第二層 32 × 8 + 8 = 264；第三層不變 9。合計 4,049。<code>layers.0.weight</code> 是 (輸出, 輸入) = <code>(32, 117)</code>。注意兩行要一起改：只改第 15 行，第 17 行還是 <code>Linear(16, 8)</code>，第一次 forward 就會因為 32 接不上 16 而報 <code>mat1 and mat2 shapes cannot be multiplied</code>。</p></details>
+<details class="quiz"><summary>2. 如果在 Sequential 裡多插一個 <code>nn.ReLU()</code>，放在最後一個 Linear 之後，參數名稱會怎麼變？存好的 model.ckpt 還能載入嗎？</summary>
+<p>參數名稱不變：多出來的 ReLU 是 <code>layers.5</code>，沒有參數，前面五個的編號都沒動，所以 state_dict 的 key 一樣，model.ckpt 能載入。但模型的行為變了：最後的輸出會被 ReLU 截掉負數。反過來，如果把 ReLU 插在<strong>中間</strong>，後面 Linear 的編號會往後移（例如 <code>layers.2</code> 變成 <code>layers.3</code>），舊的 checkpoint 就對不上名字了。</p></details>
+<details class="quiz"><summary>3. 同學把第 24 行刪掉，訓練照樣跑完沒有報錯，印出的 loss 很大但也在下降。哪裡出了問題？怎麼發現？</summary>
+<p>模型輸出 <code>(B, 1)</code>、y 是 <code>(B,)</code>，MSELoss 經廣播算的是 <code>(B, B)</code> 個差值的平均，絕大多數是「第 i 筆預測減第 j 筆答案」，loss 量的不是模型誤差（本機同一個 batch：1.7758 變 89.0963）。程式不會停，只會在 stderr 印 UserWarning；如果用 <code>2&gt;/dev/null</code> 丟掉 stderr，就完全看不到。最可靠的發現方法是在算 loss 前 assert 兩邊形狀相同。</p></details>
+<details class="quiz"><summary>4. 訓練好的模型第一層有 10 個單元永遠輸出 0。把這 10 個單元從模型裡拿掉，預測結果會變嗎？</summary>
+<p>在訓練集與驗證集上不會：它們在這些資料上永遠輸出 0，乘上第二層的權重也是 0，對下游毫無貢獻。這正是「參數量是容量上限，不是實際用上的量」的意思。（對沒看過的資料，原則上可能有某筆讓它的加權總和變成正的，所以嚴格說只能保證在量過的資料上不變。）</p></details>
+<details class="quiz"><summary>5. 為什麼 predict.py 不直接寫死 <code>My_Model(input_dim=117)</code>，而要用 <code>x_train.shape[1]</code>？如果 config 的 <code>select_all</code> 改成 <code>False</code> 再訓練，predict.py 要跟著改什麼？</summary>
+<p><code>load_state_dict</code> 依名字把參數一一複製回去，形狀必須相同；第一層 weight 的形狀是 (16, input_dim)，所以 input_dim 必須和訓練時一樣。<code>select_all=False</code> 時特徵只有 5 欄，model.ckpt 裡的第一層是 (16, 5)。predict.py 不必改：它用 <code>x_train.shape[1]</code> 算 input_dim，而它讀的是同一個 config，會選出同樣的 5 欄，建出 (16, 5) 的模型——這正是它重讀訓練資料的理由。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html">torch.nn.Module</a>：<code>parameters()</code>、<code>state_dict()</code>、<code>to()</code>、hook 等所有方法的官方說明。</li>
+  <li><a href="https://pytorch.org/docs/stable/generated/torch.nn.Linear.html">torch.nn.Linear</a>：計算式 y = xA<sup>T</sup> + b、weight 的形狀 (out_features, in_features)，以及預設初始化的範圍。</li>
+  <li><a href="https://pytorch.org/docs/stable/notes/broadcasting.html">PyTorch — Broadcasting semantics</a>：廣播的對齊與展開規則。</li>
+  <li><a href="https://pytorch.org/tutorials/beginner/basics/buildmodel_tutorial.html">PyTorch Tutorials — Build the Neural Network</a>：用 <code>nn.Module</code>、<code>nn.Sequential</code> 定義模型的官方入門教學。</li>
+  <li><a href="https://pytorch.org/tutorials/beginner/saving_loading_models.html">PyTorch Tutorials — Saving and Loading Models</a>：state_dict、<code>torch.load</code> 與 <code>load_state_dict</code> 的用法。</li>
+  <li><a href="https://arxiv.org/abs/1502.01852">He et al. (2015), Delving Deep into Rectifiers</a>：針對 ReLU 網路的權重初始化，以及為什麼初始範圍要隨輸入個數縮放。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW01 讀碼教材 · 對應 commit 717528b · 程式碼引用取自本 repo 的 HW01/；實測輸出取自 2026-10-02、10-03 本機執行</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py；本教材的原始碼全是 .py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>
