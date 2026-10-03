@@ -365,3 +365,14 @@
 
 ## 已在前面章節定義過的名詞
 （每章寫完由雲端 session 追加，格式比照 docs/HW01/FACTS.md。）
+- index（目錄頁，2026-10-03）：Explainable AI／XAI（「模型根據什麼給出答案」）、tokenizer（一句：把文字切成 token 的工具）、token、hidden states（BERT 每一層的輸出向量）、Hugging Face（公開分享模型的網站，transformers 的開發者）、Hugging Face Space（一句：放網頁小程式的地方）、BERT-base（12 層的標準尺寸）、微調（一句）、SQuAD 2.0（問答資料集）、attention（一句：每個 token 參考哪些其他 token 與比重）、exBERT（看 attention 的網站）、PCA（一句：把高維向量壓成 2 維好畫圖）、superpixel（一句：LIME 把圖切成的小塊）、logits（一句：還沒經過 softmax 的原始分數）、filter（一句：卷積層裡的小圖案偵測器）、activation（filter 的輸出）、基準圖（IG 的全黑圖，一句）、Captum（一句）、`Variable`／`.data` → `.detach()`、`matplotlib.use('Agg')`。以上大多只在目錄頁給了一句話，正式定義仍要在各章首次使用處寫完整。
+  index 的方法名稱：Filter explanation（投影片稱 Filter visualization，兩者同一個方法）。全書配色：藍＝輸入資料、綠＝模型 forward、黃＝梯度、紫＝解釋方法自己的步驟；全書地圖 SVG 用綠框＝只做 forward、黃框＝要對輸入 backward。
+  outline 的用語：bert_hidden_states.py 的三組問答稱「第 1／2／3 組問答」，**不要**寫 Q1–Q3（會和作業題號撞名）。
+
+## index／outline 審稿補測（2026-10-03，本機）
+- 舊版套件能不能裝（用 `uv pip install --target <scratch>` 試，不動 .venv）：
+  - `lime==0.1.1.37`：**裝得起來**，在 Python 3.12 上也能跑。它另外依賴 `progressbar`（2.5），pip 會一起裝。舊版的進度條是 `progressbar` 的 `|####|` 樣式，不是 tqdm。用它對圖 0 跑同一段 LIME（seed 16、start_label=1、logits）：前 5 名 (21, 5.5216)、(25, 3.5899)、(38, 3.1247)、(27, 3.0233)、(40, 2.9437)，R² 0.8423，**和 0.2.0.1 完全相同**。所以換版本不影響 Q1–4 的結果。
+  - `transformers==4.5.0`：**裝不起來**。它依賴的 `tokenizers` 0.10.3 在 Python 3.12 編譯失敗（uv：`Build failures usually indicate a problem with the package or the build environment`）。
+- Captum 仍在維護：PyPI 最新版 0.9.0，2026-04-17 發佈（index「現在的做法」框可引用）。
+- outline 的 `requirements.txt:10` 應為 `:11`（第 11 行是 `transformers==5.18.0`，第 10 行是 matplotlib），已修正。
+- outline 與 index 引用的其他 file:line 範圍都核對過，邊界正確。
