@@ -70,7 +70,7 @@
 - 抄第 4 天 tested_positive（第 101 欄）：MSE 1.313
 - 線性迴歸 4 個 tp 欄（53,69,85,101）：1.303
 - 線性迴歸 116 欄（拿掉 id）：1.166；117 欄含 id：1.172
-- 範例 DNN：1.661（見上）
+- 範例 DNN：印出的最佳 1.661，在 539 筆上一次算的真實 MSE 是 2.069（見「ch03 實測」）。跟 baseline 比時要用 2.069。
 - 全書開頭（index.html#now）已寫「過時三層次」；各章遇到過時寫法要加「現在的做法」框；ch07 要延伸 baseline 比較。
 
 ## 時間切分實測（每州依 id 排序，前 80% 訓練／後 20% 驗證）
@@ -128,3 +128,38 @@ select_feat：
 - **拿掉 id**（utils.py:32 改成 `feat_idx = list(range(1, raw_x_train.shape[1]))`）：116 個特徵；最佳 valid loss 0.982，出現在 `Epoch [1369/3000]: Train loss: 1.0857, Valid loss: 0.9820`；第 1769 個 epoch early stop；共存檔 55 次。
 - **保留 id 但除以 2699**（117 欄）：最佳 valid loss 1.003，在第 1367 個 epoch。結論：id 拖累的主因是數值尺度太大（id 最大 2699，次大的欄位是 wearing_mask 的 89.8），程式又沒有做標準化。
 - 這兩組實驗都在暫存複本裡跑，repo 的 models/model.ckpt 沒有被動到。
+
+## ch03 實測（2026-10-03 本機 GPU 環境；雲端不重跑，直接引用這裡）
+執行方式：在 `HW01/` 內 `PYTHONPATH=. ../.venv/bin/python <腳本>`，照 train.py 的順序呼叫 same_seed → split → select_feat → COVID19Dataset → DataLoader。
+**這節沒有的輸出不要寫進教材**；需要新數字就標 `TODO(本機實測)` 留給本機補。
+
+COVID19Dataset（data_loader.py）：
+- `torch.FloatTensor(x)` 把 float64 轉成 float32，而且會**複製**：之後改 numpy 陣列，tensor 不會跟著變。對照組 `torch.from_numpy` 會共用記憶體，dtype 維持 float64。
+- x_train 佔用的記憶體：numpy float64 是 2,021,760 bytes，tensor float32 是 1,010,880 bytes，剛好一半。
+- float32 的誤差：x_train 全部數值的最大絕對誤差 3.81e-06，最大相對誤差 5.94e-08。例：y_train[0] 在 float64 是 3.7109291，在 float32 是 3.7109291553497314。
+- `isinstance(train_dataset, Dataset)` 為 True。self.x 是 (2160,117) float32，self.y 是 (2160,) float32；test 的 dataset 的 self.y 是 None。
+- len：train 2160、valid 539、test 1078。
+- `train_dataset[0]` 回傳 tuple，長度 2：x 的 shape (117,)，y 是 0 維 tensor（shape ()），值 3.7109。x 前 3 個值是 [696.0, 0.0, 0.0]，第一個是 id 696，對應 ch02 train indices 的第一個。
+- `test_dataset[0]` 只回傳一個 Tensor，shape (117,)。
+- 切片也能用：`train_dataset[0:3]` 回傳 x (3,117) 和 y (3,)。`train_dataset[-1]` 的 y 是 2.1545。
+
+DataLoader（batch_size 256）：
+- len(loader)：train 9、valid 3、test 5。2160/256 = 8.4375、539/256 = 2.105…、1078/256 = 4.21…，都是無條件進位。
+- 每個 batch 的大小：train 是 256×8 + 112；valid 是 256, 256, 27；test 是 256×4 + 54。
+- 一個 batch 的型別是 **list**（不是 tuple），長度 2：x (256,117) float32、y (256,)。`pin_memory=True` 時 `is_pinned()` 為 True，device 仍是 cpu；`pin_memory=False` 時 is_pinned 為 False。
+- 預設值：num_workers 0、drop_last False；shuffle=True 時 sampler 是 RandomSampler。設 `drop_last=True` 時 train 的 len 是 8。
+- shuffle 的順序依照 train.py 的實際流程：same_seed → split → `My_Model(117).to('cuda')`（建立模型會先消耗全域亂數）→ 開始迭代。第 1 個 epoch 第一個 batch 的前 8 個 id 是 [2285, 2508, 1402, 559, 1361, 2114, 469, 1572]；第 2 個 epoch 是 [385, 383, 712, 792, 821, 1382, 971, 665]，每個 epoch 順序都不同。
+- pin_memory 的速度：迭代 10 個 epoch 並 `.cuda()`，pin 0.038 s、不 pin 0.039 s。這份資料太小，量不出差別。
+
+**valid loss 的量法有偏差（重要）**：
+- trainer 的 valid loss = 每個 batch 的 MSE 加總後除以 batch 數（sum(loss_record)/len(loss_record)）。valid 的 batch 是 256, 256, 27，所以只有 27 筆的最後一個 batch 跟 256 筆的 batch 權重一樣。valid_loader 又設了 shuffle=True，哪 27 筆落在最後一個 batch，每個 epoch 都不同。
+- 用 repo 的 model.ckpt（訓練時印出 1.661 的那個模型）實測：
+  - 全部 539 筆一次算的真實 MSE：**2.0685**
+  - shuffle=False 的 batch 平均：2.0690
+  - shuffle=True 換 20 種順序：1.7670–2.4477，平均 2.0699。前 5 次是 [1.9214, 1.973, 2.1159, 2.0788, 1.8774]。
+  - 換 200 種順序：min 1.7069、第 5 百分位 1.8095、中位數 2.0528、max 2.8467。
+- 結論：1.661 是 1883 個 epoch 裡最小的那個「雜訊量測值」，挑最小值本身就會偏低。checkpoint 的真實 valid MSE 是 2.07。
+- 拿掉 id 的 checkpoint（印出 0.982）：真實 MSE **1.2403**；200 種順序 min 0.9970、中位數 1.2326、max 1.7167。
+- id 除以 2699 的 checkpoint（印出 1.003）：真實 MSE **1.2588**；200 種順序 min 1.0154、中位數 1.2465。
+- 線性迴歸的 1.166、1.172、1.313、1.303 都是在 539 筆上一次算的真實 MSE，**可以跟 2.07 / 1.24 直接比，但不能跟 1.661 / 0.982 比**。真實數字下的排名：線性迴歸 116 欄 1.166 < 117 欄 1.172 < DNN 拿掉 id 1.240 < DNN id 縮放 1.259 < 抄第 4 天 1.313 < DNN 原版 2.069。
+- train loss 也有同樣的問題：train 最後一個 batch 是 112 筆，而且是一邊更新權重一邊記錄的，所以 train loss 也不是某一個固定模型的 MSE。

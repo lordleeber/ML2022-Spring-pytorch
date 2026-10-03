@@ -730,7 +730,7 @@ sys	0m2.904s</code></pre>
   <li><span class="mk">1</span>early stopping 觸發。往回翻 log，最後一次 <code>Saving model</code> 出現在第 1483 個 epoch（<code>Valid loss: 1.6611</code>）。1483 + 400 = 1883：連續 400 個 epoch 驗證 loss 都沒有再創新低，程式判定「不會再進步了」就收工。400 就是 config 的 <code>early_stop</code>。整個訓練過程共存檔 49 次（<code>../.venv/bin/python train.py 2&gt;/dev/null | grep -c Saving</code> 可以數，<code>grep -c</code> 是只印符合的行數）。</li>
   <li><span class="mk">2</span><code>time</code> 印三個時間：<code>real</code> 是實際經過的時間（牆上時鐘），<code>user</code>／<code>sys</code> 是 CPU 花在程式本身／作業系統上的時間。整段訓練約 34 秒。模型很小、資料只有兩千多筆，GPU 幾乎沒有發揮空間，時間多半花在 Python 迴圈與每個 epoch 的存檔、印 log 上。</li>
 </ol>
-<p>所以這次訓練的成果是：<strong>驗證集 MSE 1.661</strong>，換算平均誤差約 √1.661 ≈ 1.29 個百分點，比第 1 個 epoch 的 10 個百分點好了很多。這台機器上同樣的指令重跑兩次，最佳 loss、停止的 epoch 都一模一樣——這是第 2 章 <code>same_seed</code> 的功勞。</p>
+<p>所以程式回報的成果是：<strong>最佳驗證 loss 1.661</strong>，換算平均誤差約 √1.661 ≈ 1.29 個百分點，比第 1 個 epoch 的 10 個百分點好了很多。這台機器上同樣的指令重跑兩次，最佳 loss、停止的 epoch 都一模一樣——這是第 2 章 <code>same_seed</code> 的功勞。不過這個 1.661 比模型的真實表現樂觀：把存下來的模型拿到全部 539 筆驗證資料上一次算完，MSE 是 2.069。原因出在驗證 loss 的計算方式，第 3 章會拆解。</p>
 
 <h2 id="predict">0.6　跑 predict.py 產生預測</h2>
 <pre class="shell"><code>$ ../.venv/bin/python predict.py
@@ -869,7 +869,7 @@ from tqdm import tqdm</code></pre></figure>
   <li>HW01 是迴歸問題：用一列 117 個數字（id、州別、5 天的問卷統計）預測第 5 天的陽性率，以 MSE 評分。</li>
   <li>Blackwell 顯卡（sm_120）需要 cu128 以上的 PyTorch；repo 根目錄的 <code>.venv</code> 是 Python 3.12 + PyTorch 2.11.0+cu128。</li>
   <li>所有程式都要在 <code>HW01/</code> 裡執行，Python 用 <code>../.venv/bin/python</code>。</li>
-  <li>實測：訓練約 34 秒，第 1483 個 epoch 得到最佳驗證 MSE 1.661，第 1883 個 epoch early stop；predict 產生 1078 筆預測。</li>
+  <li>實測：訓練約 34 秒，第 1483 個 epoch 印出最佳驗證 loss 1.661（真實 MSE 2.069，見第 3 章），第 1883 個 epoch early stop；predict 產生 1078 筆預測。</li>
   <li><code>config.py</code> 刻意把 device 設為 cuda：沒有 GPU 就在 import 時立刻失敗（fail fast），不會默默退回 CPU。</li>
   <li>train 與 predict 是兩個獨立程式，透過 <code>models/model.ckpt</code> 交接。</li>
 </ul>
