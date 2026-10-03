@@ -10,3 +10,7 @@ tensorboard==2.21.0
 matplotlib==3.11.2
 transformers==5.18.0
 qqdm==0.0.7
+# HW09
+lime==0.2.0.1
+scikit-image==0.26.0
+scikit-learn==1.9.1
