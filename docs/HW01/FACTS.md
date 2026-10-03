@@ -429,7 +429,7 @@ train_data size: (2160, 118)
 - **注意：這些是測試集（Kaggle）上的 MSE。本書在驗證集上量的 MSE 不能直接拿來比**：測試集是陽性率更高的時期（ch06），本書也沒有上傳 Kaggle。
 
 ### 實驗方法
-- 用一支腳本照 train.py 的流程重現訓練（same_seed → 切分 → 選特徵 →〔標準化〕→ DataLoader → 建模型 → trainer 的五步驟、存最佳、early stop），可以切換設定。
+- 用一支腳本照 train.py 的流程重現訓練（same_seed → 切分 → 選特徵 →〔標準化〕→ DataLoader → 建模型 → trainer 的五步驟、存最佳、early stop），可以切換設定。腳本是 `docs/tools/hw01_exp.py`，全部 71 組設定列在 `docs/tools/hw01_ch07_runs.txt`，用 `docs/tools/hw01_run_grid.sh docs/tools/hw01_ch07_runs.txt <輸出.jsonl> 6` 可以整批重跑（單張 GPU 約 10 分鐘）。這些工具都需要 GPU，雲端不要執行。
 - **驗證過腳本的正確性**：原版設定逐位元重現印出的 1.6611、最佳第 1483 個 epoch、第 1883 個 epoch 停止、存檔 49 次、真實 MSE 2.0685、第一層 10 個單元沒在工作。修正量法的版本也重現了 ch03 的 1.7174、第 2968 個 epoch、跑到 3000、存檔 187 次。
 - **以下所有改良實驗都用修正後的量法**（valid shuffle=False＋依筆數加權，ch03 §3.5 的「現在的做法」），所以印出的最佳值就等於該 checkpoint 的真實 valid MSE。其他照原版：batch 256、n_epochs 3000、early_stop 400、模型 117→16→8→1（除非另外註明）。
 - 標準化：只用訓練部分的平均與標準差（std 為 0 的欄改成 1），同一組數字套用到 valid 與 test。
