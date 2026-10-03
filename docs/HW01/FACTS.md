@@ -81,6 +81,10 @@
   ch06 圖號：圖 6.1 predict.py 的資料流（上排「只為了 117」的繞路）、圖 6.2 predict() 的形狀變化（5 個 batch → cat → (1078,)）、圖 6.3 pred.csv 行尾位元組（Linux 實測 CRLF／Windows \r\r\n／newline=''）、圖 6.4 訓練答案／測試第 4 天／預測的平均與最大值。
   ch06 已講完：predict.py 重讀訓練資料的兩個問題（依賴訓練資料、117 是當下重算）與存字典的解法、weights_only 預設實際為 True、pred.csv 格式（CRLF、最短表示、id 對齊）、打亂 id 的代價 1.0045 → 120.0056、測試集是高陽性率時期與外推（§6.9）。後面章節回指即可；改進模型留給 ch07。
   ch06 的 4 個 `TODO(本機實測)` 都在 §6.10 動手做：第 1 項 wc／md5sum 逐字輸出、第 2 項 `repr(csv.excel.lineterminator)` 逐字輸出、第 3 項整段輸出（並確認 permutation 方式是否重現 120.0056）、第 4 項輸出（預期 `OrderedDict 6 117`）。
+- ch07：Kaggle public／private 排行榜（一句）、基準線分數是**測試集** MSE（不可與驗證集 MSE 比，本書沒上傳 Kaggle）、特徵組合短名 noid／survey／corr／tp4（corr 只在訓練部分算相關係數）、`np.corrcoef`（一句）、標準化插在 train.py 第 114 行之後（std 為 0 改成 1；ch01 版本是 +1e-8）、Adam（每個參數依梯度平方的移動平均自適應步幅）、AdamW（decoupled weight decay；PyTorch 的 AdamW 不寫 weight_decay 時預設 0.01）、L2 正則化（loss ＋ λ/2·Σw²，梯度多 λw）、SGD／Adam 的 `weight_decay`（加到梯度上）、Dropout（訓練時以機率 p 丟、乘 1/(1−p)；由 train()／eval() 切換）、GELU 的「永遠為 0」判準與 ReLU 不同（float32 下溢）、過擬合（overfitting）、「驗證方式決定你選到什麼模型」、判讀規則「差距小於 DNN 換 seed 的標準差（0.01～0.06）不算數」、checkpoint 存 feat_idx＋mean／std（`.tolist()`）＋state_dict（map_location 到 GPU 時 list 不受 `.numpy()` 限制）、題庫在 repo 根目錄 `cp -r HW01 HW01-lab` 的複本裡做（`../.venv` 仍可用）、Pipeline／TimeSeriesSplit（一句，現在的做法框）、梯度提升樹（回指目錄頁）。
+  ch07 圖號：圖 7.1 作業提示對應的程式位置、圖 7.2 隨機切分上的完整比較（橫條圖，虛線 1.166）、圖 7.3 兩種切分下 8 個設定的名次（紅＝時間切分 train MSE < 0.75，藍＝> 0.95）、圖 7.4 4 個 seed 的真實 valid MSE 點圖。
+  ch07 已講完：作業提示對應位置、所有「第 7 章再談」的承諾（§7.1 表）、1.240（ch02，原版量法挑選）vs 1.1848（量法修正後）是兩次不同訓練、ch04 的 10 個 vs ch07 的 12 個沒在工作的單元同理。後續（appendix）回指即可。
+  ch07 的 `TODO(本機實測)`（8 個）：§7.7 Dropout 效果；題庫入門 1 逐字 log（含印出的 Train loss）；入門 4 不標準化 SGD lr 1e-3（117 欄）；進階 2 依 §7.12 改寫後 pred.csv 的 §6.10 第 3 項輸出（預期 4.1104／55.4179）並確認 weights_only 能載入 list 化 mean/std；進階 5 Dropout 兩種切分＋刪 model.train() 對照；挑戰 2 原版 train.py（無量法修正）seed 2；挑戰 3 permutation importance 前 5 名；挑戰 4 LightGBM 兩種切分。（§7.7 與進階 5 都是 Dropout；挑戰 2 要固定切分 seed 5201314。）
 
 ## Baseline 實測（2026-10-03，與範例同一驗證集：random_split seed 5201314）
 - 抄第 4 天 tested_positive（第 101 欄）：MSE 1.313
