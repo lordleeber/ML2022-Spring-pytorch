@@ -365,3 +365,6 @@
 
 ## 已在前面章節定義過的名詞
 （每章寫完由雲端 session 追加，格式比照 docs/HW01/FACTS.md。）
+- index（目錄頁，2026-10-03）：Explainable AI／XAI（「模型根據什麼給出答案」）、tokenizer（一句：把文字切成 token 的工具）、token、hidden states（BERT 每一層的輸出向量）、Hugging Face（公開分享模型的網站，transformers 的開發者）、Hugging Face Space（一句：放網頁小程式的地方）、BERT-base（12 層的標準尺寸）、微調（一句）、SQuAD 2.0（問答資料集）、attention（一句：每個 token 參考哪些其他 token 與比重）、exBERT（看 attention 的網站）、PCA（一句：把高維向量壓成 2 維好畫圖）、superpixel（一句：LIME 把圖切成的小塊）、logits（一句：還沒經過 softmax 的原始分數）、filter（一句：卷積層裡的小圖案偵測器）、activation（filter 的輸出）、基準圖（IG 的全黑圖，一句）、Captum（一句）、`Variable`／`.data` → `.detach()`、`matplotlib.use('Agg')`。以上大多只在目錄頁給了一句話，正式定義仍要在各章首次使用處寫完整。
+  index 的方法名稱：Filter explanation（投影片稱 Filter visualization，兩者同一個方法）。全書配色：藍＝輸入資料、綠＝模型 forward、黃＝梯度、紫＝解釋方法自己的步驟；全書地圖 SVG 用綠框＝只做 forward、黃框＝要對輸入 backward。
+  outline 的用語：bert_hidden_states.py 的三組問答稱「第 1／2／3 組問答」，**不要**寫 Q1–Q3（會和作業題號撞名）。
