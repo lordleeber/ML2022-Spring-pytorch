@@ -430,3 +430,10 @@
   加總：Conv 5,756,800 + BN 5,120 = cnn 5,761,920；再加 fc 8,400,907 = 14,162,827。
 - BN 另有 **buffer**（不是參數、不訓練，但存在 state_dict 裡）：running_mean、running_var 各 c 個，加上 num_batches_tracked 1 個；11 個 BN 共 2,560 個 channel，所以 buffer 共 2×2,560 + 11 = **5,131**。
 - `model_state_dict` 的 81 個 entry = 11 個 Conv × 2（weight、bias）+ 11 個 BN × 5（weight、bias、running_mean、running_var、num_batches_tracked）+ fc 2 個 Linear × 2。
+- ch00（第 0 章，2026-10-03 雲端）：
+  - 圖號：圖 0.1（Classifier 架構：5 個 stage + 攤平 + 2 個 Linear，每段輸出形狀與參數量）、圖 0.2（參數分布長條：cnn 41%、fc 59%）。
+  - 本章正式定義的名詞：stage（本書稱呼：`stack_blocks` 的一次呼叫，程式裡沒有這個名字）、(N, C, H, W) 形狀記法、channel、Conv2d（filter = c_in×3×3 權重塊、activation／feature map、kernel 3／stride 1／padding 1 不改長寬）、BatchNorm（含 running mean／var）、ReLU、MaxPool、Linear（全連接）、Dropout、`model.eval()`（訓練／推論模式）、logits 的完整定義與 softmax 公式、參數（parameter）、buffer、`p.numel()`、global average pooling（「現在的做法」框）、`.gitignore`、stdout／stderr、tqdm、real／user time、Gradescope、Kaggle、LOAD REPORT 的 UNEXPECTED、pooler、MLM／NSP、預訓練／微調（一句）、BERT（一句）、token（一句）、embedding = 各層輸出向量 = hidden states（一句）、`python -c`。
+  - 回指（不重講）：index 的 Hugging Face、tokenizer、hidden states、SQuAD 2.0、PCA、attention、基準圖；HW01 ch00 §0.3 的環境建置。
+  - 本章用的手算（由上面逐層表推得，不是另外量的）：各 stage 參數 299,520／443,520／1,476,864／1,181,184／2,360,832；GAP 版 fc `Linear(512, 11)` = 5,643，全模型 5,767,563。
+  - **更正「環境」一節**：只有 `explain_cnn.py` 寫死 `.cuda()`；`bert_hidden_states.py`、`bert_embedding.py` 沒有 `.cuda()`（只有 `same_seeds` 裡先檢查 `torch.cuda.is_available()` 的種子設定），模型與輸入都在 CPU。ch00 照原始碼寫；index（「三支腳本都把模型和資料寫死成 `.cuda()`」）與 outline #findings 末段的同一句需要改。
+  - 在 repo 根目錄跑 `HW09/explain_cnn.py`：import 會成功（sys.path[0] 是腳本所在目錄），會在根目錄建 `output/`，然後 `torch.load('./checkpoint.pth')` 失敗。這是由 Python 規則推得，沒有實跑。
