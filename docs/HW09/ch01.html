@@ -1100,7 +1100,7 @@ for i in range(10):
 <p>回到目錄頁那句話：10 張全對而且幾乎都是 100% 確定，後面每一章都會用到這個事實。本節只預告它出現在哪裡，細節留給各章。</p>
 <ul>
   <li><strong>第 3 章 Saliency map：梯度小到幾乎是 0。</strong>Saliency map 對 loss 取梯度，而 cross-entropy loss 對 logits 的梯度是「softmax 機率減掉 one-hot 標籤」。p(標籤) 已經是 1.0000、其他類別都是 0.0000，這個差幾乎每一項都是 0，傳回輸入的梯度也就極小。1.6 節的表裡 1 − p 從 0 到 10<sup>−3</sup> 不等，差了好幾個數量級，第 3 章會看到這個差距怎麼反映在熱圖上，以及最沒把握的圖 2 為什麼是例外。</li>
-  <li><strong>第 2 章 LIME：程式餵給 LIME 的是 logits。</strong>LIME 會把圖的一部分遮掉，看模型的輸出怎麼變。如果看的是機率，大部分的圖已經頂在 1.0000，遮掉一小塊幾乎看不出變化；logits 則還有好幾個單位的起伏空間（標籤 logit 7.8 到 23.0、領先幅度 7.3 到 37.9）。<code>explain_cnn.py</code> 的 <code>predict</code>（第 45–46 行）直接回傳 <code>model(...)</code> 的輸出，沒有做 softmax。這對 LIME 的結果有什麼影響，第 2 章拿圖 0 實際比較兩種版本。</li>
+  <li><strong>第 2 章 LIME：程式餵給 LIME 的是 logits。</strong>LIME 每次會把圖上大約一半的 superpixel 換成平均色，看模型的輸出怎麼變。如果看的是機率，有幾張圖（圖 1、2、3、5）就算遮掉一半，機率也幾乎都還在 0.99 以上，分不出哪一塊比較重要；logits 則仍會隨遮掉的部分上下變動（原圖的標籤 logit 7.8 到 23.0、領先幅度 7.3 到 37.9，還有很大的空間）。<code>explain_cnn.py</code> 的 <code>predict</code>（第 45–46 行）直接回傳 <code>model(...)</code> 的輸出，沒有做 softmax。這對 LIME 的結果有什麼影響，第 2 章拿圖 0 實際比較兩種版本。</li>
   <li>第 5 章 Integrated Gradients 也是對目標類別的 <strong>logit</strong> 取梯度，所以那一章會再用到本章的 logit 數字（以及 1.6 節「小數第 3 位會變」的提醒）。</li>
 </ul>
 <p>下一章從 LIME 開始：<code>explain_cnn.py:39–74</code>，Q1–4。</p>

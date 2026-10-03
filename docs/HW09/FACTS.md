@@ -612,3 +612,159 @@ for i in range(10):
 - **自我測驗 1 實跑**（在 food/ 的複本裡多放 `10_10.jpg`）：用 my_key，它排在 index 10，labels `[0, 1, 1, 2, 2, 3, 5, 6, 8, 9, 10]`；改成 `imgnames.sort()`，它排在 index 1，labels `[0, 10, 1, 1, 2, 2, 3, 5, 6, 8, 9]`。
 - 雲端的三個 FACTS 疑點都成立，已在上面各段更正。
 - ch01 引用的行號（dataset.py 15–58、explain_cnn.py 42/45–46/72/80/95/110/121/139/154/169/216/219/220/230/280/281/289/293–305）全部核對正確。
+
+## ch02 實測（2026-10-04，本機；指令都在 HW09/ 裡執行）
+工具：`docs/tools/hw09_ch02_lime.py`（在 HW09/ 裡跑；印出下面的數字，並產生 4 張 `docs/HW09/img/ch02_*.png`）。
+
+### LIME 0.2.0.1 內部怎麼運作（讀 lime_image.py／lime_base.py 原始碼確認）
+- `LimeImageExplainer()` 預設 `kernel_width=0.25`，核函數 `sqrt(exp(-d² / 0.25²))`；`random_state=None` → 用 numpy 全域亂數。
+- `explain_instance` 的流程：
+  1. 先抽一個 `random_seed = randint(0, 1000)`，只在沒給 segmentation_fn 時才用（本作業有給，所以白抽，但會消耗一次亂數）。
+  2. 切 superpixel：`segments = segmentation_fn(image)`。
+  3. 做「遮住用的圖」：`hide_color=None` 時，每塊 superpixel 換成該塊的 RGB 平均色（`fudged_image`）。
+  4. 取樣：`data = randint(0, 2, (num_samples, n))`，每列是 n 個 0/1，0 = 把那塊換成平均色；`data[0, :] = 1`（第 0 個樣本是原圖）。每湊滿 batch_size=10 張就呼叫一次 classifier_fn → 1000 個樣本呼叫 100 次。
+  5. 每個樣本和原圖（全 1 向量）的 cosine 距離 d，換成權重 `sqrt(exp(-d²/0.0625))`。
+  6. `top_labels=5`：取原圖輸出最大的 5 個類別，逐一用加權 Ridge 回歸（`alpha=1`）把「哪幾塊沒遮」（0/1 向量）擬合到「該類別的輸出」。特徵選擇 `'auto'` 在 num_features=100000 > 6 時用 `'highest_weights'`，結果是 n 個特徵全部保留。
+  7. 回傳的 `local_exp[label]` 是 (特徵編號, 權重) 依 |權重| 由大到小排好的 list；`intercept[label]` 是截距。
+- **`exp.score` 與 `exp.local_pred` 只有一個值**：迴圈對 5 個類別都會覆寫，最後留下的是迴圈最後一個，也就是原圖輸出最大的那一類。本作業 10 張都預測正確，所以 `exp.score` 就是標籤那一類的 R²（加權）。
+- 特徵 z 對應 `segments == z`（z = 0..n−1）。這就是 `start_label=1` 差一號的來源（見下）。
+
+### superpixel（SLIC）
+- 指令（不需要 GPU）：
+  ```
+  ../.venv/bin/python -c "
+  import numpy as np
+  from skimage.segmentation import slic
+  from dataset import FoodDataset, get_paths_labels
+  paths, labels = get_paths_labels('./food/')
+  images, labels = FoodDataset(paths, labels, mode='eval').getbatch(range(10))
+  for i, image in enumerate(images.permute(0, 2, 3, 1).numpy()):
+      s = slic(image.astype(np.double), n_segments=200, compactness=1, sigma=1, start_label=1)
+      print(i, len(np.unique(s)), s.min(), s.max())
+  "
+  ```
+  逐字輸出（欄位：圖、塊數、最小編號、最大編號）：
+  ```
+  0 107 1 107
+  1 141 1 141
+  2 151 1 151
+  3 101 1 101
+  4 66 1 66
+  5 120 1 120
+  6 108 1 108
+  7 94 1 94
+  8 128 1 128
+  9 109 1 109
+  ```
+- `n_segments=200` 只是目標，實際 66–151 塊。每塊的像素數（128×128 = 16,384 個像素）：圖 0 最小 43、中位數 127、最大 667；圖 4（鬆餅）最大的一塊有 2,985 個像素（中位數 139），只切出 66 塊；其他圖每塊最小 41–47、中位數 96–150。
+- `start_label=0` 切出的是**同一個分割**，只是編號整體減 1（圖 0：0..106，逐像素比對 `s0 + 1 == s1` 為 True）。
+- 圖：`img/ch02_segments.png`（10 張圖疊上黃色邊界，標題是塊數）。
+
+### 取樣與模型輸出（圖 0，重播 explain_instance 的亂數；已核對和真正傳進 predict 的 1000 張圖完全相同）
+- 1000 個樣本 × 107 個 0/1。除了第 0 個（原圖），每個樣本被遮的塊數最少 36、平均 53.6、最多 72 —— **每次大約遮一半**，不是遮一小塊。
+- 特徵 0（沒有像素）在 478 個樣本裡是 0，但遮了等於沒遮；編號 107 那塊從來沒被遮過。
+- 標籤（Bread）的 logit 在 1000 個樣本上：原圖 10.333，最小 −21.274，中位數 −4.030，最大 10.333。p(Bread) 中位數 0.0009；≥ 0.99 的只有 5.2%，≤ 0.01 的有 62.3%；仍然預測成 Bread 的只有 18.3%。
+- 和原圖的 cosine 距離：最小 0.185、中位數 0.296、最大 0.428；核權重最小 0.231、中位數 0.496、最大 0.760（原圖本身 d=0、權重 1）。
+- 圖：`img/ch02_perturb.png`（原圖；所有塊都換成平均色；樣本 1、2、3 —— 分別遮了 50、49、48 塊，Bread 的 logit 2.970、1.749、−2.365）。
+- **10 張圖的 1000 個樣本**（照原程式的順序，同一個 seed 16 連續跑）：
+  | 圖 | 原圖 logit | 樣本 logit 最小 | 中位數 | p(標籤) 中位數 | p ≥ 0.99 | p ≤ 0.01 | 仍預測正確 |
+  |---|---|---|---|---|---|---|---|
+  | 0 | 10.33 | −21.27 | −4.03 | 0.0009 | 5.2% | 62.3% | 18.3% |
+  | 1 | 19.79 | 18.84 | 21.38 | 1.0000 | 100% | 0% | 100% |
+  | 2 | 7.81 | 7.32 | 10.30 | 1.0000 | 100% | 0% | 100% |
+  | 3 | 9.01 | 3.95 | 8.94 | 1.0000 | 99.3% | 0% | 100% |
+  | 4 | 12.21 | −2.60 | 6.67 | 0.9997 | 62.4% | 16.1% | 75.5% |
+  | 5 | 12.39 | 1.38 | 6.69 | 0.9999 | 95.5% | 0% | 99.8% |
+  | 6 | 22.96 | −9.18 | 8.30 | 1.0000 | 82.3% | 5.8% | 88.8% |
+  | 7 | 11.45 | −60.85 | −24.08 | 0.0000 | 0.2% | 96.2% | 1.4% |
+  | 8 | 13.01 | −11.18 | 3.16 | 0.8570 | 43.2% | 34.3% | 55.5% |
+  | 9 | 14.12 | −6.51 | 4.47 | 0.7799 | 31.5% | 15.6% | 59.2% |
+  - 圖 1、2、3、5：遮掉一半，機率幾乎都還 ≥ 0.99（機率「頂住」了），但 logit 仍在變（圖 1：最小 18.84、中位數 21.38）。
+  - 圖 0、7：遮掉一半就幾乎認不出來（圖 7 只剩 1.4% 預測正確）。
+  - 圖 1、2 的樣本 logit 中位數（21.38、10.30）**高於原圖**（19.79、7.81）：換成平均色反而讓模型更確定。這和兩張 Dairy product 的 LIME 權重以負為主（CNN 實測 → LIME 表）方向一致：遮掉某些塊會讓分數上升，那些塊的權重就是負的。
+- **第 1 章 1.8 節原本的預告「如果看的是機率，大部分的圖已經頂在 1.0000，遮掉一小塊幾乎看不出變化」不準確**（LIME 每次遮約一半；只有圖 1、2、3、5 的機率頂住）。本次已在 master 上把 ch01 那句改掉（見下面「ch01 修正」）。
+
+### 圖 0 的解釋（logits，原程式）
+- 可貼上的指令（需要 GPU；`2>/dev/null` 把 tqdm 進度條藏起來）：
+  ```
+  ../.venv/bin/python -c "
+  import numpy as np, torch
+  from skimage.segmentation import slic
+  from lime import lime_image
+  from model import Classifier
+  from dataset import FoodDataset, get_paths_labels
+  model = Classifier().cuda()
+  model.load_state_dict(torch.load('checkpoint.pth')['model_state_dict'])
+  model.eval()
+  paths, labels = get_paths_labels('./food/')
+  images, labels = FoodDataset(paths, labels, mode='eval').getbatch(range(10))
+  calls = []
+  def predict(input):
+      calls.append(input.shape)
+      with torch.no_grad():
+          return model(torch.FloatTensor(input).permute(0, 3, 1, 2).cuda()).cpu().numpy()
+  def segmentation(input):
+      return slic(input, n_segments=200, compactness=1, sigma=1, start_label=1)
+  np.random.seed(16)
+  x = images[0].permute(1, 2, 0).numpy().astype(np.double)
+  exp = lime_image.LimeImageExplainer().explain_instance(image=x, classifier_fn=predict, segmentation_fn=segmentation)
+  print(len(calls), calls[0])
+  print(exp.top_labels)
+  print([(int(s), round(float(w), 3)) for s, w in exp.local_exp[0][:5]])
+  print(round(exp.score, 4))
+  w = dict(exp.local_exp[0])
+  print(len(w), round(w[0], 3), 107 in w)
+  " 2>/dev/null
+  ```
+  逐字輸出：
+  ```
+  100 (10, 128, 128, 3)
+  [np.int64(0), np.int64(4), np.int64(3), np.int64(2), np.int64(5)]
+  [(21, 5.522), (25, 3.59), (38, 3.125), (27, 3.023), (40, 2.944)]
+  0.8423
+  107 0.158 False
+  ```
+  - 第 1 行：predict 被呼叫 100 次，每次 10 張 128×128×3（numpy 的 HWC）。
+  - 第 2 行：top_labels 是 Bread(0)、Fried food(4)、Egg(3)、Dessert(2)、Meat(5)，和 ch01 的第 2 名（Fried food）一致。`np.int64(...)` 是 numpy 2 印純量的樣子。
+  - 第 5 行：107 個特徵（編號 0..106）；特徵 0 權重 0.158（沒有對應像素，純雜訊）；107 號不在裡面。
+- 截距 −21.383、local_pred 12.543（線性模型對原圖的預測；實際 logit 10.333）；107 個權重加總 33.926。
+- 本機逐字與 explain_cnn.py 內同一張圖的結果相同（同 seed、同順序的第一張）。
+
+### get_image_and_mask 的參數（圖 0，logits 版）
+- 預設（程式用的）：`positive_only=False, hide_rest=False, num_features=11, min_weight=0.05` → 11 塊綠、0 塊紅，3,077 個像素被上色。
+- `positive_only=True`：一樣 11 塊綠（前 11 名本來就都是正的）。
+- `num_features=5`：5 塊綠，1,386 個像素。
+- `min_weight=0.0`：一樣 11 塊綠（前 11 名都遠大於 0.05）。
+- `num_features=200`（等於全部）：46 塊綠、36 塊紅，綠 8,476、紅 5,074 個像素（其餘 |w| < 0.05 的不畫）。
+- 上色方式：正權重那塊的 G 通道設成 `np.max(image)`（圖 0 是 0.9961），負權重的 R 通道設成最大值；其他兩個通道保留原圖 → 綠／紅是「疊色」，不是蓋掉。
+- 注意：positive_only=False 時是先取 |權重| 前 num_features 名，再丟掉 |w| < min_weight 的；所以「畫幾塊」由 num_features 和 min_weight 一起決定。
+
+### logits vs 機率、start_label=0（圖 0）
+- softmax 版：截距 −0.6451、R² 0.5409；前 5 名 (21, 0.2186)、(40, 0.1977)、(25, 0.1905)、(27, 0.1445)、(23, 0.1274)；|w| ≥ 0.05 有 13 塊。
+- start_label=0 版：R² 0.8617；前 5 名 (20, 5.2675)、(24, 3.4096)、(37, 3.3193)、(39, 3.157)、(26, 3.1135)。
+- 圖：`img/ch02_img0_compare.png`（三格：logits（repo 原樣）／softmax 機率／logits + start_label=0）。看得到的差別：logits 版與 start_label=0 版的綠色區域幾乎一樣（披薩上半部到右上的餅皮）；softmax 版綠色區域相近，但在披薩尖端附近多了一塊**紅色**。
+- **10 張都改用 softmax**（同 seed 16 連續跑；`img/ch02_lime_softmax.png`）：
+  | 圖 | R² | |w| ≥ 0.05（正/負） | 畫出的綠／紅塊 |
+  |---|---|---|---|
+  | 0 | 0.541 | 13（12/1） | 10／1 |
+  | 1 | 1.000 | 0 | 0／0 |
+  | 2 | 0.563 | 0 | 0／0 |
+  | 3 | 0.099 | 0 | 0／0 |
+  | 4 | 0.566 | 12（12/0） | 11／0 |
+  | 5 | 0.180 | 0 | 0／0 |
+  | 6 | 0.396 | 9（9/0） | 9／0 |
+  | 7 | 0.267 | 0 | 0／0 |
+  | 8 | 0.840 | 8（8/0） | 8／0 |
+  | 9 | 0.760 | 16（11/5） | 9／2 |
+  - 圖 1、2、3、5、7 共 5 張完全沒有上色：每一塊的 |權重| 都小於 0.05。
+  - 圖 1、2、3、5：機率在樣本上幾乎不動（上表 p ≥ 0.99 的比例 95–100%），所以沒有一塊的權重夠大。圖 1 的 R² 1.000 是因為要擬合的值幾乎是常數。
+  - 圖 7：機率幾乎都是 0（p ≤ 0.01 佔 96.2%），同樣沒什麼可解釋。
+  - 對照原程式（logits）的 lime.png：10 張都有上色（CNN 實測 → LIME 表，畫出 11 塊或接近 11 塊）。
+
+### 亂數的影響
+- 圖 3 單獨跑（seed 16、第一個跑）前 5 名 [40, 57, 86, 52, 39]；照原程式排在第 4 個跑：[40, 57, 86, 52, 48]。前 11 名重疊 10 塊。
+- 圖 0 改用 seed 0：前 5 名 (21, 5.158)、(25, 3.715)、(38, 3.255)、(40, 3.162)、(27, 3.055)，R² 0.8453；和 seed 16 的前 11 名重疊 10 塊。
+- 結論：換 seed 或換順序，最重要的幾塊大致不變，但排名後段會換人；要和投影片／書上的圖逐塊對照，必須照原程式的 seed 與順序。
+
+### ch01 修正（本次一起改，已在 master）
+- ch01 1.8 節的 LIME 預告改成：LIME 每次會把大約一半的 superpixel 換成平均色；改看機率的話，有幾張圖（圖 1、2、3、5）就算遮掉一半，機率也幾乎都還在 0.99 以上，分不出哪一塊重要；logits 則仍會隨遮掉的部分變動。
