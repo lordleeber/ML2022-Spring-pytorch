@@ -244,3 +244,95 @@ forward 時各層的形狀（valid 第一個 batch，shuffle=False，256 筆，�
 - 沒呼叫 super().__init__() 時，traceback 最後三行指向 `torch/nn/modules/module.py` 第 2005 行的 `__setattr__`。
 - 動手做第 3 題在真正的終端機裡跑（tty），UserWarning 的兩行（`.../torch/nn/modules/loss.py:626: UserWarning: ...`，下一行是 `  return F.mse_loss(input, target, reduction=self.reduction)`）出現在 `with squeeze 1.7758` 和 `without      89.0963` 之間。輸出接到管線時，stdout 會被緩衝，警告反而出現在最前面。
 - 動手做第 4 題：`dead units 10 / 16`、`zero ratio 0.815`。
+
+## ch05 實測（2026-10-03 本機 GPU 環境；雲端不重跑，直接引用這裡）
+範圍：train.py:27–97 的 trainer()。「原版」指 config 不改直接跑 train.py。對照組都在暫存複本裡跑，repo 的 models/model.ckpt 沒被動到。
+**這節沒有的輸出不要寫進教材**；需要新數字就標 `TODO(本機實測)` 留給本機補。
+
+### 一次更新拆開看（照 train.py 的順序：same_seed → 切分 → DataLoader → 建模型，然後拿第 1 個 epoch 的第 1 個 batch）
+- `print(optimizer)` 逐字輸出：
+```
+SGD (
+Parameter Group 0
+    dampening: 0
+    differentiable: False
+    foreach: None
+    fused: None
+    lr: 1e-05
+    maximize: False
+    momentum: 0.9
+    nesterov: False
+    weight_decay: 0
+)
+```
+- 還沒做過任何 backward 時，`layers.0.weight.grad` 是 None；`optimizer.zero_grad()` 之後也是 None（現在的 PyTorch 預設 set_to_none=True，是把 grad 設成 None，不是填 0）。
+- 建立之後 `model.training` 是 True（預設就是訓練模式）。
+- `pred.requires_grad` 是 True，`grad_fn` 是 SqueezeBackward1，因為最後一個運算是 squeeze。
+- loss 逐字是 `tensor(508.8512, device='cuda:0', grad_fn=<MseLossBackward0>)`。`loss.item()` = 508.8511657714844，跟自己算的 `((pred-y)**2).mean()` 完全相同。**這就是 ch00 進度條上的 loss=509**。第 2 個 batch 的 loss 是 136.3234，也就是 ch00 的 loss=136。
+- backward 之後各參數的梯度：
+
+| 參數 | grad 形狀 | 範數 norm | 最大的 \|g\| |
+|---|---|---|---|
+| layers.0.weight | (16,117) | 15824.6025 | 8688.2920 |
+| layers.0.bias | (16,) | 8.7824 | 4.9981 |
+| layers.2.weight | (8,16) | 6073.4746 | 2242.7007 |
+| layers.2.bias | (8,) | 21.4800 | 12.7494 |
+| layers.4.weight | (1,8) | 2681.5046 | 1831.3115 |
+| layers.4.bias | (1,) | 38.5490 | 38.5490 |
+
+  - 梯度的形狀一定跟參數的形狀相同。
+- **id 欄的梯度**：第一層 weight 梯度的平均 \|g\|，id 欄是 2602.08，其他欄平均 24.13，大約是 **108 倍**。這個 batch 裡 id 欄的平均 \|x\| 是 1348.7，其他欄平均 15.75。這直接印證 ch01 §1.4「梯度和那欄的數值大小成正比」。
+- **第一步更新**：Δw 跟 −lr × grad 的差距最大只有 7.45e-09（浮點誤差），所以第一步就是 w ← w − 1e-5 × grad。第一層最大的 \|Δw\| 是 **0.0869，就在 id 欄**，幾乎等於整個初始化範圍 ±0.0925：只走一步，id 欄的權重就移動了一整個初始範圍。
+- 第一步之後，optimizer 的 momentum buffer 等於這一步的 grad（torch.allclose 為 True）。
+- **第二步驗證了 momentum 公式**：buf ← 0.9 × buf + grad、w ← w − lr × buf，算出來的跟實際結果吻合（allclose 為 True）。
+- **忘了 zero_grad**：對同一個 batch 連續 backward 兩次，最後一層 bias 的 grad 從 −57.9991 變成 −115.9982，剛好 2 倍，梯度是累加的。
+- **在 no_grad 裡**：pred.requires_grad 是 False，grad_fn 是 None。對它算 loss 再 backward 會報錯：`RuntimeError: element 0 of tensors does not require grad and does not have a grad_fn`。
+- 同一張圖做第二次 backward 會報錯，開頭是：`RuntimeError: Trying to backward through the graph a second time (or directly access saved tensors after they have already been freed).`
+- `model.train()` 和 `model.eval()` 對同一個 batch 的輸出完全相同（torch.equal 為 True），因為 HW01 沒有 Dropout 或 BatchNorm。
+
+### 原版完整訓練（stdout 存檔分析，結果跟 FACTS 開頭的「實測執行」相同）
+- 1883 個 epoch，存檔 49 次。存檔的 epoch 依序是：1, 2, 3, 5, 6, 7, 8, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 32, 34, 36, 46, 58, 59, 65, 70, 85, 126, 127, 155, 162, 222, 227, 237, 256, 270, 272, 278, 320, 322, 491, 543, 686, 860, 879, 1028, 1030, 1122, 1260, 1483。
+  - 前 100 個 epoch 就存了 26 次，之後越來越稀疏。最長的間隔是 223 個 epoch（1260 → 1483）。1483 + 400 = 1883 時觸發 early stop。最後 400 個 epoch 裡最低的 valid loss 是 1.6727，仍然比 1.6611 高。
+- 各 epoch 的 train／valid loss：
+
+| epoch | train | valid |
+|---|---|---|
+| 1 | 134.2442 | 107.2155 |
+| 2 | 69.8929 | 50.8182 |
+| 3 | 48.5299 | 39.1161 |
+| 5 | 34.3680 | 34.5855 |
+| 10 | 29.1486 | 29.9683 |
+| 20 | 14.4297 | 12.4151 |
+| 50 | 9.3503 | 10.0611 |
+| 100 | 5.0110 | 4.2813 |
+| 200 | 4.2483 | 4.6337 |
+| 300 | 3.5812 | 2.6302 |
+| 500 | 3.8538 | 3.2954 |
+| 1000 | 2.0760 | 3.8595 |
+| 1483 | 1.8014 | 1.6611 |
+| 1500 | 2.1995 | 1.9105 |
+| 1883 | 1.7689 | 2.5030 |
+
+- 1883 個 epoch 中，有 1275 個 epoch 的 train loss 比 valid loss 低。最後 400 個 epoch 的平均：valid 2.3761、train 1.9957。
+- checkpoint（第 1483 個 epoch）在整個訓練集上的真實 MSE 是 **1.7938**，印出的 train loss 是 1.8014。對照驗證集的真實 MSE 2.0685（ch03）。
+- stdout 共 1940 行。
+- **TensorBoard**：每次執行在 `runs/` 下產生一個目錄（例如 `Oct03_16-39-09_ValtecBlackwell`），裡面只有一個 `events.out.tfevents.…` 檔，約 184,720 bytes。scalar tag 只有 `Loss/train` 和 `Loss/valid`，各 1883 個點。橫軸是 `step`（累計的 batch 數），**不是 epoch**：第一個點在 step 9（第 1 個 epoch 跑了 9 個 batch），最後一個點在 step 16947 = 1883 × 9。
+
+### 「最佳 epoch」是被幸運的分組決定的（ch03 第三層偏差的直接證據）
+- 重建 train.py 每個 epoch 的 valid 打亂順序，拿第 1483 個 epoch 的 checkpoint 去量，用第 1483 個 epoch 的分組**正好重現 1.6611**，證明重建正確。
+  - 重建時要注意：先載入要評估的 checkpoint，再呼叫 same_seed。在 same_seed 之後多建立模型，會消耗全域亂數，打亂順序就對不上了（ch03 §3.4 的現象）。
+- 同一個模型配上 1883 種分組：第 1483 個 epoch 那一組排第 **7** 名（最低的是 1.6103，中位數 2.0471）。
+- **學習率改成 1e-6 的那次訓練，最佳也是第 1483 個 epoch（印出 1.818），也在第 1883 個 epoch 停止**。它的 checkpoint 在第 1483 個 epoch 的分組上排第 **5** 名（1.8176；中位數 2.2278）。學習率差 10 倍，「最佳」卻落在同一個 epoch：每個 epoch 的分組只由全域亂數決定，跟學習率無關，兩次訓練都在第 1483 個 epoch 碰到同一組特別幸運的分組。
+
+### 學習率與 momentum 的對照組（各改一處，其餘照原版）
+| 設定 | 最佳（印出） | 最佳 epoch | 停止 | 存檔次數 | 真實 valid MSE | 第一層沒在工作的單元 |
+|---|---|---|---|---|---|---|
+| 原版 lr 1e-5、momentum 0.9 | 1.661 | 1483 | 1883（early stop） | 49 | 2.0685 | 10/16 |
+| lr 1e-4 | 36.157 | 398 | 798（early stop） | 13 | **44.5095** | **16/16** |
+| lr 1e-6 | 1.818 | 1483 | 1883（early stop） | 76 | 2.2601 | 8/16 |
+| momentum 0 | 2.463 | 2816 | 3000（跑滿上限） | 59 | 2.9992 | 6/16 |
+
+- **lr 1e-4 整個壞掉**：第 1 個 epoch 的 train loss 是 **2005349.0116**（兩百萬），valid 112.8123；第 2 個 epoch 是 67.2213 / 64.5274，之後停在 40 左右。第一層 16 個單元全部沒在工作，所以模型對每一筆都輸出同一個數字 **9.731**（預測的標準差是 0），約等於訓練集答案的平均 9.7404。真實 MSE 44.5095，跟「永遠猜訓練集平均」的 44.5021、驗證集答案的變異數 44.346 幾乎一樣。這就是 ch04 的 dying ReLU 推到極端：學習率太大，第一步就把所有單元推死了。
+- 有一點要注意：lr 1e-4 的 early stop 機制照常運作，印出的 36.157 看起來只是「比較差」，從 log 看不出模型其實已經只會輸出常數。
+- momentum 0：同樣的學習率下，進步慢很多，3000 個 epoch 都沒觸發 early stop，最後的真實 MSE 2.9992 比原版差。
+- 四組同時在一張 GPU 上跑，各花了 base 38.6 s、lr1e-4 19.3 s、lr1e-6 38.1 s、mom0 56.8 s（單獨跑原版是 34.2 s，見上方「實測執行」）。
