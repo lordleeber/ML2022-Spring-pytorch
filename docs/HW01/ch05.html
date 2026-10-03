@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 5 章　訓練迴圈 — HW01 COVID-19 確診率預測</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch04.html">← 第 4 章</a><a href="ch06.html">第 6 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW01 讀碼教材</p>
+  <h1>第 5 章　訓練迴圈</h1>
+  <p class="chap-lead">前四章把資料切好、包成 batch、建好模型，一路把「怎麼訓練」往後推。本章逐行讀 <code>train.py</code> 第 27–96 行的 <code>trainer()</code>：loss 與優化器怎麼設定、每個 batch 的五個步驟各做了什麼、梯度是什麼、驗證時為什麼要切換模式、什麼時候存檔、什麼時候停。最後拿四組學習率與 momentum 的對照實驗，看一個超參數設錯時，loss 的紀錄能騙人到什麼程度。</p>
+</header>
+<main>
+
+<h2 id="where">5.1　本章在流程中的位置</h2>
+<p>train.py 的主程式（第 99–127 行）在第 2、3 章讀過：固定 seed、讀 CSV、切分、選特徵、包成 Dataset 與 DataLoader；第 4 章讀了第 126 行建立模型。主程式的最後一行，把這些東西全部交給 <code>trainer()</code>：</p>
+
+<figure class="listing"><figcaption>train.py:126–127 — 建立模型，交給 trainer()</figcaption>
+<pre class="py" data-hot="127"><code>    model = My_Model(input_dim=x_train.shape[1]).to(device)  # put your model and data on the same computation device.
+    trainer(train_loader, valid_loader, model, config, device)</code></pre></figure>
+
+<p><code>trainer()</code> 收五個參數：兩個 DataLoader（第 3 章）、已經在 GPU 上的模型（第 4 章）、config 字典（第 0 章），以及 <code>device</code>，也就是 config.py 的 <code>"cuda"</code>。它沒有回傳值：訓練的成果以兩種檔案的形式留在磁碟上，一個是 <code>models/model.ckpt</code>，一個是 <code>runs/</code> 底下的 TensorBoard 紀錄。整個函式的結構如下：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 340" role="img" aria-label="trainer 的結構：先做準備工作（第 29 到 43 行），再進入最多 3000 次的 epoch 迴圈；每個 epoch 依序做訓練（9 個 batch，每個 batch 更新一次權重）、驗證（3 個 batch，不更新）、判斷是否創新低並存檔、判斷是否連續 400 次沒進步而停止；訓練與驗證的 loss 寫進 runs 目錄，最佳模型寫進 models/model.ckpt">
+  <defs>
+    <marker id="ar5a" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#93a1af"/>
+    </marker>
+  </defs>
+  <rect x="20" y="14" width="860" height="46" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-lbl" x="36" y="35" font-weight="700">準備（第 29–43 行）</text>
+  <text class="s-sm" x="36" y="52">criterion = MSELoss、optimizer = SGD、writer = SummaryWriter()、建立 models/、best_loss = ∞、計數器歸零</text>
+  <line x1="450" y1="60" x2="450" y2="80" stroke="#93a1af" stroke-width="2" marker-end="url(#ar5a)"/>
+
+  <rect x="20" y="84" width="860" height="200" rx="10" fill="none" stroke="#a371f7" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text class="s-key" x="36" y="106" style="fill:#a371f7">for epoch in range(n_epochs)：最多 3000 次（第 45 行）</text>
+
+  <rect x="36" y="120" width="200" height="118" rx="8" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="136" y="142" text-anchor="middle" font-weight="700">訓練（第 47–68 行）</text>
+  <text class="s-mono" x="136" y="162" text-anchor="middle">model.train()</text>
+  <text class="s-sm" x="136" y="181" text-anchor="middle">9 個 batch，每個走五步驟</text>
+  <text class="s-sm" x="136" y="199" text-anchor="middle">權重更新 9 次</text>
+  <text class="s-mono" x="136" y="222" text-anchor="middle">Loss/train → 紀錄檔</text>
+
+  <rect x="256" y="120" width="196" height="118" rx="8" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="354" y="142" text-anchor="middle" font-weight="700">驗證（第 71–83 行）</text>
+  <text class="s-mono" x="354" y="162" text-anchor="middle">model.eval()、no_grad</text>
+  <text class="s-sm" x="354" y="181" text-anchor="middle">3 個 batch，不更新權重</text>
+  <text class="s-sm" x="354" y="199" text-anchor="middle">印出 Epoch [n/3000] 那行</text>
+  <text class="s-mono" x="354" y="222" text-anchor="middle">Loss/valid → 紀錄檔</text>
+
+  <rect x="472" y="120" width="190" height="118" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-lbl" x="567" y="142" text-anchor="middle" font-weight="700">存最佳（第 85–92 行）</text>
+  <text class="s-sm" x="567" y="164" text-anchor="middle">valid loss 創新低？</text>
+  <text class="s-sm" x="567" y="186" text-anchor="middle">是：torch.save、計數歸零</text>
+  <text class="s-sm" x="567" y="206" text-anchor="middle">否：計數 +1</text>
+
+  <rect x="682" y="120" width="182" height="118" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-lbl" x="773" y="142" text-anchor="middle" font-weight="700">停止？（第 94–96 行）</text>
+  <text class="s-sm" x="773" y="164" text-anchor="middle">計數 ≥ 400？</text>
+  <text class="s-sm" x="773" y="186" text-anchor="middle">是：return，訓練結束</text>
+  <text class="s-sm" x="773" y="206" text-anchor="middle">否：下一個 epoch</text>
+
+  <line x1="236" y1="179" x2="252" y2="179" stroke="#93a1af" stroke-width="2" marker-end="url(#ar5a)"/>
+  <line x1="452" y1="179" x2="468" y2="179" stroke="#93a1af" stroke-width="2" marker-end="url(#ar5a)"/>
+  <line x1="662" y1="179" x2="678" y2="179" stroke="#93a1af" stroke-width="2" marker-end="url(#ar5a)"/>
+  <path d="M773,238 L773,262 L136,262 L136,242" fill="none" stroke="#93a1af" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ar5a)"/>
+  <text class="s-sm" x="455" y="276" text-anchor="middle">下一個 epoch</text>
+
+  <rect x="140" y="300" width="14" height="14" fill="#e3b341"/>
+  <text class="s-sm" x="160" y="312">runs/…/events.out.tfevents…（兩條 loss 曲線）</text>
+  <rect x="520" y="300" width="14" height="14" fill="#e3b341"/>
+  <text class="s-sm" x="540" y="312">models/model.ckpt（每次創新低就覆寫）</text>
+</svg>
+<figcaption>圖 5.1 — trainer() 是「準備一次、然後每個 epoch 做四件事」：訓練 9 次更新、驗證一次、可能存檔、可能停止。權重只在綠色的訓練框裡改變；後面三框只量、只記、只判斷。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#3fb950"></i>GPU 上的運算（模型、tensor 計算）</span>
+  <span><i style="background:#a371f7"></i>控制與超參數（迴圈、判斷）</span>
+  <span><i style="background:#e3b341"></i>磁碟檔案</span>
+</div>
+
+<p>前面幾章有好幾件事明講「第 5 章再說」。本章逐一接住：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>前面留下的問題</th><th>出處</th><th>本章</th></tr></thead>
+<tbody>
+<tr><td>訓練五步驟 zero_grad → forward → loss → backward → step；梯度是什麼</td><td>第 3、4 章</td><td>5.4</td></tr>
+<tr><td>loss 用 MSE、優化器用 SGD；learning_rate、n_epochs、early_stop 三個超參數</td><td>第 0 章</td><td>5.2、5.8、5.10</td></tr>
+<tr><td><code>model.train()</code>／<code>model.eval()</code> 與 <code>with torch.no_grad()</code></td><td>第 3、4 章</td><td>5.3、5.6</td></tr>
+<tr><td>資料在迴圈裡每個 batch 用 <code>.to(device)</code> 搬上 GPU</td><td>第 2、3、4 章</td><td>5.4</td></tr>
+<tr><td>第 85、88 行：創新低才存檔、存的是 state_dict</td><td>第 3、4 章</td><td>5.7</td></tr>
+<tr><td>TensorBoard 的兩條曲線是怎麼寫進去的</td><td>第 0 章</td><td>5.9</td></tr>
+<tr><td>train loss 也是「各 batch 平均再平均」，而且一邊更新權重一邊記錄</td><td>第 3 章</td><td>5.5</td></tr>
+</tbody>
+</table></div>
+<p>第 3 章 3.5 節已經把 valid loss 的量法偏差（印出 1.661、真實 2.069）拆成三層講完，本章不再重講，遇到時回指；但 5.7 節會補上一個第 3 章沒有的新證據。</p>
+
+<h2 id="setup">5.2　準備工作：loss、優化器、SummaryWriter、models 目錄</h2>
+
+<figure class="listing"><figcaption>train.py:27–43 — trainer() 的準備工作</figcaption>
+<pre class="py" data-hot="29,34,37,43"><code>def trainer(train_loader, valid_loader, model, config, device):
+    # Define your loss function, do not modify this.
+    criterion = nn.MSELoss(reduction='mean')
+
+    # Define your optimization algorithm. 
+    # TODO: Please check https://pytorch.org/docs/stable/optim.html to get more available algorithms.
+    # TODO: L2 regularization (optimizer(weight decay...) or implement by your self).
+    optimizer = torch.optim.SGD(model.parameters(), lr=config['learning_rate'], momentum=0.9)
+
+    # Writer of tensorboard.
+    writer = SummaryWriter()
+
+    # Create directory of saving models.
+    if not os.path.isdir('./models'):
+        os.mkdir('./models')
+
+    n_epochs, best_loss, step, early_stop_count = config['n_epochs'], math.inf, 0, 0</code></pre></figure>
+
+<h3>第 29 行：criterion，量「錯多少」的尺</h3>
+<p><code>criterion</code>（評判標準）是一個 <code>nn.MSELoss</code> 物件。它和模型一樣是 <code>nn.Module</code>，所以也是用「呼叫物件」的方式使用：<code>criterion(pred, y)</code> 回傳 pred 與 y 的均方誤差，也就是第 0 章 0.1 節的 MSE 公式。<code>reduction='mean'</code> 是對 batch 裡每一筆的平方誤差取平均（第 3 章 3.5 節比較過 <code>'mean'</code> 與 <code>'sum'</code>），而且這正是預設值，寫出來只是讓人一眼看見。註解「不要修改這個」是作業規定：Kaggle 用 MSE 評分（第 0 章 0.1 節），訓練時最小化的東西就該是 MSE。</p>
+<p>這裡的 <code>nn</code> 是經由 <code>from model import *</code> 借來的（第 0 章 0.8 節），train.py 自己沒有 import torch.nn。</p>
+
+<h3>第 34 行：優化器，負責「改權重」的人</h3>
+<p>loss 只告訴你錯多少；真正動手改 2,033 個參數的是<strong>優化器（optimizer）</strong>。第 34 行建立的是 <code>torch.optim.SGD</code>，三個引數各有意義：</p>
+<ul>
+  <li><code>model.parameters()</code>：要它負責哪些參數。第 4 章 4.2 節說過，這會沿著模型的名冊列出全部 6 個參數 tensor（共 2,033 個數字）。優化器把它們記在自己身上，之後每次 <code>optimizer.step()</code> 就去改這些 tensor。<strong>沒交給它的參數，它不會改。</strong></li>
+  <li><code>lr=config['learning_rate']</code>：學習率（learning rate），每一步要走多大，HW01 是 <code>1e-5</code>（0.00001）。5.4 節會看到它在公式裡的位置，5.10 節看它改大改小的後果。</li>
+  <li><code>momentum=0.9</code>：動量，讓這一步也帶著前幾步的方向（5.4 節）。它寫死在這一行，不在 config 裡。</li>
+</ul>
+<p>SGD 是 stochastic gradient descent（隨機梯度下降）。「梯度下降」等一下解釋；「隨機」指的是每一步只看一個 batch，而不是整個訓練集：batch 是打亂後隨機組成的（第 3 章 3.4 節），所以每一步的方向都帶著一點隨機性。本機實測 <code>print(optimizer)</code>，可以看到它的全部設定：</p>
+<pre class="shell"><code>SGD (
+Parameter Group 0
+    dampening: 0
+    differentiable: False
+    foreach: None
+    fused: None
+    lr: 1e-05  «1»
+    maximize: False
+    momentum: 0.9  «1»
+    nesterov: False
+    weight_decay: 0  «2»
+)</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>第 34 行給的兩個值。其他都是預設：<code>dampening</code>、<code>nesterov</code> 是 momentum 的變形，<code>maximize</code> 是「改成往 loss 變大的方向走」，<code>foreach</code>／<code>fused</code>／<code>differentiable</code> 是實作方式的選項，都不改變 HW01 的算法。</li>
+  <li><span class="mk">2</span>weight decay 是 0。第 33 行的 TODO 提示的「L2 正則化」，用 SGD 內建的方式做，就是把這個值設成非 0（每一步順便把權重往 0 拉一點）。這是作業 boss 基準線（第 0 章 0.1 節的四條分數門檻之一）的提示之一，第 7 章再動它。</li>
+</ol>
+<p>「Parameter Group 0」表示這 2,033 個參數被分成一組，共用同一組設定。優化器允許把參數分成幾組、各用不同的學習率，HW01 用不到。</p>
+
+<h3>第 37 行：SummaryWriter</h3>
+<p><code>SummaryWriter</code> 從第 15 行 import 進來（<code>torch.utils.tensorboard</code>）。不帶參數建立時，它在目前目錄的 <code>runs/</code> 底下開一個新目錄，名字是「月日_時-分-秒_主機名」（第 0 章 0.7 節），之後寫進去的東西都放在那裡。它怎麼寫、寫了什麼，在 5.9 節。</p>
+
+<h3>第 40–41 行：先確定 models/ 存在</h3>
+<p>第 88 行存檔的路徑是 <code>./models/model.ckpt</code>（config 的 <code>save_path</code>）。<code>torch.save</code> 只會建立檔案、不會建立目錄，<code>models/</code> 不存在時存檔就會失敗，所以這兩行先檢查、沒有就建。路徑是相對路徑，相對的是「執行程式時所在的目錄」，這是第 0 章 0.5 節堅持要先 <code>cd HW01</code> 的原因之一：在 repo 根目錄執行，<code>models/</code> 會建在根目錄底下，而且一開始讀 CSV 就會先失敗。</p>
+
+<h3>第 43 行：四個計數用的變數</h3>
+<p>一行同時指定四個變數（右邊是 tuple，第 3 章）：</p>
+<ul>
+  <li><code>n_epochs</code> = 3000：最多跑幾個 epoch。這是<strong>上限</strong>，不是一定會跑完；HW01 在第 1883 個 epoch 就停了（5.8 節）。</li>
+  <li><code>best_loss</code> = <code>math.inf</code>：目前看過最低的 valid loss。<code>math.inf</code> 是 Python 的「無限大」（第 2 行 <code>import math</code> 就是為了它），任何數字都比它小，所以第 1 個 epoch 一定創新低、一定存檔——第 0 章看到的第一個 <code>Saving model with loss 107.215...</code>。</li>
+  <li><code>step</code> = 0：到目前為止更新了幾次權重，給 TensorBoard 當橫軸用（5.9 節）。</li>
+  <li><code>early_stop_count</code> = 0：連續幾個 epoch 沒有創新低（5.8 節）。</li>
+</ul>
+
+<h2 id="epoch">5.3　epoch 迴圈與 model.train()</h2>
+
+<figure class="listing"><figcaption>train.py:45–51 — 每個 epoch 的開頭</figcaption>
+<pre class="py" data-hot="45,47,51"><code>    for epoch in range(n_epochs):
+        # Set your model to train mode.
+        model.train()
+        loss_record = []
+
+        # tqdm is a package to visualize your training progress.
+        train_pbar = tqdm(train_loader, position=0, leave=True)</code></pre></figure>
+
+<p>第 45 行的 epoch 從 0 數到 2999；印出來時都寫成 <code>epoch+1</code>，所以畫面上是 1 到 3000。</p>
+<p>第 47 行 <code>model.train()</code> 把模型切成<strong>訓練模式</strong>。它做的事很單純：把模型和所有子模組的 <code>training</code> 旗標設成 <code>True</code>。有些層在訓練與評估時行為不同（第 4 章提過的 Dropout，以及 BatchNorm），它們看這個旗標決定怎麼算；Linear 與 ReLU 不看。所以對 HW01 來說它<strong>不改變任何計算</strong>：本機實測，同一個 batch 在 <code>model.train()</code> 與 <code>model.eval()</code> 下的輸出完全相同（<code>torch.equal</code> 為 True）。本機也實測，模型剛建立時 <code>model.training</code> 就已經是 True，預設就是訓練模式。</p>
+<p>那為什麼每個 epoch 都要寫？因為這個 epoch 的結尾會呼叫 <code>model.eval()</code>（第 71 行），把旗標切成 False；下一個 epoch 開頭若不切回來，後面的訓練就全在評估模式下進行。在 HW01 這不會出事，但模型裡一旦加了 Dropout（第 7 章改模型時可能會加），訓練就會悄悄變成「沒有 Dropout 的訓練」。<code>train()</code> 與 <code>eval()</code> 成對出現、每個 epoch 都切換，是 PyTorch 訓練迴圈的固定寫法。</p>
+<p>第 48 行準備一個空 list，收集這個 epoch 每個 batch 的 loss。第 51 行用 tqdm 把 train_loader 包起來：<code>tqdm(...)</code> 回傳的東西照樣可以用 for 迭代，一次給一個 batch，只是每給一個就順便更新進度條。<code>leave=True</code> 讓跑完的進度條留在畫面上，所以第 0 章看到的是每個 epoch 一條；<code>position=0</code> 是有好幾條進度條同時存在時的排列位置，這裡只有一條。</p>
+
+<h2 id="steps">5.4　訓練五步驟：一個 batch 怎麼讓模型變好一點</h2>
+
+<figure class="listing"><figcaption>train.py:53–59 — 每個 batch 的五個步驟</figcaption>
+<pre class="py" data-hot="54,55,56,57,58,59"><code>        for x, y in train_pbar:
+            optimizer.zero_grad()               # Set gradient to zero.
+            x, y = x.to(device), y.to(device)   # Move your data to device. 
+            pred = model(x)             
+            loss = criterion(pred, y)
+            loss.backward()                     # Compute gradient(backpropagation).
+            optimizer.step()                    # Update parameters.</code></pre></figure>
+
+<p>這七行是整本書的核心。每個 epoch，這個迴圈跑 9 次（train 有 9 個 batch，第 3 章），每跑一次模型的 2,033 個參數就改一次。要讀懂這七行，得先知道它們在追求什麼：<strong>梯度</strong>。</p>
+
+<h3>梯度是什麼</h3>
+<p>第 4 章 4.3 節給過一句話的定義：梯度是「這個參數往哪個方向改一點，loss 會降多少」。展開來說：</p>
+<p>挑模型裡的某一個參數 w，其他 2,032 個都不動，只把 w 加上一個很小的量 ε，loss 會跟著變一點。在 ε 很小的時候，loss 的變化量大約和 ε 成正比：</p>
+<div class="eq">loss 的變化 ≈ g × ε<br>
+<span style="font-size:.9em">g 叫做 loss 對 w 的<strong>偏導數</strong>（partial derivative），也就是 w 這個方向上的「斜率」</span></div>
+<p>g 是正的，表示 w 變大 loss 會變大，所以應該把 w 調小；g 是負的，就該調大；g 的絕對值越大，表示 loss 對 w 越敏感。把 2,033 個參數各自的 g 收集起來，就是 loss 對整個模型的<strong>梯度（gradient）</strong>。在 PyTorch 裡，每個參數的梯度存在它的 <code>.grad</code> 屬性，形狀和參數本身相同：<code>layers.0.weight</code> 是 (16, 117)，它的 <code>.grad</code> 也是 (16, 117)，一個參數對應一個斜率。</p>
+<p>有了梯度，「讓 loss 變小」就有了最直接的作法：每個參數都往自己斜率的反方向走一小步。</p>
+<div class="eq">w ← w − lr × g</div>
+<p>這就是<strong>梯度下降（gradient descent）</strong>，lr 就是第 34 行的學習率。為什麼只走「一小步」？因為斜率只描述 w 附近的情況：走遠了，地形可能已經不同，原本往下的方向可能變成往上。lr 決定了一步走多遠，5.10 節會看到走太遠的後果。</p>
+<p>剩下的問題是：2,033 個斜率怎麼算？一個一個去加 ε 試，要跑 2,033 次 forward，太慢。PyTorch 用的方法是<strong>自動微分（autograd）</strong>：forward 時記下每一步運算，backward 時沿著記錄倒著走一遍，一次算出全部的梯度。下面五個步驟就是這件事的流程。</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 300" role="img" aria-label="五個步驟各自讀寫什麼：zero_grad 把 .grad 清成 None；forward 搬資料、算預測並建出計算圖；loss 算出 MSE，第一個 batch 是 508.85；backward 沿計算圖反向算出梯度、寫進每個參數的 .grad，計算圖用完釋放；step 讀取 .grad，更新 momentum buffer，再修改權重。權重只在第五步改變">
+  <text class="s-sm" x="14" y="62">步驟</text>
+  <rect x="120" y="20" width="145" height="112" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-key" x="192.5" y="44" text-anchor="middle" style="fill:#a371f7">① zero_grad</text>
+  <text class="s-sm" x="192.5" y="64" text-anchor="middle">第 54 行</text>
+  <text class="s-lbl" x="192.5" y="90" text-anchor="middle">清掉上一步梯度</text>
+  <text class="s-mono" x="192.5" y="114" text-anchor="middle">.grad → None</text>
+  <rect x="274" y="20" width="145" height="112" rx="8" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-key" x="346.5" y="44" text-anchor="middle" style="fill:#3fb950">② forward</text>
+  <text class="s-sm" x="346.5" y="64" text-anchor="middle">第 55–56 行</text>
+  <text class="s-lbl" x="346.5" y="90" text-anchor="middle">搬上 GPU 算預測</text>
+  <text class="s-mono" x="346.5" y="114" text-anchor="middle">順手建出計算圖</text>
+  <rect x="428" y="20" width="145" height="112" rx="8" class="s-box" style="stroke:#f85149"/>
+  <text class="s-key" x="500.5" y="44" text-anchor="middle" style="fill:#f85149">③ loss</text>
+  <text class="s-sm" x="500.5" y="64" text-anchor="middle">第 57 行</text>
+  <text class="s-lbl" x="500.5" y="90" text-anchor="middle">用 MSE 量差距</text>
+  <text class="s-mono" x="500.5" y="114" text-anchor="middle">第 1 批：508.85</text>
+  <rect x="582" y="20" width="145" height="112" rx="8" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-key" x="654.5" y="44" text-anchor="middle" style="fill:#3fb950">④ backward</text>
+  <text class="s-sm" x="654.5" y="64" text-anchor="middle">第 58 行</text>
+  <text class="s-lbl" x="654.5" y="90" text-anchor="middle">反向算出梯度</text>
+  <text class="s-mono" x="654.5" y="114" text-anchor="middle">填進每個 .grad</text>
+  <rect x="736" y="20" width="145" height="112" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-key" x="808.5" y="44" text-anchor="middle" style="fill:#a371f7">⑤ step</text>
+  <text class="s-sm" x="808.5" y="64" text-anchor="middle">第 59 行</text>
+  <text class="s-lbl" x="808.5" y="90" text-anchor="middle">依梯度改權重</text>
+  <text class="s-mono" x="808.5" y="114" text-anchor="middle">w ← w − lr·buf</text>
+  <line x1="265" y1="76" x2="273" y2="76" stroke="#93a1af" stroke-width="2"/>
+  <line x1="419" y1="76" x2="427" y2="76" stroke="#93a1af" stroke-width="2"/>
+  <line x1="573" y1="76" x2="581" y2="76" stroke="#93a1af" stroke-width="2"/>
+  <line x1="727" y1="76" x2="735" y2="76" stroke="#93a1af" stroke-width="2"/>
+  <text class="s-lbl" x="14" y="170">.grad</text>
+  <text class="s-lbl" x="14" y="200">計算圖</text>
+  <text class="s-lbl" x="14" y="230">權重 W</text>
+  <text class="s-lbl" x="14" y="260">momentum</text>
+  <line x1="14" y1="179" x2="881" y2="179" stroke="#93a1af" stroke-width="0.5" opacity="0.5"/>
+  <text class="s-sm" x="192.5" y="170" text-anchor="middle">None</text>
+  <text class="s-sm" x="346.5" y="170" text-anchor="middle">None</text>
+  <text class="s-sm" x="500.5" y="170" text-anchor="middle">None</text>
+  <text class="s-lbl" x="654.5" y="170" text-anchor="middle">寫入梯度</text>
+  <text class="s-sm" x="808.5" y="170" text-anchor="middle">被讀取</text>
+  <line x1="14" y1="209" x2="881" y2="209" stroke="#93a1af" stroke-width="0.5" opacity="0.5"/>
+  <text class="s-sm" x="192.5" y="200" text-anchor="middle">—</text>
+  <text class="s-lbl" x="346.5" y="200" text-anchor="middle">建立</text>
+  <text class="s-sm" x="500.5" y="200" text-anchor="middle">延伸到 loss</text>
+  <text class="s-sm" x="654.5" y="200" text-anchor="middle">用完釋放</text>
+  <text class="s-sm" x="808.5" y="200" text-anchor="middle">—</text>
+  <line x1="14" y1="239" x2="881" y2="239" stroke="#93a1af" stroke-width="0.5" opacity="0.5"/>
+  <text class="s-sm" x="192.5" y="230" text-anchor="middle">不變</text>
+  <text class="s-sm" x="346.5" y="230" text-anchor="middle">被讀取</text>
+  <text class="s-sm" x="500.5" y="230" text-anchor="middle">—</text>
+  <text class="s-sm" x="654.5" y="230" text-anchor="middle">—</text>
+  <text class="s-lbl" x="808.5" y="230" text-anchor="middle">被修改</text>
+  <line x1="14" y1="269" x2="881" y2="269" stroke="#93a1af" stroke-width="0.5" opacity="0.5"/>
+  <text class="s-sm" x="192.5" y="260" text-anchor="middle">—</text>
+  <text class="s-sm" x="346.5" y="260" text-anchor="middle">—</text>
+  <text class="s-sm" x="500.5" y="260" text-anchor="middle">—</text>
+  <text class="s-sm" x="654.5" y="260" text-anchor="middle">—</text>
+  <text class="s-lbl" x="808.5" y="260" text-anchor="middle">0.9·buf + grad</text>
+  <text class="s-sm" x="14" y="290">每個 batch 依序走一遍這五步；HW01 每個 epoch 9 個 batch，跑到第 1883 個 epoch 停止，共更新 16,947 次。</text>
+</svg>
+<figcaption>圖 5.2 — 五個步驟各碰哪些東西（buf 是第 ⑤ 步才介紹的 momentum buffer，計算圖在第 ② 步介紹，可以先讀完五小節再回來看這張圖）。前四步都只是在「算」：清梯度、算預測、算 loss、算梯度；只有第 5 步真的改了權重。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#a371f7"></i>控制：清空與更新的動作</span>
+  <span><i style="background:#3fb950"></i>GPU 上的運算</span>
+  <span><i style="background:#f85149"></i>loss（預測與答案的差距）</span>
+</div>
+
+<p>以下逐步拆開。本機照 train.py 的順序（same_seed → 切分 → DataLoader → 建立模型）準備好一切，拿第 1 個 epoch 的第 1 個 batch 一步一步執行、每步之後檢查狀態；所以下面的數字就是 train.py 真正跑的那第一步。</p>
+
+<h3>① 第 54 行 optimizer.zero_grad()：清掉上一步的梯度</h3>
+<p>第一步是清除。PyTorch 的 backward 不會覆寫 <code>.grad</code>，而是把新算出的梯度<strong>加</strong>到原有的值上。本機另做了一個實驗（不是下面那第一步的狀態）：模型不動，對同一個 batch 算兩次 loss、做兩次 backward，中間不清，最後一層 bias 的 grad 從 −57.9991 變成 −115.9982，剛好 2 倍。所以每個 batch 開始前要先清掉上一個 batch 留下的梯度，否則這一步會帶著之前所有 batch 的梯度總和去更新。</p>
+<p>「清掉」在今天的 PyTorch 是把 <code>.grad</code> 設成 <code>None</code>，不是填 0（<code>zero_grad</code> 的 <code>set_to_none</code> 參數預設為 True，省掉一次寫 0 的工夫）。本機實測，還沒做過任何 backward 時 <code>layers.0.weight.grad</code> 就是 None，呼叫 <code>zero_grad()</code> 之後仍是 None。</p>
+<p>為什麼不乾脆讓 backward 每次覆寫？因為「累加」有它的用處：記憶體放不下大 batch 時，可以連續對幾個小 batch 做 backward、讓梯度累加起來，再 step 一次，效果接近一個大 batch。代價就是平常每一步都得自己清。</p>
+
+<h3>② 第 55–56 行：搬上 GPU，算出預測</h3>
+<p>第 55 行兌現了第 2、3、4 章的說法：資料在這裡才搬上 GPU。DataLoader 交出的 x、y 在 CPU（第 3 章 3.4 節：pin_memory 只換一種記憶體，device 仍是 cpu）；模型在第 126 行已經搬上 GPU。一次運算的所有 tensor 必須在同一個裝置上（第 4 章 4.5 節），所以每個 batch 都要先搬。<code>x.to(device)</code> 回傳的是 GPU 上的新 tensor（複製，第 3 章），必須用 <code>x, y = …</code> 接住。整個 train loader 只有 2,160 筆，其實可以一開始全部搬上 GPU，但「每個 batch 搬一次」是通用寫法：資料大到 GPU 放不下時也能用。</p>
+<p>第 56 行 <code>pred = model(x)</code> 就是第 4 章圖 4.2 的整條呼叫鏈，輸出 (256,) 的預測。這裡多了一件第 4 章沒講的事：<strong>forward 的同時，PyTorch 在記帳</strong>。因為參數的 <code>requires_grad</code> 是 True（第 4 章 4.3 節），凡是用到它們的運算，PyTorch 都會記下「這個結果是由哪個運算、從哪些輸入算出來的」。這些記錄連起來，叫<strong>計算圖（computational graph）</strong>：起點是參數與輸入，經過 Linear、ReLU、squeeze，一路連到 pred。</p>
+<p>本機實測，<code>pred.requires_grad</code> 是 True，<code>pred.grad_fn</code> 是 <code>SqueezeBackward1</code>。<code>grad_fn</code> 指向「產生這個 tensor 的那個運算」在計算圖裡的節點：pred 是 <code>squeeze(1)</code> 算出來的（model.py 第 24 行），所以是 Squeeze。名字裡的 Backward 表示這個節點知道「反向時該怎麼算」。</p>
+
+<h3>③ 第 57 行：算 loss</h3>
+<p><code>loss = criterion(pred, y)</code> 算出這個 batch 的 MSE，計算圖也延伸到 loss。本機實測，第 1 個 batch 的 loss 逐字是：</p>
+<pre class="shell"><code>tensor(508.8512, device='cuda:0', grad_fn=&lt;MseLossBackward0&gt;)</code></pre>
+<p>三個資訊：值 508.8512（還沒訓練的模型，平均每筆偏了 √509 ≈ 22.6 個百分點）；它在 GPU 上；它由 MSE 運算產生，是計算圖的終點。<code>loss.item()</code> 是 508.8511657714844，和自己用 <code>((pred-y)**2).mean()</code> 算的完全相同，<code>MSELoss</code> 沒有任何神秘之處。第 2 個 batch 的 loss 是 136.3234：第 1 步之後，模型已經好了很多。</p>
+<p>注意 loss 是一個 0 維 tensor（第 3 章），一個數字。這很重要：梯度是「這一個數字」對每個參數的斜率，backward 只能從一個數字出發。這也是 <code>reduction='mean'</code> 的另一層意義：把 256 個平方誤差合成一個數。</p>
+
+<h3>④ 第 58 行 loss.backward()：反向算出所有梯度</h3>
+<p><code>loss.backward()</code> 從 loss 出發，沿計算圖<strong>倒著</strong>走回每個參數。每經過一個節點，就用該運算的局部斜率把梯度往前傳一層：loss 對 pred 的斜率，乘上 pred 對最後一層輸出的斜率，再乘上那一層對它的權重的斜率……這種「斜率一層一層相乘」的規則是微積分的<strong>連鎖律（chain rule）</strong>，用在神經網路上的這套倒著算的方法叫<strong>反向傳播（backpropagation）</strong>。走完之後，每個參數的 <code>.grad</code> 都有了值。本機實測第 1 個 batch backward 之後：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>參數</th><th>grad 形狀</th><th>梯度的範數（全部平方加總再開根號）</th><th>最大的 |g|</th></tr></thead>
+<tbody>
+<tr><td><code>layers.0.weight</code></td><td>(16, 117)</td><td>15824.6025</td><td>8688.2920</td></tr>
+<tr><td><code>layers.0.bias</code></td><td>(16,)</td><td>8.7824</td><td>4.9981</td></tr>
+<tr><td><code>layers.2.weight</code></td><td>(8, 16)</td><td>6073.4746</td><td>2242.7007</td></tr>
+<tr><td><code>layers.2.bias</code></td><td>(8,)</td><td>21.4800</td><td>12.7494</td></tr>
+<tr><td><code>layers.4.weight</code></td><td>(1, 8)</td><td>2681.5046</td><td>1831.3115</td></tr>
+<tr><td><code>layers.4.bias</code></td><td>(1,)</td><td>38.5490</td><td>38.5490</td></tr>
+</tbody>
+</table></div>
+<p>每個 grad 的形狀都和第 4 章 4.3 節的參數表一模一樣。第一層 weight 的梯度遠大於它的 bias，原因在下一小節。</p>
+<p>backward 做完，計算圖就被釋放了（中間結果佔的記憶體跟著還回去）。本機實測，對同一張圖再 backward 一次會報錯，開頭是：</p>
+<pre class="shell"><code>RuntimeError: Trying to backward through the graph a second time (or directly access saved tensors after they have already been freed).</code></pre>
+<p>所以前面「backward 兩次、梯度變 2 倍」的實驗，第二次要重新 forward、重新算 loss，建一張新圖。訓練迴圈每個 batch 本來就會重新 forward，正好每次一張新圖、用完即丟。</p>
+
+<h3>為什麼 id 欄的梯度特別大</h3>
+<p>第一層的輸出是 out[n, j] = Σ<sub>i</sub> x[n, i] · W[j, i] + b[j]（第 4 章圖 4.1）。W[j, i] 動一點 ε，out[n, j] 就動 x[n, i] · ε：<strong>這個權重的局部斜率就是它乘的那個輸入 x[n, i]</strong>。連鎖律再把它乘上「下游」（從這一層往 loss 那一端）傳回來的斜率；loss 是 batch 裡 256 筆誤差的平均，每一筆都經由這個權重影響 loss，所以梯度是每一筆的貢獻加總（再除以 256），所以第一層權重的梯度，和它所乘那一欄的數值大小大致成正比。第 1 章 1.4 節說「梯度和那欄的數值大小成正比」，說的就是這一步。</p>
+<p>本機實測第 1 個 batch：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>id 欄</th><th>其他 116 欄的平均</th><th>倍數</th></tr></thead>
+<tbody>
+<tr><td>這個 batch 的平均 |x|</td><td>1348.7</td><td>15.75</td><td>約 86 倍</td></tr>
+<tr><td>第一層 weight 梯度的平均 |g|</td><td>2602.08</td><td>24.13</td><td><strong>約 108 倍</strong></td></tr>
+</tbody>
+</table></div>
+<p>兩個倍數在同一個量級，不完全相等，因為梯度還乘上了下游傳回來的斜率，每筆資料各不相同。bias 沒有乘任何輸入（等於乘 1），所以第一層 bias 的梯度小得多（範數 8.78 對 weight 的 15824.6）。</p>
+<p>同一個式子也解釋了第 4 章 4.7 節「死掉的 ReLU 回不來」：ReLU 在輸入為負時輸出固定是 0，它的局部斜率是 0；連鎖律一路相乘，傳到那個單元的權重時就是 0，<code>step</code> 時那些權重一動也不動。</p>
+
+<h3>⑤ 第 59 行 optimizer.step()：依梯度改權重</h3>
+<p><code>step()</code> 走過第 34 行交給它的每個參數，讀它的 <code>.grad</code>，依 SGD 的規則修改參數。有 momentum 時，PyTorch 的 SGD 對每個參數多存一個同形狀的 <strong>momentum buffer</strong>（記在 optimizer 身上，不在模型裡），規則是：</p>
+<div class="eq">buf ← 0.9 × buf ＋ grad<br>w ← w − lr × buf<br>
+<span style="font-size:.9em">第一步時 buf 還不存在，直接令 buf ＝ grad</span></div>
+<p>本機逐步驗證了這兩行：第一步之後 buffer 等於這一步的 grad（<code>torch.allclose</code> 為 True）；第二步照上面的公式手算，和 PyTorch 實際的結果吻合。buf 是梯度的累積：每一步把舊的 buf 打九折、再加上新的梯度。梯度方向一致時，buf 會越積越大（一直同方向時最多累積到約 1 ÷ (1 − 0.9) = 10 倍的梯度，這是公式推得的上限，不是實測），步伐跟著變大；方向來回擺盪時，正負互相抵銷，步伐變小。它像一顆有慣性的球：被同一個方向一直推就加速，被左右亂推就不太動。每一步只看一個 batch 的梯度帶著雜訊（SGD 的「隨機」），momentum 等於把最近幾十步的梯度平均起來用。</p>
+
+<h3>第一步：id 欄的權重一步走完整個初始範圍</h3>
+<p>第一步沒有歷史可言，buf 就是 grad，所以第一步就是最樸素的 w ← w − 1e-5 × grad。本機實測，第一步權重的變化量 Δw 和 −lr × grad 最大只差 7.45e-09（浮點數誤差）。</p>
+<p>把數字代進去：第一層 weight 最大的 |g| 是 8688.2920，乘上 1e-5 是 0.0869。本機實測第一步第一層最大的 |Δw| 正是 <strong>0.0869，而且就在 id 欄</strong>。第 4 章 4.4 節看過，第一層的初始權重在 ±0.0925 之內：<strong>只走一步，id 欄的權重就移動了幾乎一整個初始範圍</strong>，其他欄的梯度小了約百倍，移動量也小了約百倍。第 4 章 4.7 節看到訓練完的 id 權重平均 |w| 是 0.22643、遠超出初始範圍，起點就在這裡：id 欄從第一步開始就被推得最猛。</p>
+<p>反過來看，lr = 1e-5 這個看起來小得出奇的值，其實是被 id 欄逼出來的：梯度動輒幾千，學習率只要大一點，一步就會走出很遠（5.10 節的 lr 1e-4 就是這樣壞掉的）。輸入標準化之後，梯度的量級會正常得多，學習率也就能用比較常見的大小——這是第 7 章的事。</p>
+
+<div class="note"><h4>現在的做法：五步驟不變，周邊多了幾樣</h4>
+<ul>
+  <li><strong>五步驟本身沒有過時。</strong>2026 年手寫 PyTorch 訓練迴圈，核心仍是 zero_grad → forward → loss → backward → step。<code>zero_grad</code> 放在 backward 之前任何位置都可以，常見的另一種寫法是放在 step 之後。</li>
+  <li><strong>優化器的預設選擇多半是 AdamW。</strong>它替每個參數依梯度的歷史自動調整步幅，對輸入尺度、學習率都比 SGD 寬容。SGD＋momentum 仍然常用，但很少是第一個嘗試的。換優化器是作業 strong 基準線的提示之一，第 7 章實測。</li>
+  <li><strong>梯度裁剪（gradient clipping）。</strong>在 backward 與 step 之間加一行 <code>torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)</code>，梯度的總範數超過上限時等比例縮小，防止某一步走得太遠。第 1 個 batch 第一層 weight 的梯度範數就有一萬多，這類情況正是它的用途。</li>
+</ul>
+</div>
+
+<h2 id="trainloss">5.5　記錄 train loss：邊更新、邊記錄</h2>
+
+<figure class="listing"><figcaption>train.py:60–68 — 記錄與顯示 train loss</figcaption>
+<pre class="py" data-hot="61,65,67,68"><code>            step += 1
+            loss_record.append(loss.detach().item())
+            
+            # Display current epoch number and loss on tqdm progress bar.
+            train_pbar.set_description(f'Epoch [{epoch+1}/{n_epochs}]')
+            train_pbar.set_postfix({'loss': loss.detach().item()})
+
+        mean_train_loss = sum(loss_record)/len(loss_record)
+        writer.add_scalar('Loss/train', mean_train_loss, step)</code></pre></figure>
+
+<p>第 60 行的 <code>step</code> 每個 batch 加 1，是全域的更新次數，5.9 節用。第 61 行把這個 batch 的 loss 記進 list。<code>.item()</code> 把 0 維 tensor 取成 Python 數字（第 3 章），順便從 GPU 拿回 CPU。前面的 <code>.detach()</code> 是「取出一個不連在計算圖上的版本」；其實 <code>.item()</code> 回傳的已經是一個普通的 Python float，和計算圖毫無關係，所以這裡的 detach 是多餘但無害的。真正要避免的是另一種寫法：<code>loss_record.append(loss)</code>，直接把 tensor 存進 list。那樣每個 loss 都還連著它的計算圖，list 留著多少個 loss，就留著多少份中間結果不能釋放。</p>
+<p>第 64–65 行更新進度條：<code>set_description</code> 設定左邊的文字 <code>Epoch [1/3000]</code>，<code>set_postfix</code> 設定右邊的 <code>loss=…</code>，顯示的是<strong>這一個 batch</strong>的 loss。所以第 1 個 epoch 的進度條，跑完第 1 個 batch 時短暫顯示 <code>loss=509</code>（508.8512，tqdm 取 3 位有效數字），第 2 個時是 <code>loss=136</code>，最後停在第 9 個 batch 的值，也就是第 0 章看到的 <code>loss=60.4</code>。第 0 章自我測驗第 5 題說「第 1 個 epoch 裡 loss 下降得很快」，前兩個 batch 的 509 與 136 就是具體的樣子。</p>
+
+<h3>第 67 行：mean_train_loss 量的是什麼</h3>
+<p>第 67 行把 9 個 batch 的 loss 加總除以 9，和第 3 章 3.5 節讀過的 valid loss（第 81 行）是同一種「平均的平均」：train 最後一個 batch 只有 112 筆，卻和 256 筆的 batch 佔一樣的份量。但 train loss 還有一個 valid loss 沒有的特性：<strong>9 個 batch 的 loss 來自 9 個不同的模型</strong>。每個 batch 先算 loss、再 step，所以第 k 個 batch 的 loss 是「被前 k−1 步改過的模型」量的，量完這個模型又被改了一次。mean_train_loss 是整個 epoch 裡一路變化的模型的平均表現，不是任何一個固定模型的 MSE。</p>
+<p>第 1 個 epoch 最能看出這一點：第一個 batch 的 loss 是 509，第 9 個是 60.4，平均出來的 train loss 是 134.2442；而 epoch 結束時（已經更新 9 次的模型）量到的 valid loss 是 107.2155。train loss 比 valid loss 高，不是模型在驗證集上表現比較好，而是 train loss 包含了 epoch 開頭那幾個還很差的模型。</p>
+<p>訓練後段每一步改得很少，這個落差就小了。本機實測，第 1483 個 epoch 印出的 train loss 是 1.8014；把那個 epoch 結束時存下的 checkpoint 拿到整個訓練集上一次算完，真實 MSE 是 1.7938，差距只有 0.008。對照驗證集：同一個 checkpoint 的真實 valid MSE 是 2.0685（第 3 章）。</p>
+<p>拿整個訓練過程來看，1,883 個 epoch 裡有 1,275 個 epoch 的 train loss 比 valid loss 低；最後 400 個 epoch，valid loss 平均 2.3761、train loss 平均 1.9957。模型在見過的資料上表現比較好，這很正常；兩者的差距，以及 valid loss 本身的雜訊（第 3 章），是第 7 章改進時要一起看的。</p>
+<p>第 68 行把 mean_train_loss 寫進 TensorBoard，5.9 節再談。</p>
+
+<h2 id="eval">5.6　驗證：model.eval() 與 torch.no_grad()</h2>
+
+<figure class="listing"><figcaption>train.py:70–83 — 每個 epoch 結尾的驗證</figcaption>
+<pre class="py" data-hot="71,75,82,83"><code>        # Set your model to evaluation mode.
+        model.eval()
+        loss_record = []
+        for x, y in valid_loader:
+            x, y = x.to(device), y.to(device)
+            with torch.no_grad():
+                pred = model(x)
+                loss = criterion(pred, y)
+
+            loss_record.append(loss.item())
+            
+        mean_valid_loss = sum(loss_record)/len(loss_record)
+        print(f'Epoch [{epoch+1}/{n_epochs}]: Train loss: {mean_train_loss:.4f}, Valid loss: {mean_valid_loss:.4f}')
+        writer.add_scalar('Loss/valid', mean_valid_loss, step)</code></pre></figure>
+
+<p>第 3 章 3.5 節讀過這一段的中間（第 72–81 行），當時把 <code>model.eval()</code>、<code>with torch.no_grad()</code>、<code>.to(device)</code> 留到本章。第 74 行的 <code>.to(device)</code> 和第 55 行相同。另外兩個：</p>
+
+<h3>第 71 行 model.eval()</h3>
+<p>把 <code>training</code> 旗標設成 False，是第 47 行的反向操作（5.3 節）。HW01 沒有 Dropout 或 BatchNorm，兩種模式輸出完全相同；寫它是為了正確性的習慣，一換模型就會用上。注意 <code>eval()</code> <strong>不會</strong>停止梯度計算，它只管那個旗標；停止梯度的是下一個。</p>
+
+<h3>第 75 行 with torch.no_grad()</h3>
+<p><code>with</code> 區塊裡的運算，PyTorch 不記帳：不建計算圖。本機實測，在 no_grad 裡算出的 <code>pred.requires_grad</code> 是 False、<code>grad_fn</code> 是 None，就算參數本身的 requires_grad 仍是 True。驗證只要 loss 的數值，不需要 backward，記帳只是浪費記憶體與時間。</p>
+<p>它同時是一道保險：在 no_grad 裡算出的 loss 根本沒有計算圖可以倒著走。本機實測，對它呼叫 backward 會直接報錯：</p>
+<pre class="shell"><code>RuntimeError: element 0 of tensors does not require grad and does not have a grad_fn</code></pre>
+<p>驗證迴圈裡沒有 <code>zero_grad</code>、<code>backward</code>、<code>step</code>，所以權重不會被驗證資料改動。這就是第 0 章說驗證集是「模型訓練時沒看過」的意思：模型確實「看過」這 539 筆（算了預測），但從沒依它們修改過任何參數。</p>
+<p>第 79 行不用 detach，因為 no_grad 下的 loss 本來就不連著計算圖。第 81 行的平均方式與它造成的偏差，是第 3 章 3.5 節的主題，這裡不重講。第 82 行印出第 0 章看過的那一行 <code>Epoch [1/3000]: Train loss: 134.2442, Valid loss: 107.2155</code>，第 83 行把 valid loss 寫進 TensorBoard。</p>
+
+<div class="note"><h4>現在的做法：純推論用 torch.inference_mode()</h4>
+<p>PyTorch 1.9 加入的 <code>torch.inference_mode()</code> 用法和 <code>no_grad()</code> 一樣（<code>with torch.inference_mode():</code>），關掉的記帳比 no_grad 更徹底，所以稍快一些；代價是在裡面產生的 tensor 之後不能再拿去參與需要梯度的計算。驗證與預測正好符合這個條件。HW01 這麼小的模型量不出差別，原程式的 no_grad 也完全正確。至於驗證 loss 本身的量法，第 3 章 3.5 節「現在的做法」已經給了修正版本。</p>
+</div>
+
+<h2 id="save">5.7　存最佳模型：創新低才存</h2>
+
+<figure class="listing"><figcaption>train.py:85–92 — valid loss 創新低時存檔</figcaption>
+<pre class="py" data-hot="85,88,89"><code>        if mean_valid_loss &lt; best_loss:
+            best_loss = mean_valid_loss
+            # Save your best model
+            torch.save(model.state_dict(), config['save_path'])
+            print('Saving model with loss {:.3f}...'.format(best_loss))
+            early_stop_count = 0
+        else: 
+            early_stop_count += 1</code></pre></figure>
+
+<p>第 85 行比較這個 epoch 的 valid loss 和目前的最低紀錄，嚴格小於才算創新低。是的話：更新紀錄（第 86 行）、存檔（第 88 行）、印一行（第 89 行）、把連續沒進步的計數歸零（第 90 行）；不是的話計數加 1（第 92 行）。</p>
+<p>第 88 行存的是 <code>model.state_dict()</code>，第 4 章 4.3 節看過的那個「名字 → tensor」字典，6 個 key，共 2,033 個數字。<code>torch.save</code> 把它序列化寫進 <code>./models/model.ckpt</code>，每次都寫同一個路徑，所以<strong>新的最佳會覆蓋舊的最佳</strong>，訓練結束時檔案裡只有最後一次創新低的模型。只存 state_dict、不存整個模型物件，是 PyTorch 官方建議的做法：檔案裡只有數字，載入時由 model.py 重建結構再填回去（第 4 章 4.8 節、第 6 章），程式碼改了路徑或類別也不受影響；存整個模型物件則會在檔案裡記下「這個物件屬於哪個模組的哪個類別」，載入時要能找到一模一樣的類別，改名或搬檔就讀不回來。第 89 行用 <code>{:.3f}</code> 只印到小數第三位，所以 log 裡是 <code>Saving model with loss 1.661...</code>，而上一行的 Epoch 那行有四位 1.6611。</p>
+<p>為什麼要「最佳時存」，而不是訓練完存最後一個？因為最後一個不一定最好：本機實測，最後一個 epoch（第 1883 個）的 valid loss 是 2.5030，比第 1483 個的 1.6611 高得多。用驗證集挑一個最好的時間點，是在不知道「訓練多久才剛好」的情況下最直接的辦法。</p>
+
+<h3>49 次存檔，越來越稀疏</h3>
+<p>原版訓練共存檔 49 次。本機從 stdout 整理出每次存檔的 epoch：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 230" role="img" aria-label="原版訓練 49 次存檔的時間軸：前 100 個 epoch 存了 26 次，之後越來越稀疏；最長間隔是第 1260 到第 1483 個 epoch 的 223；第 1483 個 epoch 是最後一次存檔，之後連續 400 個 epoch 沒有創新低，第 1883 個 epoch 停止">
+<line x1="40" y1="110" x2="860" y2="110" stroke="#93a1af" stroke-width="1.5"/>
+<line x1="40.0" y1="110" x2="40.0" y2="116" stroke="#93a1af" stroke-width="1"/>
+<text class="s-mono" x="40.0" y="130" text-anchor="middle">0</text>
+<line x1="257.7" y1="110" x2="257.7" y2="116" stroke="#93a1af" stroke-width="1"/>
+<text class="s-mono" x="257.7" y="130" text-anchor="middle">500</text>
+<line x1="475.5" y1="110" x2="475.5" y2="116" stroke="#93a1af" stroke-width="1"/>
+<text class="s-mono" x="475.5" y="130" text-anchor="middle">1000</text>
+<line x1="693.2" y1="110" x2="693.2" y2="116" stroke="#93a1af" stroke-width="1"/>
+<text class="s-mono" x="693.2" y="130" text-anchor="middle">1500</text>
+<line x1="860.0" y1="110" x2="860.0" y2="116" stroke="#93a1af" stroke-width="1"/>
+<text class="s-mono" x="860.0" y="130" text-anchor="end">1883</text>
+<text class="s-sm" x="40" y="148">橫軸：epoch</text>
+<line x1="40.4" y1="88" x2="40.4" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="40.9" y1="88" x2="40.9" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="41.3" y1="88" x2="41.3" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="42.2" y1="88" x2="42.2" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="42.6" y1="88" x2="42.6" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="43.0" y1="88" x2="43.0" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="43.5" y1="88" x2="43.5" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="46.1" y1="88" x2="46.1" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="46.5" y1="88" x2="46.5" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="47.0" y1="88" x2="47.0" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="47.4" y1="88" x2="47.4" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="47.8" y1="88" x2="47.8" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="48.3" y1="88" x2="48.3" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="48.7" y1="88" x2="48.7" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="49.1" y1="88" x2="49.1" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="49.6" y1="88" x2="49.6" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="50.0" y1="88" x2="50.0" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="53.9" y1="88" x2="53.9" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="54.8" y1="88" x2="54.8" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="55.7" y1="88" x2="55.7" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="60.0" y1="88" x2="60.0" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="65.3" y1="88" x2="65.3" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="65.7" y1="88" x2="65.7" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="68.3" y1="88" x2="68.3" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="70.5" y1="88" x2="70.5" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="77.0" y1="88" x2="77.0" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="94.9" y1="88" x2="94.9" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="95.3" y1="88" x2="95.3" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="107.5" y1="88" x2="107.5" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="110.5" y1="88" x2="110.5" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="136.7" y1="88" x2="136.7" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="138.9" y1="88" x2="138.9" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="143.2" y1="88" x2="143.2" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="151.5" y1="88" x2="151.5" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="157.6" y1="88" x2="157.6" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="158.4" y1="88" x2="158.4" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="161.1" y1="88" x2="161.1" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="179.4" y1="88" x2="179.4" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="180.2" y1="88" x2="180.2" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="253.8" y1="88" x2="253.8" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="276.5" y1="88" x2="276.5" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="338.7" y1="88" x2="338.7" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="414.5" y1="88" x2="414.5" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="422.8" y1="88" x2="422.8" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="487.7" y1="88" x2="487.7" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="488.5" y1="88" x2="488.5" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="528.6" y1="88" x2="528.6" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="588.7" y1="88" x2="588.7" y2="110" stroke="#e3b341" stroke-width="1.2"/>
+<line x1="685.8" y1="76" x2="685.8" y2="110" stroke="#e3b341" stroke-width="2.5"/>
+<path d="M40,62 L40,56 L83.5,56 L83.5,62" fill="none" stroke="#dde5ec" stroke-width="1"/>
+<text class="s-sm" x="40" y="46">前 100 個 epoch：26 次</text>
+<path d="M588.7,70 L588.7,64 L685.8,64 L685.8,70" fill="none" stroke="#dde5ec" stroke-width="1"/>
+<text class="s-sm" x="637.3" y="56" text-anchor="middle">最長間隔 223</text>
+<text class="s-lbl" x="685.8" y="30" text-anchor="middle">第 1483 個：1.6611</text>
+<rect x="685.8" y="160" width="174.2" height="18" rx="3" fill="#a371f7" opacity="0.35"/>
+<line x1="860.0" y1="70" x2="860.0" y2="178" stroke="#a371f7" stroke-width="2"/>
+<text class="s-sm" x="772.9" y="173" text-anchor="middle">連續 400 個 epoch 沒創新低</text>
+<text class="s-lbl" x="860.0" y="198" text-anchor="end">第 1883 個 epoch：early stop</text>
+<text class="s-sm" x="40" y="222">金色每一條是一次存檔（覆寫 model.ckpt）；共 49 條，前段密到疊在一起。</text>
+</svg>
+<figcaption>圖 5.3 — 存檔越來越稀疏：模型進步變慢，加上 valid loss 帶著雜訊，創新低越來越難。最後一次存檔之後的 400 個 epoch，就是 early stop 等待的耐心。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#e3b341"></i>寫入磁碟（存檔）</span>
+  <span><i style="background:#a371f7"></i>控制：early stop 的計數</span>
+</div>
+
+<p>前 100 個 epoch 就存了 26 次：模型進步得快，幾乎每隔幾個 epoch 就創新低。之後越來越稀疏，最長的一段是第 1260 到第 1483 個 epoch，隔了 223 個 epoch。第 1483 個 epoch 之後，接下來的 400 個 epoch 裡最低的 valid loss 是 1.6727，仍比 1.6611 高，於是第 1883 個 epoch 觸發 early stop（下一節）。</p>
+
+<h3>新證據：第 1483 個 epoch 是一組幸運的分組</h3>
+<p>第 3 章 3.5 節的第三層說：從將近 1,900 個有雜訊的量測裡挑最小值，挑中的多半是「模型不錯、分組又特別幸運」的那一次。當時的證據是「把 checkpoint 換 200 種順序重量，最小值 1.7069 都比 1.661 高」。本章補上更直接的證據。</p>
+<p>每個 epoch 的 valid 分組，來自 PyTorch 全域產生器（第 3 章 3.4 節）；same_seed 固定了起點，所以 train.py 每個 epoch 用的分組可以完整重建。本機照原流程重建了全部 1,883 個 epoch 的 valid 打亂順序，拿第 1483 個 epoch 存下的 checkpoint 去量：用第 1483 個 epoch 的分組，<strong>正好重現 1.6611</strong>，證明重建是對的。接著讓同一個模型配上全部 1,883 種分組：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>同一個 checkpoint，換成第 k 個 epoch 的分組</th><th>量到的 valid loss</th></tr></thead>
+<tbody>
+<tr><td>第 1483 個 epoch 的分組（訓練時實際用的）</td><td>1.6611，在 1,883 組裡排第 <strong>7</strong> 低</td></tr>
+<tr><td>1,883 組中最低的</td><td>1.6103</td></tr>
+<tr><td>1,883 組的中位數</td><td>2.0471</td></tr>
+</tbody>
+</table></div>
+<p>同一個模型，配上大部分分組都只量得到 2 左右；第 1483 個 epoch 碰巧輪到前 0.4% 幸運的那一組（7 ÷ 1883）。</p>
+<p>更有說服力的是對照組。本機把學習率改成 1e-6 重新訓練（5.10 節）：學習率小了 10 倍，模型的軌跡完全不同，存檔 76 次，但<strong>最佳也落在第 1483 個 epoch</strong>（印出 1.818），也在第 1883 個 epoch 停止。拿它的 checkpoint 去量，第 1483 個 epoch 的分組量到 1.8176，在它自己的 1,883 種分組裡排第 <strong>5</strong> 低（中位數 2.2278）。</p>
+<p>為什麼兩次訓練會選中同一個 epoch？因為每個 epoch 的分組只由全域產生器決定：train 與 valid 的打亂每個 epoch 各抽一次亂數，抽多少和學習率無關，所以兩次訓練在第 k 個 epoch 拿到的是一模一樣的分組。第 1483 個 epoch 的分組對兩個不同的模型都特別「友善」，兩次訓練便都在那裡創下紀錄，又都在 400 個 epoch 後停止。<strong>「最佳 epoch」有相當一部分是被分組決定的，不是被模型決定的。</strong>這也具體說明了第 3 章那句副作用：被存下的 checkpoint，不一定是真實表現最好的那一個。</p>
+
+<div class="note"><h4>現在的做法：存得更完整，挑得更誠實</h4>
+<ul>
+  <li><strong>先把量法修好。</strong>第 3 章 3.5 節的修正版（驗證不打亂、依筆數加權）讓每次比較都是同一個量尺，創新低才代表模型真的進步；本章的「幸運分組」就不會發生。</li>
+  <li><strong>存檔時連同訓練狀態一起存。</strong>常見的格式是一個字典：<code>{'model': model.state_dict(), 'optimizer': optimizer.state_dict(), 'epoch': epoch, 'best_loss': best_loss}</code>。optimizer 的 state_dict 包含 5.4 節的 momentum buffer，少了它，中斷後接著訓練時 momentum 要重新累積。通常也會另外存一份「最後一個 epoch」，和「最佳」分開。</li>
+  <li><strong>建目錄用 <code>os.makedirs(path, exist_ok=True)</code></strong>（或 <code>pathlib.Path(...).mkdir(parents=True, exist_ok=True)</code>）一行完成，取代第 40–41 行的先檢查再建立；多層目錄也能一次建好。</li>
+</ul>
+</div>
+
+<h2 id="earlystop">5.8　early stopping：連續 400 次沒進步就停</h2>
+
+<figure class="listing"><figcaption>train.py:94–96 — 連續沒進步就停止訓練</figcaption>
+<pre class="py" data-hot="94,96"><code>        if early_stop_count &gt;= config['early_stop']:
+            print('\nModel is not improving, so we halt the training session.')
+            return</code></pre></figure>
+
+<p><code>early_stop_count</code> 記的是「距離上次創新低已經幾個 epoch」：創新低時歸零（第 90 行），否則加 1（第 92 行）。第 94 行檢查它是否達到 config 的 <code>early_stop</code>（400），達到就印出訊息、<code>return</code> 離開 trainer()，主程式也隨之結束。訊息字串開頭的 <code>\n</code> 是換行，所以第 0 章的 log 裡，這句話前面有一行空白。</p>
+<p>原版的過程：第 1483 個 epoch 創新低、計數歸零，之後第 1484 到第 1883 個 epoch 每次加 1，第 1883 個 epoch 結束時計數到 400，停止。這就是第 0 章 1483 + 400 = 1883 的來歷。</p>
+<p>early stop 的用意是：valid loss 很久沒有進步，再訓練下去多半只是在訓練集上越練越熟（train loss 繼續降、valid loss 不再降甚至上升），浪費時間。400 就是「多久算很久」，它和 n_epochs 一起決定了訓練最長跑多久：</p>
+<ul>
+  <li><strong>n_epochs（3000）是硬上限</strong>，不管有沒有進步，跑滿就停。第 3 章動手做第 4 項修好量法後的訓練，就是一直到第 3000 個 epoch 都還在創新低，跑滿上限才停。</li>
+  <li><strong>early_stop（400）是耐心</strong>。設得太小，會在進步變慢的高原期誤停；設得太大，就要多跑很多無用的 epoch。從上一節的存檔紀錄可以推算：原版在第 1260 個 epoch 之後隔了 223 個 epoch 才再創新低，所以如果 early_stop 設成 200，訓練會在第 1260 + 200 = 1460 個 epoch 停下，最佳停在第 1260 個 epoch（第 1260 個之前，存檔間隔最長是第 686 到第 860 個 epoch 的 174，不到 200）。</li>
+</ul>
+<p>還要注意：early stop 看的是 valid loss，所以它和存檔一樣受第 3 章的雜訊影響。原版的 1.661 是靠一組幸運的分組量到的低值，之後的 400 個 epoch 裡，模型就算真的進步一點，也很難在雜訊下打破這個偏低的紀錄。第 3 章修好量法後不再 early stop，正是這個原因的反面證據。</p>
+
+<h2 id="tensorboard">5.9　TensorBoard 的兩條曲線</h2>
+<p>第 0 章 0.7 節用 <code>tensorboard --logdir runs</code> 看到兩條曲線，並說「怎麼被寫進去，第 5 章會講」。寫進去的只有兩行：</p>
+
+<figure class="listing"><figcaption>train.py:68 — 寫入 train loss</figcaption>
+<pre class="py" data-hot="68"><code>        writer.add_scalar('Loss/train', mean_train_loss, step)</code></pre></figure>
+<figure class="listing"><figcaption>train.py:83 — 寫入 valid loss</figcaption>
+<pre class="py" data-hot="83"><code>        writer.add_scalar('Loss/valid', mean_valid_loss, step)</code></pre></figure>
+
+<p><code>add_scalar(tag, value, step)</code> 記下一個「純量」資料點：</p>
+<ul>
+  <li><strong>tag</strong> 是曲線的名字。TensorBoard 依斜線前的部分分組，所以 <code>Loss/train</code> 與 <code>Loss/valid</code> 會被放在同一個「Loss」區塊下。</li>
+  <li><strong>value</strong> 是縱軸的值：5.5、5.6 節的兩個平均。</li>
+  <li><strong>step</strong> 是橫軸。這裡傳的是第 60 行累加的 <code>step</code>，也就是「到目前為止更新了幾次權重」，<strong>不是 epoch</strong>。</li>
+</ul>
+<p>本機實測原版執行產生的紀錄：<code>runs/</code> 底下多一個目錄（例如 <code>Oct03_16-39-09_ValtecBlackwell</code>），裡面只有一個 <code>events.out.tfevents.…</code> 檔，約 184,720 bytes。裡面的 scalar tag 只有 <code>Loss/train</code> 和 <code>Loss/valid</code>，各 1,883 個點，一個 epoch 一個點。第一個點在 step 9（第 1 個 epoch 跑了 9 個 batch），最後一個點在 step 16,947 = 1,883 × 9。所以在 TensorBoard 上看到橫軸 9,000 附近，對應的是第 1,000 個 epoch；要換回 epoch，就把橫軸除以 9。這個 9 來自 batch_size：改了 batch_size，每個 epoch 的 batch 數就變，同一個 epoch 在橫軸上的位置也跟著變。</p>
+<p>TensorBoard 畫的是全部 1,883 個點。下圖只取 15 個代表性 epoch 的數值（第 1、2、3、5、10、20、50、100、200、300、500、1000、1483、1500、1883 個，從 stdout 的 log 查出），而且兩軸都用對數刻度，好讓前幾個 epoch 和後段都看得見，所以形狀比 TensorBoard 上的平滑得多：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 300" role="img" aria-label="原版訓練 15 個 epoch 的 train 與 valid loss，兩軸對數刻度：第 1 個 epoch train 134、valid 107，第 100 個 epoch 約 5 與 4.3，之後在 2 到 4 之間起伏，第 1483 個 epoch valid 1.6611 為最低，第 1883 個 epoch valid 2.5030">
+<rect x="90" y="30" width="750" height="220" fill="none" stroke="#93a1af" stroke-width="1"/>
+<line x1="90" y1="250.0" x2="840" y2="250.0" stroke="#93a1af" stroke-width="0.4" opacity="0.5"/>
+<text class="s-mono" x="82" y="254.0" text-anchor="end">1</text>
+<line x1="90" y1="221.2" x2="840" y2="221.2" stroke="#93a1af" stroke-width="0.4" opacity="0.5"/>
+<text class="s-mono" x="82" y="225.2" text-anchor="end">2</text>
+<line x1="90" y1="183.2" x2="840" y2="183.2" stroke="#93a1af" stroke-width="0.4" opacity="0.5"/>
+<text class="s-mono" x="82" y="187.2" text-anchor="end">5</text>
+<line x1="90" y1="154.4" x2="840" y2="154.4" stroke="#93a1af" stroke-width="0.4" opacity="0.5"/>
+<text class="s-mono" x="82" y="158.4" text-anchor="end">10</text>
+<line x1="90" y1="125.6" x2="840" y2="125.6" stroke="#93a1af" stroke-width="0.4" opacity="0.5"/>
+<text class="s-mono" x="82" y="129.6" text-anchor="end">20</text>
+<line x1="90" y1="87.6" x2="840" y2="87.6" stroke="#93a1af" stroke-width="0.4" opacity="0.5"/>
+<text class="s-mono" x="82" y="91.6" text-anchor="end">50</text>
+<line x1="90" y1="58.8" x2="840" y2="58.8" stroke="#93a1af" stroke-width="0.4" opacity="0.5"/>
+<text class="s-mono" x="82" y="62.8" text-anchor="end">100</text>
+<line x1="90" y1="30.0" x2="840" y2="30.0" stroke="#93a1af" stroke-width="0.4" opacity="0.5"/>
+<text class="s-mono" x="82" y="34.0" text-anchor="end">200</text>
+<text class="s-mono" x="90.0" y="268" text-anchor="middle">1</text>
+<text class="s-mono" x="319.0" y="268" text-anchor="middle">10</text>
+<text class="s-mono" x="548.0" y="268" text-anchor="middle">100</text>
+<text class="s-mono" x="777.1" y="268" text-anchor="middle">1000</text>
+<text class="s-mono" x="840.0" y="268" text-anchor="middle">1883</text>
+<text class="s-sm" x="465.0" y="286" text-anchor="middle">epoch（對數刻度；TensorBoard 的橫軸 step ＝ epoch × 9）</text>
+<text class="s-sm" x="20" y="18">loss（對數刻度）</text>
+<path d="M90.0,46.6 L158.9,73.7 L199.3,88.8 L250.1,103.1 L319.0,110.0 L388.0,139.2 L479.1,157.2 L548.0,183.1 L617.0,189.9 L657.3,197.0 L708.1,194.0 L777.1,219.7 L816.2,225.6 L817.4,217.3 L840.0,226.3" fill="none" stroke="#3fb950" stroke-width="2"/>
+<circle cx="90.0" cy="46.6" r="3" fill="#3fb950"/>
+<circle cx="158.9" cy="73.7" r="3" fill="#3fb950"/>
+<circle cx="199.3" cy="88.8" r="3" fill="#3fb950"/>
+<circle cx="250.1" cy="103.1" r="3" fill="#3fb950"/>
+<circle cx="319.0" cy="110.0" r="3" fill="#3fb950"/>
+<circle cx="388.0" cy="139.2" r="3" fill="#3fb950"/>
+<circle cx="479.1" cy="157.2" r="3" fill="#3fb950"/>
+<circle cx="548.0" cy="183.1" r="3" fill="#3fb950"/>
+<circle cx="617.0" cy="189.9" r="3" fill="#3fb950"/>
+<circle cx="657.3" cy="197.0" r="3" fill="#3fb950"/>
+<circle cx="708.1" cy="194.0" r="3" fill="#3fb950"/>
+<circle cx="777.1" cy="219.7" r="3" fill="#3fb950"/>
+<circle cx="816.2" cy="225.6" r="3" fill="#3fb950"/>
+<circle cx="817.4" cy="217.3" r="3" fill="#3fb950"/>
+<circle cx="840.0" cy="226.3" r="3" fill="#3fb950"/>
+<path d="M90.0,55.9 L158.9,86.9 L199.3,97.8 L250.1,102.9 L319.0,108.8 L388.0,145.4 L479.1,154.1 L548.0,189.6 L617.0,186.3 L657.3,209.8 L708.1,200.5 L777.1,193.9 L816.2,228.9 L817.4,223.1 L840.0,211.9" fill="none" stroke="#a371f7" stroke-width="2" stroke-dasharray="6 4"/>
+<circle cx="90.0" cy="55.9" r="3" fill="#a371f7"/>
+<circle cx="158.9" cy="86.9" r="3" fill="#a371f7"/>
+<circle cx="199.3" cy="97.8" r="3" fill="#a371f7"/>
+<circle cx="250.1" cy="102.9" r="3" fill="#a371f7"/>
+<circle cx="319.0" cy="108.8" r="3" fill="#a371f7"/>
+<circle cx="388.0" cy="145.4" r="3" fill="#a371f7"/>
+<circle cx="479.1" cy="154.1" r="3" fill="#a371f7"/>
+<circle cx="548.0" cy="189.6" r="3" fill="#a371f7"/>
+<circle cx="617.0" cy="186.3" r="3" fill="#a371f7"/>
+<circle cx="657.3" cy="209.8" r="3" fill="#a371f7"/>
+<circle cx="708.1" cy="200.5" r="3" fill="#a371f7"/>
+<circle cx="777.1" cy="193.9" r="3" fill="#a371f7"/>
+<circle cx="816.2" cy="228.9" r="3" fill="#a371f7"/>
+<circle cx="817.4" cy="223.1" r="3" fill="#a371f7"/>
+<circle cx="840.0" cy="211.9" r="3" fill="#a371f7"/>
+<circle cx="816.2" cy="228.9" r="7" fill="none" stroke="#e3b341" stroke-width="2"/>
+<line x1="812.2" y1="221.9" x2="790" y2="156" stroke="#e3b341" stroke-width="1"/>
+<text class="s-sm" x="840" y="150" text-anchor="end">最佳 1.6611（第 1483 個）</text>
+<text class="s-sm" x="96" y="48">train 134.24</text>
+<text class="s-sm" x="96" y="135">valid 107.22</text>
+<text class="s-sm" x="834.0" y="201.9" text-anchor="end">valid 2.50</text>
+</svg>
+<figcaption>圖 5.4 — 只用 15 個 epoch 的數值畫出的兩條曲線骨架。前幾個 epoch 兩條都急降，train 一開始高於 valid；後段在 2～4 之間起伏，最低點之後 400 個 epoch 再也沒有更低。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#3fb950"></i>Loss/train（實線）</span>
+  <span><i style="background:#a371f7"></i>Loss/valid（虛線，決定存檔與停止）</span>
+  <span><i style="background:#e3b341"></i>存下的那一點</span>
+</div>
+
+<p>這張圖把本章幾件事放在一起：前幾個 epoch，綠線（train）高於紫線（valid），因為 train 是整個 epoch 裡一路變好的模型的平均（5.5 節）；到第 100 個 epoch 左右兩者都降到 4～5；之後在 2～4 之間起伏，valid 的起伏尤其大（第 3 章的雜訊）。最低點在第 1483 個 epoch 的 1.6611，之後的 400 個 epoch 再也沒低過它。</p>
+
+<div class="note"><h4>現在的做法：記錄要能收尾，也記更多</h4>
+<ul>
+  <li><strong>收尾時呼叫 <code>writer.close()</code></strong>（或 <code>writer.flush()</code>）。SummaryWriter 會先把資料點放在緩衝區、定時寫入檔案；trainer() 從頭到尾沒有呼叫 close，第 96 行的 <code>return</code> 也直接離開。本機實測這次的紀錄檔是完整的 1,883 個點，但明確收尾才不必依賴程式結束時的自動處理。</li>
+  <li><strong>多記幾條曲線。</strong>學習率（若有使用學習率排程，也就是讓 lr 隨訓練進度逐步變小的做法）、梯度範數、每個 epoch 花的時間都是常見的記錄項目；5.10 節 lr 1e-4 的情況，光看 loss 曲線看不出模型已經只會輸出常數，多記一條「預測值的標準差」就一目了然。</li>
+  <li>今天也常用 Weights &amp; Biases、MLflow 這類記錄服務，概念和 <code>add_scalar(tag, value, step)</code> 一樣。</li>
+</ul>
+</div>
+
+<h2 id="hparams">5.10　超參數：學習率、momentum、n_epochs、early_stop</h2>
+<p>第 0 章把 learning_rate、n_epochs、early_stop 三個超參數留給本章：</p>
+
+<figure class="listing"><figcaption>config.py:13–16 — 本章用到的三個超參數（batch_size 在第 3 章）</figcaption>
+<pre class="py" data-hot="15"><code>    'n_epochs': 3000,     # Number of epochs.
+    'batch_size': 256,
+    'learning_rate': 1e-5,
+    'early_stop': 400,    # If model has not improved for this many consecutive epochs, stop training.</code></pre></figure>
+
+<p>n_epochs 與 early_stop 在 5.8 節講過。學習率與 momentum 好不好，光講公式說不清楚，本機各改一處、其他照原版，訓練了三組對照：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th>印出的最佳</th><th>最佳 epoch</th><th>停止</th><th>存檔次數</th><th>真實 valid MSE</th><th>第一層永遠輸出 0 的單元</th></tr></thead>
+<tbody>
+<tr><td>原版：lr 1e-5、momentum 0.9</td><td>1.661</td><td>1483</td><td>1883（early stop）</td><td>49</td><td>2.0685</td><td>10 / 16</td></tr>
+<tr><td>lr 1e-4（大 10 倍）</td><td>36.157</td><td>398</td><td>798（early stop）</td><td>13</td><td><strong>44.5095</strong></td><td><strong>16 / 16</strong></td></tr>
+<tr><td>lr 1e-6（小 10 倍）</td><td>1.818</td><td>1483</td><td>1883（early stop）</td><td>76</td><td>2.2601</td><td>8 / 16</td></tr>
+<tr><td>momentum 0</td><td>2.463</td><td>2816</td><td>3000（跑滿上限）</td><td>59</td><td>2.9992</td><td>6 / 16</td></tr>
+</tbody>
+</table></div>
+<p>（真實 valid MSE 是把各自的 checkpoint 拿到 539 筆上一次算完，和第 3 章的 2.0685 同一個量法；「永遠輸出 0 的單元」的判定方式同第 4 章 4.7 節。）</p>
+
+<h3>lr 1e-4：模型壞到只會輸出一個常數</h3>
+<p>學習率只大了 10 倍，結果完全崩壞。第 1 個 epoch 的 train loss 是 <strong>2,005,349.0116</strong>（兩百萬），valid 112.8123；第 2 個 epoch 是 67.2213／64.5274，之後停在 40 左右。一個 epoch 的 train loss 是 9 個 batch 的平均，平均兩百萬，代表這個 epoch 裡至少有一個 batch 的 loss 達到兩百萬以上：崩壞發生在最初的幾步。</p>
+<p>從 5.4 節可以推算為什麼。第一步時 buf 就是 grad，而第一步的 grad 和學習率無關（同樣的初始權重、同樣的第一個 batch），所以 lr 1e-4 的第一步就是原版第一步的 10 倍：id 欄的權重一步移動約 0.87，將近初始範圍的 10 倍。id 動輒上千，乘上這樣的權重，第一層的加權總和一下子被推到幾百、幾千的量級，正負都有可能。</p>
+<p>結局是本機實測的：第一層 <strong>16 個單元全部永遠輸出 0</strong>，這是第 4 章 4.7 節 dying ReLU 推到極端的樣子。第一層全死，第二層收到的永遠是 16 個 0，它和最後一層只剩 bias 在起作用，整個模型對每一筆輸入都輸出同一個數字：本機實測是 <strong>9.731</strong>，預測的標準差是 0。</p>
+<p>既然只能輸出常數，訓練能做的就只剩把那個常數調到讓 MSE 最小的位置，也就是訓練集答案的平均。9.731 和訓練集答案的平均 9.7404（第 2 章）幾乎相同。它的真實 MSE 44.5095，和「永遠猜訓練集平均」的 44.5021、驗證集答案本身的變異數 44.346 幾乎一樣：這個模型等於什麼都沒學到。</p>
+
+<div class="warn"><h4>log 看不出模型已經死了</h4>
+<p>lr 1e-4 的訓練照樣存檔 13 次、照樣 early stop，log 的格式和原版一模一樣，印出的最佳 36.157 看起來只是「比較差」。從 stdout 完全看不出模型已經只會輸出常數。這再次說明目錄頁「先做 baseline」的價值：只要知道「永遠猜平均」的 MSE 是 44.5，看到 36（以及它的真實值 44.5）就會立刻起疑。檢查預測值的標準差，或像第 4 章那樣數一數沒在工作的單元，都只要幾行程式。</p>
+</div>
+
+<h3>lr 1e-6 與 momentum 0：走得太慢</h3>
+<p>學習率小 10 倍的那組，沒有崩壞，但真實 MSE 2.2601 比原版差：每步太小，同樣的時間內走不到那麼遠。它的最佳 epoch 和原版同是 1483，原因在 5.7 節。</p>
+<p>拿掉 momentum（momentum 0，每一步就是單純的 w − lr × grad）的那組，進步慢很多：3,000 個 epoch 都沒觸發 early stop，表示它一直到上限都還在緩慢創新低，最後真實 MSE 2.9992，是三組正常訓練裡最差的。同樣的學習率下，momentum 讓有效步伐在方向一致時放大，這組對照就是它的效果。</p>
+<p>四組實驗同時在一張 GPU 上跑，各花了 38.6 秒（原版）、19.3 秒（lr 1e-4，只跑到第 798 個 epoch）、38.1 秒（lr 1e-6）、56.8 秒（momentum 0，跑滿 3000）；單獨跑原版是 34.2 秒（第 0 章）。所花的時間大致和跑了幾個 epoch 成正比。</p>
+<p>這四組只是單一變因的對照，不是在找最好的設定。真正要改進模型，第 4 章與第 2 章都指向同一個方向：先處理輸入的尺度（id 與標準化），再調學習率、換優化器。那是第 7 章的工作。</p>
+
+<h2 id="lab">5.11　動手做</h2>
+<div class="lab"><h4>動手做：拆開一步、看錯誤訊息、把學習率調大</h4>
+<p>以下指令都在 <code>HW01/</code> 裡執行，Python 用第 0 章 0.3 節在 repo 根目錄建立的 <code>../.venv/bin/python</code>。第 1 項只 import <code>model</code> 與 <code>torch</code>，不 import <code>config</code>，所以不需要 GPU，輸出開頭也不會有 config.py 被 import 時印的 <code>True</code>、<code>0</code>（第 0 章 0.4 節）；第 2、3 項會 import config、在 GPU 上算；第 4 項會重新訓練，會覆寫 <code>models/model.ckpt</code>，做完一定要照最後的說明還原。</p>
+<ol>
+  <li><strong>看優化器的設定</strong>：
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+import torch
+from model import My_Model
+m = My_Model(input_dim=117)
+print(torch.optim.SGD(m.parameters(), lr=1e-5, momentum=0.9))
+"</code></pre>
+  印出的和 5.2 節的 <code>SGD (</code> 那段完全相同，共 12 行。把 <code>momentum=0.9</code> 拿掉再跑，<code>momentum: 0</code>；加上 <code>weight_decay=1e-4</code>，最後一個設定就變成 <code>weight_decay: 0.0001</code>。</li>
+  <li><strong>親手走一次第一步</strong>：照 train.py 的順序準備好一切，取第 1 個 epoch 的第 1 個 batch，一步一步做五步驟：
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+import pandas as pd, torch
+from torch.utils.data import DataLoader
+from utils import same_seed, train_valid_split, select_feat
+from data_loader import COVID19Dataset
+from model import My_Model
+from config import config, device
+same_seed(config['seed'])
+tr, te = pd.read_csv('covid.train.csv').values, pd.read_csv('covid.test.csv').values
+tr, va = train_valid_split(tr, config['valid_ratio'], config['seed'])
+x_tr, x_va, x_te, y_tr, y_va = select_feat(tr, va, te, config['select_all'])
+train_loader = DataLoader(COVID19Dataset(x_tr, y_tr), batch_size=config['batch_size'], shuffle=True, pin_memory=True)
+model = My_Model(input_dim=x_tr.shape[1]).to(device)
+criterion = torch.nn.MSELoss(reduction='mean')
+optimizer = torch.optim.SGD(model.parameters(), lr=config['learning_rate'], momentum=0.9)
+x, y = next(iter(train_loader))
+optimizer.zero_grad()
+print(model.training, model.layers[0].weight.grad)
+x, y = x.to(device), y.to(device)
+pred = model(x)
+print(pred.requires_grad, type(pred.grad_fn).__name__)
+loss = criterion(pred, y)
+print(loss)
+loss.backward()
+for name, p in model.named_parameters():
+    print(name, tuple(p.grad.shape), f'{p.grad.norm().item():.4f}')
+g = model.layers[0].weight.grad.abs().mean(dim=0)
+print(f'{g[0].item():.2f}', f'{g[1:].mean().item():.2f}')
+w0 = model.layers[0].weight.detach().clone()
+optimizer.step()
+d = (model.layers[0].weight.detach() - w0).abs()
+print(f'{d.max().item():.4f}', d.argmax().item() % 117)
+"</code></pre>
+  <!-- TODO(本機實測): 照字面跑一次這條指令，把完整輸出逐字貼在這裡（目前只用 5.4 節已實測的數字說明每行該是什麼） -->
+  逐行對照：<code>True</code>、<code>0</code> 之後，第一行是 <code>True None</code>（訓練模式；清過梯度，<code>.grad</code> 是 None）；第二行 <code>True SqueezeBackward1</code>；第三行是 5.4 節那個 <code>tensor(508.8512, device='cuda:0', grad_fn=&lt;MseLossBackward0&gt;)</code>；接下來六行是 5.4 節表格的形狀與範數（例如 <code>layers.0.weight (16, 117) 15824.6025</code>）；再來是 id 欄與其他欄的平均 |g|，2602.08 與 24.13；最後一行是第一步最大的 |Δw| 0.0869，以及它所在的欄 0，也就是 id。<code>next(iter(…))</code> 是「只拿第一個 batch」（第 4 章動手做）；<code>% 117</code> 把攤平後的位置換回欄號；<code>.detach().clone()</code> 先複製一份更新前的權重，因為 <code>step()</code> 是直接改參數本身，不複製就沒有「之前」可比。這段程式省略了 train.py 的 valid_loader：建立 DataLoader 不會抽亂數，要到開始迭代才抽，所以少建一個不影響第一個 batch 的內容。</li>
+  <li><strong>兩個錯誤訊息與梯度累加</strong>：在第 2 項的 Python 程式碼最後、收尾的 <code>"</code> <strong>之前</strong>加這幾行再跑（縮排從行首開始）：
+<pre class="py"><code>optimizer.zero_grad()
+for _ in range(2):
+    criterion(model(x), y).backward()
+    print(model.layers[4].bias.grad.item())
+with torch.no_grad():
+    bad = criterion(model(x), y)
+bad.backward()</code></pre>
+  第一行先清掉第 2 項留下的梯度（step 不會清梯度）；迴圈裡模型不再 step，每次都重新 forward、重新算 loss（新的計算圖），中間沒有 zero_grad，所以印出的第二個數字剛好是第一個的 2 倍：梯度是累加的。最後一行在 no_grad 裡算的 loss 上呼叫 backward，Traceback 的最後一行是 5.6 節的 <code>RuntimeError: element 0 of tensors does not require grad and does not have a grad_fn</code>。想看另一個錯誤，把迴圈裡的第一行改成先 <code>l = criterion(model(x), y)</code>，再連續呼叫兩次 <code>l.backward()</code>，就會得到 5.4 節的 <code>Trying to backward through the graph a second time</code>。</li>
+  <li><strong>把學習率調大 10 倍</strong>：先備份 <code>cp config.py config.py.bak</code>，把 config.py 第 15 行的 <code>1e-5</code> 改成 <code>1e-4</code>，然後：
+<pre class="shell cmd"><code>$ ../.venv/bin/python train.py 2&gt;/dev/null &gt; lr4.log
+$ grep "Epoch \[1/3000\]" lr4.log
+$ grep -c Saving lr4.log
+$ grep Saving lr4.log | tail -1
+$ tail -1 lr4.log</code></pre>
+  （<code>2&gt;/dev/null</code> 丟掉 stderr 的進度條、<code>&gt; lr4.log</code> 把 stdout 存成檔，同第 0 章 0.5 節的用法；<code>grep -c</code> 只印符合的行數，pattern 裡的 <code>\[</code> 讓方括號照字面比對。）四條 grep／tail 依序應該印出：
+<pre class="shell"><code>Epoch [1/3000]: Train loss: 2005349.0116, Valid loss: 112.8123
+13
+Saving model with loss 36.157...
+Model is not improving, so we halt the training session.</code></pre>
+  第一行是 5.10 節兩百萬的 train loss；13 次存檔；最佳 36.157；最後照樣 early stop。<code>grep "Epoch \[798/3000\]" lr4.log</code> 可以確認停在第 798 個 epoch。log 本身看起來一切正常，這正是 5.10 節的警告。</li>
+</ol>
+<p><strong>做完務必還原</strong>：<code>mv config.py.bak config.py</code>，再跑一次 <code>../.venv/bin/python train.py 2&gt;/dev/null | grep -B1 Saving | tail -2</code>，應該看到 <code>Epoch [1483/3000]</code> 與 <code>Saving model with loss 1.661...</code>，表示 <code>models/model.ckpt</code> 回到了 1.661 那一份；後面各章的數字都以它為準。第 4 項與還原時的重跑會在 <code>runs/</code> 各多一個目錄，用 TensorBoard 打開，可以把 lr 1e-4 那條平平的曲線和原版的並排比較。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li><code>trainer()</code> 先準備一次（MSELoss、SGD、SummaryWriter、models/、計數器），再對每個 epoch 做四件事：訓練 9 個 batch（更新 9 次）、驗證 3 個 batch（不更新）、創新低就存檔、連續 400 次沒進步就停。</li>
+  <li>梯度是 loss 對每個參數的斜率，存在 <code>.grad</code>、形狀和參數相同；梯度下降讓每個參數往斜率的反方向走一小步。五步驟：<code>zero_grad</code> 清掉累加的梯度 → <code>.to(device)</code> 與 <code>model(x)</code> 算預測並建出計算圖 → <code>criterion</code> 算 loss → <code>backward</code> 用連鎖律反向算出全部梯度並釋放計算圖 → <code>step</code> 依 buf ← 0.9·buf + grad、w ← w − lr·buf 改權重。</li>
+  <li>第一層權重的梯度和它所乘的輸入成正比：第 1 個 batch 裡 id 欄的梯度約是其他欄的 108 倍，第一步就讓 id 欄的權重移動 0.0869，幾乎一整個初始範圍。</li>
+  <li>train loss 是 9 個「一路在變的模型」的 batch loss 平均，第 1 個 epoch 因此是 134 而 valid 是 107；後段兩者的落差變小（第 1483 個 epoch 印出 1.8014，checkpoint 的真實 train MSE 1.7938）。</li>
+  <li><code>model.train()</code>／<code>eval()</code> 只切換 <code>training</code> 旗標，HW01 沒有受影響的層；<code>torch.no_grad()</code> 才是停止建計算圖的那一個。</li>
+  <li>存檔只存 state_dict、每次覆寫同一個檔；49 次存檔越來越稀疏，第 1483 個 epoch 之後 400 次沒進步而停止。第 1483 個 epoch 的分組在 1,883 組裡排第 7 幸運，lr 1e-6 的訓練也選中同一個 epoch：最佳 epoch 有一部分是分組決定的。</li>
+  <li>TensorBoard 的兩條曲線來自第 68、83 行的 <code>add_scalar</code>，橫軸是更新次數 step（每個 epoch 9），不是 epoch。</li>
+  <li>lr 1e-4 讓第一層 16 個單元全死，模型只會輸出 9.731（≈ 訓練集答案平均），真實 MSE 44.5；log 卻和正常訓練一樣。lr 1e-6 與 momentum 0 則是走得太慢。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 把第 54 行 <code>optimizer.zero_grad()</code> 刪掉，程式會報錯嗎？訓練會變成什麼樣子？</summary>
+<p>不會報錯。backward 會把梯度加到 <code>.grad</code> 上而不是覆寫，所以每一步 step 用的是「從訓練開始到現在所有 batch 的梯度總和」，而且 momentum 還會再把它累積一次。步伐會越來越大、方向越來越被很久以前的梯度主導，很容易像 lr 1e-4 那樣崩壞。本機的累加實驗：同一個 batch backward 兩次，梯度剛好變 2 倍。</p></details>
+<details class="quiz"><summary>2. 為什麼第 1 個 epoch 的 train loss（134.2442）比 valid loss（107.2155）高？這代表模型在驗證集上比較準嗎？</summary>
+<p>不代表。train loss 是 9 個 batch 的 loss 平均，每個 batch 量的是「當時」的模型：第 1 個 batch 時模型還沒訓練（loss 509），第 9 個時已經更新 8 次（60.4）。valid loss 則是 epoch 結束後、更新 9 次的模型量的。train loss 被 epoch 開頭那幾個很差的模型拉高了。</p></details>
+<details class="quiz"><summary>3. 驗證迴圈裡如果忘了寫 <code>with torch.no_grad():</code>，valid loss 的數值會變嗎？如果忘了寫 <code>model.eval()</code> 呢？</summary>
+<p>忘了 no_grad：數值不變，只是多建了沒用的計算圖，浪費記憶體與時間；驗證迴圈沒有 backward 與 step，權重也不會被改。忘了 eval()：在 HW01 也不變（本機實測兩種模式輸出完全相同，因為沒有 Dropout、BatchNorm），但模型一旦加了這類層，驗證就會在訓練模式下進行，數值會不同。而且下一個 epoch 開頭的 <code>model.train()</code> 仍然要寫，兩者是成對的。</p></details>
+<details class="quiz"><summary>4. 只把 config 的 <code>early_stop</code> 改成 200，其他不動，訓練會在第幾個 epoch 停？存下來的是第幾個 epoch 的模型？</summary>
+<p>early_stop 只影響何時停，不影響停之前的任何計算（亂數、權重、分組都相同），所以存檔紀錄和原版一模一樣，直到停止為止。原版的存檔 epoch 中，第一個超過 200 的間隔是第 1260 到第 1483 個 epoch 的 223，所以會在第 1260 + 200 = 1460 個 epoch 停止，存下的是第 1260 個 epoch 的模型。這是依 5.7 節的存檔紀錄推算的。想實際驗證：照動手做第 4 項的方式備份 config.py，把第 16 行的 <code>400</code> 改成 <code>200</code>，執行 <code>../.venv/bin/python train.py 2&gt;/dev/null &gt; es200.log</code>，再用 <code>grep -B1 Saving es200.log | tail -2</code> 看最後一次存檔（應是 <code>Epoch [1260/3000]</code> 那行），<code>grep Epoch es200.log | tail -1</code> 看最後一個 epoch（應是 <code>Epoch [1460/3000]</code>）。做完照第 4 項末尾的方法還原 config.py 並重跑原版。</p></details>
+<details class="quiz"><summary>5. 在 TensorBoard 上，橫軸 step 900 附近的點是第幾個 epoch？如果 batch_size 改成 128 呢？</summary>
+<p>batch_size 256 時每個 epoch 9 個 batch，step 900 是第 100 個 epoch 結束時寫入的點。batch_size 128 時，2160 ÷ 128 = 16.875，無條件進位是 17 個 batch（第 3 章），step 900 約是第 53 個 epoch（17 × 53 = 901）。橫軸是更新次數，換 batch_size 就換了比例。</p></details>
+<details class="quiz"><summary>6. lr 1e-4 的模型印出最佳 36.157。你手上只有 stdout 的 log，怎麼判斷它是「比較差」還是「完全壞掉」？</summary>
+<p>拿它和最簡單的 baseline 比：永遠預測訓練集答案平均的 MSE 是 44.5（驗證集答案的變異數 44.346），36～44 這個量級等於什麼都沒學到；再考慮第 3 章說印出值偏低，真實值只會更高（實測 44.5095）。要確認，就載入 checkpoint 看預測的標準差（實測是 0，全部輸出 9.731）或數第一層沒在工作的單元（16/16）。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://pytorch.org/tutorials/beginner/basics/autogradqs_tutorial.html">PyTorch Tutorials — Automatic Differentiation with torch.autograd</a>：計算圖、<code>grad_fn</code>、<code>backward</code> 與 <code>no_grad</code> 的官方入門。</li>
+  <li><a href="https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html">PyTorch Tutorials — Optimizing Model Parameters</a>：官方版的訓練迴圈，五步驟寫法與本章相同。</li>
+  <li><a href="https://pytorch.org/docs/stable/generated/torch.optim.SGD.html">torch.optim.SGD</a>：momentum、dampening、nesterov、weight_decay 的完整演算法。</li>
+  <li><a href="https://pytorch.org/docs/stable/tensorboard.html">torch.utils.tensorboard</a>：<code>SummaryWriter</code>、<code>add_scalar</code> 與其他記錄方法。</li>
+  <li><a href="https://proceedings.mlr.press/v28/sutskever13.html">Sutskever et al. (2013), On the importance of initialization and momentum in deep learning</a>：momentum 為什麼有效。</li>
+  <li><a href="https://link.springer.com/chapter/10.1007/3-540-49430-8_3">Prechelt (1998), Early Stopping — But When?</a>：early stopping 的停止準則比較。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch04.html">← 第 4 章</a><a href="ch06.html">第 6 章 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW01 讀碼教材 · 對應 commit 717528b · 程式碼引用取自本 repo 的 HW01/；實測輸出取自 2026-10-02、10-03 本機執行</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py；本教材的原始碼全是 .py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>
