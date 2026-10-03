@@ -63,7 +63,7 @@
   超參數、seed（亂數種子）、驗證集/訓練集/測試集、epoch、batch、early stopping（概念）、
   weights/參數、checkpoint、stdout/stderr、`2>`、`VAR=x cmd`、`from X import *`、Jupyter 筆記本。
 - ch01：pandas 基本語法（read_csv、d[col]、iloc、布林篩選、groupby、corr）、python -c 多行、np.isclose、one-hot、滑動視窗、相關係數（Pearson）、標準化（概念）、pandas DataFrame、`.values`、重複欄名後綴、`if __name__ == '__main__'`、0 起算 vs 1 起算欄號。
-- ch02：偽亂數（pseudo-random）與「每個函式庫各有獨立的亂數產生器」、cuDNN（deterministic／benchmark 旗標）、cuBLAS（一句帶過）、確定性演算法、docstring 與 `__doc__`、`torch.Generator`、`random_split`／`Subset`（indices）、duck typing、`int()` 截斷 vs 四捨五入、x（特徵）／y（目標）慣例、NumPy 整數陣列索引（fancy indexing）、`feat_idx`。
+- ch02：偽亂數（pseudo-random）與「每個函式庫各有獨立的亂數產生器」、cuDNN（deterministic／benchmark 旗標）、cuBLAS（一句帶過）、確定性演算法、docstring 與 `__doc__`、`torch.Generator`、`random_split`／`Subset`（indices）、duck typing、`int()` 截斷 vs 四捨五入、x（特徵）／y（目標）慣例、NumPy 整數陣列索引（fancy indexing）、`feat_idx`、全域產生器（沒指定 generator 時共用的那一個）、Dataset（只先粗略定義為「能 len() 與 [i] 的容器」，正式在 ch03）。
   ch02 圖號：圖 2.1 本章資料流、圖 2.2 random_split 打亂再切、圖 2.3 select_feat 欄位選擇。
 
 ## Baseline 實測（2026-10-03，與範例同一驗證集：random_split seed 5201314）
