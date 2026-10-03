@@ -480,6 +480,7 @@ footer.chap-footer {
 <div class="tablewrap"><table>
 <thead><tr><th>檔案</th><th>章名</th><th>對應原始碼</th><th>重點</th></tr></thead>
 <tbody>
+<tr><td><a href="index.html#now">index</a></td><td>先說在前面：用 2026 年的眼光讀 2022 年的作業</td><td>—</td><td>過時的三個層次（環境與 API／方法／觀念）；同一驗證集上的 baseline 實測：抄第 4 天 1.313、線性迴歸 1.166，都贏過範例 DNN 的 1.661</td></tr>
 <tr><td><a href="ch00.html">ch00</a></td><td>任務與環境：先讓它跑起來</td><td><code>requirements.txt</code>、<code>config.py</code></td><td>作業目標；Blackwell 顯卡為何要用 cu128；實測 train／predict 輸出逐行解讀；檔案地圖</td></tr>
 <tr><td><a href="ch01.html">ch01</a></td><td>解剖 COVID 資料</td><td><code>covid.train.csv</code>、<code>train.py:103-111</code></td><td>118 欄 = id + 37 州 one-hot + 16 指標 × 5 天；用 pandas 看數值範圍</td></tr>
 <tr><td><a href="ch02.html">ch02</a></td><td>切分、特徵與可重現性</td><td><code>utils.py:7-36</code></td><td><code>same_seed</code>、<code>random_split</code> → 2160／539、<code>select_feat</code></td></tr>

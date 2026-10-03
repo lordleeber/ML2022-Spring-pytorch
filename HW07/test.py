@@ -3,7 +3,7 @@ import numpy as np
 import random
 import torch
 from torch.utils.data import DataLoader, Dataset
-from transformers import AdamW, BertForQuestionAnswering, BertTokenizerFast, BertTokenizer, AlbertForQuestionAnswering
+from transformers import BertForQuestionAnswering, BertTokenizerFast, BertTokenizer, AutoModelForQuestionAnswering
 from tqdm.auto import tqdm
 from dataset import QA_Dataset
 
@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     device = "cuda"
     # model = BertForQuestionAnswering.from_pretrained("bert-base-chinese").to(device)
-    model = AlbertForQuestionAnswering.from_pretrained("saved_model").to(device)
+    model = AutoModelForQuestionAnswering.from_pretrained("saved_model").to(device)
     # tokenizer = BertTokenizerFast.from_pretrained("bert-base-chinese")
     tokenizer = BertTokenizerFast.from_pretrained("luhua/chinese_pretrain_mrc_roberta_wwm_ext_large")
     # tokenizer = BertTokenizerFast.from_pretrained('luhua/chinese_pretrain_mrc_macbert_large')

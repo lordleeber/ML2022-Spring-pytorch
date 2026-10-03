@@ -43,7 +43,7 @@ if __name__ == "__main__":
     # load trained model
     model_type = 'cnn'   # selecting a model type from {'cnn', 'fcn', 'vae', 'resnet'}
     checkpoint_path = f'last_model_{model_type}.pt'
-    model = torch.load(checkpoint_path)
+    model = torch.load(checkpoint_path, weights_only=False)
     model.eval()
 
     # prediction file

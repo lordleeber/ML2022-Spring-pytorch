@@ -3,7 +3,8 @@ import numpy as np
 import random
 import torch
 from torch.utils.data import DataLoader, Dataset
-from transformers import AdamW, BertForQuestionAnswering, BertTokenizerFast, AutoModelForQuestionAnswering, BertTokenizer
+from torch.optim import AdamW
+from transformers import BertForQuestionAnswering, BertTokenizerFast, AutoModelForQuestionAnswering, BertTokenizer
 from tqdm.auto import tqdm
 from dataset import QA_Dataset
 

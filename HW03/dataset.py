@@ -29,10 +29,8 @@ class FoodDataset(Dataset):
         im = self.transform(im)
         # im = self.data[idx]
         try:
-            # linux
-            # label = int(fname.split("/")[-1].split("_")[0])
-            # windows
-            label = int(fname.split("\\")[-1].split("_")[0])
+            # basename works on both linux ("/") and windows ("\\") paths
+            label = int(os.path.basename(fname).split("_")[0])
         except:
             # test has no label
             label = -1

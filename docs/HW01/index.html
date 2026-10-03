@@ -476,6 +476,64 @@ footer.chap-footer {
 </header>
 <main>
 
+<h2 id="now">先說在前面：用 2026 年的眼光讀 2022 年的作業</h2>
+<p>這份作業出自 2022 年春季的課程，本書則是在 2026 年、用當下的硬體與套件把它重新跑過一遍。四年在深度學習領域很長，所以動手之前先把話講清楚：<strong>哪些東西已經過時、哪些沒有</strong>。分三個層次看。</p>
+
+<h3>第一層：環境與 API——已經過時，本書已修到能跑</h3>
+<p>課程當年指定 PyTorch 1.13 搭 CUDA 11.6。這組版本在新一代顯卡（本機的 Blackwell）與 Python 3.12 上根本裝不起來，所以本 repo 已改用 PyTorch 2.11 搭 CUDA 12.8（第 0 章細說）。HW01 的程式碼本身很單純，換版本後不必改任何一行就能跑。同一個 repo 的其他作業就沒這麼幸運：HW07 用到的 <code>transformers.AdamW</code> 已被移除、HW08 的 <code>torch.load</code> 碰上 PyTorch 2.6 起的新預設 <code>weights_only=True</code>、HW05 依賴的 fairseq 已停止維護。這一層是「改幾行就好」的過時。</p>
+
+<h3>第二層：方法——部分過時，這是最值得知道的一層</h3>
+<p>HW01 用一個小型神經網路（DNN）做迴歸。但它的資料是一張只有 2,699 列的<strong>表格</strong>，而在小型表格資料上，神經網路通常不是第一個該拿出來的工具。今天的標準做法是：<strong>先建立簡單的基準（baseline），再決定要不要上神經網路</strong>；表格資料上常用的強基準是梯度提升樹（gradient boosting，例如 XGBoost、LightGBM）。</p>
+<p>說「簡單方法可能更好」不能只憑印象，所以我們在和範例程式<strong>完全相同的驗證集</strong>上，量了三個完全不需要神經網路的做法：</p>
+<pre class="shell"><code>$ cd HW01
+$ ../.venv/bin/python -c "
+import pandas as pd, numpy as np
+from utils import train_valid_split
+from config import config
+tr = pd.read_csv('covid.train.csv').values
+tr, va = train_valid_split(tr, config['valid_ratio'], config['seed'])
+def linreg(cols):
+    X = np.c_[tr[:, cols], np.ones(len(tr))]
+    w = np.linalg.lstsq(X, tr[:, -1], rcond=None)[0]
+    pred = np.c_[va[:, cols], np.ones(len(va))] @ w
+    return ((pred - va[:, -1]) ** 2).mean()
+print('copy day 4      ', round(((va[:, 101] - va[:, -1]) ** 2).mean(), 3))
+print('linreg 4 tp cols', round(linreg([53, 69, 85, 101]), 3))
+print('linreg 116 cols ', round(linreg(list(range(1, 117))), 3))
+"
+True  «1»
+0
+copy day 4       1.313  «2»
+linreg 4 tp cols 1.303  «3»
+linreg 116 cols  1.166  «4»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>這兩行來自 import config 時的 print（第 0 章會解釋），可以忽略。</li>
+  <li><span class="mk">2</span><strong>完全不訓練</strong>，直接拿「第 4 天的陽性率」當作第 5 天的預測。</li>
+  <li><span class="mk">3</span>線性迴歸，只用前 4 天的陽性率這 4 欄。</li>
+  <li><span class="mk">4</span>線性迴歸，用 id 以外的 116 欄。</li>
+</ol>
+<div class="tablewrap"><table>
+<thead><tr><th>方法</th><th>需要訓練嗎</th><th>驗證集 MSE（越小越好）</th></tr></thead>
+<tbody>
+<tr><td>直接抄第 4 天的陽性率</td><td>不用</td><td>1.313</td></tr>
+<tr><td>線性迴歸（4 欄）</td><td>一行最小平方法</td><td>1.303</td></tr>
+<tr><td>線性迴歸（116 欄，拿掉 id）</td><td>一行最小平方法</td><td><strong>1.166</strong></td></tr>
+<tr><td>範例程式的 DNN（117 欄，含 id）</td><td>34 秒、1,883 個 epoch</td><td>1.661</td></tr>
+</tbody>
+</table></div>
+<p>範例程式訓練了 1,883 個 epoch 的神經網路，輸給了「抄昨天的數字」。這不代表神經網路沒用——第 7 章會看到，把特徵選好、優化器換掉，DNN 可以大幅進步——而是說明兩件 2022 年的範例程式沒有教、但今天被視為基本功的事：</p>
+<ul>
+  <li><strong>先做 baseline。</strong>沒有 baseline，你不會知道 1.661 是好是壞。</li>
+  <li><strong>驗證方式要符合資料的性質。</strong>第 1 章會發現這份資料是時間上的滑動視窗，隨機切分會讓驗證集「偷看」到訓練資料；今天的做法是按時間切分。上表四個方法用的是同一個隨機切分，彼此比較是公平的，但數字整體偏樂觀。</li>
+</ul>
+
+<h3>第三層：觀念——沒有過時，這是本書的主體</h3>
+<p>Dataset 與 DataLoader、模型的 forward、訓練迴圈的五個步驟、train／eval 模式、保存最佳模型、early stopping、用驗證集挑模型——這些在 2026 年寫 PyTorch 時一模一樣。本書花最多篇幅的就是這一層，你在這裡學到的東西，換成任何新模型都用得上。</p>
+
+<div class="note"><h4>本書怎麼處理「過時」</h4>
+<p>程式碼保持課程原貌，只修到能在新環境跑（方便你對照課程影片與投影片）。每一章遇到已經不是今天主流的寫法時，會加一個「現在的做法」說明框；第 7 章則把上面這張表延伸成完整的比較。</p>
+</div>
+
 <h2 id="about">這本教材在教什麼</h2>
 <p>這是台大李宏毅老師《機器學習 2022 Spring》第一份作業（HW01）的讀碼教材。作業要做的事很單純：給你美國某一州<strong>連續 5 天</strong>的問卷統計（有多少人有類 COVID 症狀、多少人戴口罩、多少人感到焦慮……），以及前 4 天的確診陽性率，請你預測<strong>第 5 天的陽性率</strong>（<code>tested_positive</code>）。輸出是一個實數，所以這是一個<strong>迴歸（regression）</strong>問題。</p>
 <p>官方給的範例程式（sample code）原本是一份 Colab 筆記本。本 repo 把它拆成六個獨立的 <code>.py</code> 檔，每個檔案只負責一件事，讓「哪一段程式在流程的哪一步」一目了然。這本教材就順著資料在這六個檔案之間流動的順序，一章講一段。</p>

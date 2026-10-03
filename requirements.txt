@@ -8,3 +8,5 @@ pandas==3.0.6
 tqdm==4.70.1
 tensorboard==2.21.0
 matplotlib==3.11.2
+transformers==5.18.0
+qqdm==0.0.7

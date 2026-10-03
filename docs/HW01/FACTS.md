@@ -63,3 +63,10 @@
   超參數、seed（亂數種子）、驗證集/訓練集/測試集、epoch、batch、early stopping（概念）、
   weights/參數、checkpoint、stdout/stderr、`2>`、`VAR=x cmd`、`from X import *`、Jupyter 筆記本。
 - ch01：pandas 基本語法（read_csv、d[col]、iloc、布林篩選、groupby、corr）、python -c 多行、np.isclose、one-hot、滑動視窗、相關係數（Pearson）、標準化（概念）、pandas DataFrame、`.values`、重複欄名後綴、`if __name__ == '__main__'`、0 起算 vs 1 起算欄號。
+
+## Baseline 實測（2026-10-03，與範例同一驗證集：random_split seed 5201314）
+- 抄第 4 天 tested_positive（第 101 欄）：MSE 1.313
+- 線性迴歸 4 個 tp 欄（53,69,85,101）：1.303
+- 線性迴歸 116 欄（拿掉 id）：1.166；117 欄含 id：1.172
+- 範例 DNN：1.661（見上）
+- 全書開頭（index.html#now）已寫「過時三層次」；各章遇到過時寫法要加「現在的做法」框；ch07 要延伸 baseline 比較。
