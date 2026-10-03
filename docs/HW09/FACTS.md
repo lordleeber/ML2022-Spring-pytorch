@@ -376,3 +376,57 @@
 - Captum 仍在維護：PyPI 最新版 0.9.0，2026-04-17 發佈（index「現在的做法」框可引用）。
 - outline 的 `requirements.txt:10` 應為 `:11`（第 11 行是 `transformers==5.18.0`，第 10 行是 matplotlib），已修正。
 - outline 與 index 引用的其他 file:line 範圍都核對過，邊界正確。
+
+## ch00 實測（2026-10-03，本機；補大綱預告的 TODO）
+- 讀者可以貼上執行的參數計數（在 `HW09/` 裡，不需要 checkpoint，CPU 上建模型即可）：
+  ```
+  ../.venv/bin/python -c "
+  from model import Classifier
+  m = Classifier()
+  print(sum(p.numel() for p in m.parameters()))
+  print(sum(p.numel() for p in m.cnn.parameters()), sum(p.numel() for p in m.fc.parameters()))
+  "
+  ```
+  逐字輸出：
+  ```
+  14162827
+  5761920 8400907
+  ```
+- 每個 MaxPool 之後的形狀（用一張全 0 的圖走一遍 `model.cnn`，需要 GPU）：
+  ```
+  ../.venv/bin/python -c "
+  import torch
+  from model import Classifier
+  m = Classifier().cuda().eval()
+  x = torch.zeros(1, 3, 128, 128).cuda()
+  for i, layer in enumerate(m.cnn):
+      x = layer(x)
+      if isinstance(layer, torch.nn.MaxPool2d):
+          print(i, tuple(x.shape))
+  print(\"fc in\", x.reshape(1, -1).shape[1], \"out\", tuple(m.fc(x.reshape(1, -1)).shape))
+  "
+  ```
+  逐字輸出：
+  ```
+  9 (1, 128, 64, 64)
+  19 (1, 128, 32, 32)
+  29 (1, 256, 16, 16)
+  33 (1, 512, 8, 8)
+  37 (1, 512, 4, 4)
+  fc in 8192 out (1, 11)
+  ```
+- 手算用的逐層參數（Conv = 3·3·c_in·c_out + c_out；BN = 2·c，只有 weight 與 bias 是參數）：
+  | cnn index | 層 | 參數 |
+  |---|---|---|
+  | 0 | Conv 3→128 | 3,584 |
+  | 3、6、10、13、16 | Conv 128→128（各） | 147,584 |
+  | 20 | Conv 128→256 | 295,168 |
+  | 23、26 | Conv 256→256（各） | 590,080 |
+  | 30 | Conv 256→512 | 1,180,160 |
+  | 34 | Conv 512→512 | 2,359,808 |
+  | 1、4、7、11、14、17 | BN 128（各） | 256 |
+  | 21、24、27 | BN 256（各） | 512 |
+  | 31、35 | BN 512（各） | 1,024 |
+  加總：Conv 5,756,800 + BN 5,120 = cnn 5,761,920；再加 fc 8,400,907 = 14,162,827。
+- BN 另有 **buffer**（不是參數、不訓練，但存在 state_dict 裡）：running_mean、running_var 各 c 個，加上 num_batches_tracked 1 個；11 個 BN 共 2,560 個 channel，所以 buffer 共 2×2,560 + 11 = **5,131**。
+- `model_state_dict` 的 81 個 entry = 11 個 Conv × 2（weight、bias）+ 11 個 BN × 5（weight、bias、running_mean、running_var、num_batches_tracked）+ fc 2 個 Linear × 2。
