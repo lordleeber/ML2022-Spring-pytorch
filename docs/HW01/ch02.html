@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 2 章　切分、特徵與可重現性 — HW01 COVID-19 確診率預測</title>
+<!-- INLINE-ASSETS -->
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch01.html">← 第 1 章</a><a href="ch03.html">第 3 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW01 讀碼教材</p>
+  <h1>第 2 章　切分、特徵與可重現性</h1>
+  <p class="chap-lead">第 1 章把 2699 列 × 118 欄的表格拆清楚了。本章看 train.py 拿到這張表之後、交給 Dataset 之前做的三件事：固定亂數（<code>same_seed</code>）、切出驗證集（<code>train_valid_split</code>）、分開特徵與答案（<code>select_feat</code>）。三個函式都在 <code>utils.py</code>，加起來 30 行，但「每次訓練結果都一樣」「驗證集是 539 筆而不是 432 筆」「id 被當成特徵」這三件事都出自這裡。</p>
+</header>
+<main>
+
+<h2 id="where">2.1　本章在流程中的位置</h2>
+<p>回到 train.py 的主程式（第 1 章 1.5 節引用過前半段）。從第 101 行到第 117 行，資料依序經過本章的三個函式：</p>
+
+<figure class="listing"><figcaption>train.py:99–117 — 主程式前半：固定亂數、讀檔、切分、選特徵</figcaption>
+<pre class="py" data-hot="101,106,114"><code>if __name__ == '__main__':
+    # Set seed for reproducibility
+    same_seed(config['seed'])
+
+    # train_data size: 2699 x 118 (id + 37 states + 16 features x 5 days)
+    # test_data size: 1078 x 117 (without last day's positive rate)
+    train_data, test_data = pd.read_csv('./covid.train.csv').values, pd.read_csv('./covid.test.csv').values
+    train_data, valid_data = train_valid_split(train_data, config['valid_ratio'], config['seed'])
+
+    # Print out the data size.
+    print(f"""train_data size: {train_data.shape} 
+    valid_data size: {valid_data.shape} 
+    test_data size: {test_data.shape}""")
+
+    # Select features
+    x_train, x_valid, x_test, y_train, y_valid = select_feat(train_data, valid_data, test_data, config['select_all'])
+
+    # Print out the number of features.
+    print(f'number of features: {x_train.shape[1]}')</code></pre></figure>
+
+<p>三個函式的名字都沒有在 train.py 裡定義，它們是透過第 18 行的 <code>from utils import *</code> 進來的（圖 0.2）。三個呼叫各自的位置：</p>
+<ul>
+  <li><strong>第 101 行</strong> <code>same_seed</code>：在讀任何資料之前就先把亂數固定住。</li>
+  <li><strong>第 106 行</strong> <code>train_valid_split</code>：把 2699 列的訓練資料切成兩份，變數 <code>train_data</code> 被切分後的訓練部分<strong>覆蓋</strong>掉，原本 2699 列的那個陣列從此不再有名字。</li>
+  <li><strong>第 114 行</strong> <code>select_feat</code>：從三份資料裡拆出模型的輸入 <code>x_*</code> 與答案 <code>y_*</code>，一次回傳五個陣列。</li>
+</ul>
+<p>第 0 章跑 train.py 時看過這幾行程式印出的東西。下面是本機實測 stdout 的開頭，逐字照抄（含行尾空白與縮排）：</p>
+<pre class="shell"><code>True  «1»
+0
+train_data size: (2160, 118)   «2»
+    valid_data size: (539, 118)   «3»
+    test_data size: (1078, 117)  «4»
+number of features: 117  «5»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>前兩行是 import config 時印的（第 0 章 0.4 節），和本章無關。</li>
+  <li><span class="mk">2</span>切分後的訓練部分：2160 列。欄數仍是 118，因為印的時候還沒呼叫 <code>select_feat</code>，答案欄還在裡面。行尾有一個空格，來自原始碼第 109 行 <code>{train_data.shape}</code> 後面那個空格。</li>
+  <li><span class="mk">3</span>驗證集 539 列。開頭 4 格縮排的由來在第 0 章解釋過（三引號字串保留了原始碼的縮排）。2.3 節會算出 539 這個數字是怎麼來的。</li>
+  <li><span class="mk">4</span>測試集沒有經過切分，1078 × 117 原封不動。</li>
+  <li><span class="mk">5</span><code>select_feat</code> 之後 <code>x_train</code> 的欄數：118 欄扣掉答案欄 = 117，其中包含第 0 欄的 id。2.4 節細看。</li>
+</ol>
+<p>把這三步畫成一張圖，就是本章要走的路線：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 300" role="img" aria-label="本章資料流：covid.train.csv 經 train_valid_split 切成 train_data 2160 列與 valid_data 539 列，covid.test.csv 原封不動成為 test_data；三者再經 select_feat 拆成 x 與 y">
+  <defs>
+    <marker id="ar2" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#93a1af"/>
+    </marker>
+  </defs>
+  <rect x="20" y="65" width="150" height="50" rx="8" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-key" x="95" y="86" text-anchor="middle">covid.train.csv</text>
+  <text class="s-mono" x="95" y="104" text-anchor="middle">2699 × 118</text>
+  <rect x="20" y="200" width="150" height="50" rx="8" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-key" x="95" y="221" text-anchor="middle">covid.test.csv</text>
+  <text class="s-mono" x="95" y="239" text-anchor="middle">1078 × 117</text>
+
+  <rect x="190" y="65" width="150" height="50" rx="8" class="s-box"/>
+  <text class="s-key" x="265" y="86" text-anchor="middle">train_valid_split</text>
+  <text class="s-sm" x="265" y="104" text-anchor="middle">utils.py:17（2.3 節）</text>
+  <line x1="170" y1="90" x2="186" y2="90" stroke="#93a1af" stroke-width="2" marker-end="url(#ar2)"/>
+  <line x1="340" y1="80" x2="366" y2="50" stroke="#93a1af" stroke-width="2" marker-end="url(#ar2)"/>
+  <line x1="340" y1="100" x2="366" y2="130" stroke="#93a1af" stroke-width="2" marker-end="url(#ar2)"/>
+  <line x1="170" y1="225" x2="366" y2="225" stroke="#93a1af" stroke-width="2" marker-end="url(#ar2)"/>
+  <text class="s-sm" x="268" y="216" text-anchor="middle">不切分，原封不動</text>
+
+  <rect x="370" y="20" width="150" height="50" rx="8" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-key" x="445" y="41" text-anchor="middle">train_data</text>
+  <text class="s-mono" x="445" y="59" text-anchor="middle">2160 × 118</text>
+  <rect x="370" y="110" width="150" height="50" rx="8" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-key" x="445" y="131" text-anchor="middle">valid_data</text>
+  <text class="s-mono" x="445" y="149" text-anchor="middle">539 × 118</text>
+  <rect x="370" y="200" width="150" height="50" rx="8" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-key" x="445" y="221" text-anchor="middle">test_data</text>
+  <text class="s-mono" x="445" y="239" text-anchor="middle">1078 × 117</text>
+
+  <rect x="560" y="20" width="130" height="230" rx="8" class="s-box"/>
+  <text class="s-key" x="625" y="130" text-anchor="middle">select_feat</text>
+  <text class="s-sm" x="625" y="148" text-anchor="middle">utils.py:26（2.4 節）</text>
+  <line x1="520" y1="45" x2="556" y2="45" stroke="#93a1af" stroke-width="2" marker-end="url(#ar2)"/>
+  <line x1="520" y1="135" x2="556" y2="135" stroke="#93a1af" stroke-width="2" marker-end="url(#ar2)"/>
+  <line x1="520" y1="225" x2="556" y2="225" stroke="#93a1af" stroke-width="2" marker-end="url(#ar2)"/>
+
+  <rect x="720" y="20" width="105" height="50" rx="8" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-key" x="772" y="41" text-anchor="middle">x_train</text>
+  <text class="s-mono" x="772" y="59" text-anchor="middle">2160 × 117</text>
+  <rect x="832" y="20" width="60" height="50" rx="8" class="s-box" style="stroke:#f85149"/>
+  <text class="s-sm" x="862" y="41" text-anchor="middle">y_train</text>
+  <text class="s-mono" x="862" y="59" text-anchor="middle">2160</text>
+  <rect x="720" y="110" width="105" height="50" rx="8" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-key" x="772" y="131" text-anchor="middle">x_valid</text>
+  <text class="s-mono" x="772" y="149" text-anchor="middle">539 × 117</text>
+  <rect x="832" y="110" width="60" height="50" rx="8" class="s-box" style="stroke:#f85149"/>
+  <text class="s-sm" x="862" y="131" text-anchor="middle">y_valid</text>
+  <text class="s-mono" x="862" y="149" text-anchor="middle">539</text>
+  <rect x="720" y="200" width="105" height="50" rx="8" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-key" x="772" y="221" text-anchor="middle">x_test</text>
+  <text class="s-mono" x="772" y="239" text-anchor="middle">1078 × 117</text>
+  <line x1="690" y1="45" x2="716" y2="45" stroke="#93a1af" stroke-width="2" marker-end="url(#ar2)"/>
+  <line x1="690" y1="135" x2="716" y2="135" stroke="#93a1af" stroke-width="2" marker-end="url(#ar2)"/>
+  <line x1="690" y1="225" x2="716" y2="225" stroke="#93a1af" stroke-width="2" marker-end="url(#ar2)"/>
+
+  <rect x="20" y="268" width="12" height="12" rx="2" fill="#a371f7"/>
+  <text class="s-sm" x="40" y="279">在這一切之前，train.py:101 先呼叫 same_seed(5201314)，固定之後用到的亂數（2.2 節）。</text>
+</svg>
+<figcaption>圖 2.1 — 只有訓練資料被切分；測試集不切分，但和另外兩份一起經過 select_feat，三份 x 的欄位因此完全對齊。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#e3b341"></i>磁碟上的 CSV</span>
+  <span><i style="background:#58a6ff"></i>CPU 端的 NumPy 陣列</span>
+  <span><i style="background:#f85149"></i>答案（第 5 天 tested_positive）</span>
+  <span><i style="background:#a371f7"></i>控制：固定亂數</span>
+</div>
+<p>圖裡所有東西都還在 CPU 上、都還是 NumPy 陣列。要等到第 3 章包成 Dataset、第 5 章在訓練迴圈裡 <code>.to(device)</code>，資料才會搬上 GPU。</p>
+
+<h2 id="seed">2.2　same_seed：把亂數固定住</h2>
+<p>第 0 章說過，seed 是亂數產生器的起點，固定 seed 就讓每次抽出的亂數序列都一樣；第 0 章也實測過，train.py 重跑兩次，最佳 loss 1.661、停在第 1883 個 epoch，結果完全相同。做到這件事的就是這 8 行：</p>
+
+<figure class="listing"><figcaption>utils.py:7–14 — same_seed()</figcaption>
+<pre class="py" data-hot="11-14"><code>def same_seed(seed):
+    """" Fixes random number generator seeds for reproducibility. """
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)</code></pre></figure>
+
+<h3>一支程式裡有好幾個亂數產生器</h3>
+<p>電腦產生的亂數其實是<strong>偽亂數（pseudo-random）</strong>：一個演算法從某個起始狀態出發，每呼叫一次就算出下一個數字、更新一次狀態。數字看起來雜亂，但只要起始狀態相同，算出來的序列就一模一樣。seed 就是用來設定這個起始狀態的。</p>
+<p>關鍵在於：一支 Python 程式裡通常不只一個亂數產生器，<strong>每個函式庫各有各的，彼此獨立</strong>，設定其中一個不會影響其他。這也是為什麼 <code>same_seed</code> 要連續設好幾個。下表把 HW01 會碰到的亂數產生器全部列出來，對照「誰設定了它」與「誰在用它」：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>亂數產生器</th><th>由誰設定</th><th>HW01 裡誰在用</th></tr></thead>
+<tbody>
+<tr><td>Python 內建 <code>random</code> 模組</td><td><strong>沒有人設定</strong></td><td>沒有人用（HW01 沒有 <code>import random</code>）</td></tr>
+<tr><td>NumPy 的全域產生器</td><td>第 11 行 <code>np.random.seed</code></td><td>沒有人用（整個 HW01 只有第 11 行出現 <code>np.random</code>）</td></tr>
+<tr><td>PyTorch 的 CPU 全域產生器</td><td>第 12 行 <code>torch.manual_seed</code></td><td>模型權重的初始值（<code>My_Model</code> 先在 CPU 上建立，再 <code>.to(device)</code> 搬上 GPU）；DataLoader 每個 epoch 打亂資料順序（第 3 章）</td></tr>
+<tr><td>每張 GPU 各自的產生器</td><td>第 13–14 行 <code>torch.cuda.manual_seed_all</code></td><td>沒有人用（模型裡沒有需要在 GPU 上抽亂數的元件）</td></tr>
+<tr><td><code>random_split</code> 專用的 <code>torch.Generator</code></td><td>utils.py 第 22 行自己設定</td><td>切分訓練／驗證集（2.3 節）</td></tr>
+</tbody>
+</table></div>
+<p>這張表說明了一件事：<strong>真正影響 HW01 結果的只有兩個——第 12 行設定的 PyTorch 全域產生器，以及 2.3 節那個切分專用的產生器。</strong>其餘幾行是通用的範本，寫來保險，換到用得到它們的作業就會生效。</p>
+<p>第 12 行到底固定了什麼，可以直接觀察。本機實測：呼叫 <code>same_seed(5201314)</code> 之後立刻抽 3 個亂數，再重設 seed 重抽一次：</p>
+<!-- TODO(本機實測): 這張表的數字來自 FACTS.md，但產生它的原始指令與逐字輸出沒有記錄；若要改成 pre.shell 的標注輸出，需在本機補跑並貼上 -->
+<div class="tablewrap"><table>
+<thead><tr><th>呼叫 <code>same_seed(5201314)</code> 後</th><th>抽出的 3 個數</th><th>重設 seed 再抽一次</th></tr></thead>
+<tbody>
+<tr><td><code>torch.rand(3)</code></td><td>0.5436、0.9728、0.8315</td><td>完全相同</td></tr>
+<tr><td><code>np.random.rand(3)</code></td><td>0.6076、0.9134、0.281</td><td>完全相同</td></tr>
+</tbody>
+</table></div>
+<p><code>torch.rand(3)</code> 與 <code>np.random.rand(3)</code> 都是「抽 3 個 0～1 之間的均勻亂數」，但兩組數字完全不同——兩個函式庫用同一個 seed，各自的演算法算出各自的序列，印證了上表「彼此獨立」那一點。而同一個函式庫、同一個 seed，重來一次就分毫不差。模型的 2,033 個初始權重（第 0 章 0.2 節）就是從 PyTorch 這條序列裡抽出來的，所以每次訓練都從同一組起點出發。</p>
+
+<h3>第 9–10 行：cuDNN 的兩個開關</h3>
+<p><strong>cuDNN</strong> 是 NVIDIA 為深度學習提供的 GPU 函式庫，負責卷積（convolution）這類運算。同一個運算，cuDNN 常有好幾種演算法可選，兩個開關就是在管這件事：</p>
+<ul>
+  <li><code>benchmark = True</code> 會在第一次遇到某種輸入形狀時把幾種演算法都試跑一遍，挑最快的。代價是「最快」可能每次量出來不一樣，選到的演算法不同，結果的小數尾數就可能不同。第 10 行把它設成 <code>False</code>，不做這種挑選。</li>
+  <li><code>deterministic = True</code> 要求 cuDNN 只用<strong>確定性（deterministic）</strong>的演算法，也就是同樣的輸入保證得到逐位元相同的輸出。有些較快的演算法為了平行化，加總的順序每次不固定；浮點數加法的順序不同，尾數就會不同。</li>
+</ul>
+<p>本機實測這兩個旗標的值：呼叫 <code>same_seed</code> 之前是 <code>deterministic=False</code>、<code>benchmark=False</code>，之後是 <code>deterministic=True</code>、<code>benchmark=False</code>。也就是說 <code>benchmark</code> 預設就是關的，第 10 行只是把預設值明白寫出來；真正改變狀態的只有第 9 行。</p>
+<p>不過，HW01 的模型只有 <code>nn.Linear</code> 與 <code>nn.ReLU</code>（第 0 章 0.2 節），沒有卷積。Linear 在 GPU 上是矩陣乘法，由另一個函式庫 cuBLAS 處理，不經過 cuDNN。所以這兩行在 HW01 裡其實沒有作用的對象——它們和 NumPy 那一行一樣，是為之後用到卷積的作業準備的範本。HW01 兩次訓練結果完全相同，靠的是第 12 行與 2.3 節的切分產生器，加上同一台機器、同一版軟體。</p>
+
+<h3>第 12–14 行與一個小瑕疵</h3>
+<p>第 13–14 行先檢查 <code>torch.cuda.is_available()</code> 才設定 GPU 的 seed，所以在沒有 GPU 的機器上，<code>same_seed</code> 本身不會報錯（本機實測）。但 HW01 不會走到這一步：第 0 章說過，沒有 GPU 時 <code>import config</code> 就已經以 <code>RuntimeError</code> 結束了。另外，現在的 PyTorch 文件寫明 <code>torch.manual_seed</code> 會設定<strong>所有裝置</strong>的產生器（含 GPU），所以第 13–14 行和第 12 行重複，無害但多餘。</p>
+<p>最後看第 8 行的說明字串（docstring，寫在函式第一行、用來說明函式用途的字串）。仔細數，開頭是<strong>四個</strong>引號 <code>""""</code>：Python 把前三個當成字串的開頭，第四個就變成字串內容的第一個字元。本機實測 <code>same_seed.__doc__</code> 的值是：</p>
+<pre class="shell"><code>'" Fixes random number generator seeds for reproducibility. '</code></pre>
+<p>開頭多了一個 <code>"</code>。<code>__doc__</code> 是 Python 存放 docstring 的屬性；用 <code>help(same_seed)</code> 查說明時看到的就是它。這不影響程式執行，只是筆誤，但它是個好例子：程式碼「能跑」不代表每個字元都是作者想要的。</p>
+
+<div class="note"><h4>現在的做法：一次設齊、用區域產生器、需要時強制確定性</h4>
+<p><code>same_seed</code> 的思路在 2026 年仍然正確，但常見的寫法多做了三件事：</p>
+<pre class="py"><code>import random, os
+import numpy as np
+import torch
+
+def seed_everything(seed):
+    random.seed(seed)                          # Python 內建 random 也設
+    np.random.seed(seed)
+    torch.manual_seed(seed)                    # 已涵蓋所有 GPU
+    os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
+    torch.use_deterministic_algorithms(True)   # 沒有確定性版本的運算直接報錯
+
+# NumPy 的新式寫法：建立自己的產生器，不動全域狀態
+rng = np.random.default_rng(5201314)
+x = rng.random(3)</code></pre>
+<ul>
+  <li><strong>把 Python 的 <code>random</code> 也設上。</strong>今天用不到，不代表之後加進來的程式（或某個函式庫）不會用。</li>
+  <li><strong><code>torch.use_deterministic_algorithms(True)</code></strong> 比 cuDNN 的旗標管得更廣：它涵蓋 cuBLAS 在內的所有 PyTorch 運算，遇到沒有確定性實作的運算會<strong>直接拋出錯誤</strong>，而不是悄悄給出不同的尾數。依 PyTorch 文件，在 GPU 上使用時還要設定環境變數 <code>CUBLAS_WORKSPACE_CONFIG</code>。代價是可能變慢，所以通常只在除錯或需要逐位元重現時打開。</li>
+  <li><strong>用區域產生器取代全域狀態。</strong>NumPy 官方建議 <code>np.random.default_rng(seed)</code> 建立自己的產生器，<code>np.random.seed</code> 屬於舊式介面。PyTorch 這邊的同一個想法，HW01 已經用在切分上了（下一節）。</li>
+</ul>
+<p>許多訓練框架也內建了同樣的函式，例如 PyTorch Lightning 的 <code>seed_everything</code>、Hugging Face transformers 的 <code>set_seed</code>。</p>
+</div>
+
+<h2 id="split">2.3　train_valid_split：539 是怎麼來的</h2>
+
+<figure class="listing"><figcaption>utils.py:17–23 — train_valid_split()</figcaption>
+<pre class="py" data-hot="19-22"><code>def train_valid_split(data_set, valid_ratio, seed):
+    """Split provided training data into training set and validation set"""
+    valid_set_size = int(valid_ratio * len(data_set))
+    train_set_size = len(data_set) - valid_set_size
+    train_set, valid_set = random_split(data_set, [train_set_size, valid_set_size],
+                                        generator=torch.Generator().manual_seed(seed))
+    return np.array(train_set), np.array(valid_set)</code></pre></figure>
+
+<p>train.py 第 106 行傳進來的是 <code>train_data</code>（2699 × 118 的 NumPy 陣列）、<code>config['valid_ratio']</code>（0.2）、<code>config['seed']</code>（5201314）。逐行看。</p>
+
+<h3>第 19–20 行：先算大小</h3>
+<p><code>len(data_set)</code> 對二維陣列回傳列數 2699。<code>0.2 * 2699</code> 在數學上是 539.8，但浮點數無法精確表示 0.2，本機實測算出來是 <code>539.8000000000001</code>。接著 <code>int()</code> 把它變成整數——<code>int()</code> 是<strong>直接截掉小數部分</strong>，不是四捨五入，所以得到 539，不是 540。第 20 行再用 2699 − 539 = 2160 算出訓練集大小。用減法而不是另外乘 0.8，保證兩份加起來剛好是 2699，一列都不會少。</p>
+
+<div class="warn"><h4>讀 code 不盡信文件：config.py 的註解算錯了對象</h4>
+<p>config.py 第 12 行在 <code>'valid_ratio': 0.2</code> 後面註解 <code>validation_size = train_size * valid_ratio</code>。照這個公式，驗證集應該是 2160 × 0.2 = 432 筆。但第 19 行乘的是 <code>len(data_set)</code>，也就是<strong>切分前的全部 2699 列</strong>，所以實際是 539 筆。正確的註解應該寫成 <code>validation_size = len(train_data) * valid_ratio</code>（train_data 指切分前的那一份）。第 0 章 0.4 節提過這個不一致，這裡是它的出處。</p>
+</div>
+
+<h3>第 21–22 行：random_split 與它自己的 Generator</h3>
+<p><code>random_split</code> 是 PyTorch 提供的切分函式（<code>utils.py</code> 第 4 行從 <code>torch.utils.data</code> import 進來）。它的做法是：</p>
+<ol>
+  <li>產生 0～2698 這 2699 個列號的一個隨機排列（PyTorch 內部用 <code>torch.randperm</code>）。</li>
+  <li>依照第二個參數 <code>[2160, 539]</code>，把排列的前 2160 個位置分給第一份、接下來的 539 個分給第二份。</li>
+  <li>回傳兩個 <code>Subset</code> 物件。</li>
+</ol>
+<p><strong><code>Subset</code></strong> 不複製資料，它只記住兩樣東西：原始資料的參照，以及一串列號 <code>indices</code>。要第 i 筆時，它回頭去原始資料拿 <code>indices[i]</code> 那一列。本機實測，兩個 Subset 的長度是 2160 與 539，<code>indices</code> 的前 10 個如下：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 230" role="img" aria-label="random_split 示意：0 到 2698 的列號被打亂成一個排列，前 2160 個位置成為訓練集，後 539 個成為驗證集">
+  <defs>
+    <marker id="ar2b" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#93a1af"/>
+    </marker>
+  </defs>
+  <text class="s-sm" x="20" y="24">原始列號（covid.train.csv 的 2699 列，依檔案順序）</text>
+  <rect x="20" y="34" width="860" height="34" rx="4" fill="#58a6ff" opacity="0.25"/>
+  <text class="s-mono" x="30" y="56">0, 1, 2, 3, 4, 5, 6, 7, 8, 9, …</text>
+  <text class="s-mono" x="870" y="56" text-anchor="end">…, 2697, 2698</text>
+
+  <line x1="300" y1="72" x2="300" y2="122" stroke="#93a1af" stroke-width="2" marker-end="url(#ar2b)"/>
+  <text class="s-key" x="312" y="94">randperm(2699)</text>
+  <text class="s-sm" x="312" y="112">由 torch.Generator().manual_seed(5201314) 決定順序</text>
+
+  <rect x="20" y="126" width="688" height="40" rx="4" fill="#58a6ff" opacity="0.6"/>
+  <rect x="708" y="126" width="172" height="40" rx="4" class="s-box" style="stroke:#58a6ff;stroke-width:2"/>
+  <text class="s-mono" x="30" y="151">696, 2073, 909, 1475, 2165, 2487, 479, 1795, 2150, 2588, …</text>
+  <text class="s-mono" x="716" y="151">1995, 1042, 86, …</text>
+  <text class="s-sm" x="708" y="118" text-anchor="middle">↓ 位置 2160</text>
+
+  <text class="s-lbl" x="20" y="192">train_set：排列的前 2160 個位置</text>
+  <text class="s-sm" x="20" y="212">Subset.indices 前 10 個；列號未排序</text>
+  <text class="s-lbl" x="880" y="192" text-anchor="end">valid_set：後 539 個</text>
+  <text class="s-sm" x="880" y="212" text-anchor="end">Subset.indices 前 3 個</text>
+</svg>
+<figcaption>圖 2.2 — random_split 不是「前 80% 給訓練」，而是先把列號打亂、再依序切開；同一個 seed 每次打亂出同一個排列。</figcaption>
+</figure>
+
+<p>訓練集的前 10 個列號是 696、2073、909、1475、2165、2487、479、1795、2150、2588，順序是亂的；驗證集的前 10 個是 1995、1042、86、1667、464、481、1040、85、423、788。這 10 列的 id 也正是這 10 個數字——但別把「id 等於列號」當通則，第 1 章看過 id 在 2239 有一個缺號。</p>
+<p>還有一個細節：<code>data_set</code> 是 NumPy 陣列，不是 PyTorch 的 Dataset，<code>random_split</code> 卻照樣能切。因為 <code>Subset</code> 只需要對原始資料做兩件事——<code>len()</code> 與 <code>[i]</code>——而 NumPy 陣列兩件都支援。Python 不檢查「你是不是某個類別」，只看「你會不會做這些動作」，這種風格叫 <strong>duck typing</strong>。</p>
+
+<h3>為什麼要另外建一個 Generator</h3>
+<p>第 22 行的 <code>torch.Generator()</code> 建立一個<strong>全新、獨立</strong>的 PyTorch 亂數產生器，<code>.manual_seed(seed)</code> 設定它的 seed 並回傳它自己，所以可以寫在同一行傳給 <code>generator=</code>。<code>random_split</code> 只從這個產生器抽亂數，不碰 2.2 節的全域產生器。本機實測了四種情況：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>做法</th><th>切分結果</th></tr></thead>
+<tbody>
+<tr><td>同一個 seed（5201314）再切一次</td><td>和原本完全相同</td></tr>
+<tr><td>改用 seed 1</td><td>不同：訓練集前 10 個變成 1659、792、971、1755、777、408、450、248、1528、1631</td></tr>
+<tr><td>切之前先執行 <code>torch.manual_seed(0)</code> 改掉全域 seed</td><td>和原本完全相同——全域 seed 管不到這個產生器</td></tr>
+<tr><td>不傳 <code>generator</code>，改用全域產生器</td><td>全域 seed 相同，切分就相同；全域 seed 不同，切分就不同</td></tr>
+</tbody>
+</table></div>
+<p>第三列是這個設計的重點：<strong>切分結果只由「資料、比例、seed」三樣東西決定</strong>，和程式其他地方抽過幾次亂數、全域 seed 設成什麼都無關。predict.py 就是受益者：它<strong>沒有呼叫 <code>same_seed</code></strong>（第 0 章看過，它的輸出在兩行 True／0 之後直接是資料大小），全域產生器的狀態每次都不一樣，但它重切出來的訓練／驗證集和 train.py 的一模一樣，印出的大小也一樣。</p>
+<p>反過來說，如果第 22 行不傳 <code>generator</code>（第四列），train.py 因為先呼叫了 <code>same_seed</code>，每次切分仍然相同；但 predict.py 每次執行都會切出不同的兩份。在 HW01 裡這碰巧不影響預測結果（predict.py 只用測試集），但在需要「訓練和評估用同一個驗證集」的程式裡，這就是一個很難察覺的 bug。</p>
+<p>附帶一提，train.py 第 12 行 <code>from torch.utils.data import DataLoader, random_split</code> 也 import 了 <code>random_split</code>，但 train.py 自己從頭到尾沒有呼叫它——切分是在 utils.py 裡做的。這是從原版筆記本拆檔時留下的痕跡，無害。</p>
+
+<h3>第 23 行：Subset 變回 NumPy 陣列</h3>
+<p><code>np.array(train_set)</code> 收到的是一個 Subset 物件。NumPy 看到它有 <code>len()</code> 又能用 <code>[i]</code> 取值，就把它當成一個序列：從第 0 筆取到第 2159 筆，每一筆都是原始陣列的一列（118 個 float64），再把這 2160 列疊成一個新的二維陣列。本機實測結果是 <code>(2160, 118)</code>、float64，和 train.py 印出的大小一致。這一步會<strong>複製</strong>資料：回傳的是一個新陣列，不再是 Subset 那種「參照 + 列號」。</p>
+<p>同樣的事有更直接的寫法：<code>data_set[train_set.indices]</code>，用 NumPy 的整數陣列索引一次取出那些列。本機實測兩種寫法的結果完全相同（<code>np.array_equal</code> 為 True），耗時分別約 0.0015 秒與 0.0012 秒——這份資料太小，看不出差別。差別在可讀性：後者明白寫出「依列號取列」，前者要讀者知道 NumPy 會怎麼處理一個 Subset。</p>
+
+<h3>切出來的驗證集長什麼樣</h3>
+<p>隨機切分有一個好處：每一州都有機會進驗證集。本機實測，539 筆驗證資料裡 37 州全部出現，每州 7～25 列。答案欄的分布也和訓練集相近但不相同：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>筆數</th><th>答案（第 5 天 tested_positive）平均</th><th>範圍</th></tr></thead>
+<tbody>
+<tr><td>訓練集 <code>y_train</code></td><td>2160</td><td>9.7404</td><td>—</td></tr>
+<tr><td>驗證集 <code>y_valid</code></td><td>539</td><td>10.1355</td><td>0.3448～29.8157</td></tr>
+</tbody>
+</table></div>
+<!-- TODO(本機實測): y_train 的最小值與最大值（FACTS 只有平均 9.7404） -->
+<p>平均差了約 0.4 個百分點，這是抽樣造成的自然落差。但第 1 章 1.6 節指出的問題仍然在：資料是滑動視窗，同一州相鄰兩列共享 4 天；隨機切分讓驗證集的每一列，前後鄰居多半落在訓練集裡。圖 2.2 那種「打亂再切」的做法，正是讓驗證集被「偷看」的機制。第 1 章的「現在的做法：照時間切驗證集」框已經示範過替代方案，這裡不再重複。</p>
+
+<div class="note"><h4>現在的做法：用比例切、直接用索引</h4>
+<p>2022 年的範例手動算出兩份的大小再傳給 <code>random_split</code>。PyTorch 1.13 起，<code>random_split</code> 可以直接收比例：</p>
+<pre class="py"><code>train_set, valid_set = random_split(data_set, [0.8, 0.2],
+                                    generator=torch.Generator().manual_seed(seed))
+train, valid = data_set[train_set.indices], data_set[valid_set.indices]</code></pre>
+<p>本機實測，<code>[0.8, 0.2]</code> 切出來的大小也是 2160 與 539（依 PyTorch 文件，比例乘出來的小數部分被捨去後，剩下的筆數會輪流補給各份，所以總數一定等於原資料）。第二行用 <code>indices</code> 直接取列，取代 <code>np.array(Subset)</code>。表格資料在 PyTorch 之外，最常見的切分工具是 scikit-learn 的 <code>train_test_split</code>；但對這份時間序列資料，更重要的是第 1 章說的「照時間切」，而不是換一個隨機切分的函式。</p>
+</div>
+
+<h2 id="feat">2.4　select_feat：x 與 y，以及被當成特徵的 id</h2>
+
+<figure class="listing"><figcaption>utils.py:26–36 — select_feat()</figcaption>
+<pre class="py" data-hot="28-29,31-34"><code>def select_feat(train_data, valid_data, test_data, select_all=True):
+    """Selects useful features to perform regression"""
+    y_train, y_valid = train_data[:, -1], valid_data[:, -1]
+    raw_x_train, raw_x_valid, raw_x_test = train_data[:, :-1], valid_data[:, :-1], test_data
+
+    if select_all:
+        feat_idx = list(range(raw_x_train.shape[1]))
+    else:
+        feat_idx = [0, 1, 2, 3, 4]  # TODO: Select suitable feature columns.
+
+    return raw_x_train[:, feat_idx], raw_x_valid[:, feat_idx], raw_x_test[:, feat_idx], y_train, y_valid</code></pre></figure>
+
+<p>機器學習的慣例是：模型的輸入叫 <strong>x</strong>（特徵，features），要預測的答案叫 <strong>y</strong>（目標，target）。這個函式就是把 2.3 節切好的三份資料拆成 x 和 y。第 1 章 1.5 節說過，<code>.values</code> 之後欄名全部消失，程式只能用位置指稱欄位——這個函式通篇都在用位置。</p>
+
+<h3>第 28–29 行：答案是最後一欄，其餘是 x</h3>
+<ul>
+  <li><code>train_data[:, -1]</code>：每一列的最後一欄，也就是第 5 天的 <code>tested_positive</code>。結果是一維陣列 <code>(2160,)</code>，不是 <code>(2160, 1)</code>——這個形狀在第 4 章講 <code>squeeze(1)</code> 時會再出現。</li>
+  <li><code>train_data[:, :-1]</code>：每一列「從頭到倒數第二欄」，118 − 1 = 117 欄。</li>
+  <li><code>raw_x_test = test_data</code>：測試集本來就沒有答案欄，117 欄直接整份拿來用，不必切。</li>
+</ul>
+<p>這裡有一個沒寫出來、但程式完全依賴的前提：<strong>訓練集的前 117 欄和測試集的 117 欄，排列順序一模一樣</strong>。第 1 章圖 1.1 驗證過這件事；本機實測兩邊的第 116 欄（0 起算的最後一欄）都是 <code>worried_finances.4</code>。如果測試集的欄位順序和訓練集不同，模型會把 A 欄學到的權重套在 B 欄上，程式不會報錯，只會默默給出錯的預測。</p>
+
+<h3>第 31–34 行：feat_idx 決定模型看哪幾欄</h3>
+<p><code>feat_idx</code> 是一串欄號，第 36 行用 <code>raw_x[:, feat_idx]</code> 從三份 x 裡挑出這些欄。NumPy 的這種寫法叫<strong>整數陣列索引（fancy indexing）</strong>：中括號裡放一個列表，就依列表中的編號、依列表的順序取出那些欄。兩個分支的結果：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 250" role="img" aria-label="select_feat 的欄位選擇：train_data 118 欄中，最後一欄成為 y，前 117 欄成為 raw_x；select_all 為 True 時取全部 117 欄，為 False 時只取第 0 到 4 欄，即 id 與四個州">
+  <text class="s-sm" x="20" y="22">train_data／valid_data（118 欄，依欄數比例繪製；數字為 0 起算欄號）</text>
+  <rect x="20" y="32" width="7.3" height="36" fill="#a371f7" opacity="0.85"/>
+  <rect x="27.3" y="32" width="269.7" height="36" fill="#58a6ff" opacity="0.35"/>
+  <rect x="297" y="32" width="576.1" height="36" fill="#58a6ff" opacity="0.7"/>
+  <rect x="873.1" y="32" width="7.3" height="36" fill="#f85149"/>
+  <text class="s-lbl" x="162" y="55" text-anchor="middle">37 州 one-hot</text>
+  <text class="s-lbl" x="585" y="55" text-anchor="middle">5 天的問卷與前 4 天陽性率</text>
+  <rect x="19" y="29" width="38.5" height="42" fill="none" stroke="#dde5ec" stroke-width="2" stroke-dasharray="4 3"/>
+  <text class="s-mono" x="20" y="86">0</text>
+  <text class="s-mono" x="868" y="86" text-anchor="end">116</text>
+  <text class="s-mono" x="884" y="100" text-anchor="end">117</text>
+
+  <line x1="20" y1="110" x2="873" y2="110" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="20" y1="104" x2="20" y2="116" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="873" y1="104" x2="873" y2="116" stroke="#93a1af" stroke-width="1.5"/>
+  <text class="s-key" x="446" y="134" text-anchor="middle">[:, :-1] → raw_x（117 欄）</text>
+  <text class="s-key" x="880" y="134" text-anchor="end" style="fill:#f85149">[:, -1] → y</text>
+
+  <text class="s-lbl" x="20" y="172">select_all=True：feat_idx = 0～116，117 欄全拿（含第 0 欄 id）</text>
+  <text class="s-lbl" x="20" y="198">select_all=False：feat_idx = [0, 1, 2, 3, 4]（虛線框）＝ id、AL、AK、AZ、AR</text>
+  <text class="s-sm" x="20" y="230">test_data 沒有答案欄，117 欄的排列與 raw_x 相同，所以同一組 feat_idx 可以直接套用</text>
+</svg>
+<figcaption>圖 2.3 — 兩個分支都會選到 id：True 時 id 混在 117 欄裡，False 時 5 欄裡有 1 欄是 id、另外 4 欄只是在說「這列是不是 AL／AK／AZ／AR 州」。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#a371f7"></i>id（編號）</span>
+  <span><i style="background:#58a6ff"></i>輸入特徵（州別與問卷）</span>
+  <span><i style="background:#f85149"></i>答案</span>
+</div>
+
+<p>本機實測兩個分支回傳的形狀：</p>
+<div class="tablewrap"><table>
+<thead><tr><th><code>select_all</code></th><th><code>feat_idx</code></th><th>x_train</th><th>x_valid</th><th>x_test</th><th>y_train</th><th>y_valid</th></tr></thead>
+<tbody>
+<tr><td><code>True</code>（config 的設定）</td><td>0～116</td><td>(2160, 117)</td><td>(539, 117)</td><td>(1078, 117)</td><td>(2160,)</td><td>(539,)</td></tr>
+<tr><td><code>False</code></td><td>[0, 1, 2, 3, 4]</td><td>(2160, 5)</td><td>(539, 5)</td><td>(1078, 5)</td><td>(2160,)</td><td>(539,)</td></tr>
+</tbody>
+</table></div>
+<p>第 32 行寫的是 <code>range(raw_x_train.shape[1])</code>，用 x 的實際欄數產生欄號，而不是寫死 117——資料多一欄少一欄，這行都不用改。train.py 第 117 行印的 <code>number of features: 117</code> 就是 <code>x_train.shape[1]</code>，而第 126 行建立模型時用的 <code>input_dim=x_train.shape[1]</code> 也是同一個值。所以<strong>改 <code>feat_idx</code> 會自動改變模型第一層的大小</strong>，模型那邊不必跟著動手改（第 4 章會看到 117 這個數字怎麼決定第一層的 1,888 個參數）。</p>
+<p>第 36 行用<strong>同一個</strong> <code>feat_idx</code> 去挑三份 x，這保證訓練、驗證、測試三份的欄位一一對應。答案 y 則不經過 <code>feat_idx</code>，一定只有一欄。</p>
+
+<div class="warn"><h4>讀 code 不盡信文件：「Selects useful features」其實什麼都沒挑</h4>
+<p>第 27 行的 docstring 說這個函式「挑出有用的特徵」，但兩個分支都沒有在挑：</p>
+<ul>
+  <li><strong><code>select_all=True</code>（預設，也是 config 的設定）</strong>把答案以外的 117 欄全部拿走，<strong>包含第 0 欄的 id</strong>。第 1 章已經說明為什麼 id 不該是特徵：它在訓練集裡隱含時間（和答案相關 0.264），但測試集的 id 是從 0 重新編號的另一套，同一個數字代表的時間點毫無關係。</li>
+  <li><strong><code>select_all=False</code></strong> 的 <code>[0, 1, 2, 3, 4]</code> 只是佔位用的範例，旁邊的 <code>TODO</code> 註解就是在說「這裡請你自己填」。對照欄位版圖，這 5 欄是 id 加上 AL、AK、AZ、AR 四個州的 one-hot——沒有任何一欄是問卷或陽性率。拿這 5 欄訓練，模型只知道「這列是不是這四州之一」以及一個不能用的編號。</li>
+</ul>
+<p>id 到底拖累多少？目錄頁〈先說在前面〉的實測給了一個線性模型上的數字：在同一個驗證集上，線性迴歸用 117 欄（含 id）是 1.172，拿掉 id 只用 116 欄是 1.166。至於範例的 DNN 拿掉 id 會怎樣，留給下面的動手做。填好 <code>feat_idx</code> 正是作業提示裡通過 medium 基準線的方法，第 7 章會正式處理。</p>
+</div>
+
+<h2 id="lab">2.5　動手做</h2>
+<div class="lab"><h4>動手做：親手確認本章的三個說法</h4>
+<p>以下指令都在 <code>HW01/</code> 裡執行。這幾段只 import <code>utils</code>，不 import <code>config</code>，所以輸出開頭<strong>不會</strong>有 <code>True</code>、<code>0</code> 那兩行。</p>
+<ol>
+  <li><strong>539 與驗證集的列號</strong>：
+<pre class="shell"><code>$ ../.venv/bin/python -c "
+import pandas as pd
+from utils import train_valid_split
+tr = pd.read_csv('covid.train.csv').values
+a, b = train_valid_split(tr, 0.2, 5201314)
+print(a.shape, b.shape)
+print(b[:10, 0])
+"</code></pre>
+<!-- TODO(本機實測): 照字面跑這段指令，貼上逐字輸出（預期 (2160, 118) (539, 118)，第二行是 1995、1042、86… 這 10 個 id 的 float 陣列，確切印法待確認） -->
+  第一行應該是 2160 與 539 兩個形狀；第二行是驗證集前 10 列的第 0 欄（id），應該是 1995、1042、86、1667、464、481、1040、85、423、788 這 10 個數字（陣列是 float64，所以會印成帶小數點的形式）。</li>
+  <li><strong>全域 seed 管不到切分</strong>：在上一段的 <code>a, b = …</code> 之前加一行 <code>import torch; torch.manual_seed(0)</code> 再跑，第二行的 10 個 id 應該完全不變。再把 <code>5201314</code> 改成 <code>1</code>，這次就會變。</li>
+  <li><strong>拿掉 id 再訓練一次</strong>：把 <code>utils.py</code> 第 32 行暫時改成 <code>feat_idx = list(range(1, raw_x_train.shape[1]))</code>（從第 1 欄開始，跳過第 0 欄的 id），然後執行 <code>../.venv/bin/python train.py 2&gt;/dev/null | grep -B1 Saving | tail -2</code>（第 0 章用過的指令），看最後一次存檔的 epoch 與 loss。stdout 開頭的 <code>number of features</code> 應該變成 116。和原本的 1.661 比，是變好還是變差？
+<!-- TODO(本機實測): 拿掉 id（feat_idx = range(1, 117)）後 train.py 的最佳 valid loss、最佳 epoch、early stop 的 epoch -->
+  做完<strong>務必把第 32 行改回原樣，並再跑一次 train.py</strong>，讓 <code>models/model.ckpt</code> 回到 1.661 那一份——後面各章的數字都以它為準。</li>
+</ol>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>train.py 第 101、106、114 行依序呼叫 <code>same_seed</code>、<code>train_valid_split</code>、<code>select_feat</code>，三者都在 utils.py。</li>
+  <li>一支程式裡有好幾個彼此獨立的亂數產生器。影響 HW01 結果的只有 PyTorch 全域產生器（模型初始權重、DataLoader 打亂）與切分專用的 <code>torch.Generator</code>；NumPy、cuDNN、GPU seed 那幾行在 HW01 沒有作用對象，Python 的 <code>random</code> 沒有被設定。</li>
+  <li>驗證集大小是 <code>int(0.2 × 2699)</code> = 539（截斷，不是四捨五入），乘的是切分前的全部資料；config.py 的註解寫成 <code>train_size * valid_ratio</code> 是錯的。</li>
+  <li><code>random_split</code> 先打亂列號再依序切開，回傳只記列號的 <code>Subset</code>；用獨立的 Generator，所以切分只由資料、比例、seed 決定，連沒呼叫 <code>same_seed</code> 的 predict.py 都切得一模一樣。</li>
+  <li><code>select_feat</code> 以最後一欄為 y、其餘 117 欄為 x；預設 <code>select_all=True</code> 會把 id 也當成特徵，<code>False</code> 分支的 <code>[0, 1, 2, 3, 4]</code> 是 id 加四個州，只是佔位用的 TODO。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 如果把 <code>valid_ratio</code> 改成 0.25，驗證集與訓練集各有幾筆？</summary>
+<p>0.25 × 2699 = 674.75，<code>int()</code> 截掉小數得 674；訓練集 2699 − 674 = 2025。注意不是四捨五入成 675。</p></details>
+<details class="quiz"><summary>2. 呼叫 <code>same_seed</code> 後，<code>torch.rand(3)</code> 與 <code>np.random.rand(3)</code> 用的是同一個 seed，為什麼抽出的數字不一樣？</summary>
+<p>PyTorch 與 NumPy 各有自己的亂數產生器與演算法，彼此獨立。同一個 seed 只保證「同一個產生器」每次產生相同的序列，不保證不同產生器之間的序列相同。</p></details>
+<details class="quiz"><summary>3. 假設把 utils.py 第 22 行的 <code>generator=...</code> 參數刪掉。train.py 每次執行的切分還會相同嗎？predict.py 呢？</summary>
+<p>train.py 會：它在切分前呼叫了 <code>same_seed</code>，全域產生器的起點固定，切分就固定。predict.py 不會：它沒有呼叫 <code>same_seed</code>，全域產生器的起點每次不同，每次切出的兩份都不一樣。在 HW01 裡碰巧不影響預測（predict.py 只用測試集），但這正是用獨立 Generator 的理由。</p></details>
+<details class="quiz"><summary>4. HW01 的模型只有 Linear 與 ReLU。same_seed 裡設定 cuDNN 的兩行，在 HW01 有作用嗎？</summary>
+<p>沒有作用對象。cuDNN 負責卷積這類運算；Linear 在 GPU 上是矩陣乘法，由 cuBLAS 處理。另外 <code>benchmark</code> 的預設值本來就是 False。這兩行是給之後有卷積的作業用的範本。</p></details>
+<details class="quiz"><summary>5. <code>select_all=False</code> 時模型的輸入是哪 5 欄？為什麼這 5 欄幾乎不可能訓練出好模型？</summary>
+<p>0 起算的第 0～4 欄：id、AL、AK、AZ、AR。id 在測試集是另一套編號，不能當特徵；另外 4 欄只表示「這列是不是這四州之一」，完全沒有問卷或前幾天陽性率的資訊，而第 1 章看過，和答案最相關的正是前幾天的陽性率。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://pytorch.org/docs/stable/notes/randomness.html">PyTorch — Reproducibility</a>：PyTorch 官方對可重現性的說明，包括 <code>torch.manual_seed</code>、cuDNN 的兩個旗標、<code>use_deterministic_algorithms</code> 與 <code>CUBLAS_WORKSPACE_CONFIG</code>。</li>
+  <li><a href="https://pytorch.org/docs/stable/data.html#torch.utils.data.random_split">torch.utils.data.random_split</a>：參數說明，包括用比例切分時餘數怎麼分配。</li>
+  <li><a href="https://pytorch.org/docs/stable/generated/torch.Generator.html">torch.Generator</a>：獨立亂數產生器的用法。</li>
+  <li><a href="https://numpy.org/doc/stable/reference/random/generator.html">NumPy — Random Generator</a>：<code>np.random.default_rng</code> 與舊式 <code>np.random.seed</code> 的差別。</li>
+  <li><a href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html">scikit-learn — TimeSeriesSplit</a>：時間序列資料的切分工具，第 1 章「照時間切」的通用版本。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch01.html">← 第 1 章</a><a href="ch03.html">第 3 章 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW01 讀碼教材 · 對應 commit 717528b · 程式碼引用取自本 repo 的 HW01/；實測輸出取自 2026-10-02、10-03 本機執行</footer>
+
+</body>
+</html>
