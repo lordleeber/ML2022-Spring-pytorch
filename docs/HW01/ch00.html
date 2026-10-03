@@ -491,7 +491,108 @@ footer.chap-footer {
 <p>輸入：一列 117 個數字（1 個編號 id、37 個代表「哪一州」的欄位、5 天的問卷統計，第 1 章逐欄拆給你看）。輸出：第 5 天的陽性率（1 個數字）。訓練目標：讓預測和真實值的 MSE 盡量小。</p>
 </div>
 
-<h2 id="env">0.2　環境：為什麼不能照原本的 requirements 裝</h2>
+<h2 id="model">0.2　模型總覽：117 → 16 → 8 → 1</h2>
+<p>在進入環境與程式之前，先看一眼這份作業的主角長什麼樣。模型定義在 <code>model.py</code>，類別叫 <code>My_Model</code>：</p>
+
+<figure class="listing"><figcaption>model.py:10–25 — My_Model：三層全連接網路</figcaption>
+<pre class="py" data-hot="14-20"><code>class My_Model(nn.Module):
+    def __init__(self, input_dim):
+        super(My_Model, self).__init__()
+        # TODO: modify model's structure, be aware of dimensions.
+        self.layers = nn.Sequential(
+            nn.Linear(input_dim, 16),
+            nn.ReLU(),
+            nn.Linear(16, 8),
+            nn.ReLU(),
+            nn.Linear(8, 1)
+        )
+
+    def forward(self, x):
+        x = self.layers(x)
+        x = x.squeeze(1) # (B, 1) -&gt; (B)
+        return x</code></pre></figure>
+
+<p>重點在第 14–20 行：<code>nn.Sequential</code> 把五個元件依序串起來，資料從上往下流過。只有兩種元件：</p>
+<ul>
+  <li><strong><code>nn.Linear(a, b)</code>（全連接層）</strong>：把 a 個輸入數字各乘上一個權重再加總、加上一個偏差（bias），算出 b 個輸出。每個輸出都連到全部輸入，所以叫「全連接」。權重與偏差就是模型要學的參數。</li>
+  <li><strong><code>nn.ReLU()</code>（激活函數）</strong>：把負數變成 0、正數原樣保留，即 max(0, x)。少了它，三層 Linear 疊起來在數學上等於一層 Linear；有了它，網路才能表達非線性的關係。</li>
+</ul>
+<p>這種「Linear 與激活函數交替堆疊」的網路叫<strong>多層感知器（MLP）</strong>，是最基本的神經網路。下圖是資料流過它的樣子：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 270" role="img" aria-label="My_Model 架構：117 個輸入經 Linear 與 ReLU 變成 16 個、再變成 8 個，最後一個 Linear 輸出 1 個數字；各層參數量 1888、136、9，共 2033">
+  <defs>
+    <marker id="ar1" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#93a1af"/>
+    </marker>
+  </defs>
+  <rect x="30" y="40" width="130" height="170" rx="10" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-lbl" x="95" y="110" text-anchor="middle" font-weight="700">輸入 117 欄</text>
+  <text class="s-sm" x="95" y="132" text-anchor="middle">id、州別、5 天問卷</text>
+  <text class="s-mono" x="95" y="160" text-anchor="middle">(256, 117)</text>
+
+  <rect x="270" y="70" width="110" height="110" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="325" y="112" text-anchor="middle" font-weight="700">16 個輸出</text>
+  <text class="s-sm" x="325" y="134" text-anchor="middle">經過 ReLU</text>
+  <text class="s-mono" x="325" y="160" text-anchor="middle">(256, 16)</text>
+
+  <rect x="490" y="85" width="110" height="80" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="545" y="112" text-anchor="middle" font-weight="700">8 個輸出</text>
+  <text class="s-sm" x="545" y="132" text-anchor="middle">經過 ReLU</text>
+  <text class="s-mono" x="545" y="154" text-anchor="middle">(256, 8)</text>
+
+  <rect x="710" y="95" width="160" height="60" rx="10" class="s-box" style="stroke:#f85149"/>
+  <text class="s-lbl" x="790" y="118" text-anchor="middle" font-weight="700">1 個預測值</text>
+  <text class="s-mono" x="790" y="140" text-anchor="middle">(256, 1) → (256,)</text>
+
+  <line x1="162" y1="125" x2="266" y2="125" stroke="#93a1af" stroke-width="2" marker-end="url(#ar1)"/>
+  <line x1="382" y1="125" x2="486" y2="125" stroke="#93a1af" stroke-width="2" marker-end="url(#ar1)"/>
+  <line x1="602" y1="125" x2="706" y2="125" stroke="#93a1af" stroke-width="2" marker-end="url(#ar1)"/>
+  <text class="s-key" x="214" y="98" text-anchor="middle">Linear</text>
+  <text class="s-mono" x="214" y="114" text-anchor="middle">117→16</text>
+  <text class="s-sm" x="214" y="146" text-anchor="middle">1,888 個參數</text>
+  <text class="s-key" x="434" y="98" text-anchor="middle">Linear</text>
+  <text class="s-mono" x="434" y="114" text-anchor="middle">16→8</text>
+  <text class="s-sm" x="434" y="146" text-anchor="middle">136 個參數</text>
+  <text class="s-key" x="654" y="98" text-anchor="middle">Linear</text>
+  <text class="s-mono" x="654" y="114" text-anchor="middle">8→1</text>
+  <text class="s-sm" x="654" y="146" text-anchor="middle">9 個參數</text>
+  <text class="s-sm" x="30" y="245">方框內最後一行是張量形狀（一次餵 256 筆時）；最後的 squeeze(1) 把 (256, 1) 壓成 (256,)。</text>
+</svg>
+<figcaption>圖 0.1 — 117 個數字被逐層壓縮成 1 個預測值；整個模型只有 2,033 個參數，其中 93% 集中在第一層。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#58a6ff"></i>輸入資料</span>
+  <span><i style="background:#3fb950"></i>在 GPU 上運算的層</span>
+  <span><i style="background:#f85149"></i>預測值</span>
+</div>
+
+<p>參數量可以手算：一個 <code>Linear(a, b)</code> 有 a × b 個權重加 b 個偏差。</p>
+<div class="eq">第一層：117 × 16 + 16 = 1,888<br>第二層：16 × 8 + 8 = 136<br>第三層：8 × 1 + 1 = 9<br>合計：2,033</div>
+<p>也可以讓 PyTorch 自己算，順便印出結構確認（在 <code>HW01/</code> 執行）：</p>
+<pre class="shell"><code>$ ../.venv/bin/python -c "
+from model import My_Model
+m = My_Model(input_dim=117)
+print(m)
+print(sum(p.numel() for p in m.parameters()))
+"
+My_Model(
+  (layers): Sequential(
+    (0): Linear(in_features=117, out_features=16, bias=True)  «1»
+    (1): ReLU()
+    (2): Linear(in_features=16, out_features=8, bias=True)
+    (3): ReLU()
+    (4): Linear(in_features=8, out_features=1, bias=True)
+  )
+)
+2033  «2»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>括號裡的 0～4 是元件在 <code>nn.Sequential</code> 裡的編號，ReLU 沒有參數但也佔一個編號。</li>
+  <li><span class="mk">2</span><code>p.numel()</code> 是一個參數張量的元素個數，全部加總正好 2,033，和手算一致。</li>
+</ol>
+<p>2,033 個參數是非常小的模型——第 0.7 節會看到存下來的權重檔只有 11 KB。這個模型怎麼被訓練（loss 用 MSE、優化器用 SGD）是第 5 章的主題，model.py 的逐行細節（<code>super().__init__()</code>、<code>forward</code> 何時被呼叫、<code>squeeze</code> 為什麼必要）留到第 4 章。現在只要記住這張圖：<strong>117 個數字進去，1 個數字出來</strong>。</p>
+
+<h2 id="env">0.3　環境：為什麼不能照原本的 requirements 裝</h2>
 <p>先認識兩個名字。<strong>PyTorch</strong>（套件名 <code>torch</code>）是用來建立與訓練神經網路的 Python 函式庫，本作業的模型就是一個小型神經網路。<strong>CUDA</strong> 是 NVIDIA 提供的一套讓程式在顯卡上做運算的平台（驅動程式之上的函式庫與編譯工具）；PyTorch 要用顯卡，就是透過 CUDA。所以 GPU 版 PyTorch 的版本號會連帶標明它是用哪一版 CUDA 編譯的，例如 <code>cu116</code> 就是 CUDA 11.6。</p>
 <p>本 repo 原本的 <code>requirements.txt</code> 第一行是 <code>pip install torch==1.13.1+cu116 …</code>，也就是 2022 年課程當時的 PyTorch 1.13 搭 CUDA 11.6。這組版本在這台機器上有兩個無法繞過的問題：</p>
 <ol>
@@ -528,7 +629,27 @@ $ UV_HTTP_TIMEOUT=600 uv pip install --python .venv -r requirements.txt</code></
   <li>這份 PyTorch 內建了哪些架構的 kernel。最後一個 <code>sm_120</code> 正是本機需要的——這一行就是「cu128 才能用」的直接證據。</li>
 </ol>
 
-<h2 id="config">0.3　config.py：全專案的設定中心</h2>
+<div class="note"><h4>現在的做法：pyproject.toml + uv.lock</h4>
+<p><code>requirements.txt</code> 只記下「直接」用到的套件版本；torch 自己又依賴十幾個 NVIDIA 函式庫，那些的版本沒被記下來，換一台機器重裝可能就不一樣。2026 年常見的做法是把專案寫成 <code>pyproject.toml</code>，由 uv 產生一份 <code>uv.lock</code>，鎖住<strong>每一個</strong>相依套件（含間接相依）的確切版本與來源。以 torch 為例：</p>
+<pre class="shell"><code>$ uv init --bare --python 3.12
+$ uv add "torch==2.11.0" --index pytorch-cu128=https://download.pytorch.org/whl/cu128
+$ uv sync</code></pre>
+<p><code>uv add</code> 會把相依與套件來源一起寫進 <code>pyproject.toml</code>：</p>
+<pre class="shell"><code>[project]
+dependencies = [
+    "torch==2.11.0",
+]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"</code></pre>
+<p>同時產生的 <code>uv.lock</code> 裡記著 <code>torch 2.11.0+cu128</code> 來自 cu128 那個目錄，連同其他 29 個間接相依套件的版本（在空目錄實測：共解析出 30 個套件）。<code>uv sync</code> 依照 lock 檔建出 <code>.venv</code>，任何人、任何時候執行都得到同一組版本。本 repo 為了貼近課程原貌仍用 requirements.txt，但新專案建議直接用這套。</p>
+</div>
+
+<h2 id="config">0.4　config.py：全專案的設定中心</h2>
 <p>跑之前先看一眼設定檔，因為它決定了你等一下會看到的所有數字：</p>
 
 <figure class="listing"><figcaption>config.py:1–18 — device 與超參數</figcaption>
@@ -556,16 +677,15 @@ config = {
 <p>下半部的 <code>config</code> 字典是<strong>超參數（hyperparameter）</strong>：由人決定、不靠訓練學出來的設定。其中 <code>seed</code>（亂數種子）是亂數產生器的起點：訓練中有好幾處需要亂數（模型權重的初始值、資料切分、每個 epoch 打亂資料順序），固定 seed 就讓每次抽出的亂數序列都一樣。每一項後面各章都會講到——<code>seed</code> 與 <code>valid_ratio</code> 在第 2 章、<code>batch_size</code> 在第 3 章、<code>learning_rate</code>、<code>n_epochs</code>、<code>early_stop</code> 在第 5 章、<code>select_all</code> 在第 2 章與第 7 章。現在只要知道：<strong>想調整訓練行為，先來這裡改</strong>。</p>
 <p>上半部的 <code>device</code> 決定模型與資料放在哪個裝置上計算。<code>'cuda'</code> 代表 NVIDIA 顯卡，<code>'cpu'</code> 代表處理器。</p>
 
-<div class="warn"><h4>和原版不同：device 被寫死了</h4>
-<p>第 3 行被註解掉的那一句，正是官方原版的寫法：有 GPU 就用 cuda，沒有就退回 cpu。本 repo 改成第 4 行的 <code>device = "cuda"</code>，並在第 6–7 行加了兩個 print。後果有兩個：</p>
+<div class="note"><h4>設計選擇：沒有 CUDA 就立刻失敗</h4>
+<p>第 3 行被註解掉的那一句是官方原版的寫法：有 GPU 就用 cuda，沒有就退回 cpu。本 repo 刻意改成第 4 行的 <code>device = "cuda"</code>，並在第 6–7 行印出 GPU 狀態：這份程式就是要在 GPU 上跑，<strong>沒有 CUDA 就應該立刻、大聲地失敗</strong>（fail fast and loud），而不是默默退回 CPU、用慢上許多的速度跑完才讓人發現。具體行為有兩點：</p>
 <ul>
-  <li><strong>沒有 NVIDIA 顯卡的機器跑不起來。</strong>第 7 行的 <code>torch.cuda.current_device()</code> 在沒有 GPU 時會直接拋出 <code>RuntimeError: No CUDA GPUs are available</code>（用 <code>CUDA_VISIBLE_DEVICES=""</code> 把顯卡藏起來就能重現），程式在讀資料之前就結束了。</li>
-  <li><strong>每支 import config 的程式都會先印兩行。</strong>這是 <code>import</code> 的特性：Python 第一次 import 一個模組時，會把它從頭執行一遍，模組層級的 <code>print</code> 也跟著執行。所以等一下 train.py 與 predict.py 的輸出開頭都是 <code>True</code> 與 <code>0</code>。</li>
+  <li><strong>沒有可用的 NVIDIA 顯卡時，程式在讀資料之前就結束。</strong>第 7 行的 <code>torch.cuda.current_device()</code> 會直接拋出 <code>RuntimeError: No CUDA GPUs are available</code>（用 <code>CUDA_VISIBLE_DEVICES=""</code> 把顯卡藏起來就能重現）。</li>
+  <li><strong>每支 import config 的程式都會先印兩行。</strong>這是 <code>import</code> 的特性：Python 第一次 import 一個模組時，會把它從頭執行一遍，模組層級的 <code>print</code> 也跟著執行。所以等一下 train.py 與 predict.py 的輸出開頭都是 <code>True</code> 與 <code>0</code>——這兩行就是「GPU 確實在」的確認。</li>
 </ul>
-<p>在這台有 GPU 的機器上沒有影響。要給別人用，就把第 3 行恢復、第 4、6、7 行刪掉——這也是第 7 章的入門練習之一。</p>
 </div>
 
-<h2 id="train">0.4　跑一次 train.py，逐行解讀輸出</h2>
+<h2 id="train">0.5　跑一次 train.py，逐行解讀輸出</h2>
 <p>所有程式都用相對路徑讀資料（<code>./covid.train.csv</code>）與存模型（<code>./models/model.ckpt</code>），所以<strong>一定要先 cd 進 <code>HW01/</code> 再執行</strong>，否則會找不到檔案。venv 在上一層，所以 Python 的路徑是 <code>../.venv/bin/python</code>：</p>
 <pre class="shell"><code>$ cd ~/poyi/GitHubPoyi/ML2022-Spring-pytorch/HW01
 $ time ../.venv/bin/python train.py</code></pre>
@@ -612,7 +732,7 @@ sys	0m2.904s</code></pre>
 </ol>
 <p>所以這次訓練的成果是：<strong>驗證集 MSE 1.661</strong>，換算平均誤差約 √1.661 ≈ 1.29 個百分點，比第 1 個 epoch 的 10 個百分點好了很多。這台機器上同樣的指令重跑兩次，最佳 loss、停止的 epoch 都一模一樣——這是第 2 章 <code>same_seed</code> 的功勞。</p>
 
-<h2 id="predict">0.5　跑 predict.py 產生預測</h2>
+<h2 id="predict">0.6　跑 predict.py 產生預測</h2>
 <pre class="shell"><code>$ ../.venv/bin/python predict.py
 True
 0
@@ -631,12 +751,12 @@ id,tested_positive  «3»
   <li><span class="mk">3</span>提交格式：表頭加上 1078 列「編號, 預測值」。整個檔案 1079 行。</li>
 </ol>
 
-<h2 id="artifacts">0.6　跑完之後多了什麼</h2>
+<h2 id="artifacts">0.7　跑完之後多了什麼</h2>
 <p>兩支程式跑完，<code>HW01/</code> 底下多了三樣東西：</p>
 <div class="tablewrap"><table>
 <thead><tr><th>產物</th><th>誰產生</th><th>內容</th></tr></thead>
 <tbody>
-<tr><td><code>models/model.ckpt</code></td><td>train.py</td><td>驗證 loss 最低那一刻的模型權重（weights，模型裡由訓練學出來的那些數字，也叫參數；<code>.ckpt</code> 是 checkpoint 的縮寫），11,005 bytes（<code>ls -l models/</code> 可查）。檔案這麼小，是因為整個模型只有 2,033 個參數（第 4 章實算）。</td></tr>
+<tr><td><code>models/model.ckpt</code></td><td>train.py</td><td>驗證 loss 最低那一刻的模型權重（weights，模型裡由訓練學出來的那些數字，也叫參數；<code>.ckpt</code> 是 checkpoint 的縮寫），11,005 bytes（<code>ls -l models/</code> 可查）。檔案這麼小，是因為整個模型只有 2,033 個參數（0.2 節已算過）。</td></tr>
 <tr><td><code>runs/Oct02_21-34-17_ValtecBlackwell/</code></td><td>train.py</td><td>TensorBoard 的紀錄檔。目錄名是「月日_時-分-秒_主機名」，每跑一次多一個目錄。</td></tr>
 <tr><td><code>pred.csv</code></td><td>predict.py</td><td>1078 筆預測，可直接上傳。</td></tr>
 </tbody>
@@ -649,14 +769,14 @@ id,tested_positive  «3»
 <div class="lab"><h4>動手做：親手驗證本章的三個說法</h4>
 <p>以下指令都在 <code>HW01/</code> 裡執行。每一個都只要幾秒到半分鐘，做完你就不必相信本書，而是相信自己的終端機。</p>
 <ol>
-  <li><strong>可重現性</strong>：再跑一次 <code>../.venv/bin/python train.py 2&gt;/dev/null | tail -3</code>，最後一個 epoch 應該仍是 <code>Epoch [1883/3000]</code>，數字與 0.4 節完全相同。接著把 <code>config.py</code> 的 <code>'seed'</code> 改成別的數字再跑，停止的 epoch 會變；再跑一次第 3 項的指令，最佳 loss 也不再是 1.661。做完記得把 seed 改回 <code>5201314</code>，<strong>並再跑一次 train.py</strong>，讓 <code>models/model.ckpt</code> 回到 1.661 那一份——後面各章的數字都以它為準。</li>
-  <li><strong>寫死 cuda 的後果</strong>：執行 <code>CUDA_VISIBLE_DEVICES="" ../.venv/bin/python -c "import config"</code>。這個環境變數讓 PyTorch 看不到任何顯卡，模擬一台沒有 GPU 的機器；你會先看到 <code>False</code>，接著是 <code>RuntimeError: No CUDA GPUs are available</code>。</li>
+  <li><strong>可重現性</strong>：再跑一次 <code>../.venv/bin/python train.py 2&gt;/dev/null | tail -3</code>，最後一個 epoch 應該仍是 <code>Epoch [1883/3000]</code>，數字與 0.5 節完全相同。接著把 <code>config.py</code> 的 <code>'seed'</code> 改成別的數字再跑，停止的 epoch 會變；再跑一次第 3 項的指令，最佳 loss 也不再是 1.661。做完記得把 seed 改回 <code>5201314</code>，<strong>並再跑一次 train.py</strong>，讓 <code>models/model.ckpt</code> 回到 1.661 那一份——後面各章的數字都以它為準。</li>
+  <li><strong>沒有 GPU 時會怎樣</strong>：執行 <code>CUDA_VISIBLE_DEVICES="" ../.venv/bin/python -c "import config"</code>。這個環境變數讓 PyTorch 看不到任何顯卡，模擬一台沒有 GPU 的機器；你會先看到 <code>False</code>，接著是 <code>RuntimeError: No CUDA GPUs are available</code>。</li>
   <li><strong>最後一次存檔在哪</strong>：執行 <code>../.venv/bin/python train.py 2&gt;/dev/null | grep -B1 Saving | tail -2</code>，<code>-B1</code> 讓 grep 連同前一行一起印，你會看到 <code>Epoch [1483/3000]</code> 與 <code>Saving model with loss 1.661...</code>。</li>
 </ol>
 <p><code>2&gt;/dev/null</code> 把 stderr（tqdm 進度條）丟掉，否則管線只接住 stdout，進度條仍會灌滿螢幕。第 1、3 項每跑一次都會覆寫 <code>models/model.ckpt</code>，並在 <code>runs/</code> 多一個目錄；只要 seed 是 5201314，覆寫後的權重和原本相同。</p>
 </div>
 
-<h2 id="map">0.7　六個檔案的分工地圖</h2>
+<h2 id="map">0.8　六個檔案的分工地圖</h2>
 <p>官方原版是一份 Jupyter／Colab 筆記本（<code>.ipynb</code>，把程式切成一格一格、在瀏覽器裡從上往下依序執行的檔案）；本 repo 把它按職責拆成六個檔案。下圖是資料在它們之間流動的方向：</p>
 
 <figure class="fig">
@@ -720,7 +840,7 @@ id,tested_positive  «3»
   <text class="s-sm" x="780" y="160">載回權重</text>
   <text class="s-sm" x="20" y="278">實線＝資料或檔案的流向；虛線＝程式碼層級的引用（import）。</text>
 </svg>
-<figcaption>圖 0.1 — 訓練與預測共用同一份模型定義；訓練的成果只透過磁碟上的 model.ckpt 交給預測。</figcaption>
+<figcaption>圖 0.2 — 訓練與預測共用同一份模型定義；訓練的成果只透過磁碟上的 model.ckpt 交給預測。</figcaption>
 </figure>
 <div class="legend">
   <span><i style="background:#58a6ff"></i>CPU 端的資料處理</span>
@@ -740,13 +860,17 @@ from tqdm import tqdm</code></pre></figure>
 
 <p><code>from X import *</code> 會把模組 X 裡所有公開的名字（函式、類別、變數，以及 X 自己 import 進來的東西）倒進目前的命名空間。所以 train.py 裡直接寫 <code>config['seed']</code>、<code>device</code>、<code>My_Model</code>、<code>same_seed</code> 都能用，不必加前綴。這樣寫很方便，代價是讀程式時看不出某個名字從哪來——例如 train.py 自己沒有 <code>import torch</code>，卻能使用 <code>torch.optim.SGD</code>，因為 config.py、utils.py、data_loader.py 都 <code>import torch</code>，<code>torch</code> 這個名字就跟著 <code>import *</code> 一起進來了；同理，train.py 用到的 <code>nn.MSELoss</code> 的 <code>nn</code>，來自 model.py 第 1 行的 <code>import torch.nn as nn</code>。遇到「這個名字哪來的？」就回頭查這張圖。另外，第 21 行的 <code>from tqdm import tqdm</code> 在第 9 行（<code>train.py:9</code>，註解 <code># For Progress Bar</code> 底下）已經出現過一次，重複 import 無害，只是多餘。</p>
 
+<div class="note"><h4>現在的做法：明確寫出 import 的名字</h4>
+<p>今天的 Python 風格指南（PEP 8）與常見的程式檢查工具（例如 Ruff 的 <code>F403</code> 規則）都不建議在程式裡用 <code>from X import *</code>。改成明確列出要用的名字，例如 <code>from utils import same_seed, train_valid_split, select_feat</code>、<code>from model import My_Model</code>，讀程式的人一眼就知道每個名字從哪來，也不會發生「兩個模組都有同名函式、後 import 的悄悄蓋掉前一個」的問題。本書引用的程式碼維持原樣，後面各章遇到「這個名字哪來的」時，會回頭對照圖 0.2。</p>
+</div>
+
 <div class="recap"><h4>本章重點</h4>
 <ul>
   <li>HW01 是迴歸問題：用一列 117 個數字（id、州別、5 天的問卷統計）預測第 5 天的陽性率，以 MSE 評分。</li>
   <li>Blackwell 顯卡（sm_120）需要 cu128 以上的 PyTorch；repo 根目錄的 <code>.venv</code> 是 Python 3.12 + PyTorch 2.11.0+cu128。</li>
   <li>所有程式都要在 <code>HW01/</code> 裡執行，Python 用 <code>../.venv/bin/python</code>。</li>
   <li>實測：訓練約 34 秒，第 1483 個 epoch 得到最佳驗證 MSE 1.661，第 1883 個 epoch early stop；predict 產生 1078 筆預測。</li>
-  <li><code>config.py</code> 把 device 寫死為 cuda，沒 GPU 的機器會在 import 時就失敗。</li>
+  <li><code>config.py</code> 刻意把 device 設為 cuda：沒有 GPU 就在 import 時立刻失敗（fail fast），不會默默退回 CPU。</li>
   <li>train 與 predict 是兩個獨立程式，透過 <code>models/model.ckpt</code> 交接。</li>
 </ul>
 </div>

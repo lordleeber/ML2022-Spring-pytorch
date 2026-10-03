@@ -684,6 +684,30 @@ print(d.isna().sum().sum())
 0</code></pre>
 <p>缺值總數是 0，所以範例程式完全不需要處理缺值，直接轉成陣列就能用。</p>
 
+<div class="note"><h4>現在的做法：標準化，而且只用訓練集的統計量</h4>
+<p>今天處理數值特徵，標準化幾乎是固定步驟：每一欄減去平均、除以標準差，讓所有欄位都落在 0 附近、尺度相近。關鍵細節是<strong>平均與標準差只能從訓練集算</strong>，再原封不動套到驗證集與測試集；如果用全部資料算，驗證集的資訊就漏進了訓練流程。以 HW01 的切分為例（拿掉第 0 欄的 id 與最後一欄答案，只標準化 116 欄特徵）：</p>
+<pre class="shell"><code>$ ../.venv/bin/python -c "
+import pandas as pd, numpy as np
+from utils import train_valid_split
+from config import config
+tr = pd.read_csv('covid.train.csv').values
+tr, va = train_valid_split(tr, config['valid_ratio'], config['seed'])
+x_tr, x_va = tr[:, 1:-1], va[:, 1:-1]
+mean, std = x_tr.mean(axis=0), x_tr.std(axis=0) + 1e-8
+x_tr, x_va = (x_tr - mean) / std, (x_va - mean) / std
+print(x_tr.mean().round(3), x_tr.std().round(3))
+print(x_va.mean().round(3), x_va.std().round(3))
+"
+True
+0
+0.0 1.0  «1»
+0.011 1.002  «2»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>訓練集標準化後平均恰為 0、標準差恰為 1——因為統計量就是從它算的。開頭的 <code>True</code>、<code>0</code> 是 import config 時印的。</li>
+  <li><span class="mk">2</span>驗證集用的是<strong>訓練集</strong>的統計量，所以只是「接近」0 與 1。這個小落差是正常的，也正是「驗證集沒被偷看」的證據。<code>+ 1e-8</code> 是防止某欄標準差為 0 時除以零。</li>
+</ol>
+</div>
+
 <h2 id="readcsv">1.5　train.py 怎麼讀進來：重複欄名與 .values</h2>
 <p>現在回到程式。train.py 的主程式一開頭就把兩個檔案讀進來：</p>
 
@@ -831,6 +855,32 @@ print(b[b &gt; 0].to_dict())
 29 states fully chained
 {'AL': 1, 'IA': 1, 'KY': 1, 'MN': 1, 'NE': 1, 'NM': 2, 'OK': 1, 'RI': 1}</code></pre>
 
+<div class="note"><h4>現在的做法：照時間切驗證集</h4>
+<p>面對時間序列，今天的標準做法是<strong>用過去訓練、用未來驗證</strong>，模擬模型上線後真正面對的情況。這份資料裡 id 就是州內的時間順序，所以可以每一州各自依 id 排序，前 80% 當訓練、後 20% 當驗證：</p>
+<pre class="shell"><code>$ ../.venv/bin/python -c "
+import pandas as pd, numpy as np
+d = pd.read_csv('covid.train.csv')
+state = d.iloc[:, 1:38].idxmax(axis=1)
+rank = d.groupby(state)['id'].rank(pct=True)
+tr, va = d[rank &lt;= 0.8].values, d[rank &gt; 0.8].values
+print(len(tr), len(va))
+cols = list(range(1, 117))
+X = np.c_[tr[:, cols], np.ones(len(tr))]
+w = np.linalg.lstsq(X, tr[:, -1], rcond=None)[0]
+pred = np.c_[va[:, cols], np.ones(len(va))] @ w
+print('linreg 116 cols ', round(((pred - va[:, -1]) ** 2).mean(), 3))
+print('copy day 4      ', round(((va[:, 101] - va[:, -1]) ** 2).mean(), 3))
+"
+2143 556  «1»
+linreg 116 cols  1.21  «2»
+copy day 4       1.241</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span><code>rank(pct=True)</code> 把每州的 id 換成 0～1 的百分位名次。切出 2143／556 筆，和隨機切分的 2160／539 相近。</li>
+  <li><span class="mk">2</span>同樣兩個方法換到時間切分上：線性迴歸 1.21、抄第 4 天 1.241。</li>
+</ol>
+<p>對照目錄頁〈先說在前面〉在隨機切分上的結果（線性迴歸 1.166、抄第 4 天 1.313）：兩種切分的驗證集不是同一批資料，絕對數字不能直接比，但<strong>相對差距</strong>可以——隨機切分下，線性迴歸比「抄昨天」好了約 11%；照時間切，優勢只剩約 2.5%。多出來的那些特徵，在「預測未來」時幫的忙比隨機切分顯示的少得多。這正是隨機切分讓人過度樂觀的具體樣子。</p>
+</div>
+
 <h3>id 的範圍與那個缺號</h3>
 <pre class="shell"><code>$ ../.venv/bin/python -c "
 import pandas as pd
@@ -894,7 +944,7 @@ wearing_mask.4 -0.037  «5»</code></pre>
   <li><span class="mk">4</span>id 的相關是 0.264，正的：訓練資料涵蓋的期間裡，越晚的日子陽性率傾向越高。</li>
   <li><span class="mk">5</span>第 5 天戴口罩比例與答案幾乎無關：−0.037，絕對值不到 0.04。</li>
 </ol>
-<p>這組數字給了第 7 章一個清楚的方向：117 欄裡，真正扛起預測的是少數幾欄。把 37 個州欄、id、和相關很低的欄位（例如上面的 <code>wearing_mask.4</code>）拿掉，模型要學的東西變少、雜訊變少，通常反而更準。當然，相關係數只量線性關係，也只看單一欄；它是挑特徵的起點，不是終點。</p>
+<p>這組數字給了第 7 章一個清楚的方向：117 欄裡，真正扛起預測的是少數幾欄。把 37 個州欄、id、和相關很低的欄位（例如上面的 <code>wearing_mask.4</code>）拿掉，模型要學的東西變少、雜訊變少，通常反而更準。當然，相關係數只量線性關係，也只看單一欄；它是挑特徵的起點，不是終點。今天更常用的做法是讓模型自己回答「哪些欄位重要」，例如 permutation importance：訓練好模型後，把某一欄的值隨機打亂，看驗證 loss 變差多少——變差越多，代表模型越依賴那一欄。它能抓到非線性與欄位之間的交互作用，這是單欄相關係數做不到的。</p>
 
 <div class="lab"><h4>動手做：自己畫一州的曲線</h4>
 <p>在 <code>HW01/</code> 裡執行下面這段。它取出某一州所有列的「第 1 天陽性率」，按 id（也就是時間）排好，存成圖檔 <code>fl.png</code>：</p>

@@ -339,7 +339,8 @@ if config.use_wandb:
 
 cuda_env = utils.CudaEnvironment()
 utils.CudaEnvironment.pretty_print_cuda_env_list([cuda_env])
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+device = 'cuda'
 
 """# Dataloading
 

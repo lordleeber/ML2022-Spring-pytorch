@@ -240,7 +240,7 @@ def parse_args():
 
 def main(data_dir, save_path, batch_size, n_workers, valid_steps, warmup_steps, total_steps, save_steps):
     """Main function."""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     device = "cuda"
     print(f"[Info]: Use {device} now!")
 

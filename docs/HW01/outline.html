@@ -481,7 +481,7 @@ footer.chap-footer {
 <thead><tr><th>檔案</th><th>章名</th><th>對應原始碼</th><th>重點</th></tr></thead>
 <tbody>
 <tr><td><a href="index.html#now">index</a></td><td>先說在前面：用 2026 年的眼光讀 2022 年的作業</td><td>—</td><td>過時的三個層次（環境與 API／方法／觀念）；同一驗證集上的 baseline 實測：抄第 4 天 1.313、線性迴歸 1.166，都贏過範例 DNN 的 1.661</td></tr>
-<tr><td><a href="ch00.html">ch00</a></td><td>任務與環境：先讓它跑起來</td><td><code>requirements.txt</code>、<code>config.py</code></td><td>作業目標；Blackwell 顯卡為何要用 cu128；實測 train／predict 輸出逐行解讀；檔案地圖</td></tr>
+<tr><td><a href="ch00.html">ch00</a></td><td>任務與環境：先讓它跑起來</td><td><code>model.py</code>、<code>requirements.txt</code>、<code>config.py</code></td><td>作業目標；<strong>模型總覽</strong>（架構圖、參數量）；Blackwell 顯卡為何要用 cu128；實測 train／predict 輸出逐行解讀；檔案地圖</td></tr>
 <tr><td><a href="ch01.html">ch01</a></td><td>解剖 COVID 資料</td><td><code>covid.train.csv</code>、<code>train.py:103-111</code></td><td>118 欄 = id + 37 州 one-hot + 16 指標 × 5 天；用 pandas 看數值範圍</td></tr>
 <tr><td><a href="ch02.html">ch02</a></td><td>切分、特徵與可重現性</td><td><code>utils.py:7-36</code></td><td><code>same_seed</code>、<code>random_split</code> → 2160／539、<code>select_feat</code></td></tr>
 <tr><td><a href="ch03.html">ch03</a></td><td>Dataset 與 DataLoader</td><td><code>data_loader.py</code>、<code>train.py:119-123</code></td><td><code>__getitem__</code>／<code>__len__</code>；batch 256 → 每 epoch 9 個 batch；shuffle、pin_memory</td></tr>
@@ -497,7 +497,7 @@ footer.chap-footer {
 <ol>
   <li><code>select_all=True</code> 會把 <code>id</code> 欄也當成特徵；train 的 id 是 0–2699、test 是 0–1077，分布不同（第 2、7 章）。</li>
   <li><code>config.py</code> 註解寫 <code>validation_size = train_size * valid_ratio</code>，實際是「全部資料 × 0.2」（第 2 章）。</li>
-  <li><code>config.py</code> 把 device 寫死成 <code>"cuda"</code>，且 import 時就印 GPU 資訊，與原版的 cuda／cpu fallback 不同（第 0 章）。</li>
+  <li>隨機切分 vs. 照時間切分：線性迴歸相對「抄第 4 天」的優勢從約 11% 縮到約 2.5%（第 1 章）。</li>
   <li><code>predict.py</code> 為了取得輸入維度，重讀並重切 train 資料（第 6 章）。</li>
   <li><code>valid_loader</code> 設了 <code>shuffle=True</code>；<code>train.py</code> 重複 import <code>tqdm</code>、<code>random_split</code> 沒用到；train 的 id 中間跳號（第 1、3、5 章）。</li>
 </ol>

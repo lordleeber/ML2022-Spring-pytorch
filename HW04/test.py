@@ -50,7 +50,7 @@ def parse_args():
 
 def main(data_dir, model_path, output_path):
     """Main function."""
-    device = "cpu"
+    device = "cuda"
     print(f"[Info]: Use {device} now!")
 
     mapping_path = Path(data_dir) / "mapping.json"

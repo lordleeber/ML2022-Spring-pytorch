@@ -35,7 +35,7 @@
 - 模型參數量：117·16+16 = 1888；16·8+8 = 136；8·1+1 = 9；共 2033。model.ckpt 11005 bytes。
 - 優化器 SGD lr 1e-5 momentum 0.9；loss MSELoss(mean)。
 - early_stop 400：連續 400 個 epoch valid loss 沒有創新低就停。
-- `config.py` device 寫死 `"cuda"`，import 時印 `True` 與 `0`（原版為 cuda/cpu fallback）。
+- `config.py` device = "cuda" 是**刻意設計**（fail fast and loud，不要 CPU fallback）；教材以中性描述，不列為問題或練習。import 時印 `True` 與 `0`。
 - `valid_loader` shuffle=True（不影響 loss 平均值？每 batch 平均再平均，batch 大小不同時結果會隨分組微變）。
 - `train.py` 重複 import tqdm；`random_split` 在 train.py import 但沒用。
 - predict.py 為了拿 input_dim 重讀並切分 train。
@@ -70,3 +70,11 @@
 - 線性迴歸 116 欄（拿掉 id）：1.166；117 欄含 id：1.172
 - 範例 DNN：1.661（見上）
 - 全書開頭（index.html#now）已寫「過時三層次」；各章遇到過時寫法要加「現在的做法」框；ch07 要延伸 baseline 比較。
+
+## 時間切分實測（每州依 id 排序，前 80% 訓練／後 20% 驗證）
+- 2143／556 筆；線性迴歸 116 欄 1.21；抄第 4 天 1.241。
+- 標準化（只用訓練集統計量）：訓練集 mean 0.0 / std 1.0；驗證集 0.011 / 1.002。
+- uv 專案流程實測：uv init --bare + uv add torch==2.11.0 --index pytorch-cu128=… → 解析 30 個套件，lock 內 torch 2.11.0+cu128。
+
+## 全書結構約定（使用者要求，2026-10-03）
+- **每個 HW 的 ch00 都要有「模型總覽」一節**（架構圖、各層 shape、參數量、所在檔案）；模型的逐行細講仍在後面的模型章。HW01：ch00 §0.2，圖 0.1；原檔案地圖改為圖 0.2、§0.8。
