@@ -81,6 +81,10 @@
   ch06 圖號：圖 6.1 predict.py 的資料流（上排「只為了 117」的繞路）、圖 6.2 predict() 的形狀變化（5 個 batch → cat → (1078,)）、圖 6.3 pred.csv 行尾位元組（Linux 實測 CRLF／Windows \r\r\n／newline=''）、圖 6.4 訓練答案／測試第 4 天／預測的平均與最大值。
   ch06 已講完：predict.py 重讀訓練資料的兩個問題（依賴訓練資料、117 是當下重算）與存字典的解法、weights_only 預設實際為 True、pred.csv 格式（CRLF、最短表示、id 對齊）、打亂 id 的代價 1.0045 → 120.0056、測試集是高陽性率時期與外推（§6.9）。後面章節回指即可；改進模型留給 ch07。
   ch06 的 4 個 `TODO(本機實測)` 都在 §6.10 動手做：第 1 項 wc／md5sum 逐字輸出、第 2 項 `repr(csv.excel.lineterminator)` 逐字輸出、第 3 項整段輸出（並確認 permutation 方式是否重現 120.0056）、第 4 項輸出（預期 `OrderedDict 6 117`）。
+- ch07：Kaggle public／private 排行榜（一句）、基準線分數是**測試集** MSE（不可與驗證集 MSE 比，本書沒上傳 Kaggle）、特徵組合短名 noid／survey／corr／tp4（corr 只在訓練部分算相關係數）、`np.corrcoef`（一句）、標準化插在 train.py 第 114 行之後（std 為 0 改成 1；ch01 版本是 +1e-8）、Adam（每個參數依梯度平方的移動平均自適應步幅）、AdamW（decoupled weight decay；PyTorch 的 AdamW 不寫 weight_decay 時預設 0.01）、L2 正則化（loss ＋ λ/2·Σw²，梯度多 λw）、SGD／Adam 的 `weight_decay`（加到梯度上）、Dropout（訓練時以機率 p 丟、乘 1/(1−p)；由 train()／eval() 切換）、GELU 的「永遠為 0」判準與 ReLU 不同（float32 下溢）、過擬合（overfitting）、「驗證方式決定你選到什麼模型」、判讀規則「差距小於 DNN 換 seed 的標準差（0.01～0.06）不算數」、checkpoint 存 feat_idx＋mean／std（`.tolist()`）＋state_dict（map_location 到 GPU 時 list 不受 `.numpy()` 限制）、題庫在 repo 根目錄 `cp -r HW01 HW01-lab` 的複本裡做（`../.venv` 仍可用）、Pipeline／TimeSeriesSplit（一句，現在的做法框）、梯度提升樹（回指目錄頁）。
+  ch07 圖號：圖 7.1 作業提示對應的程式位置、圖 7.2 隨機切分上的完整比較（橫條圖，虛線 1.166）、圖 7.3 兩種切分下 8 個設定的名次（紅＝時間切分 train MSE < 0.75，藍＝> 0.95）、圖 7.4 4 個 seed 的真實 valid MSE 點圖。
+  ch07 已講完：作業提示對應位置、所有「第 7 章再談」的承諾（§7.1 表）、1.240（ch02，原版量法挑選）vs 1.1848（量法修正後）是兩次不同訓練、ch04 的 10 個 vs ch07 的 12 個沒在工作的單元同理。後續（appendix）回指即可。
+  ch07 的 8 個 `TODO(本機實測)` 都已在審稿時實測填入，數字見下方「ch07 審稿補測」。
 
 ## Baseline 實測（2026-10-03，與範例同一驗證集：random_split seed 5201314）
 - 抄第 4 天 tested_positive（第 101 欄）：MSE 1.313
@@ -544,3 +548,34 @@ train_data size: (2160, 118)
 - 但**按時間切分**之後，高容量的贏家全部退步，最穩的是「少而精的特徵＋簡單模型」，DNN 跟線性模型打平。測試集正是「未來的日子」（ch06：陽性率更高的時期），所以時間切分比較能預告 Kaggle 上的表現。這不是本書實測得出的結論，因為本書沒有上傳 Kaggle。
 - 測試集上的替代指標也支持這一點：隨機切分的贏家在測試集上離第 4 天很遠（64-32 是 5.75、116 欄＋標準化＋Adam 是 9.29），tp4 和 corr 的線性模型只有 0.02～0.55。
 
+
+## ch07 審稿補測（2026-10-03 本機）
+**題庫判準已用真的 train.py 驗證**：在 HW01 的複本裡照題目字面改 utils.py／train.py／config.py／model.py 後執行 train.py，印出的最佳與最佳 epoch 都跟 hw01_exp.py 逐位相同。驗證過的組合：
+- 入門 1（noid）：`Epoch [2977/3000]: Train loss: 1.0820, Valid loss: 1.1848`、`Saving model with loss 1.185...`；最後一行 `Epoch [3000/3000]: Train loss: 1.0893, Valid loss: 1.1888`；存檔 336 次。
+- 入門 2（tp4）：第 2996 個 epoch 1.3561，存檔 950 次。
+- 進階 1（noid＋標準化＋lr 1e-3）：第 543 個 epoch 1.0715（`Train loss: 0.5903`），第 943 個 epoch early stop，第一層沒在工作的單元 0/16。
+- 進階 3（時間切分 noid）：`train_data size: (2143, 118)`；第 2950 個 epoch 1.1784。
+- 進階 4（線性＋corr〔np.corrcoef 寫法，選到 34 欄〕＋標準化＋Adam 1e-3）：第 2991 個 epoch 1.1422，存檔 1400 次。
+- 挑戰 2 第一部分（量法修正、117 欄、config seed 2、第 106 行切分固定 5201314）：12.7959，第一個 epoch `Train loss: 164.9592, Valid loss: 153.3218`。
+
+新的實測：
+- **入門 4**（117 欄、不標準化、SGD lr 1e-3、量法修正）：第 1 個 epoch `Train loss: 673668052737.8724, Valid loss: 411272072.7273`；最佳是第 52 個 epoch 的 `Valid loss: 44.3461`；第 452 個 epoch early stop，存檔 47 次；真實 valid MSE 44.3461、train 40.7400；第一層 16/16 沒在工作；驗證集預測的標準差 0，平均 10.1485。
+- **Dropout**（noid＋標準化＋SGD lr 1e-3，116→64→ReLU→Dropout(0.2)→32→ReLU→Dropout(0.2)→1，量法修正，seed 5201314，直接改 model.py 實跑）：
+  - 隨機切分：最佳第 845 個 epoch 1.0094（印出的 train loss 1.6428，因為 Dropout 開著），第 1245 個 epoch early stop；真實 train MSE（eval 模式）0.5353；第一層 0/64 沒在工作。
+  - 時間切分：第 645 個 epoch 1.7219，真實 train 0.5415。
+  - 隨機切分但刪掉 train.py 第 47 行 `model.train()`：第 494 個 epoch 0.9969，真實 train 0.3130（印出的 train loss 0.3332）。第 1 個 epoch 之後 Dropout 就不再起作用。
+  - 對照沒有 Dropout 的 64-32：隨機 0.9909（train 0.3769）、時間 1.7157（train 0.7048）。
+- **進階 2**（7.12 節的 checkpoint 字典＋改寫 predict.py）：checkpoint 用 `weights_only=True` 載入正常，key 依序是 ['feat_idx', 'mean', 'std', 'state_dict']，mean 是長度 116 的 list。改寫後的 predict.py 不讀 covid.train.csv，pred.csv 是 15,762 bytes，前兩筆 `0,7.8344135`、`1,8.61439`。§6.10 第 3 項指令輸出 `85 55.4179 67`、`4.1104 59.6773`、`140.3394`。
+- **NumPy 陣列存進 checkpoint**：`torch.save({'mean': np.zeros(3)}, ...)` 再用 `weights_only=True` 載入，會報 `UnpicklingError: Weights only load failed. ...`。所以 7.12 節要先 `.tolist()` 的說法正確。
+- **挑戰 2 第二部分**（原版 train.py、沒有量法修正、config seed 2、切分固定 5201314）：第一個 epoch `Train loss: 164.9592, Valid loss: 152.6497`；印出的最佳是第 2954 個 epoch 的 `Valid loss: 10.3637`；跑滿 3000 個 epoch，存檔 83 次；checkpoint 的真實 valid MSE **13.2407**、train 11.3880；第一層 6/16 沒在工作；驗證集預測的標準差 4.2206。量法修正版結束時標準差是 4.1824。
+- **挑戰 3 permutation importance**（時間切分、corr 38 欄＋標準化＋Adam 1e-3＋wd 1e-2、seed 5201314，真實 valid 1.1219；`np.random.default_rng(0)` 依欄位順序逐欄打亂標準化後的驗證集）：前 8 名的 MSE 增加量依序是 tested_positive.3 81.314、cli.4 2.4311、cli.3 2.1536、hh_cmnty_cli.4 1.9466、hh_cmnty_cli.3 1.2411、cli.2 0.7924、cli.1 0.7137、tested_positive 0.7045；最低 3 名是 ili.1 0.0227、anxious.4 0.0272、depressed.4 0.0301。重現方式：`hw01_exp.py ... --perm 1`。
+- **挑戰 4 LightGBM 4.7.0**（noid 116 欄、不標準化；重現方式：`docs/tools/hw01_lgbm.py`。LightGBM 裝在專案 venv 之外，requirements.txt 沒有改）：
+
+| 設定 | 真實 valid MSE | 真實 train MSE | 樹的數量 | 測試集：MSE(預測, 第 4 天) | 測試集預測最大值 |
+|---|---|---|---|---|---|
+| 隨機切分，預設（100 棵） | 1.2808 | 0.1684 | 100 | 4.8417 | 28.0957 |
+| 隨機切分，early stop 100 | 1.2802 | 0.2481 | 75 | 4.8705 | 27.9937 |
+| 時間切分，預設 | 1.3759 | 0.1613 | 100 | 5.1995 | 28.1781 |
+| 時間切分，early stop 100 | 1.3602 | 0.5149 | 37 | 5.5735 | 27.1906 |
+
+  - 樹的預測不會超出訓練時見過的答案範圍（訓練集最大 30.3046），測試集第 4 天最大 46.95，所以樹在測試集上無法外推。

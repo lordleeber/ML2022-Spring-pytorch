@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 7 章　從 sample code 往上爬 — HW01 COVID-19 確診率預測</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="appendix.html">附錄 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW01 讀碼教材</p>
+  <h1>第 7 章　從 sample code 往上爬</h1>
+  <p class="chap-lead">作業投影片給了四句提示：特徵選擇、換架構與優化器、L2 正則化、多試參數。本章把每一句對應到程式碼的哪一行，再用約 70 次實際訓練看它們各帶來多少進步。結論有兩層：在範例程式用的隨機切分驗證集上，四步全部有效，DNN 從 1.7174 進步到 0.98，贏過線性迴歸的 1.166；但換成按時間切分，隨機切分的贏家全部退步，最穩的是少而精的特徵加簡單模型。<strong>驗證方式決定你選到什麼模型。</strong>最後是入門／進階／挑戰三級題庫。</p>
+</header>
+<main>
+
+<h2 id="where">7.1　本章在流程中的位置</h2>
+<p>第 0～6 章照著資料在程式裡的流向，把 train.py 與 predict.py 從頭讀到尾，程式碼一行都沒改。本章換一個方向：<strong>動手改</strong>。改的地方不多，散在 utils.py、model.py、train.py、config.py 四個檔案，原作者大多已經用 <code>TODO</code> 註解標好了位置。</p>
+<p>前面幾章有不少話說「第 7 章再談」。本章逐一接住：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>前面留下的話</th><th>出處</th><th>本章</th></tr></thead>
+<tbody>
+<tr><td>把特徵選好、優化器換掉，DNN 可以大幅進步；把 baseline 表延伸成完整的比較</td><td>目錄頁〈先說在前面〉</td><td>7.9</td></tr>
+<tr><td>範例程式能過 simple，後面三條基準線要靠第 7 章；<code>select_all</code> 在第 7 章</td><td>第 0 章 0.1、0.4 節</td><td>7.2、7.4</td></tr>
+<tr><td>州別有資訊，但前 4 天的陽性率已經把它帶進來；117 欄裡真正扛起預測的是少數幾欄</td><td>第 1 章 1.3、1.7 節</td><td>7.4</td></tr>
+<tr><td>填好 <code>feat_idx</code> 是過 medium 的方法；在「拿掉 id」的結果上繼續改進</td><td>第 2 章 2.4、2.5 節</td><td>7.4、7.5</td></tr>
+<tr><td>標準化（只用訓練集的統計量）</td><td>第 1 章 1.4 節、第 4 章 4.7 節的「現在的做法」框</td><td>7.5</td></tr>
+<tr><td>把改良合在一起，和線性迴歸的 1.166 比</td><td>第 3 章 3.6 節</td><td>7.9</td></tr>
+<tr><td>換結構、調學習率時回頭量「沒在工作的單元」；LeakyReLU／GELU 實際比較</td><td>第 4 章 4.7 節</td><td>7.5、7.7</td></tr>
+<tr><td>第 33 行 TODO 的 L2 正則化（weight_decay）</td><td>第 5 章 5.2 節</td><td>7.8</td></tr>
+<tr><td>標準化之後，學習率能用比較常見的大小；換優化器（AdamW）</td><td>第 5 章 5.4、5.10 節</td><td>7.5、7.6</td></tr>
+<tr><td>模型加了 Dropout，<code>train()</code>／<code>eval()</code> 就不只是習慣</td><td>第 5 章 5.3 節</td><td>7.7</td></tr>
+<tr><td>train 與 valid 的差距、valid 本身的雜訊，改進時要一起看</td><td>第 5 章 5.5 節</td><td>7.10、7.11</td></tr>
+<tr><td>按時間切驗證集；測試集是陽性率更高的時期</td><td>第 1 章 1.6 節、第 6 章 6.9 節</td><td>7.10</td></tr>
+<tr><td>改了 <code>select_feat</code>，predict.py 要跟著一致；標準化的統計量要存進 checkpoint</td><td>第 6 章 6.2、6.3 節</td><td>7.12</td></tr>
+</tbody>
+</table></div>
+<p>有幾件事前面已經講完，本章只回指：MSE 與 Kaggle 的四條基準線（第 0 章 0.1 節）、id 為什麼不該當特徵（第 1 章 1.6 節、第 2 章 2.4 節）、印出的 valid loss 為什麼偏低與修法（第 3 章 3.5 節）、沒在工作的單元怎麼數（第 4 章 4.7 節）、SGD 與 momentum 的更新規則（第 5 章 5.4 節）、「MSE(預測, 第 4 天)」這把替代尺與外推（第 6 章 6.6、6.9 節）。</p>
+
+<h2 id="hints">7.2　作業提示與 Kaggle 基準線：四句話落在程式的哪裡</h2>
+<p>作業投影片（repo 裡的 <code>HW01/HW01.pdf</code>）第 22 頁的 Hints 只有四行，逐字照抄：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>基準線</th><th>投影片原文</th><th>意思</th><th>改哪裡</th><th>本章</th></tr></thead>
+<tbody>
+<tr><td>simple</td><td><code>sample code</code></td><td>範例程式本身</td><td>不用改</td><td>—</td></tr>
+<tr><td>medium</td><td><code>Feature selection</code></td><td>挑選要餵給模型的欄位</td><td>utils.py 第 32 或 34 行</td><td>7.4</td></tr>
+<tr><td>strong</td><td><code>Different model architectures and optimizers</code></td><td>換模型結構、換優化器</td><td>model.py 第 14–20 行、train.py 第 34 行</td><td>7.6、7.7</td></tr>
+<tr><td>boss</td><td><code>L2 regularization and try more parameters</code></td><td>L2 正則化，以及多試幾組超參數</td><td>train.py 第 34 行、config.py</td><td>7.8</td></tr>
+</tbody>
+</table></div>
+<p>四條基準線本身是分數門檻（第 0 章 0.1 節）。投影片第 14 頁「Grading -- Kaggle」是一張排行榜截圖，上面的 public 分數（MSE，越小越好）是：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>基準線</th><th>simple</th><th>medium</th><th>strong</th><th>boss</th></tr></thead>
+<tbody>
+<tr><td>Kaggle public MSE</td><td>2.28371</td><td>1.49430</td><td>1.05728</td><td>0.86161</td></tr>
+</tbody>
+</table></div>
+<p>同一張截圖上，助教隊伍 TA_RT 是 0.85800。第 13 頁的計分方式：四條基準線各分 public 與 private 兩個排行榜，每過一條得 1 分，共 8 分；另外繳交程式碼 2 分，總分 10 分。（public／private 是 Kaggle 把測試集分成的兩半：比賽期間只公布 public 那一半的分數，private 那一半到截止後才公布，用來防止參賽者對著公開分數反覆微調。）</p>
+
+<div class="warn"><h4>這些數字不能拿來和本書的驗證集 MSE 比</h4>
+<p>上表是 Kaggle 用<strong>測試集</strong>的答案算出來的 MSE；本書從第 0 章起報的都是<strong>驗證集</strong>（從訓練資料切出來的 539 筆）上的 MSE。第 6 章 6.9 節看過，測試集是一段陽性率更高的時期（第 4 天陽性率平均 15.17，訓練集約 9.8），同一個模型在兩邊的誤差沒有理由相等。本書也沒有把任何 pred.csv 上傳到 Kaggle。所以本章不會說哪個模型「過了 strong」或「過了 boss」：驗證集 MSE 0.98 小於 1.05728，不代表上傳後也會小於它。</p>
+</div>
+
+<p>四句提示落在程式碼裡的位置，畫成一張圖：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 380" role="img" aria-label="作業提示對應到程式碼的位置：medium 對應 utils.py 第 31 到 34 行的 feat_idx；strong 對應 model.py 第 14 到 20 行的 nn.Sequential 與 train.py 第 34 行的優化器；boss 對應 train.py 第 34 行的 weight_decay 與 config.py 第 15 行的學習率；提示沒寫但要先做的三件事是 train.py 第 79、81、123 行的量法修正、train.py 第 114 行之後加標準化、predict.py 與 checkpoint 帶著同一組特徵與統計量">
+  <defs>
+    <marker id="ar7a" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#93a1af"/>
+    </marker>
+  </defs>
+  <rect x="20" y="20" width="210" height="60" rx="8" class="s-box"/>
+  <text class="s-lbl" x="125" y="46" text-anchor="middle" font-weight="700">medium：特徵選擇</text>
+  <text class="s-sm" x="125" y="66" text-anchor="middle">7.4 節</text>
+  <rect x="20" y="110" width="210" height="60" rx="8" class="s-box"/>
+  <text class="s-lbl" x="125" y="136" text-anchor="middle" font-weight="700">strong：架構與優化器</text>
+  <text class="s-sm" x="125" y="156" text-anchor="middle">7.6、7.7 節</text>
+  <rect x="20" y="200" width="210" height="60" rx="8" class="s-box"/>
+  <text class="s-lbl" x="125" y="226" text-anchor="middle" font-weight="700">boss：L2 與多試參數</text>
+  <text class="s-sm" x="125" y="246" text-anchor="middle">7.8 節</text>
+  <rect x="20" y="290" width="210" height="60" rx="8" class="s-box" stroke-dasharray="6 4"/>
+  <text class="s-lbl" x="125" y="316" text-anchor="middle" font-weight="700">提示沒寫，但要先做</text>
+  <text class="s-sm" x="125" y="336" text-anchor="middle">7.3、7.5、7.12 節</text>
+
+  <rect x="270" y="20" width="196" height="60" rx="8" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="368" y="44" text-anchor="middle">utils.py:31–34</text>
+  <text class="s-sm" x="368" y="64" text-anchor="middle">feat_idx 的兩個分支</text>
+
+  <rect x="270" y="110" width="196" height="60" rx="8" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="368" y="134" text-anchor="middle">model.py:14–20</text>
+  <text class="s-sm" x="368" y="154" text-anchor="middle">nn.Sequential 的層與激活函數</text>
+  <rect x="478" y="110" width="196" height="60" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-mono" x="576" y="134" text-anchor="middle">train.py:34</text>
+  <text class="s-sm" x="576" y="154" text-anchor="middle">SGD 換成 Adam／AdamW</text>
+
+  <rect x="270" y="200" width="196" height="60" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-mono" x="368" y="224" text-anchor="middle">train.py:34</text>
+  <text class="s-sm" x="368" y="244" text-anchor="middle">weight_decay=…</text>
+  <rect x="478" y="200" width="196" height="60" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-mono" x="576" y="224" text-anchor="middle">config.py:15</text>
+  <text class="s-sm" x="576" y="244" text-anchor="middle">learning_rate 等超參數</text>
+
+  <rect x="270" y="290" width="196" height="60" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-mono" x="368" y="314" text-anchor="middle">train.py:79、81、123</text>
+  <text class="s-sm" x="368" y="334" text-anchor="middle">量法修正（第 3 章）</text>
+  <rect x="478" y="290" width="196" height="60" rx="8" class="s-box" style="stroke:#58a6ff" stroke-dasharray="6 4"/>
+  <text class="s-mono" x="576" y="314" text-anchor="middle">train.py:114 之後</text>
+  <text class="s-sm" x="576" y="334" text-anchor="middle">標準化（原程式沒有）</text>
+  <rect x="686" y="290" width="196" height="60" rx="8" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="784" y="314" text-anchor="middle">predict.py＋checkpoint</text>
+  <text class="s-sm" x="784" y="334" text-anchor="middle">同一組特徵與統計量</text>
+
+  <line x1="230" y1="50" x2="266" y2="50" stroke="#93a1af" stroke-width="2" marker-end="url(#ar7a)"/>
+  <line x1="230" y1="140" x2="266" y2="140" stroke="#93a1af" stroke-width="2" marker-end="url(#ar7a)"/>
+  <line x1="230" y1="230" x2="266" y2="230" stroke="#93a1af" stroke-width="2" marker-end="url(#ar7a)"/>
+  <line x1="230" y1="320" x2="266" y2="320" stroke="#93a1af" stroke-width="2" marker-end="url(#ar7a)"/>
+</svg>
+<figcaption>圖 7.1 — 三條提示都只動到一兩個地方；特徵選擇、模型結構、優化器與 L2 的位置，原作者已經用 TODO 標好，只有「多試參數」沒有 TODO，指的是 config.py 的超參數。最下排是提示沒寫、但本章實驗證明要先做的三件事；其中標準化在原程式裡<strong>沒有</strong>現成的位置（虛線框），要自己加。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#58a6ff"></i>CPU 端資料（選欄、標準化）</span>
+  <span><i style="background:#3fb950"></i>GPU 上的運算（模型）</span>
+  <span><i style="background:#a371f7"></i>控制與超參數</span>
+  <span><i style="background:#e3b341"></i>磁碟檔案</span>
+</div>
+
+<p>三個有 TODO 的位置，原文如下。第一個是特徵選擇：</p>
+<figure class="listing"><figcaption>utils.py:31–34 — 選哪些欄</figcaption>
+<pre class="py" data-hot="34"><code>    if select_all:
+        feat_idx = list(range(raw_x_train.shape[1]))
+    else:
+        feat_idx = [0, 1, 2, 3, 4]  # TODO: Select suitable feature columns.</code></pre></figure>
+<p>第二個是模型結構，第 13 行的 TODO 提醒「注意維度」：第一層的輸入是 <code>input_dim</code>，由 train.py 第 126 行依選完的欄數自動決定（第 2 章 2.4 節），所以改特徵不必改這裡；改的是中間層的寬度、層數與激活函數。</p>
+<figure class="listing"><figcaption>model.py:13–20 — 模型結構</figcaption>
+<pre class="py" data-hot="15,17,19"><code>        # TODO: modify model's structure, be aware of dimensions.
+        self.layers = nn.Sequential(
+            nn.Linear(input_dim, 16),
+            nn.ReLU(),
+            nn.Linear(16, 8),
+            nn.ReLU(),
+            nn.Linear(8, 1)
+        )</code></pre></figure>
+<p>第三個是優化器，兩行 TODO 分別對應 strong 的「optimizers」和 boss 的「L2 regularization」：</p>
+<figure class="listing"><figcaption>train.py:31–34 — 優化器</figcaption>
+<pre class="py" data-hot="34"><code>    # Define your optimization algorithm. 
+    # TODO: Please check https://pytorch.org/docs/stable/optim.html to get more available algorithms.
+    # TODO: L2 regularization (optimizer(weight decay...) or implement by your self).
+    optimizer = torch.optim.SGD(model.parameters(), lr=config['learning_rate'], momentum=0.9)</code></pre></figure>
+<p>「try more parameters」沒有對應的 TODO，它指的是 config.py 裡的超參數（學習率、batch_size、n_epochs、early_stop，第 5 章 5.10 節），以及上面三處裡的各種數字。</p>
+
+<h2 id="method">7.3　先統一量尺：本章的實驗怎麼做</h2>
+<p>要比較「改了之後有沒有變好」，第一個條件是量尺可信。第 3 章 3.5 節已經看到，範例程式印出的 valid loss 有三層偏差：最後一個 27 筆的 batch 份量被放大、valid 每個 epoch 重新打亂造成雜訊、再從雜訊裡挑最小值。拿這樣的數字比較兩個設定，差距可能只是運氣。所以本章所有改良實驗都<strong>先套用第 3 章的修法</strong>（3.6 節動手做第 4 項：train.py 第 123 行 <code>shuffle=False</code>、第 79 行乘上 <code>len(y)</code>、第 81 行除以總筆數）。這樣印出的最佳 valid loss，就等於那個 checkpoint 在 539 筆上一次算完的真實 MSE，可以直接和目錄頁的線性迴歸 1.166 比。</p>
+
+<h3>實驗腳本，以及它可不可信</h3>
+<p>約 70 次訓練是用一支照 train.py 流程重寫的腳本在本機 GPU 上跑的：same_seed → 切分 → 選特徵 →（標準化）→ DataLoader → 建模型 → trainer 的五步驟、存最佳、early stop，每一步都和 train.py 相同，只是把「選哪些欄、要不要標準化、用哪個優化器、模型長什麼樣」做成可切換的設定。腳本放在 repo 的 <code>docs/tools/hw01_exp.py</code>，全部設定列在 <code>docs/tools/hw01_ch07_runs.txt</code>（需要 GPU；用法見腳本開頭的說明）。它怎麼被驗證過：</p>
+<ul>
+  <li>用原版設定跑，<strong>逐位元重現</strong>了第 0、3、4、5 章的數字：印出的最佳 1.6611、在第 1483 個 epoch、第 1883 個 epoch 停止、存檔 49 次、checkpoint 的真實 MSE 2.0685、第一層 10 個單元沒在工作。</li>
+  <li>用修正量法的設定跑，也重現了第 3 章動手做的結果：最佳 1.7174、在第 2968 個 epoch、跑滿 3000 個 epoch、存檔 187 次。</li>
+</ul>
+<p>另外，7.13 節題庫裡用到的設定，本機也<strong>照題目的寫法直接改 train.py</strong> 實際跑過（拿掉 id、tp4、標準化＋lr 1e-3、時間切分、線性 corr、原版 seed 2 的量法修正版），印出的最佳 valid loss 與最佳 epoch 都和腳本逐位相同。所以照本章的方式改 train.py，會得到本章表格裡的數字。</p>
+
+<h3>固定不變的設定</h3>
+<p>除非另外註明，每組實驗都照原版：batch_size 256、n_epochs 3000、early_stop 400、模型 輸入→16→8→1、seed 5201314，驗證集是範例程式的隨機切分（用 seed 5201314 切出的 2160／539，第 2 章 2.3 節）。7.11 節換 seed 時，<strong>切分仍固定用 5201314 那一份</strong>，換的 seed 只影響初始權重與 batch 的打亂順序，所以每一組比的都是同一批 539 筆。注意原版 train.py 第 101、106 行讀的是同一個 <code>config['seed']</code>，直接改 config 的 seed 會連切分一起換掉。</p>
+
+<h3>表格的欄位</h3>
+<p>後面幾節的表都用同一組欄位：</p>
+<ul>
+  <li><strong>特徵數、參數量</strong>：第一層的輸入欄數，以及模型的參數總數（算法同第 4 章 4.3 節）。</li>
+  <li><strong>真實 valid MSE</strong>：最佳 checkpoint 在驗證集上一次算完的 MSE。本章比較的主角。</li>
+  <li><strong>真實 train MSE</strong>：同一個 checkpoint 在訓練部分（2,160 筆）上一次算完的 MSE。它不是印出來的 train loss（第 5 章 5.5 節：印出的是邊更新邊記錄的平均）。valid 和 train 差得越多，表示模型越偏向「背熟訓練資料」。</li>
+  <li><strong>最佳 epoch、停止</strong>：存下最佳 checkpoint 的 epoch，以及訓練在第幾個 epoch 結束（3000 表示跑滿上限，沒有 early stop）。</li>
+  <li><strong>沒在工作的單元</strong>：第一層在全部資料上永遠輸出 0 的單元數，判定方式同第 4 章 4.7 節。</li>
+  <li><strong>測試集：MSE(預測, 第 4 天)</strong>：第 6 章 6.6 節那把替代尺。測試集沒有答案，只能拿第 4 天的陽性率當參照。它<strong>不是成績</strong>，但數字越大，表示預測離「昨天的陽性率」越遠。原版是 1.0045（第 6 章）。</li>
+  <li><strong>測試集預測最大值</strong>：測試集第 4 天陽性率最大是 46.95（第 6 章 6.9 節），預測超過它越多，外推得越遠。</li>
+</ul>
+
+<h3>這一章用的特徵組合</h3>
+<p>為了方便，本章給幾組特徵取了短名字。欄號都是 0 起算、對 <code>train_data</code> 的欄位（第 1 章 1.2 節的版圖：0 是 id、1–37 是州、38 起每 16 欄一天）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>名字</th><th>欄位</th><th>欄數</th></tr></thead>
+<tbody>
+<tr><td>原版</td><td>0–116，含 id（<code>select_all=True</code>）</td><td>117</td></tr>
+<tr><td>noid（拿掉 id）</td><td>1–116</td><td>116</td></tr>
+<tr><td>survey</td><td>38–116：拿掉 id 與 37 個州，只留 5 天的問卷與前 4 天陽性率</td><td>79</td></tr>
+<tr><td>corr</td><td>在<strong>訓練部分</strong>上和答案的 |相關係數| &gt; 0.5 的欄（不含 id）</td><td>34（按時間切分時 38）</td></tr>
+<tr><td>tp4</td><td>前 4 天的 tested_positive：53、69、85、101</td><td>4</td></tr>
+</tbody>
+</table></div>
+<p>corr 是照第 1 章 1.7 節的相關係數挑的，但有一個關鍵差別：相關係數只在<strong>訓練部分</strong>上算，不碰驗證集。第 1 章是在整份訓練資料上算的，那是為了看資料；拿來挑特徵時若用到驗證集，驗證集的答案就漏進了「選哪些欄」這個決定（和第 1 章 1.4 節標準化框說的是同一件事）。在隨機切分的 2,160 筆上，這個準則選到 34 欄：cli、ili、hh_cmnty_cli、nohh_cmnty_cli、work_outside_home、anxious 這 6 個指標各 5 天（30 欄），加上前 4 天的 tested_positive（4 欄）。按時間切分時，訓練部分換了一批資料，選到 38 欄，多了 depressed 的第 2～5 天（pandas 欄名 depressed.1～depressed.4，第 1 章 1.5 節的後綴規則）。</p>
+
+<h2 id="feature">7.4　medium：特徵選擇</h2>
+<p>改法有兩種。一種是 config.py 第 11 行設 <code>'select_all': False</code>，再把 utils.py 第 34 行的 <code>[0, 1, 2, 3, 4]</code> 換成你要的欄號；另一種是直接改第 32 行（第 2 章動手做拿掉 id 就是這樣改的）。不管哪一種，train.py 與 predict.py 都經由同一個 <code>select_feat</code> 取欄，兩邊自動一致（7.12 節會講什麼情況下不再自動一致）。例如 tp4：</p>
+<pre class="py"><code>        feat_idx = [53, 69, 85, 101]  # 前 4 天的 tested_positive</code></pre>
+<p>corr 要在函式裡現算。下面是示意寫法，依照上一節的準則（只看訓練部分、不含 id），本書沒有執行這一段：</p>
+<pre class="py"><code>        xs, ys = train_data[:, 1:-1], train_data[:, -1]          # 訓練部分，去掉 id 與答案
+        r = np.array([abs(np.corrcoef(xs[:, j], ys)[0, 1]) for j in range(xs.shape[1])])
+        feat_idx = [int(j) + 1 for j in np.where(r &gt; 0.5)[0]]    # +1：換回含 id 的欄號；int() 轉成 Python 整數</code></pre>
+<p>（<code>np.corrcoef</code> 算兩組數字的相關係數矩陣，<code>[0, 1]</code> 取出兩者之間的那一個；第 1 章用的是 pandas 的 <code>corr()</code>，算的是同一個 Pearson 相關係數。）</p>
+
+<h3>結果：光拿掉 id 就從 1.7174 到 1.1848</h3>
+<p>其他照原版（不標準化、SGD lr 1e-5、momentum 0.9），只換特徵：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>特徵</th><th>特徵數</th><th>參數量</th><th>真實 valid MSE</th><th>真實 train MSE</th><th>最佳 epoch</th><th>停止</th><th>沒在工作的單元</th><th>測試集：MSE(預測, 第 4 天)</th></tr></thead>
+<tbody>
+<tr><td>原版（量法修正後）</td><td>117</td><td>2033</td><td>1.7174</td><td>1.4799</td><td>2968</td><td>3000</td><td>12</td><td>0.7175</td></tr>
+<tr><td>noid</td><td>116</td><td>2017</td><td><strong>1.1848</strong></td><td>1.0592</td><td>2977</td><td>3000</td><td>7</td><td>0.2518</td></tr>
+<tr><td>survey</td><td>79</td><td>1425</td><td>1.2159</td><td>1.0743</td><td>2982</td><td>3000</td><td>6</td><td>0.2249</td></tr>
+<tr><td>corr</td><td>34</td><td>705</td><td>1.1886</td><td>1.1012</td><td>2995</td><td>3000</td><td>4</td><td>0.2393</td></tr>
+<tr><td>tp4</td><td>4</td><td>225</td><td>1.3561</td><td>1.1785</td><td>2996</td><td>3000</td><td>1</td><td>0.0253</td></tr>
+</tbody>
+</table></div>
+<ul>
+  <li><strong>id 是最大的那顆石頭。</strong>只拿掉一欄，真實 MSE 從 1.7174 降到 1.1848，已經和線性迴歸的 1.166 只差一點。第 4 章 4.7 節看到 id 在第一層的份量是其他欄的約 400 倍；拿掉它，其他欄才被「聽見」。</li>
+  <li><strong>survey、corr、noid 三組差不多</strong>（1.18～1.22）。拿掉 37 個州（survey）沒有變好，反而略差。第 1 章 1.3 節說州別有資訊、但前 4 天的陽性率已經把差異帶進來；這組數字和那句話不衝突，只是說明在這個模型、這個 seed 下，州欄沒有拖累。三組的差距只有 0.03，7.11 節會看到，換 seed 的波動也是這個量級，所以這三組分不出高下。</li>
+  <li><strong>tp4 只用 4 欄，1.3561</strong>，比抄第 4 天的 1.313 還差一點：4 欄的資訊量就到這裡，問卷欄位確實有幫助。</li>
+  <li><strong>每一組都跑滿 3000 個 epoch</strong>，最佳 epoch 都在 2968～2996。意思是 lr 1e-5 下模型到最後都還在進步，訓練其實沒有走完。這是下一節的線索。</li>
+</ul>
+
+<h3>1.1848 和第 2 章的 1.240，都是「拿掉 id」</h3>
+<p>第 2 章動手做拿掉 id，真實 MSE 是 1.240（第 3 章 3.5 節量的）；這裡是 1.1848。兩個都是「116 欄、其他照原版」，差在量法：第 2 章跑的是原版 train.py，<strong>挑選</strong>最佳 checkpoint 時用的是有雜訊的 valid loss（印出 0.982），挑出來再量真值才是 1.240；這裡挑選本身就用修正後的量法，每次存檔都是真的進步，加上 valid 不打亂改變了訓練時的 batch 順序（第 3 章 3.6 節的說明），整條訓練路徑都不同。所以兩個數字都對，量的是兩次不同的訓練。同樣的道理，原版在第 4 章是 10 個單元沒在工作，這裡是 12 個：那是 1.661 那一次訓練，這裡是量法修正後的另一次。</p>
+
+<h3>「沒在工作的單元」跟著特徵變少</h3>
+<p>第 4 章 4.7 節說「換模型結構、調學習率時，這是值得回頭量的指標」。上表的最後一欄：原版 12、noid 7、survey 6、corr 4、tp4 1。輸入的欄位越少、尺度越一致，第一層死掉的單元就越少。但 noid 仍有 7 個：沒有標準化時，剩下的欄位尺度仍然差很多（wearing_mask 到 89.8，one-hot 只有 0 和 1，第 2 章）。下一節處理這件事。</p>
+
+<h2 id="scale">7.5　標準化，然後重調學習率</h2>
+<p>標準化不在作業提示裡，但前面三章都指向它：第 1 章 1.4 節的「現在的做法」框、第 2 章「id 拖累的主因是數值尺度」、第 4 章 4.7 節「先處理輸入的尺度，再談模型」。原程式<strong>沒有</strong>做標準化的位置，要自己加。最自然的地方是 train.py 選完特徵之後、建 Dataset 之前：</p>
+<figure class="listing"><figcaption>train.py:113–119 — 標準化要插在第 114 行與第 119 行之間</figcaption>
+<pre class="py" data-hot="114,119"><code>    # Select features
+    x_train, x_valid, x_test, y_train, y_valid = select_feat(train_data, valid_data, test_data, config['select_all'])
+
+    # Print out the number of features.
+    print(f'number of features: {x_train.shape[1]}')
+
+    train_dataset, valid_dataset = COVID19Dataset(x_train, y_train), COVID19Dataset(x_valid, y_valid)</code></pre></figure>
+<p>示意寫法（本書沒有執行這一段；本機實驗用的是同一個做法）：</p>
+<pre class="py"><code>    mean, std = x_train.mean(axis=0), x_train.std(axis=0)   # 只用訓練部分算
+    std[std == 0] = 1                                       # 整欄都同一個值時，避免除以 0
+    x_train = (x_train - mean) / std
+    x_valid = (x_valid - mean) / std                        # 驗證、測試都用訓練部分的那一組
+    x_test = (x_test - mean) / std</code></pre>
+<p>每一欄減去平均、除以標準差（第 6 章 6.9 節：變異數開根號），所有欄位都落在 0 附近、大小相近。第 1 章 1.4 節的框強調過：平均與標準差只能從訓練部分算，原封不動套到驗證集與測試集。<code>axis=0</code> 表示沿著列的方向算，每一欄各得一個平均與標準差。第 1 章的版本是加上 1e-8 避免除以 0，這裡把標準差為 0 的欄改成 1，兩種寫法目的相同。</p>
+
+<h3>結果：lr 1e-5 變成太小了</h3>
+<p>noid 116 欄加上標準化，優化器仍是 SGD（momentum 0.9），只換學習率：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th>真實 valid MSE</th><th>真實 train MSE</th><th>最佳 epoch</th><th>停止</th><th>沒在工作的單元</th><th>測試集：MSE(預測, 第 4 天)</th><th>測試集預測最大值</th></tr></thead>
+<tbody>
+<tr><td>noid，不標準化，lr 1e-5（上一節）</td><td>1.1848</td><td>1.0592</td><td>2977</td><td>3000</td><td>7</td><td>0.2518</td><td>44.8421</td></tr>
+<tr><td>標準化，lr 1e-5</td><td>1.2915</td><td>0.9656</td><td>2994</td><td>3000</td><td>0</td><td>2.6444</td><td>46.5314</td></tr>
+<tr><td>標準化，lr 1e-4</td><td>1.0722</td><td>0.5874</td><td>2446</td><td>2846</td><td>0</td><td>5.0139</td><td>53.2061</td></tr>
+<tr><td>標準化，lr 1e-3</td><td><strong>1.0715</strong></td><td>0.5636</td><td>543</td><td>943</td><td>0</td><td>4.1104</td><td>55.4179</td></tr>
+<tr><td>標準化，lr 1e-2</td><td>6.669</td><td>5.1295</td><td>516</td><td>916</td><td>0</td><td>34.0022</td><td>25.981</td></tr>
+</tbody>
+</table></div>
+<ul>
+  <li><strong>標準化之後，原本的 lr 1e-5 太小。</strong>1.2915 比不標準化還差，而且跑滿 3000 個 epoch 還在進步。第 5 章 5.4 節說「lr = 1e-5 這個看起來小得出奇的值，其實是被 id 欄逼出來的」：梯度和輸入的數值大小成正比，id 動輒上千，學習率只能壓得很小。輸入標準化之後，梯度回到正常的量級，原本的小學習率就走不動了。這裡得到證實。</li>
+  <li><strong>lr 1e-4、1e-3 最好</strong>（1.0722、1.0715），第一次贏過線性迴歸的 1.166。1e-3 在第 543 個 epoch 就達到最佳、第 943 個 epoch early stop，用不到三分之一的 epoch。</li>
+  <li><strong>lr 1e-2 就壞了</strong>（6.669）。步伐太大，在谷底附近來回跳。合適的學習率是一個範圍，兩邊都有懸崖。</li>
+  <li><strong>沒在工作的單元全部歸 0。</strong>所有欄位都在 0 附近，第一層每個單元的加權總和有正有負，沒有哪個單元對所有資料都輸入為負。第 4 章 4.7 節「先處理 id 與尺度才是根本」，在這一欄看得最清楚。</li>
+</ul>
+<p>但注意最右邊兩欄。lr 1e-3 那組的真實 train MSE 0.5636 遠低於 valid 的 1.0715；測試集上，MSE(預測, 第 4 天) 從 noid 的 0.2518 變成 4.1104，預測最大值 55.4 已經超過測試集第 4 天的最大值 46.95。驗證集上變好了，在測試集上卻離「昨天的陽性率」遠得多。這是本章第二層結論的第一個徵兆，7.10 節回來看。</p>
+
+<h2 id="optim">7.6　strong 之一：換優化器（Adam、AdamW）</h2>
+<p>第 5 章 5.4 節的「現在的做法」框說：今天優化器的預設選擇多半是 AdamW。這一節實測。</p>
+<p><strong>Adam</strong>（adaptive moment estimation）和 SGD＋momentum 一樣會記住梯度的歷史，差別在於它<strong>替每個參數各自決定步幅</strong>：除了梯度的移動平均（每一步把舊值打個折再加上新的梯度，就是 momentum buffer 那種累積），它還記錄每個參數梯度平方的移動平均，更新時把前者除以後者的平方根。某個參數的梯度一直很大，它的步幅就被縮小；一直很小，就被放大。所以 id 欄梯度大上百倍的問題（第 5 章 5.4 節），Adam 會自己縮放掉一大部分。<strong>AdamW</strong> 是 Adam 的變形，只差在 weight decay 的做法，7.8 節講。</p>
+<p>改的是 train.py 第 34 行，例如（示意）：</p>
+<pre class="py"><code>    optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
+    optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'], weight_decay=0)</code></pre>
+<p>兩行擇一。學習率仍從 config.py 第 15 行讀，記得把 1e-5 改成要試的值。注意 <code>torch.optim.AdamW</code> 不寫 <code>weight_decay</code> 時預設是 0.01（PyTorch 文件），不是 0；下表「AdamW（wd 0）」那一列是明確指定 0。</p>
+
+<h3>結果</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th>特徵數</th><th>真實 valid MSE</th><th>真實 train MSE</th><th>最佳 epoch</th><th>停止</th><th>沒在工作的單元</th><th>測試集：MSE(預測, 第 4 天)</th></tr></thead>
+<tbody>
+<tr><td>noid，<strong>不標準化</strong>，Adam lr 1e-3</td><td>116</td><td>1.145</td><td>0.8982</td><td>2408</td><td>2808</td><td>7</td><td>0.7348</td></tr>
+<tr><td>noid＋標準化，Adam lr 1e-3</td><td>116</td><td>1.1704</td><td>0.6956</td><td>632</td><td>1032</td><td>0</td><td>9.2868</td></tr>
+<tr><td>noid＋標準化，Adam lr 1e-4</td><td>116</td><td>1.1944</td><td>0.7847</td><td>2957</td><td>3000</td><td>0</td><td>8.9152</td></tr>
+<tr><td>noid＋標準化，AdamW lr 1e-3（wd 0）</td><td>116</td><td>1.1704</td><td>0.6956</td><td>632</td><td>1032</td><td>0</td><td>9.2868</td></tr>
+<tr><td>tp4＋標準化，Adam lr 1e-3</td><td>4</td><td>1.3028</td><td>1.1635</td><td>977</td><td>1377</td><td>1</td><td>0.0152</td></tr>
+<tr><td>corr＋標準化，Adam lr 1e-3</td><td>34</td><td><strong>1.1063</strong></td><td>0.921</td><td>1578</td><td>1978</td><td>0</td><td>1.8546</td></tr>
+<tr><td>survey＋標準化，Adam lr 1e-3</td><td>79</td><td>1.223</td><td>0.846</td><td>800</td><td>1200</td><td>0</td><td>1.0355</td></tr>
+</tbody>
+</table></div>
+<ul>
+  <li><strong>Adam 對尺度寬容，這句話成立。</strong>不標準化，只把 SGD lr 1e-5 換成 Adam lr 1e-3，noid 從 1.1848 進步到 1.145。同樣不標準化，SGD 若把學習率放大 10 倍到 1e-4，第 5 章 5.10 節看到的是整個壞掉（輸出常數 9.731）；Adam 用 1e-3 卻能正常訓練。</li>
+  <li><strong>標準化之後，Adam 沒有贏過調好的 SGD。</strong>noid＋標準化，Adam 1e-3 是 1.1704，SGD 1e-3 是 1.0715（上一節）。「預設用 AdamW」是省事的起點，不保證是最好的；調好學習率的 SGD＋momentum 照樣有競爭力。</li>
+  <li><strong>wd 0 時，Adam 與 AdamW 的結果一模一樣</strong>（每一欄都相同）。這是對兩者關係最直接的驗證：差別只在 weight decay，wd 為 0 時就是同一個演算法。</li>
+  <li><strong>特徵少一點，Adam 反而比較好。</strong>標準化後用 Adam，corr 34 欄是 1.1063，比 116 欄的 1.1704 好；tp4 是 1.3028，和線性迴歸 4 欄的 1.303 幾乎相同。</li>
+</ul>
+<p>標準化後的 Adam，測試集上的 MSE(預測, 第 4 天) 達到 9 左右，是原版 1.0045 的 9 倍。這個徵兆比上一節更明顯，先記著。</p>
+
+<h2 id="arch">7.7　strong 之二：改架構與激活函數</h2>
+<p>改的是 model.py 第 14–20 行。改寬、改深都只要動 <code>nn.Sequential</code> 裡的數字，唯一的規則就是第 13 行 TODO 說的「注意維度」：每一層的輸出數要等於下一層的輸入數（第 4 章 4.3 節），最後一層輸出 1。例如把中間層加寬成 64 與 32（示意）：</p>
+<pre class="py"><code>        self.layers = nn.Sequential(
+            nn.Linear(input_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 1)
+        )</code></pre>
+<p>參數量照第 4 章 4.3 節的算法：116×64＋64 ＝ 7,488，64×32＋32 ＝ 2,080，32×1＋1 ＝ 33，共 <strong>9,601</strong>，是原本 2,017（116 欄時）的 4.8 倍。換激活函數則是把兩個 <code>nn.ReLU()</code> 換成 <code>nn.LeakyReLU()</code> 或 <code>nn.GELU()</code>（第 4 章 4.7 節的「現在的做法」框：LeakyReLU 在負數區保留一個小斜率，GELU 在 0 附近是平滑曲線）。</p>
+
+<h3>結果（noid＋標準化，SGD lr 1e-3）</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th>參數量</th><th>真實 valid MSE</th><th>真實 train MSE</th><th>最佳 epoch</th><th>停止</th><th>沒在工作的單元</th><th>測試集：MSE(預測, 第 4 天)</th><th>測試集預測最大值</th></tr></thead>
+<tbody>
+<tr><td>116→16→8→1（對照，7.5 節）</td><td>2017</td><td>1.0715</td><td>0.5636</td><td>543</td><td>943</td><td>0</td><td>4.1104</td><td>55.4179</td></tr>
+<tr><td>116→64→32→1</td><td>9601</td><td><strong>0.9909</strong></td><td>0.3769</td><td>390</td><td>790</td><td>0</td><td>5.7501</td><td>55.684</td></tr>
+<tr><td>116→8→1（一層隱藏層）</td><td>945</td><td>1.1349</td><td>0.7092</td><td>792</td><td>1192</td><td>0</td><td>3.2123</td><td>48.2503</td></tr>
+<tr><td>LeakyReLU</td><td>2017</td><td>1.0834</td><td>0.626</td><td>383</td><td>783</td><td>0</td><td>3.0105</td><td>51.3183</td></tr>
+<tr><td>GELU</td><td>2017</td><td>1.0346</td><td>0.4111</td><td>810</td><td>1210</td><td>0</td><td>9.6035</td><td>53.0476</td></tr>
+</tbody>
+</table></div>
+<p>加寬到 64-32 是隨機切分下單一設定的最好成績：<strong>0.9909</strong>，也是第一個低於 1 的數字。GELU 第二（1.0346）。縮成一層隱藏層 116→8→1 只有 945 個參數，1.1349，仍然贏過線性迴歸 1.166。同時也看 train MSE：64-32 是 0.3769，不到 valid 的四成，是表中最低的。容量（第 4 章 4.7 節：參數量是模型能表達多複雜關係的上限）越大，背得越熟。</p>
+
+<h3>第 4 章答應的比較：在原版設定下換激活函數</h3>
+<p>第 4 章 4.7 節說：在輸入沒有標準化之前換激活函數是治標，要實際比較。以下是在原版設定（117 欄含 id、不標準化、SGD lr 1e-5、量法修正後）只換激活函數：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>激活函數</th><th>真實 valid MSE</th><th>真實 train MSE</th><th>最佳 epoch</th><th>停止</th><th>沒在工作的單元</th></tr></thead>
+<tbody>
+<tr><td>ReLU（原版）</td><td>1.7174</td><td>1.4799</td><td>2968</td><td>3000</td><td>12</td></tr>
+<tr><td>LeakyReLU</td><td>1.7336</td><td>1.4529</td><td>2954</td><td>3000</td><td>0</td></tr>
+<tr><td>GELU</td><td>1.7304</td><td>1.4947</td><td>2968</td><td>3000</td><td>6</td></tr>
+</tbody>
+</table></div>
+<p>LeakyReLU 讓沒在工作的單元從 12 變成 0，MSE 卻沒有變好（1.7336 對 1.7174）。單元「活著」不等於它在學有用的東西：id 仍以約 400 倍的份量壓著第一層（第 4 章 4.7 節），活過來的單元聽到的主要還是 id。對照 7.4 節，光拿掉 id 就降到 1.1848。<strong>激活函數治不了 id 的尺度問題</strong>，和第 4 章的推論一致。</p>
+<p>GELU 那一列的 6 要打個折。GELU 只有在輸入剛好是 0，或輸入非常負、在 float32 下溢成 0（結果小到 float32 表示不了，只能存成 0）時，才會輸出剛好 0。所以對 GELU 來說，「永遠輸出 0」代表那個單元的輸入一直極度偏負，和 ReLU 的「輸入為負就是 0」不是同一個判準，兩者的數字不能直接比。</p>
+
+<h3>Dropout：第 5 章答應的那件事</h3>
+<p>第 5 章 5.3 節說，模型裡一旦加了 Dropout，<code>model.train()</code> 與 <code>model.eval()</code> 就不只是習慣。<strong>Dropout</strong> 是一種在訓練時隨機把一部分單元的輸出設成 0 的層：每個 batch 隨機挑，被挑中的機率是 p，沒被挑中的輸出乘上 1/(1−p) 補回平均大小。模型因此不能依賴少數幾個單元，算是一種抑制「背熟訓練資料」的方法（7.8 節的 L2 是另一種）。它在訓練與評估時行為不同：<code>training</code> 旗標為 True 時隨機丟，為 False 時原樣通過。加法是在 ReLU 後面插一層（示意，p＝0.2 只是舉例）：</p>
+<pre class="py"><code>            nn.Linear(input_dim, 64),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(64, 32),</code></pre>
+<p>train.py 第 47 行每個 epoch 開頭的 <code>model.train()</code>、第 71 行與 predict.py 第 11 行的 <code>model.eval()</code>，這時就決定了 Dropout 有沒有作用：少了 eval()，驗證與預測也會隨機丟單元，每次結果都不同；少了 train()，第一個 epoch 之後的訓練全部沒有 Dropout。本機在 64-32 架構的兩個 ReLU 後各加 <code>nn.Dropout(0.2)</code>（noid＋標準化＋SGD lr 1e-3，量法修正後，seed 5201314），直接改 model.py 實跑：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th>真實 valid MSE</th><th>真實 train MSE</th><th>最佳 epoch</th><th>停止</th></tr></thead>
+<tbody>
+<tr><td>64-32，沒有 Dropout（隨機切分，上表）</td><td>0.9909</td><td>0.3769</td><td>390</td><td>790</td></tr>
+<tr><td>64-32＋Dropout(0.2)（隨機切分）</td><td>1.0094</td><td>0.5353</td><td>845</td><td>1245</td></tr>
+<tr><td>64-32＋Dropout(0.2)，刪掉第 47 行 <code>model.train()</code>（隨機切分）</td><td>0.9969</td><td>0.3130</td><td>494</td><td>894</td></tr>
+<tr><td>64-32，沒有 Dropout（時間切分，7.10 節）</td><td>1.7157</td><td>0.7048</td><td>81</td><td>481</td></tr>
+<tr><td>64-32＋Dropout(0.2)（時間切分）</td><td>1.7219</td><td>0.5415</td><td>645</td><td>1045</td></tr>
+</tbody>
+</table></div>
+<p>（真實 train MSE 是在 <code>model.eval()</code> 下量的，Dropout 不起作用，所以可以和沒有 Dropout 的那列直接比。）Dropout 讓隨機切分下的 train MSE 從 0.3769 升到 0.5353，「背熟」的程度確實降低了，但 valid 沒有因此變好（0.9909 → 1.0094），時間切分下也一樣（1.7157 → 1.7219）。刪掉 <code>model.train()</code> 那一列正是第 5 章 5.3 節說的情況：第 1 個 epoch 結束時 <code>model.eval()</code> 把旗標切成 False，之後再也沒切回來，Dropout 從第 2 個 epoch 起就不再丟任何單元，結果（train 0.3130、valid 0.9969）幾乎回到沒有 Dropout 的樣子，而程式不會報任何錯。</p>
+
+<h2 id="l2">7.8　boss：L2 正則化（weight_decay）與多試參數</h2>
+<p><strong>L2 正則化</strong>是在 loss 上加一項懲罰「權重太大」的項：總 loss ＝ MSE ＋ (λ/2) × (所有權重的平方和)。λ 越大，模型越傾向用小的權重。為什麼小權重比較好？權重小，輸入稍微改變時輸出也只會稍微改變，模型就比較難為了貼合訓練資料裡的個別雜訊而把函數扭得很彎；這類「在 loss 之外另加限制、讓模型不要太貼合訓練資料」的做法統稱<strong>正則化（regularization）</strong>，目的和 7.7 節的 Dropout 一樣是抑制背熟。對某個權重 w 微分，多出來的那一項梯度就是 λw，所以每一步更新變成 w ← w − lr × (g ＋ λw)：除了照梯度走，還順便把權重往 0 拉一點。這就是 train.py 第 33 行 TODO 寫的兩種做法：「optimizer(weight decay...)」是讓優化器替你加這一項，「implement by your self」是自己把平方和加進 loss。</p>
+<p>SGD 的 <code>weight_decay</code> 參數就是這樣做的：把 weight_decay × w 加到梯度上，再照第 5 章 5.4 節的 momentum 規則更新。第 5 章 5.2 節 <code>print(optimizer)</code> 看到的 <code>weight_decay: 0</code>，就是這個值。改法（示意）：</p>
+<pre class="py"><code>    optimizer = torch.optim.SGD(model.parameters(), lr=config['learning_rate'], momentum=0.9, weight_decay=1e-2)</code></pre>
+
+<h3>Adam 與 AdamW：同一個 weight_decay，意思不同</h3>
+<p>Adam 的 <code>weight_decay</code> 也是把 wd × w 加到梯度上。問題是 Adam 接著會把梯度除以「梯度平方的移動平均的平方根」（7.6 節），這一項 wd × w 也被一起縮放：梯度一直很大的參數，被往 0 拉的力道跟著被縮小。<strong>AdamW</strong>（W 指 decoupled weight decay，「分離的權重衰減」）把兩件事拆開：Adam 的更新照算，權重衰減另外直接做 w ← w − lr × wd × w，不經過那個縮放。所以同樣寫 <code>weight_decay=1e-2</code>，在 Adam 和 AdamW 裡效果不同。</p>
+
+<h3>結果（noid＋標準化，隨機切分）</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th>真實 valid MSE</th><th>真實 train MSE</th><th>最佳 epoch</th><th>停止</th><th>測試集：MSE(預測, 第 4 天)</th></tr></thead>
+<tbody>
+<tr><td>SGD lr 1e-3（對照）</td><td>1.0715</td><td>0.5636</td><td>543</td><td>943</td><td>4.1104</td></tr>
+<tr><td>SGD lr 1e-3，wd 1e-3</td><td>1.0584</td><td>0.5704</td><td>543</td><td>943</td><td>4.4729</td></tr>
+<tr><td>SGD lr 1e-3，wd 1e-2</td><td><strong>1.041</strong></td><td>0.5461</td><td>764</td><td>1164</td><td>4.7655</td></tr>
+<tr><td>Adam lr 1e-3（對照，7.6 節）</td><td>1.1704</td><td>0.6956</td><td>632</td><td>1032</td><td>9.2868</td></tr>
+<tr><td>Adam lr 1e-3，wd 1e-2</td><td>1.1181</td><td>0.6658</td><td>805</td><td>1205</td><td>7.519</td></tr>
+<tr><td>AdamW lr 1e-3，wd 1e-2</td><td>1.1909</td><td>0.6873</td><td>620</td><td>1020</td><td>9.144</td></tr>
+<tr><td>AdamW lr 1e-3，wd 1e-1</td><td>1.1754</td><td>0.6656</td><td>846</td><td>1246</td><td>9.7567</td></tr>
+<tr><td>corr＋標準化，Adam 1e-3，wd 1e-2</td><td>1.0943</td><td>0.9864</td><td>797</td><td>1197</td><td>0.9537</td></tr>
+<tr><td>corr＋標準化，AdamW 1e-3，wd 1e-1</td><td>1.105</td><td>0.9583</td><td>2879</td><td>3000</td><td>3.6159</td></tr>
+</tbody>
+</table></div>
+<ul>
+  <li><strong>SGD 加 L2 有效，但幅度小</strong>：1.0715 → 1.0584（wd 1e-3）→ 1.041（wd 1e-2），共 0.03。</li>
+  <li><strong>同樣的 wd 1e-2，Adam 是 1.1181，AdamW 是 1.1909。</strong>前者比沒有 wd 好，後者反而略差：上面說的「意思不同」在數字上看得到。AdamW 的 wd 調到 1e-1 是 1.1754，也只和沒有 wd 的 1.1704 差不多。換到 AdamW 時，wd 的合適大小要重新找，不能照搬 Adam 或 SGD 的值。</li>
+  <li><strong>corr＋Adam＋wd 1e-2 是 1.0943</strong>，比 corr＋Adam 的 1.1063 好一點，而且 train MSE 0.9864 和 valid 很接近；它在測試集上的 MSE(預測, 第 4 天) 是 0.9537，和原版的 1.0045 同一個量級，不像其他標準化組合那樣離第 4 天越來越遠。這一組在 7.10 節會變成主角。</li>
+</ul>
+<p>「try more parameters」就是本章到目前為止做的事：學習率 1e-5～1e-2 四個值、wd 三個值、兩種寬度、三種激活函數、三種優化器。每多一組設定，就多一次在同一個驗證集上挑選的機會。第 3 章 3.5 節的第三層偏差「挑最小值本身就會偏低」，在這裡換成了「挑最好的設定本身就會偏樂觀」：試了二十幾組，最好的那一組有一部分是運氣。7.11 節量這部分有多大。</p>
+
+<h2 id="ladder">7.9　合起來：隨機切分上的完整比較</h2>
+<p>目錄頁〈先說在前面〉那張 baseline 表，DNN 那一列是 2.069，輸給了抄第 4 天的 1.313。目錄頁說「第 7 章會看到，DNN 可以大幅進步」，也說會把那張表延伸成完整的比較；第 3 章動手做說會把改良合在一起和 1.166 比。所有數字都在範例程式的同一個隨機切分驗證集（539 筆）上一次算完：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>做法</th><th>需要神經網路嗎</th><th>真實 valid MSE</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>範例 DNN 原版（印出 1.661）</td><td>是</td><td>2.069</td><td>目錄頁、第 3 章</td></tr>
+<tr><td>原版＋量法修正</td><td>是</td><td>1.7174</td><td>第 3 章 3.6 節</td></tr>
+<tr><td>直接抄第 4 天</td><td>不用</td><td>1.313</td><td>目錄頁</td></tr>
+<tr><td>線性迴歸 4 欄（最小平方法）</td><td>不用</td><td>1.303</td><td>目錄頁</td></tr>
+<tr><td>DNN 拿掉 id</td><td>是</td><td>1.1848</td><td>7.4 節</td></tr>
+<tr><td>線性迴歸 117 欄含 id（最小平方法）</td><td>不用</td><td>1.172</td><td>第 2 章 2.4 節</td></tr>
+<tr><td>線性迴歸 116 欄（最小平方法）</td><td>不用</td><td>1.166</td><td>目錄頁</td></tr>
+<tr><td>DNN 拿掉 id＋標準化＋SGD lr 1e-3</td><td>是</td><td>1.0715</td><td>7.5 節</td></tr>
+<tr><td>　再加 weight_decay 1e-2</td><td>是</td><td>1.041</td><td>7.8 節</td></tr>
+<tr><td>DNN 116→64→32→1＋標準化＋SGD lr 1e-3（seed 5201314）</td><td>是</td><td>0.9909</td><td>7.7 節</td></tr>
+<tr><td>　同上，4 個 seed 的平均</td><td>是</td><td><strong>0.9805</strong></td><td>7.11 節</td></tr>
+</tbody>
+</table></div>
+
+<figure class="fig">
+<svg viewBox="0 0 900 360" role="img" aria-label="隨機切分的同一個驗證集上，九個做法的真實 MSE 橫條圖：範例 DNN 2.069、量法修正 1.7174、抄第 4 天 1.313、線性迴歸 4 欄 1.303、DNN 拿掉 id 1.1848、線性迴歸 116 欄 1.166、DNN 標準化加 SGD lr 1e-3 1.0715、再加 weight decay 1.041、64-32 架構 4 個 seed 平均 0.9805。一條虛線標出線性迴歸 116 欄的 1.166">
+  <line x1="609.8" y1="22" x2="609.8" y2="304" stroke="#dde5ec" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text class="s-sm" x="609.8" y="16" text-anchor="middle">線性迴歸 116 欄 1.166</text>
+  <text class="s-sm" x="320" y="48" text-anchor="end">範例 DNN 原版（印出 1.661 的那份）</text>
+  <rect x="330" y="35" width="496.6" height="18" rx="3" fill="#3fb950" fill-opacity="0.75"/>
+  <text class="s-mono" x="892" y="48" text-anchor="end">2.069</text>
+  <text class="s-sm" x="320" y="78" text-anchor="end">原版＋量法修正（第 3 章）</text>
+  <rect x="330" y="65" width="412.2" height="18" rx="3" fill="#3fb950" fill-opacity="0.75"/>
+  <text class="s-mono" x="892" y="78" text-anchor="end">1.7174</text>
+  <text class="s-sm" x="320" y="108" text-anchor="end">直接抄第 4 天</text>
+  <rect x="330" y="95" width="315.1" height="18" rx="3" fill="#93a1af" fill-opacity="0.75"/>
+  <text class="s-mono" x="892" y="108" text-anchor="end">1.313</text>
+  <text class="s-sm" x="320" y="138" text-anchor="end">線性迴歸，4 欄</text>
+  <rect x="330" y="125" width="312.7" height="18" rx="3" fill="#93a1af" fill-opacity="0.75"/>
+  <text class="s-mono" x="892" y="138" text-anchor="end">1.303</text>
+  <text class="s-sm" x="320" y="168" text-anchor="end">DNN 拿掉 id（116 欄）</text>
+  <rect x="330" y="155" width="284.4" height="18" rx="3" fill="#3fb950" fill-opacity="0.75"/>
+  <text class="s-mono" x="892" y="168" text-anchor="end">1.1848</text>
+  <text class="s-sm" x="320" y="198" text-anchor="end">線性迴歸，116 欄</text>
+  <rect x="330" y="185" width="279.8" height="18" rx="3" fill="#93a1af" fill-opacity="0.75"/>
+  <text class="s-mono" x="892" y="198" text-anchor="end">1.166</text>
+  <text class="s-sm" x="320" y="228" text-anchor="end">DNN 標準化＋SGD lr 1e-3</text>
+  <rect x="330" y="215" width="257.2" height="18" rx="3" fill="#3fb950" fill-opacity="0.75"/>
+  <text class="s-mono" x="892" y="228" text-anchor="end">1.0715</text>
+  <text class="s-sm" x="320" y="258" text-anchor="end">　＋weight_decay 1e-2</text>
+  <rect x="330" y="245" width="249.8" height="18" rx="3" fill="#3fb950" fill-opacity="0.75"/>
+  <text class="s-mono" x="892" y="258" text-anchor="end">1.041</text>
+  <text class="s-sm" x="320" y="288" text-anchor="end">DNN 64-32 架構（4 個 seed 平均）</text>
+  <rect x="330" y="275" width="235.3" height="18" rx="3" fill="#3fb950" fill-opacity="0.75"/>
+  <text class="s-mono" x="892" y="288" text-anchor="end">0.9805</text>
+  <line x1="330" y1="310" x2="858" y2="310" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="330" y1="310" x2="330" y2="316" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="330" y="330" text-anchor="middle">0</text>
+  <line x1="450" y1="310" x2="450" y2="316" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="450" y="330" text-anchor="middle">0.5</text>
+  <line x1="570" y1="310" x2="570" y2="316" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="570" y="330" text-anchor="middle">1</text>
+  <line x1="690" y1="310" x2="690" y2="316" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="690" y="330" text-anchor="middle">1.5</text>
+  <line x1="810" y1="310" x2="810" y2="316" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="810" y="330" text-anchor="middle">2</text>
+  <text class="s-sm" x="594" y="352" text-anchor="middle">真實 valid MSE（539 筆一次算完，越小越好）</text>
+</svg>
+<figcaption>圖 7.2 — 在範例程式用的隨機切分驗證集上，作業提示的路線全部有效：DNN 從 2.069 一路降到 0.98，越過虛線（線性迴歸 116 欄的 1.166）。最後一列是 64-32 架構 4 個 seed 的平均，單一 seed 5201314 是 0.9909；那一列沒有加 weight_decay，所以它接在「標準化＋SGD lr 1e-3」之後，而不是 1.041 之後。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#3fb950"></i>神經網路（DNN）</span>
+  <span><i style="background:#93a1af"></i>不用神經網路的基準</span>
+</div>
+
+<p>目錄頁的說法兌現了：<strong>DNN 確實可以大幅進步，而且贏過線性迴歸。</strong>從 2.069 到 0.98，誤差少了一半以上。拆開看，貢獻最大的是頭兩步：修好量法（2.069 → 1.7174，其中一部分是換了訓練路徑，第 3 章 3.6 節）、拿掉 id（→ 1.1848）；接著標準化並把學習率調到 1e-3（→ 1.0715）；之後的 L2、加寬，每一步只有 0.03～0.08。</p>
+<p>目錄頁那句話寫的是「把特徵選好、優化器換掉」。實測下來，優化器那一半要補充：不標準化時換成 Adam 確實有幫助（7.6 節，1.1848 → 1.145），但真正讓 DNN 越過 1.166 的是<strong>標準化加上重調學習率</strong>；標準化之後，調好學習率的 SGD 反而贏過 Adam。</p>
+<p>還有一列值得對照：用同一套訓練流程（標準化、Adam lr 1e-3、early stop）訓練<strong>沒有隱藏層</strong>的模型，也就是把 model.py 的 <code>nn.Sequential</code> 換成單獨一個 <code>nn.Linear(input_dim, 1)</code>，這就是線性迴歸，只是用梯度下降去解：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>線性模型（隨機切分）</th><th>特徵數</th><th>參數量</th><th>真實 valid MSE</th><th>真實 train MSE</th><th>最佳 epoch</th><th>停止</th><th>測試集：MSE(預測, 第 4 天)</th></tr></thead>
+<tbody>
+<tr><td>tp4</td><td>4</td><td>5</td><td>1.3169</td><td>1.1689</td><td>2985</td><td>3000</td><td>0.0157</td></tr>
+<tr><td>corr</td><td>34</td><td>35</td><td>1.1422</td><td>1.0638</td><td>2991</td><td>3000</td><td>0.4154</td></tr>
+<tr><td>noid 116 欄</td><td>116</td><td>117</td><td>1.1464</td><td>0.9775</td><td>2900</td><td>3000</td><td>0.6292</td></tr>
+</tbody>
+</table></div>
+<p>它們和最小平方法一次解出的 1.303（4 欄）、1.166（116 欄）在同一個量級，差異來自 early stop 與標準化：梯度下降沒有走到最小平方解的那一點就停了。這三列在下一節會用到。</p>
+
+<h2 id="time">7.10　換成按時間切分，排名翻了過來</h2>
+<p>到這裡為止，所有比較都用範例程式的<strong>隨機切分</strong>驗證集。第 1 章 1.6 節發現，這份資料是時間上的滑動視窗：同一州相鄰兩列只差一天，前一列的第 2～5 天就是後一列的第 1～4 天。隨機切分時，驗證集裡的某一天，它的前一天和後一天多半在訓練集裡，等於驗證時「偷看」了答案附近的日子。第 6 章 6.9 節又看到，測試集是訓練資料沒涵蓋的、陽性率更高的一段時期。Kaggle 量的，是模型在<strong>未來的日子</strong>上準不準。</p>
+<p>所以把驗證方式換成第 1 章 1.6 節「現在的做法」框的<strong>按時間切分</strong>：每一州依 id（州內的時間順序）排序，前 80% 當訓練、後 20% 當驗證，得到 2143／556 筆。驗證集變成「每一州最後的那幾天」，比較接近「用過去預測未來」。改法是取代 train.py 第 106 行的 <code>train_valid_split</code>，例如（示意，取自第 1 章 1.6 節實測過的那段程式）：</p>
+<pre class="py"><code>    df = pd.read_csv('./covid.train.csv')
+    state = df.iloc[:, 1:38].idxmax(axis=1)                  # 37 個 one-hot 欄 → 州名
+    rank = df.groupby(state)['id'].rank(pct=True)           # 每州內依 id 的百分位名次
+    train_data, valid_data = df[rank &lt;= 0.8].values, df[rank &gt; 0.8].values</code></pre>
+<p>predict.py 第 26 行的切分不必跟著改：它只是為了算出 input_dim（第 6 章 6.2 節），切法不影響欄數。</p>
+
+<h3>結果</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>設定（按時間切分）</th><th>特徵數</th><th>參數量</th><th>真實 valid MSE</th><th>真實 train MSE</th><th>最佳 epoch</th><th>停止</th><th>測試集：MSE(預測, 第 4 天)</th><th>測試集預測最大值</th></tr></thead>
+<tbody>
+<tr><td>原版 117 欄</td><td>117</td><td>2033</td><td>1.3025</td><td>1.3405</td><td>2960</td><td>3000</td><td>0.3477</td><td>44.7125</td></tr>
+<tr><td>noid</td><td>116</td><td>2017</td><td>1.1784</td><td>1.0652</td><td>2950</td><td>3000</td><td>0.3415</td><td>45.0473</td></tr>
+<tr><td>corr</td><td>38</td><td>769</td><td>1.165</td><td>1.0888</td><td>2996</td><td>3000</td><td>0.2498</td><td>46.1877</td></tr>
+<tr><td>tp4</td><td>4</td><td>225</td><td>1.2641</td><td>1.1958</td><td>2996</td><td>3000</td><td>0.023</td><td>46.4334</td></tr>
+<tr><td>noid＋標準化，SGD 1e-3</td><td>116</td><td>2017</td><td>1.655</td><td>0.7607</td><td>134</td><td>534</td><td>2.6635</td><td>47.6076</td></tr>
+<tr><td>noid＋標準化，Adam 1e-3</td><td>116</td><td>2017</td><td>2.2158</td><td>0.6257</td><td>574</td><td>974</td><td>9.8059</td><td>52.936</td></tr>
+<tr><td>noid＋標準化，SGD 1e-3，wd 1e-2</td><td>116</td><td>2017</td><td>1.6203</td><td>0.7391</td><td>158</td><td>558</td><td>3.3913</td><td>49.8619</td></tr>
+<tr><td>noid＋標準化，64-32</td><td>116</td><td>9601</td><td>1.7157</td><td>0.7048</td><td>81</td><td>481</td><td>3.2783</td><td>51.2621</td></tr>
+<tr><td>noid＋標準化，GELU</td><td>116</td><td>2017</td><td>1.8337</td><td>0.7145</td><td>178</td><td>578</td><td>2.454</td><td>45.8497</td></tr>
+<tr><td>corr＋標準化，Adam 1e-3</td><td>38</td><td>769</td><td>1.1334</td><td>0.9569</td><td>822</td><td>1222</td><td>2.166</td><td>50.7843</td></tr>
+<tr><td>corr＋標準化，Adam 1e-3，wd 1e-2</td><td>38</td><td>769</td><td><strong>1.1219</strong></td><td>0.9528</td><td>1426</td><td>1826</td><td>2.5776</td><td>51.3118</td></tr>
+<tr><td>corr＋標準化，AdamW 1e-3，wd 1e-1</td><td>38</td><td>769</td><td>1.1512</td><td>0.9912</td><td>442</td><td>842</td><td>2.2787</td><td>50.8734</td></tr>
+<tr><td>tp4＋標準化，Adam 1e-3</td><td>4</td><td>225</td><td>1.2313</td><td>1.1825</td><td>746</td><td>1146</td><td>0.0244</td><td>46.6106</td></tr>
+<tr><td>線性 tp4（標準化，Adam 1e-3）</td><td>4</td><td>5</td><td>1.2348</td><td>1.1871</td><td>2998</td><td>3000</td><td>0.0189</td><td>46.3957</td></tr>
+<tr><td>線性 corr（標準化，Adam 1e-3）</td><td>38</td><td>39</td><td>1.1333</td><td>1.0563</td><td>2993</td><td>3000</td><td>0.5534</td><td>47.1858</td></tr>
+<tr><td>線性 116 欄（標準化，Adam 1e-3）</td><td>116</td><td>117</td><td>1.197</td><td>0.9706</td><td>2818</td><td>3000</td><td>0.8263</td><td>46.2512</td></tr>
+</tbody>
+</table></div>
+<p>（corr 在時間切分下是 38 欄，見 7.3 節。對照第 1 章 1.6 節：同一個時間切分上，最小平方法的線性迴歸 116 欄是 1.21，抄第 4 天是 1.241。）</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 330" role="img" aria-label="八個設定在兩種驗證方式下的排名：隨機切分的前三名 64-32 架構、GELU、SGD 加 weight decay，換成按時間切分後掉到第 6、7、5 名；標準化加 Adam 從第 6 掉到第 8；corr 加 Adam 加 weight decay 從第 4 升到第 1，線性 corr 從第 5 升到第 2，拿掉 id 從第 7 升到第 3，線性 tp4 從第 8 升到第 4">
+  <text class="s-lbl" x="330" y="30" text-anchor="end" font-weight="700">隨機切分的排名</text>
+  <text class="s-lbl" x="570" y="30" font-weight="700">按時間切分的排名</text>
+  <text class="s-sm" x="330" y="48" text-anchor="end">名次　設定　真實 valid MSE</text>
+  <text class="s-sm" x="570" y="48">名次　設定　真實 valid MSE</text>
+  <line x1="338" y1="70" x2="562" y2="220" stroke="#f85149" stroke-width="2.5" opacity="0.8"/>
+  <circle cx="338" cy="70" r="5" fill="#f85149"/>
+  <circle cx="562" cy="220" r="5" fill="#f85149"/>
+  <text class="s-sm" x="324" y="74" text-anchor="end">1　64-32 架構　0.9909</text>
+  <line x1="338" y1="100" x2="562" y2="250" stroke="#f85149" stroke-width="2.5" opacity="0.8"/>
+  <circle cx="338" cy="100" r="5" fill="#f85149"/>
+  <circle cx="562" cy="250" r="5" fill="#f85149"/>
+  <text class="s-sm" x="324" y="104" text-anchor="end">2　GELU　1.0346</text>
+  <line x1="338" y1="130" x2="562" y2="190" stroke="#f85149" stroke-width="2.5" opacity="0.8"/>
+  <circle cx="338" cy="130" r="5" fill="#f85149"/>
+  <circle cx="562" cy="190" r="5" fill="#f85149"/>
+  <text class="s-sm" x="324" y="134" text-anchor="end">3　SGD＋wd 1e-2　1.041</text>
+  <line x1="338" y1="160" x2="562" y2="70" stroke="#58a6ff" stroke-width="2.5" opacity="0.8"/>
+  <circle cx="338" cy="160" r="5" fill="#58a6ff"/>
+  <circle cx="562" cy="70" r="5" fill="#58a6ff"/>
+  <text class="s-sm" x="324" y="164" text-anchor="end">4　corr＋Adam＋wd 1e-2　1.0943</text>
+  <line x1="338" y1="190" x2="562" y2="100" stroke="#58a6ff" stroke-width="2.5" opacity="0.8"/>
+  <circle cx="338" cy="190" r="5" fill="#58a6ff"/>
+  <circle cx="562" cy="100" r="5" fill="#58a6ff"/>
+  <text class="s-sm" x="324" y="194" text-anchor="end">5　線性 corr　1.1422</text>
+  <line x1="338" y1="220" x2="562" y2="280" stroke="#f85149" stroke-width="2.5" opacity="0.8"/>
+  <circle cx="338" cy="220" r="5" fill="#f85149"/>
+  <circle cx="562" cy="280" r="5" fill="#f85149"/>
+  <text class="s-sm" x="324" y="224" text-anchor="end">6　標準化＋Adam　1.1704</text>
+  <line x1="338" y1="250" x2="562" y2="130" stroke="#58a6ff" stroke-width="2.5" opacity="0.8"/>
+  <circle cx="338" cy="250" r="5" fill="#58a6ff"/>
+  <circle cx="562" cy="130" r="5" fill="#58a6ff"/>
+  <text class="s-sm" x="324" y="254" text-anchor="end">7　拿掉 id（不標準化）　1.1848</text>
+  <line x1="338" y1="280" x2="562" y2="160" stroke="#58a6ff" stroke-width="2.5" opacity="0.8"/>
+  <circle cx="338" cy="280" r="5" fill="#58a6ff"/>
+  <circle cx="562" cy="160" r="5" fill="#58a6ff"/>
+  <text class="s-sm" x="324" y="284" text-anchor="end">8　線性 tp4　1.3169</text>
+  <text class="s-sm" x="576" y="224">6　64-32 架構　1.7157</text>
+  <text class="s-sm" x="576" y="254">7　GELU　1.8337</text>
+  <text class="s-sm" x="576" y="194">5　SGD＋wd 1e-2　1.6203</text>
+  <text class="s-sm" x="576" y="74">1　corr＋Adam＋wd 1e-2　1.1219</text>
+  <text class="s-sm" x="576" y="104">2　線性 corr　1.1333</text>
+  <text class="s-sm" x="576" y="284">8　標準化＋Adam　2.2158</text>
+  <text class="s-sm" x="576" y="134">3　拿掉 id（不標準化）　1.1784</text>
+  <text class="s-sm" x="576" y="164">4　線性 tp4　1.2348</text>
+</svg>
+<figcaption>圖 7.3 — 同八個設定，在兩種驗證方式下的名次。隨機切分的前三名（64-32、GELU、SGD＋wd）換成按時間切分後掉到後段；train MSE 較高、沒把訓練期背熟的四組全部往上爬。紅線四組在時間切分下的 train MSE 都低於 0.75，藍線四組都高於 0.95。兩邊的驗證集不是同一批資料，數字不能跨欄比大小，只能比名次。corr 在左邊是 34 欄、右邊是 38 欄。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#f85149"></i>把訓練資料背得很熟（train MSE 低於 0.75）</span>
+  <span><i style="background:#58a6ff"></i>沒把訓練期背熟（train MSE 高於 0.95）</span>
+</div>
+
+<h3>隨機切分的贏家，全部崩壞</h3>
+<p>先講規則：兩種切分的驗證集不是同一批資料，<strong>數字不能跨表比大小</strong>，只能比<strong>排名怎麼變</strong>。照這個規則看：</p>
+<ul>
+  <li>隨機切分下最好的幾組，在時間切分下大幅落後：64-32 是 1.7157、GELU 是 1.8337、SGD＋wd 1e-2 是 1.6203、標準化＋Adam 是 2.2158，全部輸給什麼都沒調的原版 117 欄（1.3025），也輸給抄第 4 天（1.241）。</li>
+  <li>它們的 train MSE 很低（0.63～0.74），valid 卻在 1.62～2.22：在訓練期間那段日子上學得很好，換到每州最後幾天就失靈。最佳 epoch 也很早（81～574），之後 valid 再也沒有創新低，訓練靠 early stop 結束。這就是第 5 章 5.5 節說的「train 和 valid 的差距要一起看」：差距大，表示模型學到的有一大部分只適用於它看過的那段時期。這種現象叫<strong>過擬合（overfitting）</strong>：模型貼合訓練資料的細節（包括雜訊），代價是在新資料上變差。</li>
+  <li>在隨機切分下為什麼看不出來？因為隨機切分的驗證集和訓練集是交錯的日子，「背熟附近的日子」在那裡剛好有用。這是 7.10 節開頭說的「偷看」：驗證集獎勵了過擬合。</li>
+</ul>
+
+<h3>時間切分下最穩的：少而精</h3>
+<p>時間切分下的前段班，主要是特徵少、有挑過的組合：corr＋標準化＋Adam＋wd 1e-2 是 1.1219，線性 corr 是 1.1333，corr＋標準化＋Adam 是 1.1334，tp4 系列 1.23～1.26。noid 不標準化（1.1784）是例外：它有 116 欄，但 lr 1e-5 下訓練得很保守，3000 個 epoch 都沒走完（7.4 節）。這幾組的共同點是 train MSE 都在 0.95 以上，和 valid 的差距小。注意線性 corr（39 個參數）和最好的 DNN（769 個參數）只差 0.01：<strong>按時間切分時，DNN 只和線性模型打平</strong>。7.11 節換 seed 之後，連這 0.01 都不一定站得住。</p>
+
+<h3>測試集那把替代尺也指向同一邊</h3>
+<p>測試集沒有答案，算不出真正的分數。但第 6 章 6.6 節的替代尺 MSE(預測, 第 4 天) 有一個方向性的訊號：在驗證集上，「抄第 4 天」的真實 MSE 是 1.313，表示第 5 天的答案和第 4 天通常只差 1 個百分點左右。一個模型在測試集上的預測若和第 4 天差了 9（MSE），表示它的預測和「昨天的陽性率」平均差了約 3 個百分點，遠超過答案和第 4 天平常的差距。這是推論，不是成績，但值得警覺。</p>
+<p>回頭看各表最右欄：隨機切分的贏家在測試集上離第 4 天很遠（64-32 是 5.7501，標準化＋Adam 是 9.2868，GELU 是 9.6035），預測最大值也衝到 53～55，超過測試集第 4 天的最大值 46.95；tp4 與 corr 的線性模型只有 0.0157～0.5534。測試集正是「未來的日子」，所以時間切分的排名比較可能預告 Kaggle 上的表現。<strong>但本書沒有上傳 Kaggle，這一點沒有被實測證實。</strong></p>
+
+<div class="note"><h4>驗證方式決定你選到什麼模型</h4>
+<p>本章最重要的一句話。同樣二十幾組設定，用隨機切分挑，你會交出 64-32 架構；用時間切分挑，你會交出 34～38 欄的小模型或線性模型。兩種選法交出的 pred.csv，在測試集上的預測差得很遠（上一段的替代尺）。驗證集不是用來「報一個好看的數字」，而是用來<strong>模擬模型將來要面對的情況</strong>；它模擬錯了，你就會很有自信地選錯。這也是目錄頁「驗證方式要符合資料的性質」那句話的完整版本。</p>
+</div>
+
+<h2 id="seed">7.11　一個 seed 說了不算</h2>
+<p>到目前為止，每一組都只用 seed 5201314 訓練一次。seed 決定初始權重與每個 epoch 的 batch 順序（第 2 章 2.2 節），換一個 seed 就是換一條訓練路徑。幾組關鍵設定各用 4 個 seed（5201314、1、2、3）重跑，切分固定不變（隨機切分一律是 seed 5201314 那一份，時間切分本來就不用亂數），所以差異全部來自初始權重與 batch 順序：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th>切分</th><th>seed 1</th><th>seed 2</th><th>seed 3</th><th>seed 5201314</th><th>平均</th><th>標準差</th></tr></thead>
+<tbody>
+<tr><td>原版 117 欄（量法修正後）</td><td>隨機</td><td>1.7243</td><td><strong>12.7959</strong></td><td>1.7467</td><td>1.7174</td><td>4.4961</td><td>5.5332</td></tr>
+<tr><td>noid</td><td>隨機</td><td>1.1999</td><td>1.1955</td><td>1.1714</td><td>1.1848</td><td>1.1879</td><td>0.0127</td></tr>
+<tr><td>corr＋標準化＋Adam＋wd 1e-2</td><td>隨機</td><td>1.1155</td><td>1.0882</td><td>1.0952</td><td>1.0943</td><td>1.0983</td><td>0.0119</td></tr>
+<tr><td>116 欄＋標準化，64-32</td><td>隨機</td><td>1.0446</td><td>0.9789</td><td>0.9077</td><td>0.9909</td><td>0.9805</td><td>0.0563</td></tr>
+<tr><td>corr＋標準化＋Adam＋wd 1e-2</td><td>時間</td><td>1.1525</td><td>1.1605</td><td>1.137</td><td>1.1219</td><td>1.1430</td><td>0.0171</td></tr>
+<tr><td>116 欄＋標準化，64-32</td><td>時間</td><td>1.7282</td><td>1.7258</td><td>1.7648</td><td>1.7157</td><td>1.7336</td><td>0.0215</td></tr>
+<tr><td>線性 corr</td><td>時間</td><td>1.1337</td><td>1.1333</td><td>1.1332</td><td>1.1333</td><td>1.1334</td><td>0.0002</td></tr>
+</tbody>
+</table></div>
+
+<figure class="fig">
+<svg viewBox="0 0 900 330" role="img" aria-label="七個設定各用 4 個 seed 訓練的真實 valid MSE 點圖：原版 117 欄有一個 seed 是 12.7959，遠在圖外；拿掉 id、corr 加 Adam 加 weight decay 的 4 個點擠在一起；64-32 架構在隨機切分下分布 0.91 到 1.04；線性 corr 的 4 個點幾乎重疊">
+  <text class="s-sm" x="318" y="44" text-anchor="end">原版 117 欄（隨機切分）</text>
+  <line x1="330" y1="40" x2="830" y2="40" stroke="#dde5ec" stroke-width="0.6" opacity="0.4"/>
+  <circle cx="767.1" cy="40" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <path d="M846,34 L856,40 L846,46 z" fill="#3fb950"/>
+  <text class="s-mono" x="846" y="30" text-anchor="middle">seed 2：12.7959</text>
+  <circle cx="778.3" cy="40" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="763.7" cy="40" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <text class="s-sm" x="318" y="78" text-anchor="end">拿掉 id（隨機切分）</text>
+  <line x1="330" y1="74" x2="830" y2="74" stroke="#dde5ec" stroke-width="0.6" opacity="0.4"/>
+  <circle cx="504.9" cy="74" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="502.8" cy="74" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="490.7" cy="74" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="497.4" cy="74" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <text class="s-sm" x="318" y="112" text-anchor="end">corr＋Adam＋wd 1e-2（隨機切分）</text>
+  <line x1="330" y1="108" x2="830" y2="108" stroke="#dde5ec" stroke-width="0.6" opacity="0.4"/>
+  <circle cx="462.8" cy="108" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="449.1" cy="108" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="452.6" cy="108" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="452.2" cy="108" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <text class="s-sm" x="318" y="146" text-anchor="end">64-32 架構（隨機切分）</text>
+  <line x1="330" y1="142" x2="830" y2="142" stroke="#dde5ec" stroke-width="0.6" opacity="0.4"/>
+  <circle cx="427.3" cy="142" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="394.4" cy="142" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="358.8" cy="142" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="400.5" cy="142" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <text class="s-sm" x="318" y="180" text-anchor="end">corr＋Adam＋wd 1e-2（時間切分）</text>
+  <line x1="330" y1="176" x2="830" y2="176" stroke="#dde5ec" stroke-width="0.6" opacity="0.4"/>
+  <circle cx="481.3" cy="176" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="485.3" cy="176" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="473.5" cy="176" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="465.9" cy="176" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <text class="s-sm" x="318" y="214" text-anchor="end">64-32 架構（時間切分）</text>
+  <line x1="330" y1="210" x2="830" y2="210" stroke="#dde5ec" stroke-width="0.6" opacity="0.4"/>
+  <circle cx="769.1" cy="210" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="767.9" cy="210" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="787.4" cy="210" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <circle cx="762.9" cy="210" r="5" fill="#3fb950" fill-opacity="0.8"/>
+  <text class="s-sm" x="318" y="248" text-anchor="end">線性 corr（時間切分）</text>
+  <line x1="330" y1="244" x2="830" y2="244" stroke="#dde5ec" stroke-width="0.6" opacity="0.4"/>
+  <circle cx="471.8" cy="244" r="5" fill="#93a1af" fill-opacity="0.8"/>
+  <circle cx="471.6" cy="244" r="5" fill="#93a1af" fill-opacity="0.8"/>
+  <circle cx="471.6" cy="244" r="5" fill="#93a1af" fill-opacity="0.8"/>
+  <circle cx="471.6" cy="244" r="5" fill="#93a1af" fill-opacity="0.8"/>
+  <line x1="330" y1="272" x2="830" y2="272" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="355" y1="272" x2="355" y2="278" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="355" y="292" text-anchor="middle">0.9</text>
+  <line x1="455" y1="272" x2="455" y2="278" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="455" y="292" text-anchor="middle">1.1</text>
+  <line x1="555" y1="272" x2="555" y2="278" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="555" y="292" text-anchor="middle">1.3</text>
+  <line x1="655" y1="272" x2="655" y2="278" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="655" y="292" text-anchor="middle">1.5</text>
+  <line x1="755" y1="272" x2="755" y2="278" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="755" y="292" text-anchor="middle">1.7</text>
+  <text class="s-sm" x="580" y="312" text-anchor="middle">真實 valid MSE（每個點是一個 seed）</text>
+</svg>
+<figcaption>圖 7.4 — 每個點是一個 seed 的真實 valid MSE。原版設定有一個 seed 壞到 12.7959（右邊箭頭，在圖外）；拿掉 id 之後，4 個點擠在 0.03 之內。64-32 在隨機切分下散得最開（0.91～1.04）。時間切分下，線性 corr 的 4 個點幾乎疊成一個（標準差 0.0002），corr DNN 的 4 個點散在 1.12～1.16。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#3fb950"></i>神經網路（DNN）</span>
+  <span><i style="background:#93a1af"></i>線性模型</span>
+</div>
+
+<h3>原版設定換個 seed，整個壞掉</h3>
+<p>原版（117 欄含 id、不標準化、SGD lr 1e-5，量法修正後）用 seed 2 訓練，真實 MSE 是 <strong>12.7959</strong>。它沒有像第 5 章 5.10 節 lr 1e-4 那樣全死（第一層 16 個單元死了 6 個），而是一開始就卡在幾乎只輸出常數的狀態：第一個 epoch 印出 train 164.9592、valid 153.3218，前 3 個 epoch 每個 batch 的 loss 一直在 120～160 之間（第 1 個 batch 是 354.8）；第 3 個 epoch 結束時，訓練集預測的標準差只有 0.0058、平均 −0.27。之後非常緩慢地往下爬，跑滿 3000 個 epoch 都還在創新低（存檔 1,552 次），最後停在 12.7959，測試集預測的最大值只有 14.47。</p>
+<div class="warn"><h4>不能說「原版 train.py 用 seed 2 一定會壞掉」</h4>
+<p>這組實驗用的是量法修正後的設定（valid 不打亂）。直接跑原版 train.py 時，valid 的打亂每個 epoch 都會多消耗全域亂數（第 3 章 3.4 節），同一個 seed 的 batch 順序會不同，訓練軌跡也就不同。而且直接把 config 的 seed 改成 2，連切分都會換成另一份（7.3 節），驗證集已經不是同一批 539 筆。能說的只有：<strong>這套設定對 seed 很敏感</strong>，四次裡有一次失敗。config.py 第 10 行的註解說「you can pick your lucky number」，在原版設定下，這句玩笑是認真的。</p>
+</div>
+<p>拿掉 id 之後，4 個 seed 都穩定在 1.17～1.20（標準差 0.0127）。id 不只讓平均成績變差，也讓訓練變得不穩：一個欄位的梯度大上百倍（第 5 章 5.4 節），初始權重稍微不同，走向就可能完全不同。</p>
+
+<h3>時間切分下的「DNN 贏了」只是運氣</h3>
+<p>7.10 節單看 seed 5201314，corr DNN 的 1.1219 贏線性 corr 的 1.1333。4 個 seed 平均之後：<strong>corr DNN 1.1430（標準差 0.0171），線性 corr 1.1334（標準差 0.0002）</strong>。平均下來線性模型反而略好，而且幾乎不受 seed 影響；DNN 在 4 次裡只有 seed 5201314 那一次贏。7.10 節說「DNN 只和線性模型打平」，換 seed 之後連「略勝」都收回了。</p>
+<p>隨機切分下的 64-32 是 0.9805 平均（0.9077～1.0446），仍是隨機切分的第一名，標準差 0.0563 是原版以外最大的；同一個架構在時間切分下平均 1.7336，4 個 seed 都在 1.72～1.77，壞得很穩定。</p>
+
+<h3>判讀差距的一條規則</h3>
+<p>把這張表當成量尺：同一個 DNN 設定換 seed，真實 MSE 的標準差在 0.01～0.06 之間（原版除外；線性模型只有 0.0002）。兩組設定的差距如果小於這個範圍，單跑一次的結果分不出誰好。回頭看本章的單一 seed 比較：7.4 節 noid／survey／corr 的差距 0.03、7.8 節 SGD 加 wd 的進步 0.03，都在這個範圍內，所以本書只說「差不多」或「有一點幫助」，不說「確定比較好」。標準化（0.11）、拿掉 id（0.53）、時間切分下的排名翻轉（0.5 以上），則遠大於 seed 的波動。</p>
+
+<h2 id="predict">7.12　改良要帶進 predict.py</h2>
+<p>第 6 章 6.2 節說：predict.py 用的 117，是執行當下依 config 與 <code>select_feat</code> 重算的，和訓練時用的特徵之間沒有任何檢查。本章的改法對 predict.py 有三種影響：</p>
+<ul>
+  <li><strong>改 utils.py 的 feat_idx 或 config 的 select_all</strong>：predict.py 第 34 行也呼叫同一個 <code>select_feat</code>，自動一致。前提是兩次執行之間沒有再改它（第 6 章 6.2 節的「安靜的錯」）。</li>
+  <li><strong>改 model.py 的結構</strong>：predict.py 第 39 行用同一個 <code>My_Model</code> 建模型，也自動一致。前提一樣：訓練完沒有再改 model.py。改了結構卻沒重新訓練，<code>load_state_dict</code> 會因為名字或形狀對不上而報錯（第 4 章 4.8 節），至少是大聲的失敗。</li>
+  <li><strong>加了標準化</strong>：這是唯一<strong>不會</strong>自動一致的。標準化只寫在 train.py 裡，predict.py 不知道要做；就算知道，它也拿不到訓練時算出的那一組平均與標準差。測試集若沒有標準化就送進模型，形狀完全對得上、不會報錯，模型卻在一個它從沒見過的尺度上做預測。這是比第 6 章 6.2 節更安靜的錯。</li>
+</ul>
+<p>解法就是第 6 章 6.3 節「現在的做法」框預告的：<strong>把預測時必須原樣重用的東西，和權重一起存進 checkpoint。</strong>示意寫法（本書沒有執行）：</p>
+<pre class="py"><code>torch.save({
+    'feat_idx': feat_idx,                       # 主程式要拿得到它（例如讓 select_feat 多回傳一個值）
+    'mean': mean.tolist(), 'std': std.tolist(),    # 轉成 list 再存
+    'state_dict': model.state_dict(),
+}, config['save_path'])</code></pre>
+<p>載入端：</p>
+<pre class="py"><code>ckpt = torch.load(config['save_path'], map_location=device, weights_only=True)
+test_data = pd.read_csv('./covid.test.csv').values
+x_test = (test_data[:, ckpt['feat_idx']] - np.array(ckpt['mean'])) / np.array(ckpt['std'])
+model = My_Model(input_dim=len(ckpt['feat_idx'])).to(device)
+model.load_state_dict(ckpt['state_dict'])</code></pre>
+<p>平均與標準差用 <code>.tolist()</code> 轉成 Python 的 list 再存，是因為第 6 章 6.3 節的 <code>weights_only</code> 只放行 tensor、數字、字串、list、dict 這類純資料，NumPy 陣列不在那份清單裡。本機實測：把 NumPy 陣列直接存進字典，用 <code>weights_only=True</code> 載入時會報 <code>UnpicklingError: Weights only load failed. ...</code>；轉成 list 的版本則能正常載入。不存成 tensor 還有一個好處：<code>map_location=device</code> 會把 checkpoint 裡的 tensor 都放到 GPU 上，GPU 上的 tensor 不能直接 <code>.numpy()</code>（第 6 章 6.5 節），list 就沒有這個問題。這樣一來，predict.py 不需要讀訓練資料、不需要切分，也不可能用錯特徵或錯尺度。input_dim 直接是 feat_idx 的長度，不必另外存。</p>
+
+<div class="note"><h4>現在的做法：把前處理和模型綁在一起，用時間序列的交叉驗證挑設定</h4>
+<ul>
+  <li><strong>前處理和模型是一體的。</strong>選欄、標準化這類「訓練時從資料學到參數」的步驟，今天通常和模型包成同一個物件一起存、一起載入（例如 scikit-learn 的 <code>Pipeline</code>）。上面那個字典是手工版本。原則是一樣的：預測端不該重新計算任何訓練時決定的東西。</li>
+  <li><strong>時間序列用滾動式的驗證。</strong>本章的時間切分只切一刀（前 80%／後 20%）。更穩的做法是切好幾刀：用前 1 段訓練、第 2 段驗證，用前 2 段訓練、第 3 段驗證……每一刀都是「用過去預測未來」，再把幾刀的結果平均（scikit-learn 的 <code>TimeSeriesSplit</code>）。它同時處理了 7.10 節的驗證方式問題與 7.11 節「一次說了不算」的問題。</li>
+  <li><strong>小型表格資料，先跑梯度提升樹。</strong>目錄頁說過，這類資料上常用的強基準是 XGBoost、LightGBM 這類梯度提升樹。它不是神經網路：模型是一棵接一棵的決策樹（一連串「某欄是否大於某值」的分岔，最後落到一個預測值），每一棵新樹專門修正前面所有樹加起來還剩下的誤差。它們是另外的套件，有自己的 API，也支援用驗證集做 early stop（樹加到驗證誤差不再下降就停）。挑戰題第 4 題附了本機用 LightGBM 量的參考結果：它有一個神經網路沒有的限制，<strong>預測不會超出訓練時見過的答案範圍</strong>，在 HW01 這種測試集是更高陽性率時期的資料上，這一點很關鍵。</li>
+</ul>
+</div>
+
+<h2 id="bank">7.13　三級題庫</h2>
+<p>以下所有題目都在 <strong>HW01 的一份複本</strong>裡做，不要改 repo 的原檔。在 repo 根目錄執行：</p>
+<pre class="shell"><code>$ cp -r HW01 HW01-lab
+$ cd HW01-lab</code></pre>
+<p>複本和 <code>HW01/</code> 是同一層，所以 Python 照樣用 <code>../.venv/bin/python</code>（第 0 章 0.3 節）。在複本裡訓練會覆寫的是 <code>HW01-lab/models/model.ckpt</code>，原本那份 1.661 的 model.ckpt 不受影響。做完可以整個刪掉（回到 repo 根目錄執行 <code>rm -rf HW01-lab</code>），不要把它加進 git（commit）。</p>
+<p><strong>每一題都從一份新的複本開始</strong>，除非題目寫「接著上一題」：做完一題，回到 repo 根目錄執行 <code>rm -rf HW01-lab &amp;&amp; cp -r HW01 HW01-lab</code> 再進去。題目沒提到的設定都照原版（117 欄含 id、不標準化、SGD lr 1e-5）。除非題目另外說明，<strong>每一題都先在複本裡套用第 3 章 3.6 節動手做第 4 項的量法修正</strong>（train.py 第 79、81、123 行），這樣印出的最佳 valid loss 就是真實 MSE，可以和本章的表直接對照。執行與看結果的方式同第 2 章動手做：</p>
+<pre class="shell"><code>$ ../.venv/bin/python train.py 2&gt;/dev/null &gt; run.log
+$ grep features run.log
+$ grep -B1 Saving run.log | tail -2</code></pre>
+<p>第二條印出特徵數；第三條印出最後一次存檔的那個 epoch 與 <code>Saving model with loss …</code>，也就是最佳的那一次。判準裡寫的數字都是本章表格裡的值，在本書的環境（第 0 章的 torch 版本與 GPU）下才會逐位相同；換了環境，小數點後幾位可能不同（目錄頁的版本聲明）。</p>
+
+<div class="lab"><h4>入門：一次只改一個地方</h4>
+<ol>
+  <li><strong>拿掉 id，用修正後的量法。</strong>把 utils.py 第 32 行改成 <code>feat_idx = list(range(1, raw_x_train.shape[1]))</code>，訓練一次。
+  <p>判準：<code>number of features: 116</code>；最佳在第 2977 個 epoch，該行結尾是 <code>Valid loss: 1.1848</code>，下一行 <code>Saving model with loss 1.185...</code>；沒有 early stop，<code>tail -1 run.log</code> 是第 3000 個 epoch 那一行（7.4 節）。和第 2 章動手做的 0.982 不同，原因在 7.4 節最後一小節。本機照題目改過 train.py 實跑的輸出：</p>
+<pre class="shell"><code>$ grep features run.log
+number of features: 116
+$ grep -B1 Saving run.log | tail -2
+Epoch [2977/3000]: Train loss: 1.0820, Valid loss: 1.1848
+Saving model with loss 1.185...
+$ tail -1 run.log
+Epoch [3000/3000]: Train loss: 1.0893, Valid loss: 1.1888</code></pre></li>
+  <li><strong>只用前 4 天的陽性率。</strong>config.py 第 11 行改成 <code>'select_all': False</code>，utils.py 第 34 行改成 <code>feat_idx = [53, 69, 85, 101]</code>。
+  <p>判準：<code>number of features: 4</code>；最佳在第 2996 個 epoch，<code>Valid loss: 1.3561</code>（<code>Saving model with loss 1.356...</code>），跑滿 3000 個 epoch（7.4 節）。比抄第 4 天（1.313）還差一點，想一想為什麼：模型有 225 個參數，卻沒學到比「照抄」更好的關係，lr 1e-5 下它到第 3000 個 epoch 都還沒訓練完。</p></li>
+  <li><strong>算參數量。</strong>不跑程式，算出 116→64→32→1 與 116→8→1 的參數總數，再算「沒有隱藏層」的 <code>nn.Linear(116, 1)</code>。
+  <p>答案：9,601、945、117（7.7、7.9 節）。算法：每個 Linear 是 輸入×輸出＋輸出（第 4 章 4.3 節）。想確認的話，照第 4 章動手做的方式建出模型，把 <code>p.numel()</code> 加總。</p></li>
+  <li><strong>不標準化，直接把學習率調大到 1e-3</strong>（只改 config.py 第 15 行，117 欄含 id，SGD 不動）。會發生什麼事？先預測，再跑。
+  <p>判準：先寫下預測。推算的思路是：第 5 章 5.10 節的 lr 1e-4 已經讓第一層 16 個單元全死、輸出常數 9.731；1e-3 再大 10 倍，第一步 id 欄的權重移動量也再大 10 倍（第 5 章 5.4 節：第一步就是 lr × grad），預期同樣崩壞成常數輸出，真實 MSE 落在「永遠猜訓練集平均」的 44.5 附近（第 5 章 5.10 節）。本機實測，推算是對的，而且壞得更徹底：第 1 個 epoch 印出 <code>Train loss: 673668052737.8724</code>（約 6.7 × 10<sup>11</sup>）；最佳是第 52 個 epoch 的 <code>Valid loss: 44.3461</code>，第 452 個 epoch early stop；第一層 16 個單元全部沒在工作，驗證集預測的標準差是 0（每一筆都輸出同一個數字）。</p></li>
+  <li><strong>判讀題。</strong>同學說：「我在驗證集上量到 0.98，比 strong 的 1.05728 還低，所以我過了 strong。」這句話哪裡有問題？
+  <p>判準：答出兩點。一、1.05728 是 Kaggle 測試集上的 MSE，0.98 是驗證集上的，測試集是陽性率更高的時期（第 6 章 6.9 節），兩者不能直接比（7.2 節）。二、0.98 是在隨機切分上量的，7.10 節看到同一個 64-32 架構換成時間切分是 1.7157，隨機切分很可能高估了它在未來日子上的表現。唯一能回答「過了沒有」的，是把 pred.csv 上傳到 Kaggle。</p></li>
+</ol>
+</div>
+
+<div class="lab"><h4>進階：自己加程式碼</h4>
+<ol>
+  <li><strong>加上標準化，學習率改成 1e-3。</strong>先照入門第 1 題把 utils.py 第 32 行改成 noid（116 欄），再照 7.5 節在 train.py 第 114 行之後加標準化，config 的 learning_rate 改成 1e-3。
+  <p>判準：最佳在第 543 個 epoch，<code>Valid loss: 1.0715</code>，第 943 個 epoch early stop（最後一行是 <code>Model is not improving, so we halt the training session.</code>，第 5 章 5.8 節）。再照第 4 章動手做的方式數第一層沒在工作的單元，應該是 0。</p></li>
+  <li><strong>讓 predict.py 跟上。</strong>接著上一題，照 7.12 節把 feat_idx、平均、標準差和 state_dict 一起存進 checkpoint，改寫 predict.py 載入它們，產生 pred.csv。最省事的接法：存檔端不動 trainer，而是在 train.py 第 127 行 <code>trainer(...)</code> 之後加幾行，用 <code>torch.load</code> 讀回 trainer 存下的最佳 state_dict，和主程式手上的 <code>feat_idx</code>（noid 就是 <code>list(range(1, 117))</code>）、<code>mean</code>、<code>std</code> 包成 7.12 節的字典，覆寫同一個檔。載入端用 7.12 節的五行取代 predict.py 第 25–34 行與第 39–40 行，第 36–37 行（建 test loader）和第 41–42 行（預測、寫檔）照舊，它們只用到 <code>x_test</code> 與 <code>model</code>。
+  <p>判準：predict.py 不再讀 covid.train.csv；用第 6 章 6.10 節動手做第 3 項的指令量，MSE(預測, 第 4 天) 應該是 4.1104，預測最大值 55.4179（7.5 節）。如果量到的數字很不一樣，最可能是測試集沒有用訓練時的那一組平均與標準差。本機照這題的寫法實做，第 6 章 6.10 節第 3 項指令的輸出是：</p>
+<pre class="shell"><code>85 55.4179 67
+4.1104 59.6773
+140.3394</code></pre>
+  <p>第一行：85 筆預測超過 30.3046（原版是 61），最大 55.4179；第二行：MSE(預測, 第 4 天) 4.1104，和 7.5 節一致；第三行是打亂之後的值。checkpoint 用 <code>weights_only=True</code> 讀得回來，key 依序是 feat_idx、mean、std、state_dict，mean 是長度 116 的 list。改寫後的 predict.py 只讀 covid.test.csv。</p></li>
+  <li><strong>換成按時間切分。</strong>照 7.10 節取代 train.py 第 106 行，其餘照原版、只拿掉 id。
+  <p>判準：印出的 <code>train_data size</code> 是 (2143, 118)、<code>valid_data size</code> 是 (556, 118)；最佳 <code>Valid loss: 1.1784</code>，在第 2950 個 epoch，跑滿 3000（7.10 節）。</p></li>
+  <li><strong>線性模型。</strong>把 model.py 的 <code>nn.Sequential</code> 換成只有一個 <code>nn.Linear(input_dim, 1)</code>，配標準化、Adam lr 1e-3、corr 特徵（7.4 節的示意寫法），在隨機切分上訓練。
+  <p>判準：最佳 <code>Valid loss: 1.1422</code>，在第 2991 個 epoch，跑滿 3000（7.9 節）。forward 的 <code>squeeze(1)</code> 不必改：<code>nn.Linear(input_dim, 1)</code> 的輸出一樣是 (B, 1)（第 4 章 4.6 節）。</p></li>
+  <li><strong>加 Dropout。</strong>在 64-32 架構的兩個 ReLU 後面各加 <code>nn.Dropout(0.2)</code>（7.7 節），配標準化、SGD lr 1e-3，隨機切分與時間切分各跑一次。和沒有 Dropout 的 0.9909、1.7157 比，哪一邊的改變比較大？
+  <p>判準：本書沒有實測，沒有標準答案。要回報的是：兩種切分下的真實 valid MSE、真實 train MSE、最佳 epoch。判斷 Dropout 有沒有發揮「抑制背熟」的作用，看的是 train MSE 和 valid 的差距有沒有縮小，而不只是 valid 有沒有變好。再做一個對照：把 train.py 第 47 行的 <code>model.train()</code> 刪掉，結果和有 Dropout 的那次比會怎樣（5.3 節說的「悄悄變成沒有 Dropout 的訓練」）。本機的參考結果在 7.7 節 Dropout 那張表：隨機切分 1.0094、時間切分 1.7219，train MSE 從 0.3769 升到 0.5353（差距縮小，但 valid 沒變好）；刪掉 <code>model.train()</code> 後是 0.9969、train 0.3130，幾乎回到沒有 Dropout 的樣子。</p></li>
+</ol>
+</div>
+
+<div class="lab"><h4>挑戰：自己設計實驗</h4>
+<ol>
+  <li><strong>寫一個多 seed 的評估迴圈。</strong>把 train.py 主程式包成函式，接收 seed 與設定，回傳最佳 checkpoint 的真實 valid MSE；對同一個設定跑 seed 5201314、1、2、3。切分要固定：隨機切分的 <code>train_valid_split</code> 一律傳 5201314，只把 same_seed 換成新的 seed（7.3 節）。
+  <p>判準：時間切分下，線性 corr 的 4 個值是 1.1337、1.1333、1.1332、1.1333（平均 1.1334），corr＋標準化＋Adam＋wd 1e-2 是 1.1525、1.1605、1.137、1.1219（平均 1.1430），重現 7.11 節「線性模型平均略好」的結論。小心：same_seed 要在每次訓練開頭呼叫；同一個行程裡先建了別的模型，會消耗全域亂數，順序就對不上（第 5 章 5.7 節的提醒）。</p></li>
+  <li><strong>重現 seed 2 的失敗，再看原版 train.py 會不會一樣。</strong>先在量法修正後的設定、117 欄、seed 2 下訓練（config 的 seed 改成 2，第 106 行的 <code>config['seed']</code> 改成 <code>5201314</code>，讓切分不變），確認真實 MSE 是 12.7959、第一個 epoch 印出 train 164.9592、valid 153.3218（7.11 節）。再在<strong>沒有</strong>量法修正的原版 train.py 上用 seed 2 訓練：seed 與切分的改法同前。
+  <p>判準：第一部分照 7.11 節。第二部分本書沒有實測：7.11 節的警告框說，valid 打亂會改變 batch 順序，所以結果不一定一樣；你的任務是量出來，並用第 5 章 5.10 節的方法（預測值的標準差、第一層沒在工作的單元）判斷它是否也卡住了。</p>
+<details class="quiz"><summary>看答案：本機實測結果</summary>
+<p>第一部分照 7.11 節重現：真實 MSE 12.7959，第一個 epoch <code>Train loss: 164.9592, Valid loss: 153.3218</code>。第二部分（原版 train.py，沒有量法修正）：第一個 epoch 是 <code>Train loss: 164.9592, Valid loss: 152.6497</code>（train 相同，因為第 1 個 epoch 的訓練在 valid 打亂之前就做完了；valid 不同，因為打亂改變了分組）。印出的最佳是第 2954 個 epoch 的 <code>Valid loss: 10.3637</code>，跑滿 3000 個 epoch 沒有 early stop，存檔 83 次；checkpoint 一次算完的真實 MSE 是 <strong>13.2407</strong>，第一層 16 個單元有 6 個沒在工作。所以原版 train.py 用 seed 2 也一樣失敗。訓練結束時它已經不是常數輸出（驗證集預測的標準差 4.22），而是在前段卡住、之後爬得太慢：量法修正版也一樣（結束時標準差 4.18）。</p></details></li>
+  <li><strong>permutation importance。</strong>第 1 章 1.7 節介紹過：訓練好模型後，把某一欄的值在驗證集上隨機打亂，看真實 MSE 變差多少。對時間切分下的 corr＋標準化＋Adam＋wd 1e-2 模型，算出 38 欄各自的重要性，和第 1 章的相關係數排名比較。
+  <p>判準：本書沒有實測，沒有標準答案。要回報前 5 名的欄名與 MSE 增加量。一個可以先寫下來再驗證的預測（推測，非實測）：tested_positive.3（第 4 天陽性率）會排第一，因為它和答案的相關係數 0.985 最高（第 1 章 1.7 節）。打亂要用固定 seed 的產生器（第 6 章 6.6 節的 <code>np.random.default_rng</code>），不然每次結果都不同。</p>
+<details class="quiz"><summary>看答案：本機的參考結果</summary>
+<p>本機的做法：用 seed 5201314 訓練這個模型（真實 valid MSE 1.1219，和 7.10 節相同），建一個 <code>np.random.default_rng(0)</code>，依欄位順序逐欄把標準化後的驗證集那一欄打亂、量 MSE 增加多少。前 5 名：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>名次</th><th>欄位</th><th>打亂後 MSE 增加</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>tested_positive.3（第 4 天陽性率）</td><td><strong>81.314</strong></td></tr>
+<tr><td>2</td><td>cli.4</td><td>2.4311</td></tr>
+<tr><td>3</td><td>cli.3</td><td>2.1536</td></tr>
+<tr><td>4</td><td>hh_cmnty_cli.4</td><td>1.9466</td></tr>
+<tr><td>5</td><td>hh_cmnty_cli.3</td><td>1.2411</td></tr>
+</tbody>
+</table></div>
+<p>預測對了：第 4 天陽性率排第一，而且遠遠領先。值得對照的是第 1 章的相關係數排名：tested_positive.2（0.970）、tested_positive.1（0.953）都沒進前 5，前 8 名裡只有第 1 天的 tested_positive（0.7045，第 8 名）。原因是這幾欄彼此高度相關，第 4 天已經帶著前幾天的資訊，模型不需要再靠它們；打亂其中一欄，模型還有其他欄可用。<strong>相關係數看的是單一欄和答案的關係，permutation importance 看的是「拿掉這一欄、模型還剩下什麼」</strong>，兩者回答的是不同的問題。重要性最低的 3 欄是 ili.1、anxious.4、depressed.4，打亂後只增加 0.02～0.03。</p></details></li>
+  <li><strong>梯度提升樹的基準。</strong>用 LightGBM 或 XGBoost（需要另外安裝套件）在 noid 116 欄上訓練，隨機切分與時間切分各量一次真實 valid MSE，放進 7.9 節與 7.10 節的表裡。
+  <p>判準：本書沒有實測，沒有標準答案。要回報兩種切分下的 MSE，並回答：它在兩種切分下的名次是像 64-32 那樣翻轉，還是像線性 corr 那樣穩定？訓練時同樣只能用訓練部分，early stop 用的驗證集也必須是同一份。</p>
+<details class="quiz"><summary>看答案：本機的參考結果</summary>
+<p>本機用 LightGBM 4.7.0，noid 116 欄、不標準化（樹不在乎欄位的尺度），兩種設定：預設參數（100 棵樹），以及 <code>n_estimators=10000</code> 加上「驗證誤差連續 100 棵沒進步就停」的 early stop：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th>真實 valid MSE</th><th>真實 train MSE</th><th>樹的數量</th><th>測試集：MSE(預測, 第 4 天)</th><th>測試集預測最大值</th></tr></thead>
+<tbody>
+<tr><td>隨機切分，預設</td><td>1.2808</td><td>0.1684</td><td>100</td><td>4.8417</td><td>28.0957</td></tr>
+<tr><td>隨機切分，early stop</td><td>1.2802</td><td>0.2481</td><td>75</td><td>4.8705</td><td>27.9937</td></tr>
+<tr><td>時間切分，預設</td><td>1.3759</td><td>0.1613</td><td>100</td><td>5.1995</td><td>28.1781</td></tr>
+<tr><td>時間切分，early stop</td><td>1.3602</td><td>0.5149</td><td>37</td><td>5.5735</td><td>27.1906</td></tr>
+</tbody>
+</table></div>
+<p>名次相對穩定：隨機切分下輸給 DNN 與線性迴歸，時間切分下排在中段（贏過過擬合的 64-32、輸給 corr 系列），沒有像 64-32 那樣翻轉。但最右欄才是重點：<strong>預測最大值只有 28 左右，連訓練集答案的最大值 30.3046 都不到</strong>，而測試集第 4 天陽性率最高到 46.95（第 6 章 6.9 節）。決策樹的每一個預測值都是某一群訓練樣本答案的組合，所以預測永遠落在訓練時見過的範圍內，不會外推。第 6 章看到神經網路會沿著直線往外延伸；樹則被卡在範圍裡。在測試集是「更高陽性率的未來」的 HW01 上，這是梯度提升樹的一個實際弱點，「表格資料先跑梯度提升樹」這條經驗法則在這裡要打折。</p></details></li>
+  <li><strong>設計你自己的選模流程。</strong>只准用時間切分（或 7.12 節框裡的滾動式驗證）挑設定，每個設定至少 4 個 seed，最後選出一組，用它產生 pred.csv。
+  <p>判準：流程本身。有三條必須做到：挑選時完全不看測試集（包括 MSE(預測, 第 4 天) 這把替代尺：它只能當事後的警示，拿來挑設定就等於用測試集挑模型）；用平均而不是單一 seed 比較，差距小於 7.11 節那個範圍的不算贏；predict.py 依 7.12 節帶著同一組特徵與統計量。若你決定上傳 Kaggle，記下 public 與 private 分數，和你的時間切分 MSE 一起看，就能親自回答本章留下的那個問題：時間切分的排名是否真的比較能預告測試集。</p></li>
+</ol>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>作業提示四句：medium 改 utils.py 第 32／34 行的 feat_idx；strong 改 model.py 第 14–20 行與 train.py 第 34 行的優化器；boss 在第 34 行加 weight_decay、再多試超參數。Kaggle 基準線 simple 2.28371、medium 1.49430、strong 1.05728、boss 0.86161 是<strong>測試集</strong>上的 MSE，不能和驗證集 MSE 比；本書沒有上傳 Kaggle。</li>
+  <li>先統一量尺：所有改良都用第 3 章修正後的量法，印出的最佳就是真實 MSE。實驗腳本逐位元重現了原版的 1.6611／1483／1883。</li>
+  <li>隨機切分上，四步全部有效：1.7174 → 拿掉 id 1.1848 → 標準化＋lr 1e-3 1.0715 → ＋wd 1.041；64-32 架構 4 個 seed 平均 0.9805。DNN 確實大幅進步，也贏過線性迴歸 1.166。</li>
+  <li>標準化之後 lr 1e-5 太小（1.2915），1e-3 最好、1e-2 壞掉；沒在工作的單元全部歸 0。Adam 對尺度寬容（不標準化也有 1.145），但標準化後輸給調好的 SGD。wd 0 時 Adam 與 AdamW 完全相同；同一個 wd 值在兩者裡意義不同。</li>
+  <li>原版設定下換 LeakyReLU，沒在工作的單元 12 → 0，MSE 卻沒變好：激活函數治不了 id 的尺度問題。</li>
+  <li>按時間切分，排名翻轉：64-32、GELU、SGD＋wd、標準化＋Adam 全部掉到後段（train MSE 0.63～0.74、valid 1.62～2.22，過擬合）；少而精的 corr 小模型與線性模型在前，DNN 只和線性模型打平。<strong>驗證方式決定你選到什麼模型。</strong></li>
+  <li>換 seed：原版 seed 2 是 12.7959；拿掉 id 後標準差只有 0.0127。時間切分下 corr DNN 平均 1.1430，線性 corr 1.1334：單一 seed 的「DNN 贏了」是運氣。差距小於 seed 波動（0.01～0.06）的比較不算數。</li>
+  <li>加了標準化，平均與標準差要和 feat_idx、state_dict 一起存進 checkpoint，predict.py 原樣重用；這是唯一不會自動一致的改法。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 第 2 章「拿掉 id」的真實 MSE 是 1.240，本章是 1.1848。哪一個才對？</summary>
+<p>兩個都對，量的是兩次不同的訓練。第 2 章跑的是原版 train.py：挑選最佳 checkpoint 時用的是有雜訊、偏低的 valid loss（印出 0.982），挑出那一份再一次算完才是 1.240。本章先修好量法，挑選本身就用真實 MSE，每次存檔都是真的進步；而且 valid 不打亂之後，全域亂數的消耗方式不同，batch 順序與整條訓練路徑都變了（第 3 章 3.6 節）。所以 1.1848 不是「1.240 量得更準」，而是「另一次挑得更誠實的訓練」的結果。</p></details>
+<details class="quiz"><summary>2. 為什麼輸入標準化之後，原本的 lr 1e-5 反而讓結果變差（1.1848 → 1.2915）？</summary>
+<p>一個權重的梯度和它那一欄的數值大小成正比（第 1 章 1.4 節、第 5 章 5.4 節）。原版有 id 這種上千的欄位，梯度動輒幾千，學習率只能壓到 1e-5 才不會一步走太遠；那是被 id 逼出來的值。標準化之後所有欄位都在 0 附近，梯度回到正常的量級，1e-5 的步伐就小到 3000 個 epoch 都走不完（表上最佳在第 2994 個 epoch、跑滿上限）。換成 1e-3，第 543 個 epoch 就到最佳，1.0715。</p></details>
+<details class="quiz"><summary>3. Adam 與 AdamW 在 wd＝0 時結果完全相同，wd＝1e-2 時一個是 1.1181、一個是 1.1909。這說明了什麼？</summary>
+<p>兩者只差在 weight decay 的做法。Adam 把 wd × w 加進梯度，接著被「梯度平方的移動平均」一起縮放；AdamW 把權重衰減拆出來，直接做 w ← w − lr × wd × w。wd 為 0 時兩者是同一個演算法，所以每一欄都相同；wd 不為 0 時，同樣的數字代表不同的拉力。實務上的意思是：換優化器時，wd 的合適大小要重新找，不能照搬。</p></details>
+<details class="quiz"><summary>4. 64-32 架構在隨機切分下是 0.9909（第一名），在按時間切分下是 1.7157（輸給原版）。該交哪一個模型給 Kaggle？</summary>
+<p>測試集是訓練資料沒涵蓋、陽性率更高的「未來的日子」（第 6 章 6.9 節），按時間切分的驗證集比較接近這個情況，所以應該相信時間切分的排名，交出在那裡穩定的模型（例如 corr 的小模型或線性模型）。64-32 在時間切分下 train MSE 0.7048、valid 1.7157，是過擬合的典型樣子；它在隨機切分上的好成績，有一部分來自驗證集和訓練集是交錯的日子。不過要注意：本書沒有上傳 Kaggle，「時間切分比較能預告測試集」是推論，不是實測。</p></details>
+<details class="quiz"><summary>5. 時間切分下，seed 5201314 的 corr DNN 是 1.1219，線性 corr 是 1.1333。可以說「DNN 比線性模型好 0.01」嗎？</summary>
+<p>不行。4 個 seed 平均之後，corr DNN 是 1.1430（標準差 0.0171），線性 corr 是 1.1334（標準差 0.0002）：平均下來線性模型略好，DNN 只在 seed 5201314 那一次贏。差距 0.01 比 DNN 自己換 seed 的波動還小，單跑一次分不出高下。正確的說法是「兩者打平，線性模型更穩定」。</p></details>
+<details class="quiz"><summary>6. 在 train.py 加了標準化、重新訓練，predict.py 一行都沒改就執行。會報錯嗎？pred.csv 會對嗎？</summary>
+<p>不會報錯：特徵數沒變，模型形狀對得上，load_state_dict 照常成功。但 pred.csv 是錯的：模型是在標準化後的輸入上訓練的，predict.py 送進去的卻是原始尺度的測試集。這是比第 6 章 6.2 節「欄位換了」更安靜的錯。解法是把訓練部分算出的平均與標準差存進 checkpoint，predict.py 載入後原樣套用（7.12 節）。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://pytorch.org/docs/stable/optim.html">PyTorch 文件 — torch.optim</a>：train.py 第 32 行 TODO 指向的頁面，SGD、Adam、AdamW 各自的參數與預設值（包括 AdamW 的 weight_decay 預設 0.01）。</li>
+  <li><a href="https://arxiv.org/abs/1711.05101">Loshchilov &amp; Hutter — Decoupled Weight Decay Regularization</a>：AdamW 的原始論文，說明為什麼在 Adam 裡 L2 正則化和 weight decay 不再等價。</li>
+  <li><a href="https://arxiv.org/abs/1412.6980">Kingma &amp; Ba — Adam: A Method for Stochastic Optimization</a>：Adam 的原始論文。</li>
+  <li><a href="https://jmlr.org/papers/v15/srivastava14a.html">Srivastava et al. — Dropout: A Simple Way to Prevent Neural Networks from Overfitting</a>：Dropout 的原始論文。</li>
+  <li><a href="https://scikit-learn.org/stable/modules/cross_validation.html#time-series-split">scikit-learn — Time Series Split</a>：滾動式的時間序列交叉驗證。</li>
+  <li><a href="https://otexts.com/fpp3/tscv.html">Hyndman &amp; Athanasopoulos — Forecasting: Principles and Practice, Time series cross-validation</a>：為什麼時間序列的驗證必須「用過去預測未來」。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="appendix.html">附錄 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW01 讀碼教材 · 對應 commit 717528b · 程式碼引用取自本 repo 的 HW01/；實測輸出取自 2026-10-02、10-03 本機執行</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py；本教材的原始碼全是 .py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>
