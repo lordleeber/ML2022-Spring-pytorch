@@ -347,3 +347,62 @@ Parameter Group 0
 - 動手做第 2 題逐字輸出（用 tty 跑）：`True`、`0`、`True None`、`True SqueezeBackward1`、`tensor(508.8512, device='cuda:0', grad_fn=<MseLossBackward0>)`，接著六行參數 `layers.0.weight (16, 117) 15824.6025` … `layers.4.bias (1,) 38.5490`，然後 `2602.08 24.13`、`0.0869 0`。
 - 動手做第 3 題：模型 step 過一次之後，連續 backward 兩次，最後一層 bias 的 grad 是 `15.719593048095703` 和 `31.439186096191406`，剛好 2 倍。最後一行 traceback 是 `RuntimeError: element 0 of tensors does not require grad and does not have a grad_fn`。
 - 原版第一次存檔印出 `Saving model with loss 107.215...`（valid 是 107.2155）。
+
+## ch06 實測（2026-10-03 本機 GPU 環境；雲端不重跑，直接引用這裡）
+範圍：predict.py 全檔、utils.py:39–45 save_pred()。「模型」指 repo 的 models/model.ckpt（印出 1.661、真實 valid MSE 2.0685）。
+**這節沒有的輸出不要寫進教材**；需要新數字就標 `TODO(本機實測)` 留給本機補。
+
+### 執行 predict.py（在 HW01/ 內，`../.venv/bin/python predict.py`）
+- stdout 逐字（`train_data size` 那行行尾有一個空格，跟 train.py 一樣）：
+```
+True
+0
+train_data size: (2160, 118) 
+    valid_data size: (539, 118) 
+    test_data size: (1078, 117)
+```
+  - predict.py **不印** `number of features`，這行只有 train.py 有。
+- stderr 是 tqdm 進度條，跑完停在 `100%|██████████| 5/5 [00:00<00:00, 37.49it/s]`（速度每次不同），沒有 `Epoch` 描述，因為 predict() 沒呼叫 set_description。
+- 含 import 和讀檔，整支約 2.5 秒。其中讀 CSV、切分、選特徵約 0.025 秒。
+- 執行兩次，pred.csv 的 md5 完全相同（`46a0484b5d4eff1d72c9dd06923e65bb`）：預測是確定性的。predict.py 沒呼叫 same_seed 也沒關係，因為預測過程不用到亂數，切分則有自己的 Generator（ch02）。
+
+### predict() 內部
+- `in no_grad` 時 `pred.requires_grad` 是 False，所以第 17 行的 `.detach()` 是多餘的，但無害（ch05 §5.5 的 train loss 也有同樣的情況）。
+- `preds` 是 5 個 tensor 組成的 list，形狀 [(256,), (256,), (256,), (256,), (54,)]，都在 cpu、float32。`torch.cat(preds, dim=0).numpy()` 得到 ndarray (1078,) float32。
+- 對 cuda tensor 直接呼叫 `.numpy()` 會報錯：`TypeError: can't convert cuda:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first.`，所以要先 `.cpu()`。
+
+### pred.csv 格式（save_pred）
+- 1079 行（header + 1078），15,799 bytes。header 是 `id,tested_positive`。
+- 前三筆：`0,8.850631`、`1,7.368863`、`2,4.1526003`；最後兩筆：`1076,36.028175`、`1077,38.698322`。
+- 數字寫成 `str(np.float32)`，也就是最短的 float32 表示法（8.850631、4.1526003），不是 float64 的 8.850630760192871。
+- **每一行結尾是 `\r\n`（CRLF），即使是在 Linux 上產生的**。`csv.writer` 預設的 lineterminator 就是 `'\r\n'`，檔案開頭的 bytes 是 `b'id,tested_positive\r\n0,8.850631'`。save_pred 用 `open(file, 'w')` 開檔，沒有加 `newline=''`（Python csv 文件建議要加）。在 Windows 上，文字模式會再把 `\n` 換成 `\r\n`，結果變成 `\r\r\n`，用一般工具看會多出空行。
+- `pd.read_csv('pred.csv')` 讀回來的欄位是 ['id','tested_positive']，tested_positive 是 float64，1078 列，數值跟模型在 x_test 上的輸出一致（allclose）。
+- 測試集的 id 欄正好是 0..1077 依序排列（array_equal True），所以 save_pred 用 `enumerate` 的 i 當 id，跟測試集的 id 對得上。前提是 test_loader 的 shuffle=False（ch03）。
+
+### 測試集預測的分布：測試集是陽性率更高的時期
+- 測試集的預測：最小 3.7642、最大 **44.7035**、平均 15.1763、標準差 7.4867。有 **61 筆超過訓練集最大的答案 30.3046**，沒有負值。
+- 原因**不是 id**，而是測試集本身陽性率就比較高：
+
+| 欄位 | 訓練集平均 | 訓練集最大 | 測試集平均 | 測試集最大 | 測試集超過 30.3046 的筆數 |
+|---|---|---|---|---|---|
+| tested_positive（第 1 天） | 9.5997 | 30.3046 | 14.7545 | 46.4835 | 50 |
+| tested_positive.3（第 4 天） | 9.7698 | 30.3046 | **15.1686** | **46.9521** | 67 |
+
+  - 訓練集答案 tested_positive.4 的平均是 9.8193、最大 30.3046。測試集 37 州都有出現，每州 7–38 列。
+- 預測超過 30 的那 61 筆，第 4 天陽性率本身就超過 30，例如 id 96 是 32.1、id 835 是 32.08。模型是跟著第 4 天的值往上預測，也就是在訓練資料沒涵蓋的範圍做外推。
+- 拿「抄第 4 天」當參照（測試集沒有答案，算不出真實 MSE）：
+
+| 模型 | MSE(預測, 第 4 天)：valid | MSE(預測, 第 4 天)：test | 平均(預測 − 第 4 天)：valid | 平均(預測 − 第 4 天)：test |
+|---|---|---|---|---|
+| 原版（含 id） | 0.9536 | 1.0045 | +0.1567 | +0.0078 |
+| 拿掉 id | 0.1711 | 0.3029 | +0.0689 | +0.1256 |
+
+  - 對照真實 valid MSE：原版 2.0685、拿掉 id 1.2403、抄第 4 天 1.3134。
+  - 把原版模型在測試集上的 id 全部改成 1349（約訓練 id 的中位數）再預測：預測平均改變 +0.1305，MSE(預測, 第 4 天) 從 1.0045 變成 0.8888。id 在測試集上的影響存在，但不大。
+  - 拿掉 id 的模型在測試集上有 65 筆超過 30.3046，最大 44.8734。
+- **如果 test_loader 被打亂**：把 1078 個預測隨機重排（`np.random.default_rng(0)`），MSE(預測, 第 4 天) 從 **1.0045 變成 120.0056**；測試集第 4 天陽性率的變異數是 59.6773。順序錯了，預測就等於配錯答案，大約是變異數的 2 倍。這量化了 ch03 說的「像亂猜」。
+
+### 載入與錯誤
+- 這版 torch 的 `torch.load` 簽名中，weights_only 的預設值是 `None`，執行時的效果是 **True**：載入含自訂類別的檔案會報 `UnpicklingError: Weights only load failed. ...`，加 `weights_only=False` 才能載入。`collections.Counter` 這類在白名單裡的型別照樣能載入。model.ckpt（OrderedDict，6 個 key）和 `{'input_dim': 117, 'state_dict': ...}` 這種字典，用預設值都能載入。
+- 把 models/model.ckpt 移走再執行：`FileNotFoundError: [Errno 2] No such file or directory: './models/model.ckpt'`
+- 在 repo 根目錄執行 `.venv/bin/python HW01/predict.py`：`FileNotFoundError: [Errno 2] No such file or directory: './covid.train.csv'`，在讀 CSV 時就失敗，不會留下 pred.csv。
