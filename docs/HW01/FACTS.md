@@ -78,3 +78,43 @@
 
 ## 全書結構約定（使用者要求，2026-10-03）
 - **每個 HW 的 ch00 都要有「模型總覽」一節**（架構圖、各層 shape、參數量、所在檔案）；模型的逐行細講仍在後面的模型章。HW01：ch00 §0.2，圖 0.1；原檔案地圖改為圖 0.2、§0.8。
+
+## ch02 實測（2026-10-03 本機 GPU 環境；雲端不重跑，直接引用這裡）
+執行方式：在 `HW01/` 內 `PYTHONPATH=. ../.venv/bin/python <腳本>`，import `utils.py` 的函式。
+**這節沒有的輸出不要寫進教材**；需要新數字就標 `TODO(本機實測)` 留給本機補。
+
+`train.py` 開頭的 stdout，逐字照抄，含行尾空白與縮排（後面接 tqdm 進度條和 Epoch 1 的 loss，見上方「實測執行」）：
+```
+True
+0
+train_data size: (2160, 118) 
+    valid_data size: (539, 118) 
+    test_data size: (1078, 117)
+number of features: 117
+```
+- 第 1、2 行來自 `config.py` import 時的 print。`train_data size` 那行行尾有一個空格，下一行開頭有 4 格縮排，因為 f-string 用三引號跨行。
+
+same_seed：
+- docstring 寫成 `""""`（4 個引號），所以 `__doc__` 實際是 `'" Fixes random number generator seeds for reproducibility. '`，開頭多一個 `"`。
+- cudnn 旗標：呼叫前 deterministic=False、benchmark=False；呼叫後 deterministic=True、benchmark=False。
+- 呼叫 `same_seed(5201314)` 後，`torch.rand(3)` = [0.5436, 0.9728, 0.8315]，`np.random.rand(3)` = [0.6076, 0.9134, 0.281]。重設 seed 再取一次，結果完全相同。
+- **不會**設定 Python 內建的 `random` 模組，因為 same_seed 沒有呼叫 random.seed。
+- 有 `torch.cuda.is_available()` 判斷，在沒 GPU 的機器上也不會報錯。但 config.py 的 device="cuda" 在別處會失敗，見上方。
+
+train_valid_split（seed 5201314）：
+- `0.2*2699` = 539.8000000000001，經 `int()` 截斷成 539，不是四捨五入。train 2160。
+- `random_split` 的回傳型別是 `Subset`，長度 2160 和 539。
+- train indices 前 10 個：[696, 2073, 909, 1475, 2165, 2487, 479, 1795, 2150, 2588]（未排序）。
+- valid indices 前 10 個：[1995, 1042, 86, 1667, 464, 481, 1040, 85, 423, 788]。因為 id 欄 = 列號，valid 的 id 前 10 個也是這組數字。
+- 同一個 seed 重切一次，結果相同。改用 seed 1 時，train 前 10 個是 [1659, 792, 971, 1755, 777, 408, 450, 248, 1528, 1631]。
+- 先改全域 `torch.manual_seed(0)` 再切，結果仍與原本相同，因為切分用的是獨立的 Generator。
+- 不傳 generator 時，切分依賴全域 seed：全域 seed 相同，切分就相同；全域 seed 不同，切分就不同。
+- `random_split(data, [0.8, 0.2], ...)`（比例寫法，torch ≥1.13 支援）切出來也是 [2160, 539]。
+- `np.array(Subset)` 得到 (2160,118) float64，耗時約 0.0015 s。`data[subset.indices]` 結果完全相同（array_equal True），耗時約 0.0012 s。這組資料量太小，兩種寫法的速度看不出差別。
+- valid 裡 37 州都有出現，每州 7–25 列。
+- y_valid 平均 10.1355、範圍 0.3448–29.8157；y_train 平均 9.7404。
+
+select_feat：
+- select_all=True：x_train (2160,117)、x_valid (539,117)、x_test (1078,117)、y_train (2160,)、y_valid (539,)。
+- select_all=False：feat_idx [0,1,2,3,4] = 欄名 ['id','AL','AK','AZ','AR']，也就是 id 加 4 個州的 one-hot，全部不是有用的特徵。shape 分別是 (2160,5) (539,5) (1078,5)。
+- test 沒有答案欄，所以 `raw_x_test = test_data` 直接使用全部 117 欄。train[:, :-1] 也是 117 欄，兩邊對齊；第 116 欄是 worried_finances.4。
