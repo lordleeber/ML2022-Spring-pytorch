@@ -66,7 +66,8 @@ for p in sys.argv[2:]:
             probs.append(f'listing caption unparsable: {cap!r}')
             continue
         fn, a, z = cm.group(1), int(cm.group(2)), int(cm.group(3) or cm.group(2))
-        sp = next((c for c in (ROOT / "HW01" / fn, ROOT / fn) if c.exists()), ROOT / fn)
+        # docs/HWxx/chNN.html quotes HWxx/<file>; fall back to a repo-root path
+        sp = next((c for c in (ROOT / Path(p).parent.name / fn, ROOT / fn) if c.exists()), ROOT / fn)
         if not sp.exists():
             probs.append(f'listing file missing: {fn}')
             continue
