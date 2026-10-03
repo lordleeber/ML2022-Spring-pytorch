@@ -368,6 +368,13 @@
 - index（目錄頁，2026-10-03）：Explainable AI／XAI（「模型根據什麼給出答案」）、tokenizer（一句：把文字切成 token 的工具）、token、hidden states（BERT 每一層的輸出向量）、Hugging Face（公開分享模型的網站，transformers 的開發者）、Hugging Face Space（一句：放網頁小程式的地方）、BERT-base（12 層的標準尺寸）、微調（一句）、SQuAD 2.0（問答資料集）、attention（一句：每個 token 參考哪些其他 token 與比重）、exBERT（看 attention 的網站）、PCA（一句：把高維向量壓成 2 維好畫圖）、superpixel（一句：LIME 把圖切成的小塊）、logits（一句：還沒經過 softmax 的原始分數）、filter（一句：卷積層裡的小圖案偵測器）、activation（filter 的輸出）、基準圖（IG 的全黑圖，一句）、Captum（一句）、`Variable`／`.data` → `.detach()`、`matplotlib.use('Agg')`。以上大多只在目錄頁給了一句話，正式定義仍要在各章首次使用處寫完整。
   index 的方法名稱：Filter explanation（投影片稱 Filter visualization，兩者同一個方法）。全書配色：藍＝輸入資料、綠＝模型 forward、黃＝梯度、紫＝解釋方法自己的步驟；全書地圖 SVG 用綠框＝只做 forward、黃框＝要對輸入 backward。
   outline 的用語：bert_hidden_states.py 的三組問答稱「第 1／2／3 組問答」，**不要**寫 Q1–Q3（會和作業題號撞名）。
+- ch01（第 1 章，2026-10-03 雲端）：
+  - 圖號：圖 1.1（checkpoint.pth 170 MB 組成長條：model_state_dict 33.3% 綠、Adam 動量 66.6% 黃）、圖 1.2（food/ → os.listdir → my_key 排序 → paths/labels → FoodDataset → getbatch → (10,3,128,128) 的路線圖，藍）、圖 1.3（img/images.png）、圖 1.4（10 張圖第 1、2 名 logit 差長條，圖 2 用黃標出，虛線在差 7）。
+  - 本章正式定義的名詞：state_dict（「名字 → 張量」對照表；key 是屬性路徑，如 `cnn.0.weight`）、checkpoint（含 epoch／model_state_dict／optimizer_state_dict 的容器）、`load_state_dict`（名字逐一對上；預設 strict）、Adam 的 `step`／`exp_avg`（一階動量）／`exp_avg_sq`（二階動量）與 param_groups、pickle（一句）、`weights_only`（2.6 起預設 True）、safetensors（一句）、`os.listdir` 不保證順序、`my_key`（類別×1,000,000+編號；tuple key 的替代寫法）、food-11（一句）、`Dataset`／`__len__`／`__getitem__`、`transforms.Compose`、資料增強（data augmentation）、Resize 給 (高, 寬) 不保持長寬比、ToTensor（HWC uint8 → CHW float32 0–1）、PIL／Pillow（一句）、`torch.stack`、`DataLoader`（一句）、`normalize`（整個陣列 min-max；常數陣列 → NaN）、`save_fig`（bbox_inches='tight'、plt.close）、`plt.subplots`、`imshow` 與 `permute(1, 2, 0)`、`torch.no_grad()`（只管梯度、不擋 BN buffer 更新）、1 − p(標籤)、第 1／2 名 logit 差（機率比 = e^差）、float32 在 1 附近的間距 2^−24、train 模式 forward 會改寫 BN buffer。
+  - 本章用語：「10 張一起算」＝批次結果；引用 logit 時註明批次或單張。
+  - 回指（不重講）：ch00 的模型總覽、逐層表、buffer、`model.eval()`、logits／softmax 定義、相對路徑（0.5 節）、資料來源（0.4 節）。
+  - 本章手算（由 FACTS 推得，非另外量）：e^−7.262 ≈ 0.0007（= 圖 2 第 2 名機率）、e^−37.930 ≈ 3e-17、e^7 ≈ 1,100、1.19e-07 = 2×2^−24；只存 model_state_dict 約 56.7 MB。
+  - **雲端發現的 FACTS 疑點**：(1)「ch01 實測 → FoodDataset」說圖 1、3「看起來被壓扁、變寬」：寬圖被擠成正方形，內容其實是**變窄、變高**，ch01 照後者寫。(2)「logit 的小數第 3 位會隨 batch 組成變」：10.3332 − 10.3312 = 0.0020，不是 8.3e-03；ch01 已拿掉差值並標 TODO。(3)「差 7 以上時 softmax 機率就超過 0.999」只看第 2 名；10 類一起算的下界約 0.993，ch01 沒有引用這句。
 
 ## index／outline 審稿補測（2026-10-03，本機）
 - 舊版套件能不能裝（用 `uv pip install --target <scratch>` 試，不動 .venv）：
