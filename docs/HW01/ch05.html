@@ -998,7 +998,7 @@ Parameter Group 0
 <p>early stop 的用意是：valid loss 很久沒有進步，再訓練下去多半只是在訓練集上越練越熟（train loss 繼續降、valid loss 不再降甚至上升），浪費時間。400 就是「多久算很久」，它和 n_epochs 一起決定了訓練最長跑多久：</p>
 <ul>
   <li><strong>n_epochs（3000）是硬上限</strong>，不管有沒有進步，跑滿就停。第 3 章動手做第 4 項修好量法後的訓練，就是一直到第 3000 個 epoch 都還在創新低，跑滿上限才停。</li>
-  <li><strong>early_stop（400）是耐心</strong>。設得太小，會在進步變慢的高原期誤停；設得太大，就要多跑很多無用的 epoch。從上一節的存檔紀錄可以推算：原版在第 1260 個 epoch 之後隔了 223 個 epoch 才再創新低，所以如果 early_stop 設成 200，訓練會在第 1260 + 200 = 1460 個 epoch 停下，最佳停在第 1260 個 epoch（第 1260 個之前，存檔間隔最長是第 686 到第 860 個 epoch 的 174，不到 200）。</li>
+  <li><strong>early_stop（400）是耐心</strong>。設得太小，會在進步變慢的高原期誤停；設得太大，就要多跑很多無用的 epoch。從上一節的存檔紀錄可以推算：原版在第 1260 個 epoch 之後隔了 223 個 epoch 才再創新低，所以如果 early_stop 設成 200，訓練會在第 1260 + 200 = 1460 個 epoch 停下，最佳停在第 1260 個 epoch（第 1260 個之前，存檔間隔最長是第 686 到第 860 個 epoch 的 174，不到 200）。本機實際把 early_stop 改成 200 跑了一次，結果正是如此：最後一次存檔是 <code>Epoch [1260/3000]: Train loss: 1.7980, Valid loss: 1.7165</code>，最後一個 epoch 是第 1460 個，共存檔 48 次（原版的 49 次少了第 1483 個那一次）。</li>
 </ul>
 <p>還要注意：early stop 看的是 valid loss，所以它和存檔一樣受第 3 章的雜訊影響。原版的 1.661 是靠一組幸運的分組量到的低值，之後的 400 個 epoch 裡，模型就算真的進步一點，也很難在雜訊下打破這個偏低的紀錄。第 3 章修好量法後不再 early stop，正是這個原因的反面證據。</p>
 
@@ -1144,7 +1144,7 @@ Parameter Group 0
 <p>以下指令都在 <code>HW01/</code> 裡執行，Python 用第 0 章 0.3 節在 repo 根目錄建立的 <code>../.venv/bin/python</code>。第 1 項只 import <code>model</code> 與 <code>torch</code>，不 import <code>config</code>，所以不需要 GPU，輸出開頭也不會有 config.py 被 import 時印的 <code>True</code>、<code>0</code>（第 0 章 0.4 節）；第 2、3 項會 import config、在 GPU 上算；第 4 項會重新訓練，會覆寫 <code>models/model.ckpt</code>，做完一定要照最後的說明還原。</p>
 <ol>
   <li><strong>看優化器的設定</strong>：
-<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+<pre class="shell"><code>$ ../.venv/bin/python -c "
 import torch
 from model import My_Model
 m = My_Model(input_dim=117)
@@ -1152,7 +1152,7 @@ print(torch.optim.SGD(m.parameters(), lr=1e-5, momentum=0.9))
 "</code></pre>
   印出的和 5.2 節的 <code>SGD (</code> 那段完全相同，共 12 行。把 <code>momentum=0.9</code> 拿掉再跑，<code>momentum: 0</code>；加上 <code>weight_decay=1e-4</code>，最後一個設定就變成 <code>weight_decay: 0.0001</code>。</li>
   <li><strong>親手走一次第一步</strong>：照 train.py 的順序準備好一切，取第 1 個 epoch 的第 1 個 batch，一步一步做五步驟：
-<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+<pre class="shell"><code>$ ../.venv/bin/python -c "
 import pandas as pd, torch
 from torch.utils.data import DataLoader
 from utils import same_seed, train_valid_split, select_feat
@@ -1184,9 +1184,21 @@ w0 = model.layers[0].weight.detach().clone()
 optimizer.step()
 d = (model.layers[0].weight.detach() - w0).abs()
 print(f'{d.max().item():.4f}', d.argmax().item() % 117)
-"</code></pre>
-  <!-- TODO(本機實測): 照字面跑一次這條指令，把完整輸出逐字貼在這裡（目前只用 5.4 節已實測的數字說明每行該是什麼） -->
-  逐行對照：<code>True</code>、<code>0</code> 之後，第一行是 <code>True None</code>（訓練模式；清過梯度，<code>.grad</code> 是 None）；第二行 <code>True SqueezeBackward1</code>；第三行是 5.4 節那個 <code>tensor(508.8512, device='cuda:0', grad_fn=&lt;MseLossBackward0&gt;)</code>；接下來六行是 5.4 節表格的形狀與範數（例如 <code>layers.0.weight (16, 117) 15824.6025</code>）；再來是 id 欄與其他欄的平均 |g|，2602.08 與 24.13；最後一行是第一步最大的 |Δw| 0.0869，以及它所在的欄 0，也就是 id。<code>next(iter(…))</code> 是「只拿第一個 batch」（第 4 章動手做）；<code>% 117</code> 把攤平後的位置換回欄號；<code>.detach().clone()</code> 先複製一份更新前的權重，因為 <code>step()</code> 是直接改參數本身，不複製就沒有「之前」可比。這段程式省略了 train.py 的 valid_loader：建立 DataLoader 不會抽亂數，要到開始迭代才抽，所以少建一個不影響第一個 batch 的內容。</li>
+"
+True
+0
+True None
+True SqueezeBackward1
+tensor(508.8512, device='cuda:0', grad_fn=&lt;MseLossBackward0&gt;)
+layers.0.weight (16, 117) 15824.6025
+layers.0.bias (16,) 8.7824
+layers.2.weight (8, 16) 6073.4746
+layers.2.bias (8,) 21.4800
+layers.4.weight (1, 8) 2681.5046
+layers.4.bias (1,) 38.5490
+2602.08 24.13
+0.0869 0</code></pre>
+  逐行對照：<code>True</code>、<code>0</code> 之後，<code>True None</code> 是訓練模式、清過梯度後 <code>.grad</code> 是 None；<code>True SqueezeBackward1</code> 是 pred 連在計算圖上；接著是 5.4 節那個 loss；六行參數就是 5.4 節表格的形狀與範數；<code>2602.08 24.13</code> 是 id 欄與其他欄的平均 |g|；最後一行是第一步最大的 |Δw| 0.0869，以及它所在的欄 0，也就是 id。<code>next(iter(…))</code> 是「只拿第一個 batch」（第 4 章動手做）；<code>% 117</code> 把攤平後的位置換回欄號；<code>.detach().clone()</code> 先複製一份更新前的權重，因為 <code>step()</code> 是直接改參數本身，不複製就沒有「之前」可比。這段程式省略了 train.py 的 valid_loader：建立 DataLoader 不會抽亂數，要到開始迭代才抽，所以少建一個不影響第一個 batch 的內容。</li>
   <li><strong>兩個錯誤訊息與梯度累加</strong>：在第 2 項的 Python 程式碼最後、收尾的 <code>"</code> <strong>之前</strong>加這幾行再跑（縮排從行首開始）：
 <pre class="py"><code>optimizer.zero_grad()
 for _ in range(2):
@@ -1195,9 +1207,9 @@ for _ in range(2):
 with torch.no_grad():
     bad = criterion(model(x), y)
 bad.backward()</code></pre>
-  第一行先清掉第 2 項留下的梯度（step 不會清梯度）；迴圈裡模型不再 step，每次都重新 forward、重新算 loss（新的計算圖），中間沒有 zero_grad，所以印出的第二個數字剛好是第一個的 2 倍：梯度是累加的。最後一行在 no_grad 裡算的 loss 上呼叫 backward，Traceback 的最後一行是 5.6 節的 <code>RuntimeError: element 0 of tensors does not require grad and does not have a grad_fn</code>。想看另一個錯誤，把迴圈裡的第一行改成先 <code>l = criterion(model(x), y)</code>，再連續呼叫兩次 <code>l.backward()</code>，就會得到 5.4 節的 <code>Trying to backward through the graph a second time</code>。</li>
+  第一行先清掉第 2 項留下的梯度（step 不會清梯度）；迴圈裡模型不再 step，每次都重新 forward、重新算 loss（新的計算圖），中間沒有 zero_grad，所以印出的第二個數字剛好是第一個的 2 倍：梯度是累加的。本機實測這兩行是 <code>15.719593048095703</code> 與 <code>31.439186096191406</code>（和 5.4 節的 −57.9991 不同，因為這次的模型已經 step 過一次，而且那個實驗用的是另一個剛初始化的模型）。最後一行在 no_grad 裡算的 loss 上呼叫 backward，Traceback 的最後一行是 5.6 節的 <code>RuntimeError: element 0 of tensors does not require grad and does not have a grad_fn</code>。想看另一個錯誤，把迴圈裡的第一行改成先 <code>l = criterion(model(x), y)</code>，再連續呼叫兩次 <code>l.backward()</code>，就會得到 5.4 節的 <code>Trying to backward through the graph a second time</code>。</li>
   <li><strong>把學習率調大 10 倍</strong>：先備份 <code>cp config.py config.py.bak</code>，把 config.py 第 15 行的 <code>1e-5</code> 改成 <code>1e-4</code>，然後：
-<pre class="shell cmd"><code>$ ../.venv/bin/python train.py 2&gt;/dev/null &gt; lr4.log
+<pre class="shell"><code>$ ../.venv/bin/python train.py 2&gt;/dev/null &gt; lr4.log
 $ grep "Epoch \[1/3000\]" lr4.log
 $ grep -c Saving lr4.log
 $ grep Saving lr4.log | tail -1
@@ -1233,7 +1245,7 @@ Model is not improving, so we halt the training session.</code></pre>
 <details class="quiz"><summary>3. 驗證迴圈裡如果忘了寫 <code>with torch.no_grad():</code>，valid loss 的數值會變嗎？如果忘了寫 <code>model.eval()</code> 呢？</summary>
 <p>忘了 no_grad：數值不變，只是多建了沒用的計算圖，浪費記憶體與時間；驗證迴圈沒有 backward 與 step，權重也不會被改。忘了 eval()：在 HW01 也不變（本機實測兩種模式輸出完全相同，因為沒有 Dropout、BatchNorm），但模型一旦加了這類層，驗證就會在訓練模式下進行，數值會不同。而且下一個 epoch 開頭的 <code>model.train()</code> 仍然要寫，兩者是成對的。</p></details>
 <details class="quiz"><summary>4. 只把 config 的 <code>early_stop</code> 改成 200，其他不動，訓練會在第幾個 epoch 停？存下來的是第幾個 epoch 的模型？</summary>
-<p>early_stop 只影響何時停，不影響停之前的任何計算（亂數、權重、分組都相同），所以存檔紀錄和原版一模一樣，直到停止為止。原版的存檔 epoch 中，第一個超過 200 的間隔是第 1260 到第 1483 個 epoch 的 223，所以會在第 1260 + 200 = 1460 個 epoch 停止，存下的是第 1260 個 epoch 的模型。這是依 5.7 節的存檔紀錄推算的。想實際驗證：照動手做第 4 項的方式備份 config.py，把第 16 行的 <code>400</code> 改成 <code>200</code>，執行 <code>../.venv/bin/python train.py 2&gt;/dev/null &gt; es200.log</code>，再用 <code>grep -B1 Saving es200.log | tail -2</code> 看最後一次存檔（應是 <code>Epoch [1260/3000]</code> 那行），<code>grep Epoch es200.log | tail -1</code> 看最後一個 epoch（應是 <code>Epoch [1460/3000]</code>）。做完照第 4 項末尾的方法還原 config.py 並重跑原版。</p></details>
+<p>early_stop 只影響何時停，不影響停之前的任何計算（亂數、權重、分組都相同），所以存檔紀錄和原版一模一樣，直到停止為止。原版的存檔 epoch 中，第一個超過 200 的間隔是第 1260 到第 1483 個 epoch 的 223，所以會在第 1260 + 200 = 1460 個 epoch 停止，存下的是第 1260 個 epoch 的模型。這是依 5.7 節的存檔紀錄推算的，本機也實際跑過一次確認（5.8 節）。想自己驗證：照動手做第 4 項的方式備份 config.py，把第 16 行的 <code>400</code> 改成 <code>200</code>，執行 <code>../.venv/bin/python train.py 2&gt;/dev/null &gt; es200.log</code>，再用 <code>grep -B1 Saving es200.log | tail -2</code> 看最後一次存檔（應是 <code>Epoch [1260/3000]</code> 那行），<code>grep Epoch es200.log | tail -1</code> 看最後一個 epoch（應是 <code>Epoch [1460/3000]</code>）。做完照第 4 項末尾的方法還原 config.py 並重跑原版。</p></details>
 <details class="quiz"><summary>5. 在 TensorBoard 上，橫軸 step 900 附近的點是第幾個 epoch？如果 batch_size 改成 128 呢？</summary>
 <p>batch_size 256 時每個 epoch 9 個 batch，step 900 是第 100 個 epoch 結束時寫入的點。batch_size 128 時，2160 ÷ 128 = 16.875，無條件進位是 17 個 batch（第 3 章），step 900 約是第 53 個 epoch（17 × 53 = 901）。橫軸是更新次數，換 batch_size 就換了比例。</p></details>
 <details class="quiz"><summary>6. lr 1e-4 的模型印出最佳 36.157。你手上只有 stdout 的 log，怎麼判斷它是「比較差」還是「完全壞掉」？</summary>

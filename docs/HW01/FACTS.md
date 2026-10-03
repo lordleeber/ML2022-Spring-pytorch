@@ -75,7 +75,7 @@
 - ch05：criterion（nn.MSELoss 物件，`criterion(pred, y)`）、優化器（optimizer，只改交給它的參數）、SGD（stochastic gradient descent，「隨機」= 每步只看一個 batch）、學習率（lr）、momentum 與 momentum buffer（buf ← 0.9·buf + grad、w ← w − lr·buf；第一步 buf = grad；記在 optimizer 身上）、`print(optimizer)` 各欄位、Parameter Group、weight_decay（= SGD 內建的 L2，細節 ch07）、梯度（gradient：loss 對每個參數的斜率，存在 `.grad`，形狀與參數相同）、偏導數（一句）、梯度下降（w ← w − lr·g）、自動微分（autograd）、計算圖（computational graph）、`grad_fn`（SqueezeBackward1、MseLossBackward0）、連鎖律（chain rule，一句）、反向傳播（backpropagation）、梯度累加與 `zero_grad`（`set_to_none=True` 預設，清成 None）、計算圖在 backward 後釋放、`.detach()`（在 train.py:61 是多餘的）、`model.train()`／`eval()` 只切 `training` 旗標、`torch.no_grad()`（不建計算圖）、`torch.inference_mode()`（一句）、`math.inf`、`torch.save(state_dict)` 覆寫同一檔、early stopping 的計數器（耐心）與 n_epochs 硬上限、SummaryWriter、`add_scalar(tag, value, step)`、tag 依斜線分組、橫軸 step = 更新次數（每 epoch 9）、tqdm `set_description`／`set_postfix`／`leave`／`position`、AdamW（一句）、梯度裁剪 `clip_grad_norm_`（一句）、`writer.close()`、`os.makedirs(exist_ok=True)`。
   ch05 圖號：圖 5.1 trainer() 的結構、圖 5.2 五步驟各讀寫什麼（.grad／計算圖／權重／momentum）、圖 5.3 49 次存檔的時間軸、圖 5.4 15 個 epoch 的 train／valid loss（兩軸對數）。
   ch05 已講完五步驟、梯度、momentum、train loss「邊更新邊記錄」、第 1483 個 epoch 的幸運分組（§5.7）、lr／momentum 對照組與 lr 1e-4 輸出常數 9.731（§5.10），後面章節回指即可。
-  ch05 推算（非實測，由存檔清單算出）：early_stop 改 200 會在第 1460 個 epoch 停、最佳為第 1260 個 epoch（第 1260 之前最長間隔是 686→860 的 174）。
+  ch05 early_stop 200（**已實測**，2026-10-03）：最後一次存檔是 `Epoch [1260/3000]: Train loss: 1.7980, Valid loss: 1.7165`（印出 `Saving model with loss 1.716...`），在第 1460 個 epoch 停止，共存檔 48 次，跟從存檔清單推算的結果一致（第 1260 個 epoch 之前最長的存檔間隔是 686→860 的 174）。
   注意：上方「ch05 實測」寫「loss=509 就是 ch00 進度條上的 loss=509」，但 ch00 只引用了每個 epoch 結束時的進度條（loss=60.4），沒有 509／136；ch05 §5.5 改寫成「跑完第 1 個 batch 時短暫顯示 loss=509」。
 
 ## Baseline 實測（2026-10-03，與範例同一驗證集：random_split seed 5201314）
@@ -341,3 +341,9 @@ Parameter Group 0
 - 有一點要注意：lr 1e-4 的 early stop 機制照常運作，印出的 36.157 看起來只是「比較差」，從 log 看不出模型其實已經只會輸出常數。
 - momentum 0：同樣的學習率下，進步慢很多，3000 個 epoch 都沒觸發 early stop，最後的真實 MSE 2.9992 比原版差。
 - 四組同時在一張 GPU 上跑，各花了 base 38.6 s、lr1e-4 19.3 s、lr1e-6 38.1 s、mom0 56.8 s（單獨跑原版是 34.2 s，見上方「實測執行」）。
+
+## ch05 審稿補測（2026-10-03 本機）
+- 動手做第 1 題：`print(SGD)` 共 12 行。不給 momentum 時印 `momentum: 0`；加 `weight_decay=1e-4` 時印 `weight_decay: 0.0001`。
+- 動手做第 2 題逐字輸出（用 tty 跑）：`True`、`0`、`True None`、`True SqueezeBackward1`、`tensor(508.8512, device='cuda:0', grad_fn=<MseLossBackward0>)`，接著六行參數 `layers.0.weight (16, 117) 15824.6025` … `layers.4.bias (1,) 38.5490`，然後 `2602.08 24.13`、`0.0869 0`。
+- 動手做第 3 題：模型 step 過一次之後，連續 backward 兩次，最後一層 bias 的 grad 是 `15.719593048095703` 和 `31.439186096191406`，剛好 2 倍。最後一行 traceback 是 `RuntimeError: element 0 of tensors does not require grad and does not have a grad_fn`。
+- 原版第一次存檔印出 `Saving model with loss 107.215...`（valid 是 107.2155）。
