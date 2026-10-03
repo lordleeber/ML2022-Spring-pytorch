@@ -451,3 +451,148 @@
 - **資料來源**：`ml2022spring-hw9.zip` 127,524,956 bytes。Kaggle 沒有 `ml2022spring-hw9` 競賽頁（`kaggle.com/competitions/ml2022spring-hw9` 回 404，同網址 hw1、hw8 回 200；投影片 p.17 也說 HW09 沒有排行榜）。原版 Colab 的三個 Google Drive id（food.zip `1QntUQuWJoVR8h5FoeDa56xrQSdcCwFeD`、checkpoint `1-Qw-oIJ0cSo2iG_n_U9mcJqXc2-LCSdV`、字型 `1JWHUSlcPwoEzmr0VE6J71jcnwinH10G6`）2026-10-03 全部 404。目前沒有公開下載來源。
 - **zip 結構**：外層 `ml2022spring-hw9/checkpoint.pth`、`ml2022spring-hw9/food.zip`；`food.zip` 內含 `food/` 資料夾與 10 張 jpg。解壓指令（在 HW09/）：`unzip -j <路徑>/ml2022spring-hw9.zip ml2022spring-hw9/checkpoint.pth ml2022spring-hw9/food.zip`、`unzip food.zip`、`rm food.zip`。
 - ch00 0.6 的版本指令實測輸出：`['2.11.0+cu128', '0.2.0.1', '5.18.0', '0.26.0', '1.9.1']`。
+
+## ch01 實測（2026-10-03，本機；指令都在 HW09/ 裡執行）
+### checkpoint.pth 裡有什麼
+指令：
+```
+../.venv/bin/python -c "
+import torch
+ck = torch.load(\"checkpoint.pth\")
+print(type(ck).__name__, list(ck.keys()))
+print(\"epoch\", ck[\"epoch\"])
+sd = ck[\"model_state_dict\"]
+print(len(sd), list(sd.keys())[:6])
+opt = ck[\"optimizer_state_dict\"]
+print(list(opt.keys()), len(opt[\"state\"]))
+print({k: v for k, v in opt[\"param_groups\"][0].items() if k != \"params\"})
+"
+```
+逐字輸出：
+```
+dict ['epoch', 'model_state_dict', 'optimizer_state_dict']
+epoch 208
+81 ['cnn.0.weight', 'cnn.0.bias', 'cnn.1.weight', 'cnn.1.bias', 'cnn.1.running_mean', 'cnn.1.running_var']
+['state', 'param_groups'] 48
+{'lr': 0.001, 'betas': (0.9, 0.999), 'eps': 1e-08, 'weight_decay': 0, 'amsgrad': False}
+```
+- state_dict 的 key 名稱 = 屬性路徑： 是 ； 是 BN 的 buffer。
+- 優化器是 **Adam**（lr 0.001、betas (0.9, 0.999)、eps 1e-8、無 weight decay）。 有 48 個 entry = 模型的 48 個參數張量（11 Conv × 2 + 11 BN × 2 + 2 Linear × 2）。每個 entry 有 、、（Adam 的一階、二階動量，形狀與參數相同，例如第一個是 (128, 3, 3, 3)）。
+- **舊版 PyTorch 存的痕跡**： 只有  六個 key（新版還有 maximize、foreach、capturable 等）； 是 Python int （新版存成 tensor）； 的 key 是很大的整數，例如 ，不是新版的 0..47。這些不影響本作業：腳本只讀 。
+-  32395 = 155 × 209。**推論**（沒有其他資料佐證）：epoch 從 0 數，存檔時是第 209 個 epoch，每個 epoch 155 個 batch；HW3 訓練集 9,866 張、batch 64 時正好是 ⌈9866/64⌉ = 155。
+- **170 MB 的組成**（逐 tensor 加總 bytes）：
+  - model_state_dict 56,671,876 bytes = 參數 14,162,827 × 4 bytes（float32）= 56,651,308，加上 BN buffer：running_mean/var 共 5,120 個 float32 = 20,480，再加 11 個 int64 的 num_batches_tracked = 88。dtype 只有 float32 與 int64。
+  - optimizer 的 exp_avg + exp_avg_sq：113,302,616 bytes = 2 × 56,651,308。
+  - 兩者合計 169,974,492；檔案 170,002,879；差的 28,387 bytes 是存檔格式本身（pickle 結構、key 名稱等）。
+  - 結論：檔案的 **2/3 是 Adam 的動量**，推論時完全用不到。
+-  在 torch 2.11 沒有指定 ，預設是 True（2.6 起）；這個檔案只含 dict、tensor、int、float、tuple，所以照樣載得進來，沒有警告。
+
+### 10 張圖的檔名與順序
+```
+../.venv/bin/python -c "
+import os
+print(os.listdir('food'))
+print(sorted(os.listdir('food')))
+"
+```
+逐字輸出（第一行的順序取決於檔案系統，本機 WSL2 ext4；換機器可能不同）：
+```
+['9_9.jpg', '1_1.jpg', '2_4.jpg', '8_8.jpg', '0_0.jpg', '2_3.jpg', '3_5.jpg', '1_2.jpg', '5_6.jpg', '6_7.jpg']
+['0_0.jpg', '1_1.jpg', '1_2.jpg', '2_3.jpg', '2_4.jpg', '3_5.jpg', '5_6.jpg', '6_7.jpg', '8_8.jpg', '9_9.jpg']
+```
+-  不保證順序，所以  一定要排序。
+- 這 10 個檔名用普通字串排序（）剛好也得到同一個順序，因為類別都是個位數。 的用處在類別有兩位數時：
+  ```
+  ../.venv/bin/python -c "
+  names = ['1_2.jpg', '10_3.jpg', '2_1.jpg']
+  print(sorted(names))
+  key = lambda n: int(n.replace('.jpg','').split('_')[1]) + 1000000 * int(n.split('_')[0])
+  print(sorted(names, key=key), [key(n) for n in sorted(names, key=key)])
+  "
+  ```
+  逐字輸出：
+  ```
+  ['10_3.jpg', '1_2.jpg', '2_1.jpg']
+  ['1_2.jpg', '2_1.jpg', '10_3.jpg'] [1000002, 2000001, 10000003]
+  ```
+  字串排序把  排在  前面（逐字元比，'0' < '_'）； 把「類別 × 1,000,000 + 編號」當數字比。這要求編號小於 1,000,000。
+-  的輸出：
+  ```
+  ['./food/0_0.jpg', './food/1_1.jpg', './food/1_2.jpg', './food/2_3.jpg', './food/2_4.jpg', './food/3_5.jpg', './food/5_6.jpg', './food/6_7.jpg', './food/8_8.jpg', './food/9_9.jpg']
+  [0, 1, 1, 2, 2, 3, 5, 6, 8, 9]
+  ```
+  標籤是 Python list of int；路徑用  接， 得到 。
+
+### FoodDataset 與 getbatch
+```
+../.venv/bin/python -c "
+from dataset import FoodDataset, get_paths_labels
+paths, labels = get_paths_labels('./food/')
+train_set = FoodDataset(paths, labels, mode='eval')
+images, labels = train_set.getbatch(range(10))
+print(images.shape, images.dtype, labels.shape, labels.dtype)
+print(images.min().item(), images.max().item())
+x, y = train_set[3]
+print(x.shape, y, type(y).__name__)
+"
+```
+逐字輸出：
+```
+torch.Size([10, 3, 128, 128]) torch.float32 torch.Size([10]) torch.int64
+0.0 1.0
+torch.Size([3, 128, 128]) 2 int
+```
+-  會呼叫 ，回傳 (tensor, int)； 用  疊圖、 把 int list 變成 int64 tensor。
+-  把 PIL 圖（0–255 的 uint8，H×W×C）轉成 0.0–1.0 的 float32，並換成 C×H×W。
+- Resize(size=(128, 128)) 給的是 (高, 寬) 兩個數，所以**不保持長寬比**：
+  | 檔名 | 原尺寸 W×H | 寬高比 | 水平縮放 | 垂直縮放 |
+  |---|---|---|---|---|
+  | 2_3.jpg（圖 3） | 512×341 | 1.501 | 0.250 | 0.375 |
+  | 1_1.jpg（圖 1） | 849×565 | 1.503 | 0.151 | 0.227 |
+  | 1_2.jpg（圖 2） | 1294×1300 | 0.995 | 0.099 | 0.098 |
+  | 9_9.jpg（圖 9） | 512×384 | 1.333 | 0.250 | 0.333 |
+  圖 1、3 的垂直方向被多壓 1.5 倍（看起來變矮胖）、圖 9 1.33 倍；其餘 6 張 512×512 只是等比縮小。
+- 10 張都是 RGB，所以  不用  也沒事（灰階或 RGBA 圖會變成 1 或 4 通道，模型吃不進去）。
+-  的 RandomHorizontalFlip、RandomRotation(15) 在本作業從來沒用到；變數名  與這 10 張圖可能來自訓練集有關，但 eval 轉換才是實際使用的。
+
+### 模型對 10 張圖的預測
+指令（需要 GPU）：
+```
+../.venv/bin/python -c "
+import torch
+from model import Classifier
+from dataset import FoodDataset, get_paths_labels
+model = Classifier().cuda()
+model.load_state_dict(torch.load('checkpoint.pth')['model_state_dict'])
+model.eval()
+paths, labels = get_paths_labels('./food/')
+images, labels = FoodDataset(paths, labels, mode='eval').getbatch(range(10))
+with torch.no_grad():
+    logits = model(images.cuda()).cpu()
+prob = logits.softmax(dim=1)
+for i in range(10):
+    y = labels[i].item()
+    print(i, y, logits[i].argmax().item(), '%.3f' % logits[i, y].item(), '%.4f' % prob[i, y].item())
+"
+```
+逐字輸出（欄位：圖編號、標籤、預測、標籤類別的 logit、softmax 機率）：
+```
+0 0 0 10.333 1.0000
+1 1 1 19.785 1.0000
+2 1 1 7.808 0.9986
+3 2 2 9.011 1.0000
+4 2 2 12.215 1.0000
+5 3 3 12.385 1.0000
+6 5 5 22.956 1.0000
+7 6 6 11.447 1.0000
+8 8 8 13.015 1.0000
+9 9 9 14.118 1.0000
+```
+- 1 − p(標籤)：圖 0 2.50e-06、1 0（float32 下剛好等於 1）、2 1.38e-03、3 2.38e-07、4 1.19e-07、5 3.58e-07、6 0、7 6.08e-06、8 0、9 1.19e-07。圖 1、6、8 的機率在 float32 裡就是 1。
+- 第一名和第二名的 logit 差：7.262（圖 2）到 37.930（圖 6）；圖 0 13.662、1 24.314、3 15.473、4 16.519、5 14.791、7 12.831、8 19.700、9 15.687。差 7 以上，softmax 機率就到 0.999 以上（e^−7 ≈ 0.0009）。
+- **logit 的小數第 3 位會隨 batch 組成變**：同一張圖 0，10 張一起算是 10.3332，單獨算是 10.3312（差 8.3e-03，GPU 依 batch 大小選不同的卷積演算法）。CNN 實測「IG」表裡的 logit 是單張算的，所以和這裡的批次結果差在小數第 2–3 位（例如圖 3：9.024 vs 9.011）。同一個 batch 重算兩次則逐位元相同。
+- **eval 與 train 模式**：同 10 張圖改 ，argmax 仍全對，但 logit 最多差 18.9（Dropout 隨機丟掉、BN 改用這一批的統計量）；而且 train 模式的 forward 會**改寫 BN 的 running_mean／running_var**（buffer 被這 10 張圖更新），之後切回 eval 結果也變了。所以解釋方法前一定要 ，且不要在 train 模式下 forward。
+
+### normalize 與 save_fig（explain_cnn.py:24–32）
+- ，把任何值域線性拉到 0–1，numpy 與 torch 都能用（只用到 、 和算術）。若整張圖是常數，分母為 0，會得到 NaN；本作業的資料沒有遇到。
+-  用  裁掉多餘白邊，存完  釋放記憶體，再印 。
