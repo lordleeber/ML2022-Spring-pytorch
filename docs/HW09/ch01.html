@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 1 章　10 張圖與一個太有把握的模型 — HW09 Explainable AI</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW09 讀碼教材</p>
+  <h1>第 1 章　10 張圖與一個太有把握的模型</h1>
+  <p class="chap-lead">五種解釋方法開工之前，<code>explain_cnn.py</code> 先做兩件事：載入權重、讀進 10 張圖。本章把這兩步拆開來看：170 MB 的 <code>checkpoint.pth</code> 裡裝了什麼、檔名怎麼決定圖 0–9 的順序、圖片在進模型前被做了哪些處理。最後讓模型對這 10 張圖各猜一次：全部猜對，而且幾乎都是 100% 確定。這個「太有把握」會影響後面每一章的圖。</p>
+</header>
+<main>
+
+<h2 id="start">1.1　起點：stdout 的前兩行</h2>
+<p>第 0 章 <a href="ch00.html#run-cnn">0.5 節</a>執行了 <code>explain_cnn.py</code>，stdout 一共 9 行。後面 7 行 <code>saved …</code> 各對應一張圖，第 2–5 章逐一解讀；本章只看最前面兩行：</p>
+<pre class="shell"><code>&lt;All keys matched successfully&gt;  «1»
+labels: [0, 1, 1, 2, 2, 3, 5, 6, 8, 9]  «2»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>權重載入成功。這一行背後是一個 170 MB 的檔案，1.2 節打開它。</li>
+  <li><span class="mk">2</span>10 張圖的類別編號。它為什麼剛好是這個順序、為什麼沒有 4、7、10，1.3 節從檔名講起。</li>
+</ol>
+<p>這兩行由主程式的前半段印出。第 0 章看過整段主程式（<code>explain_cnn.py:284–312</code>），這一章把它拆成三小段，各配一節細看。第一段是載入模型：</p>
+<figure class="listing"><figcaption>explain_cnn.py:287–291 — 建模型、讀 checkpoint、填入權重</figcaption>
+<pre class="py" data-hot="289,290"><code>    # Load trained model
+    model = Classifier().cuda()
+    checkpoint = torch.load(ckptpath)
+    print(model.load_state_dict(checkpoint['model_state_dict']))
+    # It should display: &lt;All keys matched successfully&gt;</code></pre></figure>
+<p>第 288 行先建出一個「空」的 <code>Classifier</code>：結構是 <code>model.py</code> 定義的那個（第 0 章 <a href="ch00.html#model">0.2 節</a>），權重是隨機初始值，然後搬上 GPU。第 289 行把整個 <code>checkpoint.pth</code> 讀進記憶體，第 290 行從裡面取出 <code>'model_state_dict'</code> 這一項，填進模型。可見 <code>checkpoint</code> 不是「模型」本身，而是一個裝了好幾樣東西的容器，模型權重只是其中一樣。<code>ckptpath</code> 是第 19 行的模組層常數 <code>'./checkpoint.pth'</code>，1.5 節會一起看。</p>
+
+<h2 id="checkpoint">1.2　checkpoint.pth 裡裝了什麼</h2>
+<p>第 0 章 <a href="ch00.html#params">0.2 節</a>的〈參數之外：BN 的 buffer〉說過，存檔裡的模型權重不只 14,162,827 個參數，還有 BN 的 buffer。現在直接打開檔案看。下面的指令從 repo 根目錄出發、先 <code>cd HW09</code> 再執行，本章之後的指令也都在 <code>HW09/</code> 裡跑（<code>checkpoint.pth</code> 要先照 <a href="ch00.html#getdata">0.4 節</a>放好）；<code>python -c "…"</code> 的用法和第 0 章相同，整段貼進終端機即可。字串裡的 <code>\"</code> 是因為整段 Python 包在 shell 的雙引號裡，裡面的雙引號要跳脫：</p>
+<pre class="shell cmd"><code>$ cd HW09
+$ ../.venv/bin/python -c "
+import torch
+ck = torch.load(\"checkpoint.pth\")
+print(type(ck).__name__, list(ck.keys()))
+print(\"epoch\", ck[\"epoch\"])
+sd = ck[\"model_state_dict\"]
+print(len(sd), list(sd.keys())[:6])
+opt = ck[\"optimizer_state_dict\"]
+print(list(opt.keys()), len(opt[\"state\"]))
+print({k: v for k, v in opt[\"param_groups\"][0].items() if k != \"params\"})
+"</code></pre>
+<p>這段程式裡沒有 <code>.cuda()</code>，但<strong>還是需要 GPU</strong>：checkpoint 裡的張量當初是在 GPU 上存的，記錄的裝置是 <code>cuda:0</code>，<code>torch.load</code> 預設會把它們放回原來的裝置。實測用 <code>CUDA_VISIBLE_DEVICES=""</code> 假裝沒有 GPU 再跑，會停在 <code>torch.load</code>：</p>
+<pre class="shell"><code>RuntimeError: Attempting to deserialize object on a CUDA device but torch.cuda.is_available() is False. If you are running on a CPU-only machine, please use torch.load with map_location=torch.device('cpu') to map your storages to the CPU.</code></pre>
+<p>錯誤訊息已經給了解法：改成 <code>torch.load(\"checkpoint.pth\", map_location=\"cpu\")</code>，強制把張量讀到 CPU，實測這樣就能在沒有 GPU 時載入。<code>explain_cnn.py:289</code> 沒有加 <code>map_location</code>，這也是 Part 1 離不開 GPU 的原因之一。有 GPU 時的實測輸出：</p>
+<pre class="shell"><code>dict ['epoch', 'model_state_dict', 'optimizer_state_dict']  «1»
+epoch 208  «2»
+81 ['cnn.0.weight', 'cnn.0.bias', 'cnn.1.weight', 'cnn.1.bias', 'cnn.1.running_mean', 'cnn.1.running_var']  «3»
+['state', 'param_groups'] 48  «4»
+{'lr': 0.001, 'betas': (0.9, 0.999), 'eps': 1e-08, 'weight_decay': 0, 'amsgrad': False}  «5»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span><code>torch.load</code> 讀回來的是一個普通的 Python dict，三個 key：訓練到第幾個 epoch、模型的 state_dict、優化器的 state_dict。<strong>state_dict</strong> 是 PyTorch 存模型的標準格式：一個「名字 → 張量」的對照表。</li>
+  <li><span class="mk">2</span>存檔時的 epoch 編號是 208。這個數字在本作業不會用到，下面會拿它和優化器的步數對照。</li>
+  <li><span class="mk">3</span><code>model_state_dict</code> 有 81 個 entry，這裡印出前 6 個名字。名字就是屬性路徑：<code>cnn.0.weight</code> 是 <code>model.cnn[0].weight</code>（第一個卷積層的權重）；<code>cnn.1.*</code> 是 <code>model.cnn[1]</code>，也就是第一個 BN，它除了 <code>weight</code>、<code>bias</code> 兩個參數，還有 <code>running_mean</code>、<code>running_var</code> 兩個 buffer。</li>
+  <li><span class="mk">4</span><code>optimizer_state_dict</code> 分成 <code>state</code>（每個參數各自的狀態）與 <code>param_groups</code>（超參數）。<code>state</code> 有 48 個 entry。</li>
+  <li><span class="mk">5</span>超參數是 Adam 的典型設定：學習率 0.001、<code>betas</code> (0.9, 0.999)、<code>eps</code> 1e-8、沒有 weight decay、沒有開 AMSGrad。所以這個模型是用 <strong>Adam</strong> 優化器訓練的。</li>
+</ol>
+
+<h3 id="entries">81 與 48 怎麼來</h3>
+<p>81 可以從第 0 章的逐層表數出來：5 個 stage 裡一共有 11 個卷積層，每個卷積層後面各接一個 BN，最後是 2 個 Linear。模型裡有參數或 buffer 的層只有這三種（<code>num_batches_tracked</code> 是 BN 記錄「看過幾個 batch」的計數器，第 0 章介紹 buffer 時提過）：</p>
+<div class="eq">11 個 Conv2d × 2（weight、bias）= 22<br>11 個 BatchNorm2d × 5（weight、bias、running_mean、running_var、num_batches_tracked）= 55<br>2 個 Linear × 2（weight、bias）= 4<br>合計 22 + 55 + 4 = <b>81</b></div>
+<p>ReLU、MaxPool、Dropout 沒有任何要存的東西，所以不出現在 state_dict 裡。<code>load_state_dict</code> 做的事，就是拿這 81 個名字去對模型自己的 81 個名字，一個一個把張量複製進去；名字和形狀全部對上，才會回報 <code>&lt;All keys matched successfully&gt;</code>。如果存檔少了某個名字，或多出模型沒有的名字，預設會直接報錯，而不是默默略過。</p>
+<p>48 則是只數「參數」：Adam 只替要訓練的張量保存狀態，buffer 不用梯度訓練，所以沒有。11 × 2 + 11 × 2 + 2 × 2 = 48，正好等於模型的 48 個參數張量。每個 entry 裡有三樣東西：</p>
+<ul>
+  <li><code>step</code>：這個參數被更新過幾次。</li>
+  <li><code>exp_avg</code>：梯度的移動平均（Adam 的一階動量）。</li>
+  <li><code>exp_avg_sq</code>：梯度平方的移動平均（Adam 的二階動量）。</li>
+</ul>
+<p>（每個 entry 的內容上面的指令沒有印出，是本書另外逐一檢查的；下面「舊版 PyTorch 留下的痕跡」裡的 <code>step</code> 值與 key 也一樣。）後兩個的形狀和對應的參數完全一樣，例如第一個 entry 的 <code>exp_avg</code> 是 <code>(128, 3, 3, 3)</code>，和 <code>cnn.0.weight</code> 相同。也就是說，<strong>每一個參數，Adam 都另外存了兩份一樣大的張量</strong>。這就是檔案為什麼這麼大。</p>
+
+<h3 id="size">170 MB 的組成</h3>
+<p>逐個張量把 bytes 加起來（float32 每個數 4 bytes、int64 每個數 8 bytes）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>內容</th><th>怎麼算</th><th>bytes</th></tr></thead>
+<tbody>
+<tr><td>模型參數</td><td>14,162,827 × 4（float32）</td><td>56,651,308</td></tr>
+<tr><td>BN 的 running_mean／running_var</td><td>5,120 × 4（float32）</td><td>20,480</td></tr>
+<tr><td>BN 的 num_batches_tracked</td><td>11 × 8（int64）</td><td>88</td></tr>
+<tr><td><b>model_state_dict 小計</b></td><td></td><td><b>56,671,876</b></td></tr>
+<tr><td>Adam 的 exp_avg + exp_avg_sq</td><td>2 × 56,651,308</td><td>113,302,616</td></tr>
+<tr><td>兩者合計</td><td></td><td>169,974,492</td></tr>
+<tr><td>檔案實際大小</td><td>第 0 章 0.4 節</td><td>170,002,879</td></tr>
+<tr><td>差額</td><td>存檔格式本身（pickle 結構、key 名稱等；pickle 是 Python 把物件存成檔案的內建格式）</td><td>28,387</td></tr>
+</tbody>
+</table></div>
+<p>本書逐個張量檢查過，state_dict 裡的 dtype 只有 float32 和 int64 兩種。5,120 是 11 個 BN 的通道數總和 2,560 再乘 2（mean 與 var 各一份），和第 0 章算 buffer 數量時用的是同一組數字。</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 200" role="img" aria-label="checkpoint.pth 的 170,002,879 bytes 中，model_state_dict 佔 56,671,876 bytes（約三分之一），Adam 的兩份動量佔 113,302,616 bytes（約三分之二），存檔格式只有 28,387 bytes">
+  <text class="s-lbl" x="20" y="32" font-weight="700">checkpoint.pth：170,002,879 bytes</text>
+  <rect x="20" y="50" width="286.6" height="50" style="fill:#3fb950;fill-opacity:0.75"/>
+  <rect x="306.6" y="50" width="573.2" height="50" style="fill:#e3b341;fill-opacity:0.55"/>
+  <rect x="20" y="50" width="860" height="50" fill="none" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-lbl" x="163" y="80" text-anchor="middle">model_state_dict</text>
+  <text class="s-lbl" x="593" y="80" text-anchor="middle">optimizer：exp_avg + exp_avg_sq</text>
+  <text class="s-mono" x="163" y="124" text-anchor="middle">56,671,876（33.3%）</text>
+  <text class="s-mono" x="593" y="124" text-anchor="middle">113,302,616（66.6%）</text>
+  <text class="s-sm" x="163" y="146" text-anchor="middle">推論只需要這一段</text>
+  <text class="s-sm" x="593" y="146" text-anchor="middle">兩份和參數一樣大的動量，只有繼續訓練時才用得到</text>
+  <text class="s-sm" x="20" y="182">存檔格式本身 28,387 bytes（0.017%），在這個比例下畫不出來。</text>
+</svg>
+<figcaption>圖 1.1 — 檔案的三分之二是 Adam 的動量。<code>explain_cnn.py</code> 只讀 <code>model_state_dict</code>，所以每次執行讀進來的 170 MB 裡，有 113 MB 讀完就沒再用過。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#3fb950"></i>模型（forward 會用到）</span>
+  <span><i style="background:#e3b341"></i>梯度的累積（Adam 的動量）</span>
+</div>
+<p>為什麼訓練時要連優化器一起存？因為 Adam 每一步的更新量取決於過去梯度的累積。如果訓練中斷、只存了模型權重，重新開始時動量從 0 起算，訓練曲線會跳一下。把 <code>optimizer_state_dict</code> 一起存，就能從中斷處無縫接著訓練。這對 HW3 的訓練有用，對 HW09 這種只做推論的作業則完全是多餘的重量。</p>
+
+<h3 id="old-save">舊版 PyTorch 留下的痕跡</h3>
+<p>仔細看 <code>optimizer_state_dict</code>，還能看出這個檔案是用比較舊的 PyTorch 存的（存檔的確切版本無從得知）：</p>
+<ul>
+  <li><code>param_groups</code> 只有 <code>lr</code>、<code>betas</code>、<code>eps</code>、<code>weight_decay</code>、<code>amsgrad</code>、<code>params</code> 六個 key；新版還會多出 <code>maximize</code>、<code>foreach</code>、<code>capturable</code> 等設定。</li>
+  <li><code>step</code> 存成 Python 的 int <code>32395</code>；新版存成張量。</li>
+  <li><code>state</code> 的 key 是很大的整數，例如 <code>140436588276144</code>，而不是新版的 0 到 47。（從數值大小看，像是存檔當時參數物件在記憶體裡的位址；這是推測，沒有另外查證。）</li>
+</ul>
+<p>這些差異都不影響本作業，因為腳本只讀 <code>model_state_dict</code>，從頭到尾沒碰優化器的部分。</p>
+<p><code>step</code> 的 32395 還能拿來推一件事：32395 = 155 × 209。<strong>以下是推論，沒有其他資料佐證</strong>：如果 epoch 從 0 開始數，存檔時的 <code>epoch 208</code> 就是第 209 個 epoch；每個 epoch 更新 155 次，209 個 epoch 正好 32,395 步。而 HW3 的訓練集有 9,866 張圖，若 batch size 是 64（這兩個數都是 HW3 的設定，不在本 repo 裡，無法在這裡核對），一個 epoch 正好是 ⌈9866 ÷ 64⌉ = 155 個 batch。數字對得上，但這只是吻合，不是證明。</p>
+
+<div class="note"><h4>現在的做法：推論用的權重只存 state_dict，載入時用 weights_only</h4>
+<p>這個 checkpoint 是「訓練中途存檔」的格式，適合接續訓練。如果只是要把模型交給別人做推論，現在的慣例是只存模型本身：<code>torch.save(model.state_dict(), path)</code>。照上表推算，這樣只剩 model_state_dict 的 56.7 MB 左右，大約是原本的三分之一（這是由上表推得，本書沒有另外存檔量過）。</p>
+<p>另一個變化在載入端。<code>torch.load</code> 底層用的是 Python 的 pickle，pickle 檔在載入時可以執行任意程式碼，載入來路不明的檔案有安全風險。PyTorch 2.6 起，<code>torch.load</code> 的 <code>weights_only</code> 參數預設改成 <code>True</code>，只允許載入張量、dict、數字這類基本型別。<code>explain_cnn.py:289</code> 沒有指定這個參數，所以在本書的 torch 2.11 上用的就是 <code>True</code>；這個檔案裡只有 dict、tensor、int、float、tuple，照樣載得進來，也沒有任何警告。另一個常見的選擇是 Hugging Face 推出的 safetensors 格式，它只存張量，根本不含可執行的內容（第 0 章 <a href="ch00.html#env">0.3 節</a>提到的 BERT 權重檔 <code>model.safetensors</code> 就是這種格式）。</p>
+</div>
+
+<h2 id="order">1.3　從檔名到圖 0–9</h2>
+<p>載入模型之後，主程式的第二段讀進 10 張圖：</p>
+<figure class="listing"><figcaption>explain_cnn.py:293–300 — 取得路徑與標籤、建立 dataset、一次取出 10 張</figcaption>
+<pre class="py" data-hot="293,299,300"><code>    train_paths, train_labels = get_paths_labels(dataset_dir)
+    train_set = FoodDataset(train_paths, train_labels, mode='eval')
+
+    # The images for observation, marked from 0 to 9. They should be the same as those in the slides.
+    # 11 categories: Bread, Dairy product, Dessert, Egg, Fried food, Meat, Noodles/Pasta, Rice, Seafood, Soup, Vegetable/Fruit
+    img_indices = [i for i in range(10)]
+    images, labels = train_set.getbatch(img_indices)
+    print('labels:', labels.tolist())</code></pre></figure>
+<p>三個步驟：第 293 行 <code>get_paths_labels</code> 從資料夾拿到「每張圖的路徑」與「每張圖的類別」兩個 list；第 294 行用它們建一個 <code>FoodDataset</code>；第 299 行用 <code>getbatch</code> 一次取出第 0 到第 9 張，疊成一個張量。第 296 行的註解要你確認拿到的是投影片上那 10 張（投影片第 6 頁用紅字寫 <em>Please make sure you got these 10 images in your code</em>）。整條路線畫成圖：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 330" role="img" aria-label="從 food 資料夾到張量的路線：os.listdir 取得檔名、用 my_key 排序、得到路徑與標籤兩個 list；FoodDataset 記住它們，getbatch 對每個 index 呼叫 __getitem__ 讀圖、Resize、ToTensor，最後疊成 (10,3,128,128) 的 images 與 (10,) 的 labels">
+  <defs>
+    <marker id="ar11" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#93a1af"/>
+    </marker>
+  </defs>
+  <text class="s-sm" x="20" y="24">get_paths_labels（dataset.py:49–59）：只處理檔名，不打開圖片</text>
+  <rect x="20" y="36" width="190" height="104" rx="10" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-lbl" x="115" y="62" text-anchor="middle" font-weight="700">food/</text>
+  <text class="s-sm" x="115" y="84" text-anchor="middle">10 個 .jpg</text>
+  <text class="s-mono" x="115" y="106" text-anchor="middle">&lt;類別&gt;_&lt;編號&gt;.jpg</text>
+  <rect x="240" y="36" width="190" height="104" rx="10" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="335" y="62" text-anchor="middle">os.listdir</text>
+  <text class="s-sm" x="335" y="84" text-anchor="middle">回傳 10 個檔名</text>
+  <text class="s-sm" x="335" y="104" text-anchor="middle">順序不保證</text>
+  <rect x="460" y="36" width="190" height="104" rx="10" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="555" y="62" text-anchor="middle">sort(key=my_key)</text>
+  <text class="s-sm" x="555" y="84" text-anchor="middle">當數字比：</text>
+  <text class="s-mono" x="555" y="104" text-anchor="middle">類別×1000000+編號</text>
+  <rect x="680" y="36" width="200" height="104" rx="10" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="780" y="62" text-anchor="middle">imgpaths</text>
+  <text class="s-sm" x="780" y="80" text-anchor="middle">./food/0_0.jpg …</text>
+  <text class="s-mono" x="780" y="104" text-anchor="middle">labels</text>
+  <text class="s-sm" x="780" y="122" text-anchor="middle">[0, 1, 1, 2, …, 9]</text>
+  <line x1="212" y1="88" x2="236" y2="88" stroke="#93a1af" stroke-width="2" marker-end="url(#ar11)"/>
+  <line x1="432" y1="88" x2="456" y2="88" stroke="#93a1af" stroke-width="2" marker-end="url(#ar11)"/>
+  <line x1="652" y1="88" x2="676" y2="88" stroke="#93a1af" stroke-width="2" marker-end="url(#ar11)"/>
+  <path d="M780,142 V160 H115 V178" fill="none" stroke="#93a1af" stroke-width="2" marker-end="url(#ar11)"/>
+
+  <text class="s-sm" x="20" y="174">FoodDataset（dataset.py:10–44）：真正讀圖</text>
+  <rect x="20" y="184" width="190" height="104" rx="10" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="115" y="210" text-anchor="middle">FoodDataset(…, 'eval')</text>
+  <text class="s-sm" x="115" y="232" text-anchor="middle">只記住路徑、標籤</text>
+  <text class="s-sm" x="115" y="252" text-anchor="middle">和要用的轉換</text>
+  <rect x="240" y="184" width="190" height="104" rx="10" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="335" y="210" text-anchor="middle">getbatch(range(10))</text>
+  <text class="s-sm" x="335" y="232" text-anchor="middle">對每個 index 呼叫</text>
+  <text class="s-mono" x="335" y="252" text-anchor="middle">__getitem__</text>
+  <rect x="460" y="184" width="190" height="104" rx="10" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="555" y="210" text-anchor="middle">Image.open</text>
+  <text class="s-mono" x="555" y="232" text-anchor="middle">Resize((128,128))</text>
+  <text class="s-mono" x="555" y="254" text-anchor="middle">ToTensor()</text>
+  <text class="s-sm" x="555" y="276" text-anchor="middle">每張 (3,128,128)，0–1</text>
+  <rect x="680" y="184" width="200" height="104" rx="10" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="780" y="210" text-anchor="middle">images</text>
+  <text class="s-mono" x="780" y="230" text-anchor="middle">(10,3,128,128)</text>
+  <text class="s-mono" x="780" y="256" text-anchor="middle">labels</text>
+  <text class="s-mono" x="780" y="276" text-anchor="middle">(10,) int64</text>
+  <line x1="212" y1="236" x2="236" y2="236" stroke="#93a1af" stroke-width="2" marker-end="url(#ar11)"/>
+  <line x1="432" y1="236" x2="456" y2="236" stroke="#93a1af" stroke-width="2" marker-end="url(#ar11)"/>
+  <line x1="652" y1="236" x2="676" y2="236" stroke="#93a1af" stroke-width="2" marker-end="url(#ar11)"/>
+  <text class="s-sm" x="20" y="314">上排決定「誰是圖 0、誰是圖 9」；下排決定「圖進模型時長什麼樣」。兩排都沒有用到模型。</text>
+</svg>
+<figcaption>圖 1.2 — 圖 0–9 的編號在上排就定了：它就是排序後的位置。下排才打開圖片，把每張圖變成 <code>(3, 128, 128)</code>、值在 0–1 的張量，再疊成一批。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#58a6ff"></i>輸入資料（還沒進模型）</span>
+</div>
+
+<h3 id="listdir">get_paths_labels：只看檔名</h3>
+<figure class="listing"><figcaption>dataset.py:47–59 — get_paths_labels：列出檔名、排序、從檔名取出類別</figcaption>
+<pre class="py" data-hot="51-53,58"><code># help to get data path and label
+# file name is "&lt;label&gt;_&lt;index&gt;.jpg"; sort by label, then by index
+def get_paths_labels(path):
+    def my_key(name):
+        return int(name.replace(".jpg", "").split("_")[1]) + 1000000 * int(name.split("_")[0])
+    imgnames = os.listdir(path)
+    imgnames.sort(key=my_key)
+    imgpaths = []
+    labels = []
+    for name in imgnames:
+        imgpaths.append(os.path.join(path, name))
+        labels.append(int(name.split('_')[0]))
+    return imgpaths, labels</code></pre></figure>
+<p>第 48 行的註解把命名規則說得很清楚：檔名是 <code>&lt;類別&gt;_&lt;編號&gt;.jpg</code>。<code>food/</code> 裡的 10 個檔名是 <code>0_0.jpg</code>、<code>1_1.jpg</code>、<code>1_2.jpg</code>、<code>2_3.jpg</code>、<code>2_4.jpg</code>、<code>3_5.jpg</code>、<code>5_6.jpg</code>、<code>6_7.jpg</code>、<code>8_8.jpg</code>、<code>9_9.jpg</code>（第 0 章 <a href="ch00.html#getdata">0.4 節</a>）。<strong>類別編號完全寫在檔名裡</strong>，第 58 行取底線前面那段轉成整數，就是標籤；沒有另外一份標籤檔。</p>
+<p>第 52 行的 <code>os.listdir(path)</code> 回傳資料夾裡所有檔名。關鍵在於：<strong>它不保證順序</strong>。Python 文件寫的是 <em>The list is in arbitrary order</em>，實際順序由檔案系統決定。在 <code>HW09/</code> 裡印出來看看，順便和普通的字串排序比較：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+import os
+print(os.listdir('food'))
+print(sorted(os.listdir('food')))
+"</code></pre>
+<p>本書的實測輸出（WSL2 上的 ext4 檔案系統）：</p>
+<pre class="shell"><code>['9_9.jpg', '1_1.jpg', '2_4.jpg', '8_8.jpg', '0_0.jpg', '2_3.jpg', '3_5.jpg', '1_2.jpg', '5_6.jpg', '6_7.jpg']  «1»
+['0_0.jpg', '1_1.jpg', '1_2.jpg', '2_3.jpg', '2_4.jpg', '3_5.jpg', '5_6.jpg', '6_7.jpg', '8_8.jpg', '9_9.jpg']  «2»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span><code>os.listdir</code> 的原始順序，看起來毫無規律。<strong>這一行只是本機的例子</strong>，換一台機器、換一種檔案系統，甚至同一個資料夾重新解壓一次，都可能得到不同的順序。你跑出來和這裡不同是正常的。</li>
+  <li><span class="mk">2</span>排序之後就固定了。這一行在任何機器上都一樣。</li>
+</ol>
+<p>如果不排序，「圖 0」是哪一張就看運氣：在本機會是味噌湯，在別的機器可能是牛排，題目裡的編號就全部對不上了。所以第 53 行一定要排序。</p>
+
+<h3 id="my-key">為什麼不用普通的字串排序</h3>
+<p>上面第二行顯示，這 10 個檔名用 <code>sorted</code> 的字串排序，結果和 <code>my_key</code> 排出來的完全一樣。那 <code>my_key</code> 有什麼用？原因是字串排序是<strong>逐字元</strong>比較的，類別一旦有兩位數就會排錯。這個模型的資料集（HW3 用的 food-11）有 11 個類別，編號 0 到 10，類別 10（Vegetable/Fruit）就是兩位數；只是這 10 張圖裡剛好沒有它。用三個假的檔名試試（不需要真的有這些檔案，這裡只排序字串）：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+names = ['1_2.jpg', '10_3.jpg', '2_1.jpg']
+print(sorted(names))
+key = lambda n: int(n.replace('.jpg','').split('_')[1]) + 1000000 * int(n.split('_')[0])
+print(sorted(names, key=key), [key(n) for n in sorted(names, key=key)])
+"</code></pre>
+<p>這裡的 <code>key</code> 和第 51 行的 <code>my_key</code> 算法相同，只是寫成一行的 lambda。實測輸出：</p>
+<pre class="shell"><code>['10_3.jpg', '1_2.jpg', '2_1.jpg']  «1»
+['1_2.jpg', '2_1.jpg', '10_3.jpg'] [1000002, 2000001, 10000003]  «2»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>字串排序把 <code>10_3.jpg</code> 排在最前面。比較 <code>10_3</code> 和 <code>1_2</code>：第一個字元都是 <code>1</code>；第二個字元一邊是 <code>0</code>、一邊是 <code>_</code>，而 <code>'0'</code> 的字元碼比 <code>'_'</code> 小，所以 <code>10_3</code> 先。類別 10 就被排到類別 1 前面了。</li>
+  <li><span class="mk">2</span><code>my_key</code> 把檔名換成一個整數：類別 × 1,000,000 + 編號。<code>1_2</code> → 1,000,002、<code>2_1</code> → 2,000,001、<code>10_3</code> → 10,000,003，當數字比就是「先比類別、類別相同再比編號」。</li>
+</ol>
+<p>這個技巧有個前提：編號必須小於 1,000,000，否則編號會「溢位」到類別那一段（例如類別 1、編號 1,000,000 會變成 2,000,000，和類別 2、編號 0 撞在一起）。HW3 的資料量遠小於這個數，所以沒問題。Python 裡更直接的寫法是讓 key 回傳一個 tuple，例如 <code>(int(類別), int(編號))</code>，tuple 會先比第一個元素、相同再比第二個，不必挑一個夠大的倍數。</p>
+
+<h3 id="labels">回傳值：路徑和標籤</h3>
+<p>排序完，第 56–58 行逐一處理檔名：<code>os.path.join(path, name)</code> 把資料夾和檔名接起來（<code>'./food/'</code> 加 <code>'0_0.jpg'</code> 得到 <code>'./food/0_0.jpg'</code>），底線前的類別轉成 int 放進 <code>labels</code>。<code>get_paths_labels('./food/')</code> 回傳的兩個 list 是：</p>
+<pre class="diagram">imgpaths = ['./food/0_0.jpg', './food/1_1.jpg', './food/1_2.jpg', './food/2_3.jpg', './food/2_4.jpg',
+            './food/3_5.jpg', './food/5_6.jpg', './food/6_7.jpg', './food/8_8.jpg', './food/9_9.jpg']
+labels   = [0, 1, 1, 2, 2, 3, 5, 6, 8, 9]</pre>
+<p>這就是 stdout 第二行的由來。<code>labels</code> 是 Python 的 int list，還不是張量；它要等到 <code>getbatch</code> 才變成張量。把它對回 11 類的順序（Bread、Dairy product、Dessert、Egg、Fried food、Meat、Noodles/Pasta、Rice、Seafood、Soup、Vegetable/Fruit，投影片第 4 頁），就能讀出這 10 張圖的類別（原始尺寸是本書另外讀取原圖量得的）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>檔名</th><th>類別編號</th><th>類別</th><th>圖的內容</th><th>原始尺寸（寬×高）</th></tr></thead>
+<tbody>
+<tr><td>0</td><td><code>0_0.jpg</code></td><td>0</td><td>Bread</td><td>披薩切片</td><td>512×512</td></tr>
+<tr><td>1</td><td><code>1_1.jpg</code></td><td>1</td><td>Dairy product</td><td>奶油塊</td><td>849×565</td></tr>
+<tr><td>2</td><td><code>1_2.jpg</code></td><td>1</td><td>Dairy product</td><td>牛奶壺加草莓</td><td>1294×1300</td></tr>
+<tr><td>3</td><td><code>2_3.jpg</code></td><td>2</td><td>Dessert</td><td>巧克力蛋糕</td><td>512×341</td></tr>
+<tr><td>4</td><td><code>2_4.jpg</code></td><td>2</td><td>Dessert</td><td>鬆餅</td><td>512×512</td></tr>
+<tr><td>5</td><td><code>3_5.jpg</code></td><td>3</td><td>Egg</td><td>荷包蛋吐司</td><td>512×512</td></tr>
+<tr><td>6</td><td><code>5_6.jpg</code></td><td>5</td><td>Meat</td><td>牛排</td><td>512×512</td></tr>
+<tr><td>7</td><td><code>6_7.jpg</code></td><td>6</td><td>Noodles/Pasta</td><td>炒麵加荷包蛋</td><td>512×512</td></tr>
+<tr><td>8</td><td><code>8_8.jpg</code></td><td>8</td><td>Seafood</td><td>生魚片</td><td>512×512</td></tr>
+<tr><td>9</td><td><code>9_9.jpg</code></td><td>9</td><td>Soup</td><td>味噌湯</td><td>512×384</td></tr>
+</tbody>
+</table></div>
+<p>從表上可以讀出幾件事：</p>
+<ul>
+  <li>披薩被歸在 <strong>Bread</strong>（類別 0）。這是 food-11 資料集的分類，不是模型猜錯；後面看解釋圖時，「模型認為這是麵包」指的就是這張披薩。</li>
+  <li>類別 4（Fried food）、7（Rice）、10（Vegetable/Fruit）<strong>沒有圖</strong>，所以 <code>labels</code> 裡沒有 4、7、10。Dairy product 和 Dessert 各有兩張。</li>
+  <li>檔名底線後面的編號剛好就是 0 到 9，和排序後的位置一致。所以「圖 3」就是 <code>2_3.jpg</code>，看檔名就能對上號。</li>
+  <li>投影片第 4 頁的類別清單寫成 <em>Diary product</em>、<em>Vegetables/Fruit</em>，是投影片的拼字；程式註解（<code>explain_cnn.py:297</code>）寫的是 Dairy product、Vegetable/Fruit，本書照程式。</li>
+</ul>
+
+<h2 id="dataset">1.4　讀圖：FoodDataset 與 getbatch</h2>
+<p>有了路徑和標籤，第 294 行建立 <code>FoodDataset</code>。這個類別繼承 PyTorch 的 <code>Dataset</code>；<code>Dataset</code> 是 PyTorch 表示「一組資料」的基本類別，子類別只要實作 <code>__len__</code>（有幾筆）和 <code>__getitem__</code>（取出第 i 筆），PyTorch 的其他工具就能用它。這一份另外加了一個 <code>getbatch</code>：</p>
+<figure class="listing"><figcaption>dataset.py:10–44 — FoodDataset：兩套轉換、逐張讀圖、一次取一批</figcaption>
+<pre class="py" data-hot="21-25,31,32,44"><code>class FoodDataset(Dataset):
+    def __init__(self, paths, labels, mode):
+        # mode: 'train' or 'eval'
+        self.paths = paths
+        self.labels = labels
+        trainTransform = transforms.Compose([
+            transforms.Resize(size=(128, 128)),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomRotation(15),
+            transforms.ToTensor(),
+        ])
+        evalTransform = transforms.Compose([
+            transforms.Resize(size=(128, 128)),
+            transforms.ToTensor(),
+        ])
+        self.transform = trainTransform if mode == 'train' else evalTransform
+
+    def __len__(self):
+        return len(self.paths)
+
+    def __getitem__(self, index):
+        X = Image.open(self.paths[index])
+        X = self.transform(X)
+        Y = self.labels[index]
+        return X, Y
+
+    # help to get images for visualizing
+    def getbatch(self, indices):
+        images = []
+        labels = []
+        for index in indices:
+            image, label = self.__getitem__(index)
+            images.append(image)
+            labels.append(label)
+        return torch.stack(images), torch.tensor(labels)</code></pre></figure>
+<p><code>__init__</code> 不讀任何圖片，只記下路徑、標籤，並決定之後要用哪一套轉換（transform）。<code>transforms.Compose([...])</code> 把幾個轉換串成一個，依序套用。兩套轉換：</p>
+<ul>
+  <li><strong>trainTransform</strong>（第 15–20 行）：縮放後再隨機左右翻轉、隨機旋轉 ±15 度。這是 HW3 訓練時的資料增強（data augmentation）：每次讀到同一張圖都稍微不一樣，讓模型不要死記圖片。</li>
+  <li><strong>evalTransform</strong>（第 21–24 行）：只縮放、轉張量，沒有任何隨機成分。</li>
+</ul>
+<p>第 25 行依 <code>mode</code> 選一套。<code>explain_cnn.py:294</code> 傳的是 <code>mode='eval'</code>，整個 HW09 也只在這裡建過 <code>FoodDataset</code>，所以 trainTransform 在本作業<strong>從來沒用到</strong>，它是從 HW3 沿用過來的。這很重要：如果用了隨機翻轉、旋轉，每次執行拿到的圖都不一樣，解釋圖也就無法重現。</p>
+<p>真正讀圖發生在 <code>__getitem__</code>（第 30–34 行）：用 PIL（Python 最常用的圖片處理套件，現在的套件名稱是 Pillow）的 <code>Image.open</code> 打開第 <code>index</code> 張圖，套上轉換，連同標籤一起回傳。<code>getbatch</code>（第 37–44 行）則是對每個 index 呼叫一次 <code>__getitem__</code>，最後用 <code>torch.stack</code> 把 10 個 <code>(3, 128, 128)</code> 的張量沿著新的第 0 維疊成 <code>(10, 3, 128, 128)</code>，用 <code>torch.tensor</code> 把 int list 變成張量。第 36 行的註解說明了它的用途：拿圖來視覺化。訓練時一般用 PyTorch 的 <code>DataLoader</code> 自動分批；這裡只有固定的 10 張，手動取一批就夠了。</p>
+
+<h3 id="transform">Resize 與 ToTensor 做了什麼</h3>
+<p>第 0 章圖 0.1 的輸入方框寫著「縮放成 128×128、像素值 0–1」，就是這兩個轉換：</p>
+<ul>
+  <li><strong><code>transforms.Resize(size=(128, 128))</code></strong>：把圖縮放到 128×128。注意 <code>size</code> 給的是 <strong>(高, 寬)</strong> 兩個數，這時 Resize 會把圖直接拉成這個尺寸，<strong>不保持長寬比</strong>。（如果只給一個數，例如 <code>Resize(128)</code>，才會保持長寬比，把短邊縮到 128。）</li>
+  <li><strong><code>transforms.ToTensor()</code></strong>：PIL 圖片是 0–255 的整數（uint8），維度排成 高 × 寬 × 通道；ToTensor 把它轉成 0.0–1.0 的 float32，並把維度換成 通道 × 高 × 寬，也就是 PyTorch 要的 <code>(C, H, W)</code>。</li>
+</ul>
+<p>10 張圖裡有 4 張不是正方形，Resize 對它們的水平、垂直縮放比例不同：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>檔名</th><th>原尺寸 寬×高</th><th>寬高比</th><th>水平縮放</th><th>垂直縮放</th></tr></thead>
+<tbody>
+<tr><td>3</td><td><code>2_3.jpg</code></td><td>512×341</td><td>1.501</td><td>0.250</td><td>0.375</td></tr>
+<tr><td>1</td><td><code>1_1.jpg</code></td><td>849×565</td><td>1.503</td><td>0.151</td><td>0.227</td></tr>
+<tr><td>2</td><td><code>1_2.jpg</code></td><td>1294×1300</td><td>0.995</td><td>0.099</td><td>0.098</td></tr>
+<tr><td>9</td><td><code>9_9.jpg</code></td><td>512×384</td><td>1.333</td><td>0.250</td><td>0.333</td></tr>
+</tbody>
+</table></div>
+<p>水平縮放是 128 ÷ 原寬，垂直縮放是 128 ÷ 原高。圖 1 和圖 3 原本是寬圖（寬高比約 1.5），水平方向縮得比較多，垂直方向縮得比較少，兩者差 1.5 倍；結果是寬度被擠進 128 格，<strong>圖裡的東西看起來比原圖窄、比較高</strong>。圖 9 差 1.33 倍；圖 2 幾乎是正方形，影響可以忽略。其餘 6 張是 512×512，只是等比縮小到四分之一。模型在 HW3 訓練時也是這樣縮放的，所以這種變形對它來說是「正常的輸入」；只是你在後面的解釋圖上看到的，都是這個變形後的版本。</p>
+<p>還有一個小細節：第 31 行 <code>Image.open</code> 之後沒有 <code>.convert('RGB')</code>。這 10 張圖都是 RGB，所以沒事；但如果放進一張灰階圖或帶透明通道的 PNG，ToTensor 會給出 1 個或 4 個通道，模型第一層 <code>Conv2d(3, 128, …)</code> 就吃不下了。</p>
+
+<h3 id="getbatch-run">實際取一批看看</h3>
+<p>下面的指令重現 <code>explain_cnn.py:293–299</code>，再多取一張單獨的圖，看看兩種取法的差別。它不需要 GPU，也不需要 <code>checkpoint.pth</code>，只要 <code>food/</code>：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+from dataset import FoodDataset, get_paths_labels
+paths, labels = get_paths_labels('./food/')
+train_set = FoodDataset(paths, labels, mode='eval')
+images, labels = train_set.getbatch(range(10))
+print(images.shape, images.dtype, labels.shape, labels.dtype)
+print(images.min().item(), images.max().item())
+x, y = train_set[3]
+print(x.shape, y, type(y).__name__)
+"</code></pre>
+<p>實測輸出：</p>
+<pre class="shell"><code>torch.Size([10, 3, 128, 128]) torch.float32 torch.Size([10]) torch.int64  «1»
+0.0 1.0  «2»
+torch.Size([3, 128, 128]) 2 int  «3»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span><code>images</code> 是 10 張疊成的 <code>(10, 3, 128, 128)</code> float32 張量，就是第 0 章 <code>(N, C, H, W)</code> 記法裡 N = 10 的情形；<code>labels</code> 是長度 10 的 int64 張量（<code>torch.tensor</code> 遇到 Python int 預設用 int64）。</li>
+  <li><span class="mk">2</span>整批的最小值 0.0、最大值 1.0，正是 ToTensor 的值域。「像素值大約落在 0–1」這件事第 3 章還會用到：SmoothGrad 依每張圖的最大值減最小值決定雜訊大小。</li>
+  <li><span class="mk">3</span><code>train_set[3]</code> 這種中括號寫法，Python 會轉成呼叫 <code>__getitem__(3)</code>。單張圖沒有批次維度，形狀是 <code>(3, 128, 128)</code>；標籤 2（圖 3 是 Dessert）是 Python 的 <code>int</code>，還沒變成張量。</li>
+</ol>
+<p><code>explain_cnn.py</code> 的五種方法拿到的 <code>images</code>、<code>labels</code> 就是第 1 行的這兩個張量。注意 <code>images</code> 此時還在 CPU 上，各方法要用時才自己 <code>.cuda()</code>。</p>
+
+<h2 id="helpers">1.5　檔案開頭的常數與兩個小工具</h2>
+<p>主程式的第三段把 10 張原圖畫成一張總覽圖。在看它之前，先看它用到的工具。<code>explain_cnn.py</code> 開頭（import 之後）有三個常數和兩個函式，全檔都會用到：</p>
+<figure class="listing"><figcaption>explain_cnn.py:19–32 — 路徑常數、normalize、save_fig</figcaption>
+<pre class="py" data-hot="25,30-32"><code>ckptpath = './checkpoint.pth'
+dataset_dir = './food/'
+output_dir = './output/'
+
+
+def normalize(image):
+    return (image - image.min()) / (image.max() - image.min())
+
+
+def save_fig(fig, name):
+    path = os.path.join(output_dir, name)
+    fig.savefig(path, bbox_inches='tight')
+    plt.close(fig)
+    print(f'saved {path}')</code></pre></figure>
+<p>第 19–21 行的三個路徑都以 <code>./</code> 開頭，相對於「目前所在的資料夾」，所以腳本要在 <code>HW09/</code> 裡執行，第 0 章 <a href="ch00.html#run">0.5 節</a>講過，這裡不重複。</p>
+<p><strong><code>normalize</code></strong>（第 24–25 行）把任何數值線性拉到 0–1：減掉最小值，再除以最大值與最小值的差，於是最小的變 0、最大的變 1，中間的按比例排。它只用到 <code>.min()</code>、<code>.max()</code> 和四則運算，所以 NumPy 陣列和 PyTorch 張量都能用。它是對<strong>傳進來的整個陣列</strong>取最大最小值，所以呼叫的人決定「誰跟誰一起正規化」：第 3 章的 Saliency map 是一張圖一張圖分開呼叫（<code>explain_cnn.py:95</code>），那個選擇為什麼重要，到時再談。這個函式有一個邊界情況：如果整個陣列都是同一個值，分母是 0，會得到 NaN（not a number）；本作業的資料沒有遇到。</p>
+<p>為什麼需要它？因為 matplotlib 的 <code>imshow</code> 畫彩色圖時，浮點數要落在 0–1 之間，超出的會被截斷。原圖本來就在 0–1，但後面幾章要畫的東西不是：梯度可能小到接近 0，Filter explanation 優化出來的圖會跑出 0–1 之外。全部先 <code>normalize</code> 再畫，才看得出相對的高低。<code>normalize</code> 在後面被呼叫了 5 次（第 95、139、216、219、280 行），分屬第 3、4、5 章。</p>
+<p><strong><code>save_fig</code></strong>（第 28–32 行）是 Colab 版沒有的函式。notebook 用 <code>plt.show()</code> 把圖畫在儲存格底下；腳本沒有地方顯示，所以改成存檔（目錄頁〈第一層〉）。它做四件事：把檔名接到 <code>output_dir</code> 後面；<code>savefig</code> 存檔，<code>bbox_inches='tight'</code> 會裁掉圖周圍多餘的白邊；<code>plt.close(fig)</code> 關掉這張圖、釋放記憶體（不關的話 matplotlib 會一直留著，畫多了會警告）；最後印一行 <code>saved …</code>。全檔呼叫 <code>save_fig</code> 的地方有 6 處（第 72、110、154、220、281、305 行），其中第 220 行在 <code>filter_explain</code> 裡，被主程式呼叫兩次，所以 stdout 正好 7 行 <code>saved</code>。</p>
+
+<h3 id="images-png">第一張輸出：images.png</h3>
+<figure class="listing"><figcaption>explain_cnn.py:302–305 — 把 10 張原圖排成一列存檔</figcaption>
+<pre class="py" data-hot="304"><code>    fig, axs = plt.subplots(1, len(img_indices), figsize=(15, 8))
+    for i, img in enumerate(images):
+        axs[i].imshow(img.cpu().permute(1, 2, 0))
+    save_fig(fig, 'images.png')</code></pre></figure>
+<p><code>plt.subplots(1, 10, figsize=(15, 8))</code> 開一張 1 列 10 欄的畫布，寬 15 吋、高 8 吋，<code>axs[i]</code> 是第 i 格。第 304 行的 <code>permute(1, 2, 0)</code> 把 <code>(C, H, W)</code> 換回 <code>(H, W, C)</code>：PyTorch 習慣通道在前，matplotlib 的 <code>imshow</code> 卻要通道在後，這一步剛好是 ToTensor 換維度的反方向。<code>.cpu()</code> 在這裡沒有作用（<code>images</code> 本來就在 CPU），寫上去是保險。</p>
+<figure class="fig">
+<img src="img/images.png" alt="10 張縮放成 128×128 的食物圖片排成一列，每格都有 0 到 100 的座標刻度，由左到右是圖 0 到圖 9">
+<figcaption>圖 1.3 — <code>images.png</code>：模型實際看到的 10 張圖。每張都已經被 Resize 成 128×128，所以圖 1、3、9 是變形後的樣子；每格周圍的 0–100 刻度是 matplotlib 預設的座標軸（像素座標），原版 notebook 也有。</figcaption>
+</figure>
+<p>和投影片第 6 頁並排對照，順序、內容一致，就完成了投影片要你確認的那件事。投影片同一頁還寫了一句 <em>We encourage you to observe other images!</em>，但本 repo 的 <code>food/</code> 只有這 10 張（資料來源見第 0 章 <a href="ch00.html#getdata">0.4 節</a>），想觀察別的圖，得自己準備 food-11 的圖片，並照 <code>&lt;類別&gt;_&lt;編號&gt;.jpg</code> 命名。</p>
+
+<h2 id="predict">1.6　模型的預測：10 張全對，而且太有把握</h2>
+<p>到這裡，模型和資料都準備好了。<code>explain_cnn.py</code> 本身<strong>從來不印模型的預測</strong>，它直接進入 LIME。但「模型對這 10 張圖怎麼想」是讀懂後面每一張解釋圖的前提，所以本書另外量了一次。下面的指令把模型搬上 GPU（<code>.cuda()</code>），<strong>需要 NVIDIA 顯示卡</strong>，也需要 <code>checkpoint.pth</code> 與 <code>food/</code>：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+import torch
+from model import Classifier
+from dataset import FoodDataset, get_paths_labels
+model = Classifier().cuda()
+model.load_state_dict(torch.load('checkpoint.pth')['model_state_dict'])
+model.eval()
+paths, labels = get_paths_labels('./food/')
+images, labels = FoodDataset(paths, labels, mode='eval').getbatch(range(10))
+with torch.no_grad():
+    logits = model(images.cuda()).cpu()
+prob = logits.softmax(dim=1)
+for i in range(10):
+    y = labels[i].item()
+    print(i, y, logits[i].argmax().item(), '%.3f' % logits[i, y].item(), '%.4f' % prob[i, y].item())
+"</code></pre>
+<p>前半段和 <code>explain_cnn.py</code> 的載入流程一樣，多了兩樣東西：<code>model.eval()</code>（第 0 章 <a href="ch00.html#layers">0.2 節</a>：BN 改用長期平均、Dropout 關掉）與 <code>torch.no_grad()</code>（這段只算輸出、不需要梯度，PyTorch 就不必記錄計算過程）。10 張圖<strong>一起</strong>送進模型，得到 <code>(10, 11)</code> 的 logits；<code>softmax(dim=1)</code> 對每一列（每張圖的 11 個分數）各做一次 softmax，變成機率。logits 與 softmax 的定義在第 0 章 <a href="ch00.html#shapes">0.2 節圖 0.1 之後</a>。迴圈對每張圖印五個欄位：圖編號、標籤、預測（11 個 logits 裡最大的那一個的位置）、標籤那一類的 logit（小數 3 位）、標籤那一類的機率（小數 4 位）。實測輸出：</p>
+<pre class="shell"><code>0 0 0 10.333 1.0000  «1»
+1 1 1 19.785 1.0000
+2 1 1 7.808 0.9986  «2»
+3 2 2 9.011 1.0000
+4 2 2 12.215 1.0000
+5 3 3 12.385 1.0000
+6 5 5 22.956 1.0000  «3»
+7 6 6 11.447 1.0000
+8 8 8 13.015 1.0000
+9 9 9 14.118 1.0000</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>第 2、3 欄相同：預測等於標籤。往下看，10 行全部相同，<strong>10 張全對</strong>。</li>
+  <li><span class="mk">2</span>圖 2（牛奶壺加草莓）是唯一一張機率顯示不到 1.0000 的：0.9986。它的標籤 logit 7.808 也是 10 張裡最低的。</li>
+  <li><span class="mk">3</span>圖 6（牛排）的標籤 logit 最高，22.956。其他 8 張的機率四捨五入到小數 4 位都是 1.0000。</li>
+</ol>
+
+<h3 id="confidence">「1.0000」到底有多接近 1</h3>
+<p>小數 4 位的 1.0000 只告訴你「至少 0.99995」。要看清楚模型有多把握，換兩個角度：<strong>1 − p(標籤)</strong>（模型分給「其他 10 類」的機率總和），以及<strong>第一名與第二名的 logit 差</strong>。下表是同一次計算（10 張一起算）的結果；後三欄是本書從同一份 logits 另外算出的，上面的指令只印了前面幾欄：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>類別</th><th>標籤的 logit</th><th>p(標籤)</th><th>1 − p(標籤)</th><th>第 2 名</th><th>第 1、2 名 logit 差</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>Bread</td><td>10.333</td><td>1.0000</td><td>2.50e-06</td><td>Fried food</td><td>13.662</td></tr>
+<tr><td>1</td><td>Dairy product</td><td>19.785</td><td>1.0000</td><td>0</td><td>Dessert</td><td>24.314</td></tr>
+<tr><td>2</td><td>Dairy product</td><td>7.808</td><td>0.9986</td><td>1.38e-03</td><td>Dessert（0.0007）</td><td><b>7.262</b>（最小）</td></tr>
+<tr><td>3</td><td>Dessert</td><td>9.011</td><td>1.0000</td><td>2.38e-07</td><td>Seafood</td><td>15.473</td></tr>
+<tr><td>4</td><td>Dessert</td><td>12.215</td><td>1.0000</td><td>1.19e-07</td><td>Noodles/Pasta</td><td>16.519</td></tr>
+<tr><td>5</td><td>Egg</td><td>12.385</td><td>1.0000</td><td>3.58e-07</td><td>Meat</td><td>14.791</td></tr>
+<tr><td>6</td><td>Meat</td><td>22.956</td><td>1.0000</td><td>0</td><td>Fried food</td><td><b>37.930</b>（最大）</td></tr>
+<tr><td>7</td><td>Noodles/Pasta</td><td>11.447</td><td>1.0000</td><td>6.08e-06</td><td>Meat</td><td>12.831</td></tr>
+<tr><td>8</td><td>Seafood</td><td>13.015</td><td>1.0000</td><td>0</td><td>Vegetable/Fruit</td><td>19.700</td></tr>
+<tr><td>9</td><td>Soup</td><td>14.118</td><td>1.0000</td><td>1.19e-07</td><td>Dessert</td><td>15.687</td></tr>
+</tbody>
+</table></div>
+<p>第 2 名的機率除了圖 2 是 0.0007，其他圖四捨五入到小數 4 位都是 0.0000。圖 1、6、8 的 1 − p 是 0：它們的機率在 float32 裡<strong>剛好等於 1</strong>。float32 只有大約 7 位有效數字，緊鄰 1 的下一個比較小的數是 1 − 2<sup>−24</sup> ≈ 1 − 6 × 10<sup>−8</sup>；真正的 1 − p 比這個間距還小時，就只能存成 1。表裡的 1.19e-07 是 2 × 2<sup>−24</sup>，也就是只差兩格。</p>
+<p>為什麼 logit 差一點點，機率就差這麼多？softmax 的分子是 e<sup>z</sup>，所以兩個類別的機率比是 e 的「logit 差」次方。第二名分到的機率，大約是第一名的 e<sup>−差</sup> 倍。用表上的數字手算：</p>
+<div class="eq">圖 2：e<sup>−7.262</sup> ≈ 0.0007，和表上第 2 名 Dessert 的 0.0007 一致<br>圖 6：e<sup>−37.930</sup> ≈ 3 × 10<sup>−17</sup>，遠小於 float32 在 1 附近的間距 6 × 10<sup>−8</sup>，所以 p 存成剛好 1</div>
+<p>圖 2 的 1 − p 是 1.38e-03，大約是第 2 名 0.0007 的兩倍：剩下的一半由其他 9 個類別分掉，其中第 3 名 Vegetable/Fruit 就有約 0.0007。即使是最沒把握的圖 2，第一名也領先第二名 7 個以上的 logit；而 logit 差 7 就代表機率差上千倍（e<sup>7</sup> ≈ 1,100）。畫成長條圖：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 400" role="img" aria-label="10 張圖第一名與第二名的 logit 差長條圖：最小是圖 2 的 7.262，最大是圖 6 的 37.930，其餘在 12.8 到 24.3 之間；虛線標出 logit 差 7 的位置">
+  <text class="s-lbl" x="20" y="28" font-weight="700">第 1 名與第 2 名的 logit 差</text>
+  <line x1="305" y1="40" x2="305" y2="330" stroke="#93a1af" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text class="s-sm" x="309" y="52">差 7：機率比 e⁷ ≈ 1,100 倍</text>
+  <text class="s-sm" x="190" y="78" text-anchor="end">圖 0 Bread</text>
+  <rect x="200" y="64" width="204.9" height="18" style="fill:#3fb950;fill-opacity:0.7"/>
+  <text class="s-mono" x="411" y="78">13.662</text>
+  <text class="s-sm" x="190" y="106" text-anchor="end">圖 1 Dairy product</text>
+  <rect x="200" y="92" width="364.7" height="18" style="fill:#3fb950;fill-opacity:0.7"/>
+  <text class="s-mono" x="571" y="106">24.314</text>
+  <text class="s-sm" x="190" y="134" text-anchor="end">圖 2 Dairy product</text>
+  <rect x="200" y="120" width="108.9" height="18" style="fill:#e3b341;fill-opacity:0.85"/>
+  <text class="s-mono" x="315" y="134">7.262（p = 0.9986）</text>
+  <text class="s-sm" x="190" y="162" text-anchor="end">圖 3 Dessert</text>
+  <rect x="200" y="148" width="232.1" height="18" style="fill:#3fb950;fill-opacity:0.7"/>
+  <text class="s-mono" x="438" y="162">15.473</text>
+  <text class="s-sm" x="190" y="190" text-anchor="end">圖 4 Dessert</text>
+  <rect x="200" y="176" width="247.8" height="18" style="fill:#3fb950;fill-opacity:0.7"/>
+  <text class="s-mono" x="454" y="190">16.519</text>
+  <text class="s-sm" x="190" y="218" text-anchor="end">圖 5 Egg</text>
+  <rect x="200" y="204" width="221.9" height="18" style="fill:#3fb950;fill-opacity:0.7"/>
+  <text class="s-mono" x="428" y="218">14.791</text>
+  <text class="s-sm" x="190" y="246" text-anchor="end">圖 6 Meat</text>
+  <rect x="200" y="232" width="569.0" height="18" style="fill:#3fb950;fill-opacity:0.7"/>
+  <text class="s-mono" x="775" y="246">37.930</text>
+  <text class="s-sm" x="190" y="274" text-anchor="end">圖 7 Noodles/Pasta</text>
+  <rect x="200" y="260" width="192.5" height="18" style="fill:#3fb950;fill-opacity:0.7"/>
+  <text class="s-mono" x="399" y="274">12.831</text>
+  <text class="s-sm" x="190" y="302" text-anchor="end">圖 8 Seafood</text>
+  <rect x="200" y="288" width="295.5" height="18" style="fill:#3fb950;fill-opacity:0.7"/>
+  <text class="s-mono" x="502" y="302">19.700</text>
+  <text class="s-sm" x="190" y="330" text-anchor="end">圖 9 Soup</text>
+  <rect x="200" y="316" width="235.3" height="18" style="fill:#3fb950;fill-opacity:0.7"/>
+  <text class="s-mono" x="442" y="330">15.687</text>
+  <line x1="200" y1="56" x2="200" y2="340" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="200" y="358" text-anchor="middle">0</text>
+  <text class="s-mono" x="350" y="358" text-anchor="middle">10</text>
+  <text class="s-mono" x="500" y="358" text-anchor="middle">20</text>
+  <text class="s-mono" x="650" y="358" text-anchor="middle">30</text>
+  <text class="s-mono" x="800" y="358" text-anchor="middle">40</text>
+  <text class="s-sm" x="20" y="388">10 張一起算（批次）的結果。除了圖 2，其餘 9 張的 softmax 機率四捨五入到小數 4 位都是 1.0000。</text>
+</svg>
+<figcaption>圖 1.4 — 每一張圖，第一名都遠遠領先第二名。最接近的圖 2 也差 7 以上；圖 6 差到 37.9，第二名的機率小到 float32 存不下。</figcaption>
+</figure>
+
+<h3 id="batch-effect">同一張圖，logit 的小數第 3 位會變</h3>
+<p>本書引用 logit 時都會註明「10 張一起算」，原因是：<strong>同一張圖，跟誰一起算，logit 的小數第 3 位會不一樣</strong>。實測圖 0 的標籤 logit，10 張一起算是 10.3332，單獨一張算是 10.3312。完整數值是 10.333248 與 10.331242，差 0.0020；把 11 個 logit 都比一遍，差最多的一個是 0.0083，10 張圖各自單獨算，每張的 11 個 logit 最多差 0.0076 到 0.0505。這不是 bug：GPU 會依批次大小選用不同的卷積演算法，浮點數的加總順序不同，尾數就不同（浮點數加法有捨入誤差，(a + b) + c 不一定等於 a + (b + c)）。同一個批次重算兩次則逐位元相同。第 5 章 Integrated Gradients 的表裡也會出現這幾個 logit，那邊是一張一張算的，所以和本節的數字在小數第 2–3 位對不上（例如圖 3：本節 9.011，第 5 章 9.024），兩邊都是對的。</p>
+
+<div class="warn"><h4>這 10 張圖是訓練集的圖嗎？只能推測</h4>
+<p>一個在 HW3 訓練出來的模型，對 10 張圖全對、而且幾乎都是 100% 確定，很容易讓人懷疑這些圖本來就在它的訓練集裡，被它「背」過。間接的線索有兩個：程式把 dataset 變數取名為 <code>train_set</code>、<code>train_paths</code>（<code>explain_cnn.py:293–294</code>，原版 Colab 也叫 <code>train_set</code>）；以及模型極度自信。但是<strong>沒有直接證據</strong>：變數名稱可能只是沿用 HW3 的寫法，repo 裡也沒有 HW3 的訓練集清單可以比對。本書把它當作推測，不當作事實。不論圖從哪來，「模型對這 10 張圖極度自信」都是實測確認的，後面各章依賴的是這一點。</p>
+</div>
+
+<h2 id="mode">1.7　eval 與 train：forward 也會改到模型</h2>
+<p>上一節的指令有一行 <code>model.eval()</code>。第 0 章說過它的基本作用：BN 改用長期平均、Dropout 關掉。這裡補一個第 0 章沒提到的細節：<strong>在 train 模式下做 forward，會改寫模型本身。</strong></p>
+<p>原因在 BN。train 模式的 BN 用「這一批」的平均與變異數做正規化，同時把這一批的統計量混進長期平均（running_mean、running_var），讓長期平均跟著訓練資料更新。這個更新在 forward 裡就發生了，不需要 backward，也不需要優化器；包在 <code>torch.no_grad()</code> 裡照樣會更新，因為 no_grad 只管梯度、不管 buffer。實測把上一節的指令改成 <code>model.train()</code>，對同樣 10 張圖做 forward：</p>
+<ul>
+  <li>預測（argmax）仍然 10 張全對；</li>
+  <li>但 logit 和 eval 模式相比最多差了 18.9（Dropout 隨機丟掉了數值，BN 改用這 10 張圖的統計量）；</li>
+  <li>而且 BN 的 running_mean、running_var 被這 10 張圖更新了。之後再切回 eval，用的已經是被改過的長期平均，輸出也跟著變了，回不到原本的結果。</li>
+</ul>
+<p>換句話說，在 train 模式下 forward 一次，就把從 <code>checkpoint.pth</code> 載入的 buffer 弄髒了，要重新 <code>load_state_dict</code> 才能還原。這件事沒有附上可以照貼的指令，是本書另外量的。</p>
+<p>回頭看 <code>explain_cnn.py</code>：<code>nn.Module</code> 剛建好時預設是 train 模式，而主程式在 <code>explain_cnn.py:288–290</code> 建模型、載入權重之後<strong>沒有</strong>呼叫 <code>model.eval()</code>。它沒出事，是因為主程式在載入之後沒有做任何 forward，而每一個解釋方法都在開頭自己呼叫 <code>model.eval()</code>：LIME 的 <code>predict</code> 裡（第 42 行）、Saliency map（第 80 行）、SmoothGrad（第 121 行）、Filter explanation（第 169 行）、Integrated Gradients（第 230 行）。<strong>這是寫解釋程式的基本規矩：先 <code>model.eval()</code>，再做任何 forward。</strong>如果你自己加了一段 forward（例如想印出預測），要記得放在 <code>model.eval()</code> 之後。</p>
+
+<h2 id="ahead">1.8　這個「太有把握」會跟著你走完 Part 1</h2>
+<p>回到目錄頁那句話：10 張全對而且幾乎都是 100% 確定，後面每一章都會用到這個事實。本節只預告它出現在哪裡，細節留給各章。</p>
+<ul>
+  <li><strong>第 3 章 Saliency map：梯度小到幾乎是 0。</strong>Saliency map 對 loss 取梯度，而 cross-entropy loss 對 logits 的梯度是「softmax 機率減掉 one-hot 標籤」。p(標籤) 已經是 1.0000、其他類別都是 0.0000，這個差幾乎每一項都是 0，傳回輸入的梯度也就極小。1.6 節的表裡 1 − p 從 0 到 10<sup>−3</sup> 不等，差了好幾個數量級，第 3 章會看到這個差距怎麼反映在熱圖上，以及最沒把握的圖 2 為什麼是例外。</li>
+  <li><strong>第 2 章 LIME：程式餵給 LIME 的是 logits。</strong>LIME 會把圖的一部分遮掉，看模型的輸出怎麼變。如果看的是機率，大部分的圖已經頂在 1.0000，遮掉一小塊幾乎看不出變化；logits 則還有好幾個單位的起伏空間（標籤 logit 7.8 到 23.0、領先幅度 7.3 到 37.9）。<code>explain_cnn.py</code> 的 <code>predict</code>（第 45–46 行）直接回傳 <code>model(...)</code> 的輸出，沒有做 softmax。這對 LIME 的結果有什麼影響，第 2 章拿圖 0 實際比較兩種版本。</li>
+  <li>第 5 章 Integrated Gradients 也是對目標類別的 <strong>logit</strong> 取梯度，所以那一章會再用到本章的 logit 數字（以及 1.6 節「小數第 3 位會變」的提醒）。</li>
+</ul>
+<p>下一章從 LIME 開始：<code>explain_cnn.py:39–74</code>，Q1–4。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li><code>checkpoint.pth</code> 是一個 dict，三個 key：<code>epoch</code>（208）、<code>model_state_dict</code>（81 個 entry）、<code>optimizer_state_dict</code>（Adam，48 個參數各自的狀態）。</li>
+  <li>81 = 11 個 Conv × 2 + 11 個 BN × 5 + 2 個 Linear × 2。170 MB 裡模型只佔 56.7 MB，<strong>三分之二是 Adam 的兩份動量</strong>，推論用不到。</li>
+  <li>類別寫在檔名 <code>&lt;類別&gt;_&lt;編號&gt;.jpg</code> 裡。<code>os.listdir</code> 不保證順序，所以要排序；<code>my_key</code> 用「類別 × 1,000,000 + 編號」當數字比，避免字串排序在類別 10 時排錯。排序後的位置就是圖 0–9。</li>
+  <li><code>FoodDataset(mode='eval')</code> 只做 Resize(128, 128) 與 ToTensor：不保持長寬比（圖 1、3、9 被橫向擠窄）、值域 0–1、形狀 <code>(3, 128, 128)</code>；<code>getbatch</code> 疊成 <code>(10, 3, 128, 128)</code>。</li>
+  <li><code>normalize</code> 把整個陣列線性拉到 0–1；<code>save_fig</code> 存圖、關圖、印一行 <code>saved …</code>。</li>
+  <li>模型對 10 張圖全對；p(標籤) 除了圖 2（0.9986）都是 1.0000，第 1、2 名的 logit 差 7.3 到 37.9。這會讓第 3 章的梯度極小，也讓第 2 章「餵 logits 還是機率」變得重要。</li>
+  <li>train 模式的 forward 會改寫 BN 的 buffer；解釋模型前一定要先 <code>model.eval()</code>。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 如果在 <code>food/</code> 裡多放一張 <code>10_10.jpg</code>（Vegetable/Fruit），用 <code>my_key</code> 排序後它會是第幾張？如果把第 53 行改成普通的 <code>imgnames.sort()</code> 呢？</summary>
+<p>用 <code>my_key</code>：它的 key 是 10 × 1,000,000 + 10 = 10,000,010，比其他 10 張都大，排在最後，成為圖 10；圖 0–9 不受影響，<code>labels</code> 變成 <code>[0, 1, 1, 2, 2, 3, 5, 6, 8, 9, 10]</code>。用字串排序：<code>10_10.jpg</code> 和 <code>1_1.jpg</code> 比到第二個字元時，<code>'0'</code> 比 <code>'_'</code> 小，所以它會排在 <code>0_0.jpg</code> 之後、<code>1_1.jpg</code> 之前，變成圖 1，原本的圖 1–9 全部往後挪一號，題目的編號就全錯了。（實測：在 <code>food/</code> 的複本裡多放一張 <code>10_10.jpg</code>，<code>my_key</code> 版把它排在第 10 個、<code>labels</code> 是 <code>[0, 1, 1, 2, 2, 3, 5, 6, 8, 9, 10]</code>；改成 <code>imgnames.sort()</code> 之後它排在第 1 個，<code>labels</code> 變成 <code>[0, 10, 1, 1, 2, 2, 3, 5, 6, 8, 9]</code>。）</p></details>
+<details class="quiz"><summary>2. 如果把 checkpoint 改存成只有 <code>model.state_dict()</code>，檔案大約多大？<code>explain_cnn.py</code> 要改哪一行才讀得進去？</summary>
+<p>大約 56.7 MB（model_state_dict 的 56,671,876 bytes，再加上一點存檔格式的開銷），約原本的三分之一（由 1.2 節的表推得）。第 290 行 <code>checkpoint['model_state_dict']</code> 要改成直接用 <code>checkpoint</code>，因為讀回來的已經是 state_dict 本身，不再是外面包一層的 dict。</p></details>
+<details class="quiz"><summary>3. 圖 2 的 p(標籤) 是 0.9986，第 2 名 Dessert 是 0.0007。為什麼 1 − p 是 1.38e-03，而不是 0.0007？</summary>
+<p>1 − p(標籤) 是「其他 10 個類別的機率總和」，不只第 2 名。第 2 名分到約 0.0007（e<sup>−7.262</sup> ≈ 0.0007），其餘 9 個類別合起來又分到差不多一樣多，加起來約 0.0014。</p></details>
+<details class="quiz"><summary>4. 你在自己的機器上把圖 0 單獨送進模型，得到標籤 logit 10.331，書上卻寫 10.333。哪裡出錯了？</summary>
+<p>沒有出錯。本章的 10.333 是 10 張一起算的結果；單獨一張算時，GPU 會用不同的卷積演算法，浮點數加總順序不同，小數第 3 位就會變（實測 10.3332 對 10.3312）。比較 logit 時要用同樣的批次組成。</p></details>
+<details class="quiz"><summary>5. 有人把 1.6 節指令裡的 <code>model.eval()</code> 刪掉，反正預測還是 10 張全對。這樣有什麼問題？</summary>
+<p>預測雖然仍然全對，但 logit 和 eval 模式最多差 18.9：Dropout 會隨機丟值，BN 改用這 10 張圖自己的統計量，所以每次跑的數字都不一樣。更麻煩的是，train 模式的 forward 會把這 10 張圖的統計量寫進 BN 的 running_mean／running_var，即使之後再切回 eval，結果也回不去了，要重新載入 checkpoint 才能還原。<code>torch.no_grad()</code> 擋不住這個更新。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://pytorch.org/tutorials/beginner/saving_loading_models.html">PyTorch Tutorials — Saving and Loading Models</a>：state_dict 的概念、只存模型 vs 存「訓練中途的 checkpoint」（模型 + 優化器 + epoch）的兩種寫法。</li>
+  <li><a href="https://pytorch.org/docs/stable/generated/torch.load.html">PyTorch — torch.load</a>：<code>weights_only</code> 參數的說明，以及為什麼載入 pickle 檔有安全風險。</li>
+  <li><a href="https://docs.python.org/3/library/os.html#os.listdir">Python — os.listdir</a>：文件明寫回傳的 list 是任意順序（arbitrary order）。</li>
+  <li><a href="https://pytorch.org/vision/stable/generated/torchvision.transforms.Resize.html">torchvision — transforms.Resize</a>：<code>size</code> 給一個數與給兩個數時的差別（保持長寬比與否）。</li>
+  <li><a href="https://arxiv.org/abs/1706.04599">Guo et al., 2017, On Calibration of Modern Neural Networks</a>：現代神經網路普遍「過度自信」，給出的機率比實際的正確率還高。本章的模型就是一個例子。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW09 讀碼教材 · 對應 commit b2dbe4c · 程式碼引用取自本 repo 的 HW09/；實測輸出取自 2026-10-03 本機執行</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>

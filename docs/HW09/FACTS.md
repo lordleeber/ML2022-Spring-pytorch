@@ -368,6 +368,13 @@
 - index（目錄頁，2026-10-03）：Explainable AI／XAI（「模型根據什麼給出答案」）、tokenizer（一句：把文字切成 token 的工具）、token、hidden states（BERT 每一層的輸出向量）、Hugging Face（公開分享模型的網站，transformers 的開發者）、Hugging Face Space（一句：放網頁小程式的地方）、BERT-base（12 層的標準尺寸）、微調（一句）、SQuAD 2.0（問答資料集）、attention（一句：每個 token 參考哪些其他 token 與比重）、exBERT（看 attention 的網站）、PCA（一句：把高維向量壓成 2 維好畫圖）、superpixel（一句：LIME 把圖切成的小塊）、logits（一句：還沒經過 softmax 的原始分數）、filter（一句：卷積層裡的小圖案偵測器）、activation（filter 的輸出）、基準圖（IG 的全黑圖，一句）、Captum（一句）、`Variable`／`.data` → `.detach()`、`matplotlib.use('Agg')`。以上大多只在目錄頁給了一句話，正式定義仍要在各章首次使用處寫完整。
   index 的方法名稱：Filter explanation（投影片稱 Filter visualization，兩者同一個方法）。全書配色：藍＝輸入資料、綠＝模型 forward、黃＝梯度、紫＝解釋方法自己的步驟；全書地圖 SVG 用綠框＝只做 forward、黃框＝要對輸入 backward。
   outline 的用語：bert_hidden_states.py 的三組問答稱「第 1／2／3 組問答」，**不要**寫 Q1–Q3（會和作業題號撞名）。
+- ch01（第 1 章，2026-10-03 雲端）：
+  - 圖號：圖 1.1（checkpoint.pth 170 MB 組成長條：model_state_dict 33.3% 綠、Adam 動量 66.6% 黃）、圖 1.2（food/ → os.listdir → my_key 排序 → paths/labels → FoodDataset → getbatch → (10,3,128,128) 的路線圖，藍）、圖 1.3（img/images.png）、圖 1.4（10 張圖第 1、2 名 logit 差長條，圖 2 用黃標出，虛線在差 7）。
+  - 本章正式定義的名詞：state_dict（「名字 → 張量」對照表；key 是屬性路徑，如 `cnn.0.weight`）、checkpoint（含 epoch／model_state_dict／optimizer_state_dict 的容器）、`load_state_dict`（名字逐一對上；預設 strict）、Adam 的 `step`／`exp_avg`（一階動量）／`exp_avg_sq`（二階動量）與 param_groups、pickle（一句）、`weights_only`（2.6 起預設 True）、safetensors（一句）、`os.listdir` 不保證順序、`my_key`（類別×1,000,000+編號；tuple key 的替代寫法）、food-11（一句）、`Dataset`／`__len__`／`__getitem__`、`transforms.Compose`、資料增強（data augmentation）、Resize 給 (高, 寬) 不保持長寬比、ToTensor（HWC uint8 → CHW float32 0–1）、PIL／Pillow（一句）、`torch.stack`、`DataLoader`（一句）、`normalize`（整個陣列 min-max；常數陣列 → NaN）、`save_fig`（bbox_inches='tight'、plt.close）、`plt.subplots`、`imshow` 與 `permute(1, 2, 0)`、`torch.no_grad()`（只管梯度、不擋 BN buffer 更新）、1 − p(標籤)、第 1／2 名 logit 差（機率比 = e^差）、float32 在 1 附近的間距 2^−24、train 模式 forward 會改寫 BN buffer。
+  - 本章用語：「10 張一起算」＝批次結果；引用 logit 時註明批次或單張。
+  - 回指（不重講）：ch00 的模型總覽、逐層表、buffer、`model.eval()`、logits／softmax 定義、相對路徑（0.5 節）、資料來源（0.4 節）。
+  - 本章手算（由 FACTS 推得，非另外量）：e^−7.262 ≈ 0.0007（= 圖 2 第 2 名機率）、e^−37.930 ≈ 3e-17、e^7 ≈ 1,100、1.19e-07 = 2×2^−24；只存 model_state_dict 約 56.7 MB。
+  - **雲端發現的 FACTS 疑點**：(1)「ch01 實測 → FoodDataset」說圖 1、3「看起來被壓扁、變寬」：寬圖被擠成正方形，內容其實是**變窄、變高**，ch01 照後者寫。(2)「logit 的小數第 3 位會隨 batch 組成變」：10.3332 − 10.3312 = 0.0020，不是 8.3e-03；ch01 已拿掉差值並標 TODO。(3)「差 7 以上時 softmax 機率就超過 0.999」只看第 2 名；10 類一起算的下界約 0.993，ch01 沒有引用這句。
 
 ## index／outline 審稿補測（2026-10-03，本機）
 - 舊版套件能不能裝（用 `uv pip install --target <scratch>` 試，不動 .venv）：
@@ -552,7 +559,7 @@ torch.Size([3, 128, 128]) 2 int
   | 1_1.jpg（圖 1） | 849×565 | 1.503 | 0.151 | 0.227 |
   | 1_2.jpg（圖 2） | 1294×1300 | 0.995 | 0.099 | 0.098 |
   | 9_9.jpg（圖 9） | 512×384 | 1.333 | 0.250 | 0.333 |
-  圖 1、3 的垂直方向縮得比水平少 1.5 倍（看起來被壓扁、變寬），圖 9 是 1.33 倍；其餘 6 張 512×512 只是等比縮小。
+  圖 1、3 的水平方向縮得比垂直多 1.5 倍：寬圖被擠成正方形，圖裡的東西**變窄、變高**（ch01 審稿更正；原本誤寫成「壓扁、變寬」）。圖 9 是 1.33 倍；其餘 6 張 512×512 只是等比縮小。
 - 10 張都是 RGB，所以 `Image.open` 不加 `.convert('RGB')` 也沒事（灰階或 RGBA 圖會變成 1 或 4 個通道，模型吃不進去）。
 - `mode='train'` 的 RandomHorizontalFlip、RandomRotation(15) 在本作業從來沒用到；實際使用的是 eval 轉換。
 
@@ -590,10 +597,18 @@ for i in range(10):
 9 9 9 14.118 1.0000
 ```
 - 1 − p(標籤)：圖 0 2.50e-06、圖 1 0、圖 2 1.38e-03、圖 3 2.38e-07、圖 4 1.19e-07、圖 5 3.58e-07、圖 6 0、圖 7 6.08e-06、圖 8 0、圖 9 1.19e-07。圖 1、6、8 的機率在 float32 裡剛好等於 1。
-- 第一名與第二名的 logit 差：最小 7.262（圖 2），最大 37.930（圖 6）；圖 0 13.662、圖 1 24.314、圖 3 15.473、圖 4 16.519、圖 5 14.791、圖 7 12.831、圖 8 19.700、圖 9 15.687。差 7 以上時 softmax 機率就超過 0.999（e^−7 ≈ 0.0009）。
-- **logit 的小數第 3 位會隨 batch 組成變**：同一張圖 0，10 張一起算是 10.3332，單獨算是 10.3312（差 8.3e-03；GPU 依 batch 大小選不同的卷積演算法）。CNN 實測「IG」表裡的 logit 是單張算的，所以和這裡的批次結果在小數第 2–3 位不同（例如圖 3：9.024 vs 9.011）。同一個 batch 重算兩次則逐位元相同。
+- 第一名與第二名的 logit 差：最小 7.262（圖 2），最大 37.930（圖 6）；圖 0 13.662、圖 1 24.314、圖 3 15.473、圖 4 16.519、圖 5 14.791、圖 7 12.831、圖 8 19.700、圖 9 15.687。差 7 時，第 2 名的機率約是第 1 名的 e^−7 ≈ 0.0009 倍；但 1 − p(標籤) 是其他 10 類的總和，所以只靠「差 7」推不出 p > 0.999（10 類都落後 7 時的下界約 0.991）。ch01 沒有引用原本那句。
+- **logit 的小數第 3 位會隨 batch 組成變**：同一張圖 0 的標籤 logit，10 張一起算是 10.333248，單獨算是 10.331242，差 0.0020（ch01 審稿更正：原本寫的 8.3e-03 是 11 個 logit 中差最多的那一個，不是標籤 logit）。可能原因：GPU 依 batch 大小選不同的卷積演算法。CNN 實測「IG」表裡的 logit 是單張算的，所以和這裡的批次結果在小數第 2–3 位不同（例如圖 3：9.024 vs 9.011）。同一個 batch 重算兩次則逐位元相同。
 - **eval 與 train 模式**：同樣 10 張圖改用 `model.train()`，argmax 仍然全對，但 logit 最多差 18.9（Dropout 隨機丟值、BN 改用這一批的統計量）。而且 train 模式的 forward 會**改寫 BN 的 running_mean／running_var**（buffer 被這 10 張圖更新），之後再切回 eval，結果也跟著變了。所以解釋方法前一定要 `model.eval()`，也不要在 train 模式下 forward。
 
 ### normalize 與 save_fig（explain_cnn.py:24–32）
 - `normalize(x)` = (x − x.min()) / (x.max() − x.min())，把任何值域線性拉到 0–1；numpy 陣列和 torch tensor 都能用（只用到 `.min()`、`.max()` 和四則運算）。如果整張圖是常數，分母是 0，會得到 NaN；本作業的資料沒有遇到。
 - `save_fig` 用 `bbox_inches='tight'` 裁掉多餘白邊，存完用 `plt.close(fig)` 釋放記憶體，再印出 `saved <路徑>`。
+
+## ch01 審稿補測（2026-10-03，本機）
+- **沒有 GPU 時連 torch.load 都會失敗**：checkpoint 裡所有張量的 device 是 `cuda:0`。`CUDA_VISIBLE_DEVICES="" ../.venv/bin/python -c "import torch; torch.load('checkpoint.pth')"` 的最後一行是 `RuntimeError: Attempting to deserialize object on a CUDA device but torch.cuda.is_available() is False. If you are running on a CPU-only machine, please use torch.load with map_location=torch.device('cpu') to map your storages to the CPU.`。加上 `map_location='cpu'` 後可以載入，device 變成 `cpu`。所以「ch01 實測」裡讀 checkpoint 的那段指令**需要 GPU**（交給雲端的 prompt 寫成不需要，是錯的）。
+- 圖 0 batch vs single：標籤 logit 10.333248 vs 10.331242，差 0.002007；11 個 logit 的最大差 0.008293。10 張各自單獨算，每張 11 個 logit 的最大差：0.0083、0.0076、0.0199、0.0505、0.0205、0.0206、0.0219、0.0177、0.0239、0.0289。
+- 圖 2 的前 3 名：Dairy product 0.9986、Dessert 0.0007、Vegetable/Fruit 0.0007（見「CNN 實測 → 預測」）。
+- **自我測驗 1 實跑**（在 food/ 的複本裡多放 `10_10.jpg`）：用 my_key，它排在 index 10，labels `[0, 1, 1, 2, 2, 3, 5, 6, 8, 9, 10]`；改成 `imgnames.sort()`，它排在 index 1，labels `[0, 10, 1, 1, 2, 2, 3, 5, 6, 8, 9]`。
+- 雲端的三個 FACTS 疑點都成立，已在上面各段更正。
+- ch01 引用的行號（dataset.py 15–58、explain_cnn.py 42/45–46/72/80/95/110/121/139/154/169/216/219/220/230/280/281/289/293–305）全部核對正確。
