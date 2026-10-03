@@ -376,6 +376,13 @@
   - 本章手算（由 FACTS 推得，非另外量）：e^−7.262 ≈ 0.0007（= 圖 2 第 2 名機率）、e^−37.930 ≈ 3e-17、e^7 ≈ 1,100、1.19e-07 = 2×2^−24；只存 model_state_dict 約 56.7 MB。
   - **雲端發現的 FACTS 疑點**：(1)「ch01 實測 → FoodDataset」說圖 1、3「看起來被壓扁、變寬」：寬圖被擠成正方形，內容其實是**變窄、變高**，ch01 照後者寫。(2)「logit 的小數第 3 位會隨 batch 組成變」：10.3332 − 10.3312 = 0.0020，不是 8.3e-03；ch01 已拿掉差值並標 TODO。(3)「差 7 以上時 softmax 機率就超過 0.999」只看第 2 名；10 類一起算的下界約 0.993，ch01 沒有引用這句。
 
+- ch02（第 2 章，2026-10-03 雲端）：
+  - 圖號：圖 2.1（img/lime.png）、圖 2.2（LIME 流程 SVG：原圖 → ①切 superpixel → ②取樣 0/1 → ③換平均色 → ④模型 predict → ⑤加權 Ridge → ⑥每塊一個權重 → ⑦get_image_and_mask 上色；藍＝輸入、綠＝forward、紫＝LIME 步驟）、圖 2.3（img/ch02_segments.png）、圖 2.4（img/ch02_perturb.png）、圖 2.5（img/ch02_img0_compare.png）、圖 2.6（img/ch02_lime_softmax.png）、圖 2.7（差一錯誤 SVG：SLIC 塊 1..107 vs 特徵 0..106，紅＝對不上）。
+  - 本章正式定義的名詞：LIME（Local Interpretable Model-agnostic Explanations，三個字各自的意思）、model-agnostic、代理模型（surrogate model）、superpixel（完整定義）、SLIC 與 `n_segments`／`compactness`／`sigma`／`start_label`、特徵（每塊一個）、樣本（0/1 向量，第 0 列＝原圖）、「遮住」＝換成該塊平均色（`hide_color=None`）、`explain_instance` 的預設值（num_samples、batch_size、top_labels、hide_color、distance_metric、kernel_width、random_state）、cosine 距離、核函數（kernel）與樣本權重（≠ 每塊的權重）、Ridge 回歸與 alpha、R²（含加權）、截距、`local_exp`／`intercept`／`exp.score`（只有一個值）／`local_pred`、`top_labels`、`get_image_and_mask` 五個參數與 mask、疊色、差一錯誤（off-by-one）、偽亂數／種子／NumPy 全域亂數產生器、`2>/dev/null`。
+  - 本章手算（由本 FACTS 推得）：0/1 向量與全 1 向量的 cosine = √(k/n)；圖 0 平均保留 53.4 塊 → d ≈ 0.29、樣本權重 ≈ 0.50；最像原圖的樣本權重約為最不像的 3 倍（0.760／0.231）；−21.383 + 33.926 = 12.543 = local_pred；num_features=200 的 46 綠 = 47 正 − 特徵 0。
+  - 推論（未實測，ch02 標了 TODO）：紅色疊在亮處（R 已接近最大值）看不出來，用來解釋圖 1、2 在 lime.png 上幾乎看不到紅色；`LimeImageExplainer(random_state=16)` 可讓每張圖的結果不依賴順序。
+  - 回指（不重講）：ch00 的 logits／softmax、tqdm、逐段計時 14.7 s、0.6 節重跑逐位元相同；ch01 的預測表、批次 vs 單張 logit、model.eval()、HWC／permute、save_fig；index 的 lime 0.1.1.37 vs 0.2.0.1。
+
 ## index／outline 審稿補測（2026-10-03，本機）
 - 舊版套件能不能裝（用 `uv pip install --target <scratch>` 試，不動 .venv）：
   - `lime==0.1.1.37`：**裝得起來**，在 Python 3.12 上也能跑。它另外依賴 `progressbar`（2.5），pip 會一起裝。舊版的進度條是 `progressbar` 的 `|####|` 樣式，不是 tqdm。用它對圖 0 跑同一段 LIME（seed 16、start_label=1、logits）：前 5 名 (21, 5.5216)、(25, 3.5899)、(38, 3.1247)、(27, 3.0233)、(40, 2.9437)，R² 0.8423，**和 0.2.0.1 完全相同**。所以換版本不影響 Q1–4 的結果。
@@ -732,7 +739,7 @@ for i in range(10):
 
 ### get_image_and_mask 的參數（圖 0，logits 版）
 - 預設（程式用的）：`positive_only=False, hide_rest=False, num_features=11, min_weight=0.05` → 11 塊綠、0 塊紅，3,077 個像素被上色。
-- `positive_only=True`：一樣 11 塊綠（前 11 名本來就都是正的）。
+- `positive_only=True`：mask 上一樣選出 11 塊，但回傳的圖**沒有上色**、和原圖相同（見「ch02 審稿補測」；原本寫「一樣 11 塊綠」是錯的）。
 - `num_features=5`：5 塊綠，1,386 個像素。
 - `min_weight=0.0`：一樣 11 塊綠（前 11 名都遠大於 0.05）。
 - `num_features=200`（等於全部）：46 塊綠、36 塊紅，綠 8,476、紅 5,074 個像素（其餘 |w| < 0.05 的不畫）。
@@ -768,3 +775,12 @@ for i in range(10):
 
 ### ch01 修正（本次一起改，已在 master）
 - ch01 1.8 節的 LIME 預告改成：LIME 每次會把大約一半的 superpixel 換成平均色；改看機率的話，有幾張圖（圖 1、2、3、5）就算遮掉一半，機率也幾乎都還在 0.99 以上，分不出哪一塊重要；logits 則仍會隨遮掉的部分變動。
+
+## ch02 審稿補測（2026-10-04，本機）
+- **更正「ch02 實測 → get_image_and_mask」的 `positive_only=True` 那一行**：mask 上一樣選出 11 塊（3,077 個像素），但**回傳的圖和原圖逐像素完全相同，沒有任何上色**。lime 0.2.0.1 的 positive_only 分支只做 `temp[segments == f] = image[segments == f].copy()`，沒有把 G 通道設成最大值。搭配 `hide_rest=True` 時，回傳的圖只剩這 3,077 個非零像素，其餘是 0（黑）。原本寫的「一樣 11 塊綠」只數了 mask，是錯的。
+- **紅色疊在亮處看不出來（實測）**：圖 1、圖 2 的 `np.max(image)` 都是 1.0000。
+  - 圖 1：紅 1,227 px，原圖平均 R 0.985、G 0.925、B 0.767；95% 的紅像素原本 R ≥ 0.9。整張圖平均 R 0.994。7 塊紅色幾乎都在白色背景。綠 828 px，原圖 G 平均 0.857。
+  - 圖 2：紅 1,427 px，原圖平均 R 0.813、G 0.753、B 0.702；44% 的紅像素原本 R ≥ 0.9。疊色後是淡粉紅，放大才看得出來。綠 243 px。
+  - 10 張的 mask 像素數（綠／紅）：0：3077／0；1：828／1227；2：243／1427；3：1663／667；4：7025／156；5：1906／350；6：4402／0；7：3856／0；8：2941／0；9：2119／765。
+- **`LimeImageExplainer(random_state=16)`（實測）**：不呼叫 np.random.seed，每張圖新建 `LimeImageExplainer(random_state=16)`。圖 3 單獨跑與在迴圈中第 4 個跑，權重完全相同；前 5 名 [40, 57, 86, 52, 39]，和「np.random.seed(16) 後單獨第一個跑」相同，因為兩者都是從 seed 16 的起點開始取數。
+- 雲端手算的幾個數都核對過：cos(0/1 向量, 全 1) = √(k/n)；−21.383 + 33.926 = 12.543；num_features=200 的 46 綠 = 47 個正權重扣掉特徵 0。
