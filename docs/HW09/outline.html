@@ -617,7 +617,7 @@ footer.chap-footer {
 <tr><td>ch00</td><td>全書約定；環境；資料與檔案；程式結構；執行實測；CNN 實測 → 模型</td><td>（模型總覽為手繪 SVG）</td></tr>
 <tr><td>ch01</td><td>資料與檔案；CNN 實測 → 預測；執行實測（stdout 前兩行）</td><td><code>images.png</code></td></tr>
 <tr><td>ch02</td><td>CNN 實測 → LIME；repo 問題清單 1、2</td><td><code>lime.png</code></td></tr>
-<tr><td>ch03</td><td>CNN 實測 → 預測、Saliency map、SmoothGrad；repo 問題清單 3、6</td><td><code>saliency.png</code>、<code>smoothgrad.png</code></td></tr>
+<tr><td>ch03</td><td>CNN 實測 → 預測、Saliency map、SmoothGrad；ch03 實測；repo 問題清單 3、6</td><td><code>saliency.png</code>、<code>smoothgrad.png</code>、<code>ch03_saliency_global.png</code>、<code>ch03_saliency_logit.png</code>、<code>ch03_smoothgrad_variants.png</code>、<code>ch03_smoothgrad_n.png</code></td></tr>
 <tr><td>ch04</td><td>CNN 實測 → 模型、Filter explanation；repo 問題清單 5</td><td><code>filter_cnn6.png</code>、<code>filter_cnn23.png</code></td></tr>
 <tr><td>ch05</td><td>CNN 實測 → 預測（目標 logit）、Integrated Gradients；repo 問題清單 4</td><td><code>integrated_gradients.png</code></td></tr>
 <tr><td>ch06</td><td>原版 notebook vs 本 repo（Part 2a、Q21–24）；執行實測；BERT 實測 → Q21–24、Q25–27；repo 問題清單 7</td><td><code>bert_q{1,2,3}_layer{1..12}.png</code>（挑幾層放，描述只寫看得到的）</td></tr>
@@ -674,7 +674,7 @@ footer.chap-footer {
 <p>以下內容事實清單目前沒有，寫到時會在 HTML 留下 <code>TODO(本機實測)</code> 標記：</p>
 <ul>
   <li>第 0 章：模型總覽要放「PyTorch 印出的參數量」，需要一段逐字的指令與輸出（清單有數字，沒有逐字輸出）。</li>
-  <li>第 3 章：若要放「不各自正規化」或「SmoothGrad 不 normalize」的對照圖，這兩張圖沒有存。</li>
+  <li>第 3 章：「不各自正規化」與「SmoothGrad 不 normalize」的對照圖原本沒有存；本機已補量，存成 <code>img/ch03_saliency_global.png</code> 與 <code>img/ch03_smoothgrad_variants.png</code>，第 3 章已使用（此項已完成）。</li>
   <li>第 6 章：清單只描述了 <code>bert_q3_layer12.png</code>；其他層會直接看圖描述，看不出結論的地方標 TODO。</li>
 </ul>
 

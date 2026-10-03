@@ -383,6 +383,14 @@
   - 推論（未實測，ch02 標了 TODO）：紅色疊在亮處（R 已接近最大值）看不出來，用來解釋圖 1、2 在 lime.png 上幾乎看不到紅色；`LimeImageExplainer(random_state=16)` 可讓每張圖的結果不依賴順序。
   - 回指（不重講）：ch00 的 logits／softmax、tqdm、逐段計時 14.7 s、0.6 節重跑逐位元相同；ch01 的預測表、批次 vs 單張 logit、model.eval()、HWC／permute、save_fig；index 的 lime 0.1.1.37 vs 0.2.0.1。
 
+- ch03（第 3 章，2026-10-04 雲端）：
+  - 圖號：圖 3.1（img/saliency.png）、圖 3.2（forward + backward 路徑 SVG：x → model(x) → logits → CE loss（綠）；loss.backward() → ∂L/∂z =(softmax − one-hot)÷10 → x.grad（黃）；W.grad 虛線框「也被寫入，但沒有人讀」；紫框＝取絕對值、RGB 取最大、各自 normalize）、圖 3.3（10 張圖梯度最大值的對數刻度長條圖，左欄是 1 − p）、圖 3.4（img/ch03_saliency_global.png）、圖 3.5（img/ch03_saliency_logit.png）、圖 3.6（img/smoothgrad.png）、圖 3.7（img/ch03_smoothgrad_variants.png）、圖 3.8（img/ch03_smoothgrad_n.png）。
+  - 本章正式定義的名詞：backward、鏈鎖律、偏微分、梯度（gradient）、對輸入取梯度 vs 對權重取梯度、autograd、`requires_grad`／`requires_grad_()`（結尾底線＝就地修改）、`.grad`（會累加）、`model.zero_grad()`（兩個函式都沒呼叫）、saliency map（顯著圖）、CE loss（cross-entropy，內含 softmax、−log p_y、批次預設取平均 `reduction='mean'`）、one-hot、∂L/∂z_j = p_j − 1[j=y]、`torch.max(..., dim=1)` 回傳 (值, 位置)、colormap（色表）與 `plt.cm.hot`、二維陣列套色表 vs (H,W,3) 當 RGB、相關係數（Pearson）、SmoothGrad、常態（高斯）分佈、標準差、變異數、`Tensor.normal_(mean, std)`、`x.new_empty`、`unsqueeze(0)`、`torch.manual_seed`、`torch.randn`、`torch.bincount`、`amax(dim=...)`、`torch.autograd.grad`（現在的做法框）、Captum `Saliency`／`NoiseTunnel`（一句）。
+  - 本章用語：「對 loss 取梯度」（程式）vs「對標籤 logit 取梯度」（投影片的 output category，第 5 章 IG 也是後者）；「各自正規化」vs「一起正規化」；「程式的標準差」(0.4/範圍)² vs「論文式」0.4×範圍。
+  - 本章手算（由本 FACTS 推得，非另外量）：3.75e-04 ÷ 1.52e-17 ≈ 2.5e13；圖 6 ÷ 圖 2 ≈ 4e-14；0.256 ÷ 8.48e-07 ≈ 30 萬倍、÷ 8.565e-06 ≈ 3 萬倍；雜訊比例圖 6 40%、圖 0 ≈ 40%、圖 1 ≈ 47%；0–255 範圍時論文式 102、程式式 ≈ 2.5e-06；loss 29.6 → p ≈ e^−29.6 ≈ 10^−13；圖 7 一起正規化 ≈ 1.51e-06 ÷ 3.75e-04 ≈ 4.0e-03。
+  - 推論（未實測，ch03 標了 TODO）：1 − p 存成 0 的圖仍有梯度是因為其他類別 p_j 非零；雜訊樣本上 Vegetable/Fruit 是否拿走大部分機率（若是，梯度 ≈ ∂z_VF/∂x − ∂z_y/∂x）；smoothgrad.png 偏綠灰的原因；雜訊 std 0.01 時的 SmoothGrad 圖。
+  - 回指（不重講）：ch00 的 logits／softmax、0.5 節逐段計時（Saliency 0.4 s、SmoothGrad 24.1 s）、0.6 節 smoothgrad.png 每次重跑不同；ch01 的 1 − p 表、batch vs 單張 logit、model.eval()、normalize／save_fig、torch.no_grad()；ch02 的偽亂數與種子。
+
 ## index／outline 審稿補測（2026-10-03，本機）
 - 舊版套件能不能裝（用 `uv pip install --target <scratch>` 試，不動 .venv）：
   - `lime==0.1.1.37`：**裝得起來**，在 Python 3.12 上也能跑。它另外依賴 `progressbar`（2.5），pip 會一起裝。舊版的進度條是 `progressbar` 的 `|####|` 樣式，不是 tqdm。用它對圖 0 跑同一段 LIME（seed 16、start_label=1、logits）：前 5 名 (21, 5.5216)、(25, 3.5899)、(38, 3.1247)、(27, 3.0233)、(40, 2.9437)，R² 0.8423，**和 0.2.0.1 完全相同**。所以換版本不影響 Q1–4 的結果。
