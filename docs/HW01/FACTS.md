@@ -167,3 +167,11 @@ DataLoader（batch_size 256）：
 - id 除以 2699 的 checkpoint（印出 1.003）：真實 MSE **1.2588**；200 種順序 min 1.0154、中位數 1.2465。
 - 線性迴歸的 1.166、1.172、1.313、1.303 都是在 539 筆上一次算的真實 MSE，**可以跟 2.07 / 1.24 直接比，但不能跟 1.661 / 0.982 比**。真實數字下的排名：線性迴歸 116 欄 1.166 < 117 欄 1.172 < DNN 拿掉 id 1.240 < DNN id 縮放 1.259 < 抄第 4 天 1.313 < DNN 原版 2.069。
 - train loss 也有同樣的問題：train 最後一個 batch 是 112 筆，而且是一邊更新權重一邊記錄的，所以 train loss 也不是某一個固定模型的 MSE。
+
+## ch03 審稿補測（2026-10-03 本機）
+- id 除以 2699 的 checkpoint 換 200 種順序：最大值 1.8034。
+- 動手做第 1 題逐字輸出：`2160 torch.Size([117]) torch.float32 torch.Size([]) 3.7109291553497314`，接著 `tensor([696.,   0.,   0.])`。動手做第 2 題輸出 `[256, 256, 27]`。
+- 動手做第 3 題：`True`、`0`、`one shot 2.0685`、`shuffle False 2.0690`；三行 shuffle True 這次是 1.9393、2.1544、2.0068，每次執行都會不同。
+- **修好量法後重新訓練**（train.py 第 123 行改 shuffle=False，第 79 行改 `loss.item() * len(y)`，第 81 行除以 `len(valid_loader.dataset)`）：最佳 `Epoch [2968/3000]: Train loss: 1.5739, Valid loss: 1.7174`，checkpoint 一次算完的 MSE 也是 1.7174，跟印出值相同。**沒有 early stop**，跑滿 3000 個 epoch，最後一行 `Epoch [3000/3000]: Train loss: 1.7492, Valid loss: 2.0180`，共存檔 187 次。
+  - 注意：valid 不打亂後，valid_loader 不再消耗全域亂數，train 的打亂順序也會改變，所以 2.069 → 1.717 的進步不能全歸功於量法。
+- 實驗都在暫存複本裡跑，repo 的 models/model.ckpt 沒有被動到。

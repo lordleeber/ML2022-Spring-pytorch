@@ -858,7 +858,7 @@ test_dataset = TensorDataset(torch.tensor(x_test, dtype=torch.float32))</code></
 <tbody>
 <tr><td>範例原版（117 欄，含 id）</td><td>1.661</td><td><strong>2.0685</strong></td><td>最小 1.7069、中位數 2.0528、最大 2.8467</td></tr>
 <tr><td>拿掉 id（116 欄）</td><td>0.982</td><td><strong>1.2403</strong></td><td>最小 0.9970、中位數 1.2326、最大 1.7167</td></tr>
-<tr><td>id 除以 2699（117 欄）</td><td>1.003</td><td><strong>1.2588</strong></td><td>最小 1.0154、中位數 1.2465<!-- TODO(本機實測): id 除以 2699 的 checkpoint，200 種順序的最大值 --></td></tr>
+<tr><td>id 除以 2699（117 欄）</td><td>1.003</td><td><strong>1.2588</strong></td><td>最小 1.0154、中位數 1.2465、最大 1.8034</td></tr>
 </tbody>
 </table></div>
 <p>三個模型都一樣：印出的值比 200 次重量的最小值還低，真實值在中位數附近。</p>
@@ -916,9 +916,10 @@ ds = COVID19Dataset(x_tr, y_tr)
 x, y = ds[0]
 print(len(ds), x.shape, x.dtype, y.shape, y.item())
 print(x[:3])
-"</code></pre>
-  <!-- TODO(本機實測): 第 1 項指令的逐字輸出（兩行），貼成 pre.shell 取代下面的文字描述 -->
-  對照 3.2 節：長度 2160；x 的形狀是 117、dtype 是 float32；y 的形狀是空的（0 維 tensor）；<code>y.item()</code> 是 float32 存下的 3.7109291553497314。第二行是 x 的前 3 個值 696、0、0。把 <code>ds = COVID19Dataset(x_tr, y_tr)</code> 改成 <code>ds = COVID19Dataset(x_te)</code>，<code>ds[0]</code> 就只剩一個 tensor，<code>x, y = …</code> 那行會失敗——想想為什麼。（答案：沒有 y 時 <code>__getitem__</code> 只回傳一個 shape (117,) 的 tensor，Python 會試著把它沿第一維拆成 117 個值，數量對不上兩個變數。）</li>
+"
+2160 torch.Size([117]) torch.float32 torch.Size([]) 3.7109291553497314
+tensor([696.,   0.,   0.])</code></pre>
+  對照 3.2 節：長度 2160；x 的形狀是 117、dtype 是 float32；y 的形狀 <code>torch.Size([])</code> 是空的，表示 0 維 tensor；<code>y.item()</code> 是 float32 存下的 3.7109291553497314。第二行是 x 的前 3 個值 696、0、0，tensor 印出時也像 NumPy 一樣補空白對齊。把 <code>ds = COVID19Dataset(x_tr, y_tr)</code> 改成 <code>ds = COVID19Dataset(x_te)</code>，<code>ds[0]</code> 就只剩一個 tensor，<code>x, y = …</code> 那行會失敗——想想為什麼。（答案：沒有 y 時 <code>__getitem__</code> 只回傳一個 shape (117,) 的 tensor，Python 會試著把它沿第一維拆成 117 個值，數量對不上兩個變數。）</li>
   <li><strong>每個 batch 有幾筆</strong>：在第 1 項指令的 Python 程式碼最後、收尾的 <code>"</code> <strong>之前</strong>加兩行再跑：
 <pre class="py"><code>from torch.utils.data import DataLoader
 print([len(y) for x, y in DataLoader(COVID19Dataset(x_va, y_va), batch_size=256, shuffle=True)])</code></pre>
@@ -944,9 +945,15 @@ with torch.no_grad():
     for shuffle in [False, True, True, True]:
         losses = [mse(model(xb.cuda()), yb.cuda()).item() for xb, yb in DataLoader(ds, batch_size=256, shuffle=shuffle)]
         print('shuffle', shuffle, f'{sum(losses) / len(losses):.4f}')
-"</code></pre>
-  <!-- TODO(本機實測): 第 3 項指令的逐字輸出（True/0 兩行 + one shot + 4 行 shuffle），確認 one shot 印 2.0685、shuffle False 印 2.0690 -->
-  <code>True</code>、<code>0</code> 之後，<code>one shot</code> 那一行是一次算完的真實 MSE，應該是 3.5 節的 2.0685；<code>shuffle False</code> 那一行應該是 2.0690；後面三行 <code>shuffle True</code> 每一行都不同，而且每次執行這條指令都會不同（這段程式沒有呼叫 <code>same_seed</code>），本機 20 次落在 1.77～2.45 之間。多跑幾次，看你能不能碰到比 1.661 還低的值。</li>
+"
+True
+0
+one shot 2.0685
+shuffle False 2.0690
+shuffle True 1.9393
+shuffle True 2.1544
+shuffle True 2.0068</code></pre>
+  <code>True</code>、<code>0</code> 之後，<code>one shot</code> 那一行是一次算完的真實 MSE，就是 3.5 節的 2.0685；<code>shuffle False</code> 那一行是 2.0690；後面三行 <code>shuffle True</code> 每一行都不同，而且每次執行這條指令都會不同（這段程式沒有呼叫 <code>same_seed</code>），所以你跑出來的這三行不會跟上面一樣。本機 20 次落在 1.77～2.45 之間。多跑幾次，看你能不能碰到比 1.661 還低的值。</li>
   <li><strong>修好量法再訓練一次</strong>：先備份：<code>cp train.py train.py.bak</code>。然後只改三行，每一行原地修改、縮排不動，所以行號不會位移（這是「現在的做法」方框裡 <code>criterion(pred, y).item() * len(y)</code> 那種寫法）：
 <ul>
   <li>第 123 行：<code>shuffle=True</code> 改成 <code>shuffle=False</code>。</li>
@@ -954,7 +961,19 @@ with torch.no_grad():
   <li>第 81 行：<code>sum(loss_record)/len(loss_record)</code> 改成 <code>sum(loss_record)/len(valid_loader.dataset)</code>，除以總筆數 539。</li>
 </ul>
   重跑 train.py（例如用第 2 章動手做的 <code>../.venv/bin/python train.py 2&gt;/dev/null &gt; fixed.log</code> 與 <code>grep -B1 Saving fixed.log | tail -2</code>），觀察最佳驗證 loss、它出現的 epoch、early stop 的 epoch 和原本比有什麼不同。原本是：最佳 1.661 出現在第 1483 個 epoch、第 1883 個 epoch early stop（第 0 章；<code>Epoch [1483/3000]</code> 裡的 3000 是 config 的 <code>n_epochs</code> 上限）。印出的最佳值現在就是那個 checkpoint 一次算完的 MSE，可以直接拿去和線性迴歸的 1.166 比。
-  <!-- TODO(本機實測): 套用「現在的做法」（valid shuffle=False + reduction='sum' 依筆數加權）後重跑 train.py：最佳 valid loss、出現的 epoch、early stop 的 epoch、存檔次數；並確認該 checkpoint 一次算完的 MSE 等於印出值。補成 details.quiz「看答案：本機實測結果」 -->
+<details class="quiz"><summary>看答案：本機實測結果</summary>
+<pre class="shell"><code>$ grep -B1 Saving fixed.log | tail -2
+Epoch [2968/3000]: Train loss: 1.5739, Valid loss: 1.7174
+Saving model with loss 1.717...
+$ tail -1 fixed.log
+Epoch [3000/3000]: Train loss: 1.7492, Valid loss: 2.0180</code></pre>
+<ul>
+  <li><strong>印出的值就是真值。</strong>最佳是第 2968 個 epoch 的 1.717，把這個 checkpoint 拿到 539 筆上一次算完，MSE 也是 1.7174，兩者完全一致。這證明修法正確：印出的數字不再受分組和順序影響。</li>
+  <li><strong>沒有 early stop。</strong>最後一行是第 3000 個 epoch，也就是 config 的 <code>n_epochs</code> 上限，沒有出現「Model is not improving」，總共存檔 187 次。原版第 1883 個 epoch 就停了，因為 1.661 是靠運氣量到的低值，之後連續 400 個 epoch 都打不破，early stop 就提早觸發。量法誠實之後，每次創新低都是模型真的進步了，所以一直到 3000 個 epoch 還在進步。</li>
+  <li><strong>真實 MSE 從 2.069 降到 1.717。</strong>但這不全是量法的功勞：valid 不打亂之後，valid_loader 不再從全域產生器抽亂數，train_loader 每個 epoch 拿到的順序也跟原版不同（3.4 節），等於換了一條訓練路徑。可以確定的是：印出的數字現在可信，early stop 也不再被雜訊誤導。</li>
+  <li>1.717 仍然輸給線性迴歸的 1.166。第 2 章拿掉 id 後的真實值是 1.240，第 7 章會把這些改良合在一起。</li>
+</ul>
+</details>
   做完<strong>務必還原 train.py 並再跑一次</strong>（<code>mv train.py.bak train.py</code>，再 <code>../.venv/bin/python train.py</code>），讓 <code>models/model.ckpt</code> 回到 1.661 那一份（應該再看到 <code>Epoch [1483/3000]</code> 與 <code>Saving model with loss 1.661...</code>）。後面各章的數字都以它為準。</li>
 </ol>
 </div>
