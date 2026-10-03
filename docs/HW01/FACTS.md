@@ -175,3 +175,59 @@ DataLoader（batch_size 256）：
 - **修好量法後重新訓練**（train.py 第 123 行改 shuffle=False，第 79 行改 `loss.item() * len(y)`，第 81 行除以 `len(valid_loader.dataset)`）：最佳 `Epoch [2968/3000]: Train loss: 1.5739, Valid loss: 1.7174`，checkpoint 一次算完的 MSE 也是 1.7174，跟印出值相同。**沒有 early stop**，跑滿 3000 個 epoch，最後一行 `Epoch [3000/3000]: Train loss: 1.7492, Valid loss: 2.0180`，共存檔 187 次。
   - 注意：valid 不打亂後，valid_loader 不再消耗全域亂數，train 的打亂順序也會改變，所以 2.069 → 1.717 的進步不能全歸功於量法。
 - 實驗都在暫存複本裡跑，repo 的 models/model.ckpt 沒有被動到。
+
+## ch04 實測（2026-10-03 本機 GPU 環境；雲端不重跑，直接引用這裡）
+執行方式：在 `HW01/` 內 `PYTHONPATH=. ../.venv/bin/python <腳本>`。「訓練好的模型」指 repo 的 models/model.ckpt，也就是印出 1.661、真實 MSE 2.069 的那份。
+**這節沒有的輸出不要寫進教材**；需要新數字就標 `TODO(本機實測)` 留給本機補。
+
+`print(My_Model(117))` 逐字輸出：
+```
+My_Model(
+  (layers): Sequential(
+    (0): Linear(in_features=117, out_features=16, bias=True)
+    (1): ReLU()
+    (2): Linear(in_features=16, out_features=8, bias=True)
+    (3): ReLU()
+    (4): Linear(in_features=8, out_features=1, bias=True)
+  )
+)
+```
+
+參數（`named_parameters()`）：
+- layers.0.weight 的形狀是 (16, 117)，**注意是 (輸出, 輸入)**，共 1872 個；layers.0.bias (16,) 16 個。
+- layers.2.weight (8, 16) 128 個；layers.2.bias (8,) 8 個。
+- layers.4.weight (1, 8) 8 個；layers.4.bias (1,) 1 個。
+- 全部都是 float32，requires_grad=True。總數 2033，第一層佔 92.9%。
+- 名稱裡沒有 1、3，因為 ReLU 沒有參數（layers[1] 的參數數量是 0）。`len(model.layers)` 是 5。
+- state_dict 的 key 依序是 'layers.0.weight', 'layers.0.bias', 'layers.2.weight', 'layers.2.bias', 'layers.4.weight', 'layers.4.bias'。
+- 輸入改成 116 欄（拿掉 id）時總數是 2017。
+- model.ckpt 的檔案大小是 11005 bytes，其中參數本身佔 2033 × 4 = 8132 bytes，其餘是 key 名稱、形狀等格式資訊。
+
+初始權重（跟 train.py 一樣先 `same_seed(5201314)` 再建立模型，所以就是 train.py 開始訓練時的權重）：
+- nn.Linear 預設從均勻分布 U(−1/√in, 1/√in) 抽初始權重和 bias。第一層的範圍是 1/√117 = 0.0925，實測 weight 最小 −0.0924、最大 0.0924，bias −0.0891～0.065。
+- 第二層範圍 1/√16 = 0.25，實測 weight −0.2459～0.2499。
+- 第三層範圍 1/√8 = 0.3536，8 個 weight 是 [0.1932, -0.168, 0.1907, 0.1301, -0.2984, -0.0179, -0.3317, 0.1277]，bias 0.0609。
+- layers.0.weight[0, :5] = [0.0081, 0.0874, 0.0613, -0.0031, 0.0789]。
+
+forward 時各層的形狀（valid 第一個 batch，shuffle=False，256 筆，在 cuda 上）：
+- 輸入 (256,117) → layers[0] Linear (256,16) → layers[1] ReLU (256,16) → layers[2] Linear (256,8) → layers[3] ReLU (256,8) → layers[4] Linear (256,1) → squeeze(1) 變成 (256,)。
+- `model(x)` 和 `model.forward(x)` 結果完全相同（torch.equal 為 True）。model(x) 會經過 `nn.Module.__call__`，再由它呼叫 forward。
+- `.to('cuda')` 之後參數的 device 是 cuda:0。
+- 前 5 筆預測是 [15.9939, 5.0906, 9.6055, 3.0774, 8.2978]，真值是 [13.4923, 3.7415, 11.25, 1.875, 8.8235]。
+
+**拿掉 squeeze(1) 會怎樣**（同一個 batch）：
+- `MSELoss((256,1), (256,))` 會被廣播成 (256,256)，loss 是 **89.0963**；正確的值是 1.7758。
+- 會跳出 UserWarning，逐字是：`Using a target size (torch.Size([256])) that is different to the input size (torch.Size([256, 1])). This will likely lead to incorrect results due to broadcasting. Please ensure they have the same size.`
+- 只有 1 筆時，原始輸出是 (1,1)，`squeeze(1)` 得到 (1,)，`squeeze()` 得到 ()（0 維）。所以指定維度 1 比較安全。HW01 每個 batch 最少也有 27 筆，實際上不會碰到這個情況。
+
+訓練好的模型：
+- 驗證集的預測範圍 1.8327～28.2623，真值範圍 0.3448～29.8157。
+- **ReLU 沒在工作的單元**：在整個訓練集和驗證集上都永遠輸出 0 的，第一層有 **10/16** 個，第二層 1/8 個。第一層所有輸出裡 81.5%（train）、81.7%（valid）是 0。
+  - 對照：剛初始化時第一層只有 2/16 個這樣的單元（train，0 的比例 46.6%）。所以大部分是訓練過程中才變成這樣的。
+  - 對照：拿掉 id 的模型第一層是 7/16，0 的比例 56.2%；第二層 2/8。
+- **id 欄壓過其他欄**：第一層 weight 的平均絕對值，id 欄是 0.22643，其他欄平均 0.05002。乘上驗證集各欄的平均值之後，id 欄的平均 |w·x| 是 **309.13**，其他欄平均只有 0.7558，差了約 400 倍。可以接 ch02 「數值尺度」的結論。
+
+故意寫錯時的錯誤訊息（逐字取第一行）：
+- 輸入 float64：`RuntimeError: mat1 and mat2 must have the same dtype, but got Double and Float`
+- 輸入 116 欄給 117 欄的模型：`RuntimeError: mat1 and mat2 shapes cannot be multiplied (4x116 and 117x16)`
+- 自訂 nn.Module 時沒呼叫 `super().__init__()` 就指定子模組：`AttributeError: cannot assign module before Module.__init__() call`
