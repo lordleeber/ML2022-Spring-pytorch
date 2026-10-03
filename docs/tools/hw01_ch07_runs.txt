@@ -1,0 +1,71 @@
+CHECK_orig  --fix 0
+CHECK_fixed --fix 1
+F_all       --feat all
+F_noid      --feat noid
+F_tp4       --feat tp4
+F_survey    --feat survey
+F_corr      --feat corr
+S_noid_1e-5 --feat noid --std 1 --lr 1e-5
+S_noid_1e-4 --feat noid --std 1 --lr 1e-4
+S_noid_1e-3 --feat noid --std 1 --lr 1e-3
+S_noid_1e-2 --feat noid --std 1 --lr 1e-2
+O_raw_adam  --feat noid --opt adam --lr 1e-3
+O_std_adam3 --feat noid --std 1 --opt adam --lr 1e-3
+O_std_adam4 --feat noid --std 1 --opt adam --lr 1e-4
+O_std_adamw3 --feat noid --std 1 --opt adamw --lr 1e-3
+T_tp4_std_adam3 --feat tp4 --std 1 --opt adam --lr 1e-3
+T_corr_std_adam3 --feat corr --std 1 --opt adam --lr 1e-3
+T_survey_std_adam3 --feat survey --std 1 --opt adam --lr 1e-3
+TS_all          --split time --feat all
+TS_noid         --split time --feat noid
+TS_tp4          --split time --feat tp4
+TS_corr         --split time --feat corr
+TS_noid_std_sgd3 --split time --feat noid --std 1 --lr 1e-3
+TS_noid_std_adam3 --split time --feat noid --std 1 --opt adam --lr 1e-3
+TS_corr_std_adam3 --split time --feat corr --std 1 --opt adam --lr 1e-3
+TS_tp4_std_adam3 --split time --feat tp4 --std 1 --opt adam --lr 1e-3
+W_sgd3_wd1e-3    --feat noid --std 1 --lr 1e-3 --wd 1e-3
+W_sgd3_wd1e-2    --feat noid --std 1 --lr 1e-3 --wd 1e-2
+W_adamw3_wd1e-2  --feat noid --std 1 --opt adamw --lr 1e-3 --wd 1e-2
+W_adamw3_wd1e-1  --feat noid --std 1 --opt adamw --lr 1e-3 --wd 1e-1
+W_adam3_wd1e-2   --feat noid --std 1 --opt adam --lr 1e-3 --wd 1e-2
+W_corr_adamw_wd1e-1 --feat corr --std 1 --opt adamw --lr 1e-3 --wd 1e-1
+A_64_32          --feat noid --std 1 --lr 1e-3 --arch 64-32
+A_8              --feat noid --std 1 --lr 1e-3 --arch 8
+A_leaky          --feat noid --std 1 --lr 1e-3 --act leaky
+A_gelu           --feat noid --std 1 --lr 1e-3 --act gelu
+X_all_leaky      --feat all --act leaky
+X_all_gelu       --feat all --act gelu
+R_lin_tp4_std     --feat tp4 --std 1 --opt adam --lr 1e-3 --arch none
+R_lin_noid_std    --feat noid --std 1 --opt adam --lr 1e-3 --arch none
+R_lin_corr_std    --feat corr --std 1 --opt adam --lr 1e-3 --arch none
+TS_lin_tp4_std    --split time --feat tp4 --std 1 --opt adam --lr 1e-3 --arch none
+TS_lin_noid_std   --split time --feat noid --std 1 --opt adam --lr 1e-3 --arch none
+TS_lin_corr_std   --split time --feat corr --std 1 --opt adam --lr 1e-3 --arch none
+TS_64_32          --split time --feat noid --std 1 --lr 1e-3 --arch 64-32
+TS_gelu           --split time --feat noid --std 1 --lr 1e-3 --act gelu
+TS_sgd3_wd1e-2    --split time --feat noid --std 1 --lr 1e-3 --wd 1e-2
+TS_corr_adamw_wd1e-1 --split time --feat corr --std 1 --opt adamw --lr 1e-3 --wd 1e-1
+TS_corr_adam3_wd1e-2 --split time --feat corr --std 1 --opt adam --lr 1e-3 --wd 1e-2
+R_corr_adam3_wd1e-2  --feat corr --std 1 --opt adam --lr 1e-3 --wd 1e-2
+SD1_R_all       --seed 1 --feat all
+SD1_R_noid      --seed 1 --feat noid
+SD1_R_corr_wd   --seed 1 --feat corr --std 1 --opt adam --lr 1e-3 --wd 1e-2
+SD1_R_64_32     --seed 1 --feat noid --std 1 --lr 1e-3 --arch 64-32
+SD1_TS_corr_wd  --seed 1 --split time --feat corr --std 1 --opt adam --lr 1e-3 --wd 1e-2
+SD1_TS_64_32    --seed 1 --split time --feat noid --std 1 --lr 1e-3 --arch 64-32
+SD1_TS_lin_corr --seed 1 --split time --feat corr --std 1 --opt adam --lr 1e-3 --arch none
+SD2_R_all       --seed 2 --feat all
+SD2_R_noid      --seed 2 --feat noid
+SD2_R_corr_wd   --seed 2 --feat corr --std 1 --opt adam --lr 1e-3 --wd 1e-2
+SD2_R_64_32     --seed 2 --feat noid --std 1 --lr 1e-3 --arch 64-32
+SD2_TS_corr_wd  --seed 2 --split time --feat corr --std 1 --opt adam --lr 1e-3 --wd 1e-2
+SD2_TS_64_32    --seed 2 --split time --feat noid --std 1 --lr 1e-3 --arch 64-32
+SD2_TS_lin_corr --seed 2 --split time --feat corr --std 1 --opt adam --lr 1e-3 --arch none
+SD3_R_all       --seed 3 --feat all
+SD3_R_noid      --seed 3 --feat noid
+SD3_R_corr_wd   --seed 3 --feat corr --std 1 --opt adam --lr 1e-3 --wd 1e-2
+SD3_R_64_32     --seed 3 --feat noid --std 1 --lr 1e-3 --arch 64-32
+SD3_TS_corr_wd  --seed 3 --split time --feat corr --std 1 --opt adam --lr 1e-3 --wd 1e-2
+SD3_TS_64_32    --seed 3 --split time --feat noid --std 1 --lr 1e-3 --arch 64-32
+SD3_TS_lin_corr --seed 3 --split time --feat corr --std 1 --opt adam --lr 1e-3 --arch none
