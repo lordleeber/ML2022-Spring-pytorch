@@ -610,7 +610,7 @@ footer.chap-footer {
 <tr><td>一份 notebook</td><td><code>model.py</code>、<code>dataset.py</code>、<code>explain_cnn.py</code>、<code>bert_hidden_states.py</code>、<code>bert_embedding.py</code></td><td>一個檔案只做一件事，比較好對照</td></tr>
 </tbody>
 </table></div>
-<p>還有一件事要先知道：三支腳本都把模型和資料寫死成 <code>.cuda()</code>，所以需要一張 NVIDIA 顯示卡才跑得起來。這是本 repo 刻意的寫法，第 0 章會說明執行環境。</p>
+<p>還有一件事要先知道：<code>explain_cnn.py</code> 把模型和資料寫死成 <code>.cuda()</code>，所以 Part 1 需要一張 NVIDIA 顯示卡才跑得起來；兩支 BERT 腳本則在 CPU 上算。這是本 repo 刻意的寫法，第 0 章會說明執行環境。</p>
 
 <h3>第二層：外部資源——有些已經不在了</h3>
 <p>這一層比較麻煩，因為不是改幾行程式就能解決：</p>
