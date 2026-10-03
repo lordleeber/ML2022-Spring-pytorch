@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 6 章　預測與輸出 pred.csv — HW01 COVID-19 確診率預測</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch05.html">← 第 5 章</a><a href="ch07.html">第 7 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW01 讀碼教材</p>
+  <h1>第 6 章　預測與輸出 pred.csv</h1>
+  <p class="chap-lead">第 5 章訓練完，磁碟上留下一個 <code>models/model.ckpt</code>。本章逐行讀 <code>predict.py</code> 全檔與 <code>utils.py</code> 的 <code>save_pred()</code>：它為什麼要重讀訓練資料、怎麼把權重載回來、怎麼一批一批算出 1,078 個預測，以及這些數字最後變成 pred.csv 時，每一個位元組長什麼樣子。最後看一眼預測值本身：測試集是陽性率更高的時期，模型有 61 筆預測超出了它在訓練時見過的範圍。</p>
+</header>
+<main>
+
+<h2 id="where">6.1　本章在流程中的位置</h2>
+<p>第 0 章 0.6 節跑過一次 predict.py，得到 pred.csv；第 3、4 章各讀了它的幾行。這一章把整支程式從頭讀完。predict.py 只有 42 行，結構是「一個函式加一段主程式」，真正做事的是主程式最後四行：</p>
+
+<figure class="listing"><figcaption>predict.py:39–42 — 建模型、載權重、預測、存檔</figcaption>
+<pre class="py" data-hot="41,42"><code>    model = My_Model(input_dim=x_train.shape[1]).to(device)
+    model.load_state_dict(torch.load(config['save_path']))
+    preds = predict(test_loader, model, device)
+    save_pred(preds, 'pred.csv')</code></pre></figure>
+
+<p>第 39–40 行在第 4 章 4.8 節讀過：重建一個同樣形狀的模型，再把 model.ckpt 裡的數字填回去。第 41 行呼叫同一個檔案開頭定義的 <code>predict()</code>，在測試集上算出預測；第 42 行呼叫 utils.py 的 <code>save_pred()</code>，把預測寫成提交格式。整支程式的資料流如下：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 310" role="img" aria-label="predict.py 的資料流：上排虛線框是為了得到 input_dim 117 而讀入訓練資料、切分、選特徵的繞路；中排是讀入 model.ckpt、重建模型並填回權重；下排是測試集經 test_loader 分成 5 個 batch，交給 predict 算出 1078 個預測，再由 save_pred 寫成 pred.csv">
+  <defs>
+    <marker id="ar6a" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#93a1af"/>
+    </marker>
+  </defs>
+  <rect x="10" y="10" width="640" height="84" rx="10" fill="none" stroke="#dde5ec" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text class="s-lbl" x="668" y="44" font-weight="700">只為了得到 117</text>
+  <text class="s-sm" x="668" y="64">第 25–34 行（6.2 節）</text>
+
+  <rect x="20" y="22" width="150" height="60" rx="8" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="95" y="48" text-anchor="middle">covid.train.csv</text>
+  <text class="s-sm" x="95" y="68" text-anchor="middle">2699 × 118</text>
+  <rect x="196" y="22" width="240" height="60" rx="8" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-lbl" x="316" y="48" text-anchor="middle">讀入、切分、選特徵</text>
+  <text class="s-sm" x="316" y="68" text-anchor="middle">算出 x_train (2160, 117) 等五份</text>
+  <rect x="462" y="22" width="170" height="60" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-mono" x="547" y="48" text-anchor="middle">input_dim = 117</text>
+  <text class="s-sm" x="547" y="68" text-anchor="middle">x_train.shape[1]</text>
+
+  <rect x="20" y="124" width="150" height="60" rx="8" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="95" y="150" text-anchor="middle">models/model.ckpt</text>
+  <text class="s-sm" x="95" y="170" text-anchor="middle">state_dict，6 個 key</text>
+  <rect x="462" y="124" width="170" height="60" rx="8" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="547" y="150" text-anchor="middle">重建模型、填回權重</text>
+  <text class="s-sm" x="547" y="170" text-anchor="middle">第 39–40 行（6.4 節）</text>
+
+  <rect x="20" y="226" width="150" height="60" rx="8" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="95" y="252" text-anchor="middle">covid.test.csv</text>
+  <text class="s-sm" x="95" y="272" text-anchor="middle">1078 × 117</text>
+  <rect x="196" y="226" width="240" height="60" rx="8" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="316" y="252" text-anchor="middle">test_loader</text>
+  <text class="s-sm" x="316" y="272" text-anchor="middle">5 個 batch，不打亂（第 36–37 行）</text>
+  <rect x="462" y="226" width="170" height="60" rx="8" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="547" y="252" text-anchor="middle">predict()</text>
+  <text class="s-sm" x="547" y="272" text-anchor="middle">第 41 行（6.5 節）</text>
+  <rect x="668" y="226" width="212" height="60" rx="8" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="774" y="252" text-anchor="middle">pred.csv</text>
+  <text class="s-sm" x="774" y="272" text-anchor="middle">save_pred，第 42 行（6.6 節）</text>
+
+  <line x1="170" y1="52" x2="192" y2="52" stroke="#93a1af" stroke-width="2" marker-end="url(#ar6a)"/>
+  <line x1="436" y1="52" x2="458" y2="52" stroke="#93a1af" stroke-width="2" marker-end="url(#ar6a)"/>
+  <line x1="547" y1="82" x2="547" y2="120" stroke="#93a1af" stroke-width="2" marker-end="url(#ar6a)"/>
+  <line x1="170" y1="154" x2="458" y2="154" stroke="#93a1af" stroke-width="2" marker-end="url(#ar6a)"/>
+  <line x1="547" y1="184" x2="547" y2="222" stroke="#93a1af" stroke-width="2" marker-end="url(#ar6a)"/>
+  <line x1="170" y1="256" x2="192" y2="256" stroke="#93a1af" stroke-width="2" marker-end="url(#ar6a)"/>
+  <line x1="436" y1="256" x2="458" y2="256" stroke="#93a1af" stroke-width="2" marker-end="url(#ar6a)"/>
+  <line x1="632" y1="256" x2="664" y2="256" stroke="#93a1af" stroke-width="2" marker-end="url(#ar6a)"/>
+</svg>
+<figcaption>圖 6.1 — predict.py 真正需要的是下兩排：權重檔與測試集。上排虛線框整段都是為了一個數字 117。（測試集其實也經過第 34 行的 select_feat，但 <code>select_all=True</code> 時它原樣傳回全部 117 欄，所以圖上畫成直接進 test_loader。）</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#e3b341"></i>磁碟檔案</span>
+  <span><i style="background:#58a6ff"></i>CPU 端資料</span>
+  <span><i style="background:#3fb950"></i>GPU 上的運算</span>
+  <span><i style="background:#a371f7"></i>控制與設定</span>
+</div>
+
+<p>前面幾章有幾件事明講「第 6 章再說」。本章逐一接住：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>前面留下的問題</th><th>出處</th><th>本章</th></tr></thead>
+<tbody>
+<tr><td>predict.py 為了拿到 input_dim＝117 而重讀訓練資料並切分，是「多餘的步驟」；更好的做法是把 input_dim 和 state_dict 一起存</td><td>第 0 章 0.6 節、第 4 章 4.8 節</td><td>6.2、6.3</td></tr>
+<tr><td>載回權重的流程</td><td>第 4 章 4.8 節、第 5 章 5.7 節</td><td>6.4</td></tr>
+<tr><td>預測迴圈與 pred.csv 的格式</td><td>第 4 章 4.8 節</td><td>6.5～6.8</td></tr>
+</tbody>
+</table></div>
+<p>有幾件事前面已經講完，本章只回指不重講：<code>load_state_dict</code> 依名字複製、形狀不符時的錯誤訊息（第 4 章 4.8 節）；test loader 必須 <code>shuffle=False</code>、<code>enumerate</code> 的編號就是 id（第 3 章 3.4 節）；<code>model.eval()</code> 與 <code>torch.no_grad()</code>（第 5 章 5.6 節）；<code>weights_only</code>（目錄頁、第 4 章 4.8 節的「現在的做法」）。其中兩件，本章有新的實測可以補強：6.3 節驗證 weights_only 的預設值，6.6 節把第 3 章「像亂猜」的說法量化。</p>
+<p>本章會反覆用到一個詞：<strong>推論（inference）</strong>，指拿訓練好的模型、只做 forward 來產生預測，不算梯度、不改權重。第 5 章的驗證迴圈其實也是推論，只是它還拿預測去和答案比；predict.py 手上沒有答案，只能把預測交出去。</p>
+
+<h2 id="detour">6.2　第 22–34 行：為了一個 117，重讀訓練資料</h2>
+
+<figure class="listing"><figcaption>predict.py:22–34 — 主程式的前半</figcaption>
+<pre class="py" data-hot="25,26,34"><code>if __name__ == '__main__':
+    # train_data size: 2699 x 118 (id + 37 states + 16 features x 5 days)
+    # test_data size: 1078 x 117 (without last day's positive rate)
+    train_data, test_data = pd.read_csv('./covid.train.csv').values, pd.read_csv('./covid.test.csv').values
+    train_data, valid_data = train_valid_split(train_data, config['valid_ratio'], config['seed'])
+
+    # Print out the data size.
+    print(f"""train_data size: {train_data.shape} 
+    valid_data size: {valid_data.shape} 
+    test_data size: {test_data.shape}""")
+
+    # Select features
+    x_train, x_valid, x_test, y_train, y_valid = select_feat(train_data, valid_data, test_data, config['select_all'])</code></pre></figure>
+
+<p>拿這 13 行和 train.py 的主程式對照，第 23–34 行和 train.py 第 103–114 行<strong>逐字相同</strong>：同樣讀兩個 CSV（第 1 章）、同樣用 seed 5201314 切成 2160／539（第 2 章）、同樣印出三個形狀、同樣呼叫 <code>select_feat</code>（第 2 章）。差別只在少了兩件事：train.py 第 101 行的 <code>same_seed</code>，以及第 116–117 行印 <code>number of features</code> 的那一行。所以 predict.py 的 stdout 是這樣（本機實測）：</p>
+<pre class="shell"><code>$ ../.venv/bin/python predict.py
+True  «1»
+0
+train_data size: (2160, 118)   «2»
+    valid_data size: (539, 118) 
+    test_data size: (1078, 117)
+100%|██████████| 5/5 [00:00&lt;00:00, 37.49it/s]  «3»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>第 3 行 <code>from config import *</code> 執行 config.py 時印的兩行（第 0 章 0.4 節），和 train.py 一樣。</li>
+  <li><span class="mk">2</span>第 29–31 行印的三個形狀。<code>train_data size</code> 那行行尾有一個看不見的空格，第二、三行開頭有 4 格縮排，原因和 train.py 相同：f-string 用三引號跨行（第 2 章）。這裡<strong>沒有</strong> <code>number of features: 117</code>，那行只有 train.py 有。</li>
+  <li><span class="mk">3</span>這行在 stderr，是 6.5 節 <code>predict()</code> 裡的 tqdm 進度條：1,078 筆、每批 256 筆，共 5 個 batch。最後的速度每次執行都不同，第 0 章看到的是 44.46it/s。進度條左邊沒有 <code>Epoch [1/3000]</code> 那樣的描述，因為 predict() 沒有呼叫 <code>set_description</code>（第 5 章 5.5 節）。</li>
+</ol>
+
+<h3>這 13 行用掉了什麼</h3>
+<p>第 34 行一口氣算出五樣東西：<code>x_train</code>、<code>x_valid</code>、<code>x_test</code>、<code>y_train</code>、<code>y_valid</code>。往下讀，真正被用到的只有兩樣：<code>x_test</code> 交給第 36 行建 Dataset，<code>x_train</code> 只在第 39 行被取了一個 <code>.shape[1]</code>。其餘三樣算完就丟。換句話說，讀入 2,699 列訓練資料、打亂、切分、選欄，全部是為了得到 117 這個數字，好讓第 39 行建出的模型和存檔時同一個形狀（第 4 章 4.8 節）。</p>
+<p>花了多少時間？本機實測整支 predict.py 約 2.5 秒（大部分是 import torch、初始化 GPU 這類固定開銷），其中讀 CSV、切分、選特徵合計約 0.025 秒。所以這段繞路<strong>慢不了多少</strong>，第 0 章稱它「多餘」，問題不在速度，而在下面兩件事。</p>
+
+<h3>問題一：預測要依賴訓練資料</h3>
+<p>predict.py 只要預測測試集，卻非得找到 <code>covid.train.csv</code> 不可。把它交給別人、搬到另一台機器上執行，就得連訓練資料一起帶過去。本機實測，在 repo 根目錄（而不是 <code>HW01/</code>）執行 <code>.venv/bin/python HW01/predict.py</code>，第一個失敗的就是第 25 行讀訓練資料：</p>
+<pre class="shell"><code>FileNotFoundError: [Errno 2] No such file or directory: './covid.train.csv'</code></pre>
+<p>路徑 <code>./covid.train.csv</code> 是相對於「執行時所在的目錄」（第 5 章 5.2 節講 models/ 時的同一件事），所以 predict.py 和 train.py 一樣必須在 <code>HW01/</code> 裡執行。程式在讀檔時就停了，不會留下半份 pred.csv。</p>
+
+<h3>問題二：117 是「現在」算的，不是「訓練時」的</h3>
+<p>這是更根本的問題。第 39 行的 117，是 predict.py <strong>執行當下</strong>依照 config 與 <code>select_feat</code> 重算出來的；它和 model.ckpt 訓練時用的特徵一致，只是因為兩支程式剛好讀同一份 config、呼叫同一個函式。兩者之間沒有任何東西在檢查「是不是同一套特徵」。</p>
+<p>第 7 章改進模型時，你會去改 <code>select_feat</code> 或 config（例如拿掉 id 欄）。只要改了之後沒有重新訓練就執行 predict.py，會出現兩種情況：</p>
+<ul>
+  <li><strong>欄數變了</strong>：例如改成 116 欄，第 39 行就建出 <code>My_Model(116)</code>，第 40 行載入 117 欄的權重時報第 4 章 4.8 節那個 <code>size mismatch for layers.0.weight</code> 錯誤。這種情況至少會大聲失敗。</li>
+  <li><strong>欄數沒變、欄位換了</strong>：例如把某一欄換成另一欄，總數還是 117。形狀完全對得上，<code>load_state_dict</code> 不會抱怨，模型卻會把學給 A 欄的權重乘在 B 欄上。第 2 章 2.4 節說過這種錯「程式不會報錯，只會默默給出錯的預測」。這種情況完全安靜。</li>
+</ul>
+<p>兩種情況的根源相同：<strong>建模型需要的資訊，沒有跟著權重一起存</strong>。下一節看怎麼補。</p>
+<p>附帶一提，predict.py 沒有呼叫 <code>same_seed</code>，對結果沒有影響。切分用的是 <code>train_valid_split</code> 自己的 <code>torch.Generator</code>（第 2 章），不看全域 seed；第 39 行建模型時抽到的亂數初始權重（第 4 章 4.4 節），下一行就全部被覆蓋；預測過程本身不用任何亂數。本機實測連續執行兩次，pred.csv 的 md5（一種檔案內容的指紋，內容差一個位元組，指紋就完全不同）都是 <code>46a0484b5d4eff1d72c9dd06923e65bb</code>：預測是確定性的。</p>
+
+<h2 id="better">6.3　更好的做法：讓 checkpoint 自己帶著 input_dim</h2>
+<p>第 4 章 4.8 節的「現在的做法」框提過方向：存檔時不只存 state_dict，而是存一個字典，把建模型需要的設定一起放進去。這裡把它展開。</p>
+
+<h3>先確認：存字典，新版 torch.load 讀得回來嗎</h3>
+<p>目錄頁說過，PyTorch 2.6 起 <code>torch.load</code> 的 <code>weights_only</code> 預設為 <code>True</code>：只允許載入 tensor 與基本容器。本書用的 torch 2.11 實測如下：</p>
+<ul>
+  <li><code>torch.load</code> 的函式簽名（def 那一行列出的參數與預設值）裡，<code>weights_only</code> 的預設值寫的是 <code>None</code>，但執行時的效果<strong>就是 True</strong>：載入一個含自訂類別物件的檔案，會報 <code>UnpicklingError: Weights only load failed. ...</code>，加上 <code>weights_only=False</code> 才讀得進來。</li>
+  <li>白名單裡的型別照樣能載入，例如 <code>collections.Counter</code>（標準函式庫裡用來計數的 dict）。</li>
+  <li>repo 的 model.ckpt（一個 <code>OrderedDict</code>，也就是會記住 key 插入順序的 dict，6 個 key）用預設值能載入，所以第 40 行沒寫 weights_only 也照常運作。</li>
+  <li><code>{'input_dim': 117, 'state_dict': ...}</code> 這種「整數加 state_dict」的字典，用預設值也能載入。</li>
+</ul>
+<p>UnpicklingError 的 unpickling 指的是 Python 的 pickle 格式：<code>torch.save</code> 用它把物件序列化（轉成一串可以寫進檔案的位元組，第 5 章 5.7 節）。pickle 可以存任意 Python 物件，載入時也就可能執行任意程式碼，所以來路不明的檔案很危險；weights_only 就是只放行 tensor、數字、字串、list、dict 這類「純資料」的限制。最後一點是本節要的：<strong>把 input_dim 和 state_dict 包成字典，新版預設的安全載入照樣接受。</strong></p>
+
+<div class="note"><h4>現在的做法：checkpoint 帶著重建模型需要的一切</h4>
+<p>以下是示意寫法，本書沒有改 repo 的程式，也沒有實際執行這段。存檔端（train.py 第 88 行）：</p>
+<pre class="py"><code>torch.save({
+    'input_dim': x_train.shape[1],
+    'feat_idx': feat_idx,              # 用了哪幾欄（需要讓 select_feat 把它傳回來）
+    'state_dict': model.state_dict(),
+}, config['save_path'])</code></pre>
+<p>載入端（取代 predict.py 第 25–34 行與第 39–40 行）：</p>
+<pre class="py"><code>ckpt = torch.load(config['save_path'], map_location=device, weights_only=True)  # map_location：第 4 章 4.8 節
+test_data = pd.read_csv('./covid.test.csv').values
+x_test = test_data[:, ckpt['feat_idx']]
+model = My_Model(input_dim=ckpt['input_dim']).to(device)
+model.load_state_dict(ckpt['state_dict'])</code></pre>
+<ul>
+  <li><strong>不必再讀訓練資料。</strong>predict 只需要權重檔與測試集，圖 6.1 的上排整段消失。</li>
+  <li><strong>存 feat_idx，才擋得住 6.2 節的「安靜的錯」。</strong>只存 input_dim，只能保證欄數一致；存下用了哪幾欄，預測時直接照著取，欄位就不可能對錯。feat_idx 是整數 list，屬於 weights_only 放行的基本容器（本機只實測了含 input_dim 的那種字典）。</li>
+  <li>標準化（第 1 章「現在的做法」）一旦加進來，訓練集算出的平均與標準差也是「預測時必須原樣重用」的東西，同樣該放進這個字典。第 5 章 5.7 節的「存檔時連同訓練狀態一起存」是同一個想法：checkpoint 存的是「之後要用到的一切」，不只是權重。</li>
+</ul>
+</div>
+
+<h3>不改存檔格式的折衷：從權重形狀反推</h3>
+<p>如果不想動 train.py，還有一個辦法：input_dim 其實已經藏在 model.ckpt 裡了。第 4 章 4.3 節看過，<code>layers.0.weight</code> 的形狀是 (輸出, 輸入) ＝ (16, 117)，第二個維度就是 input_dim。所以：</p>
+<pre class="py"><code>state_dict = torch.load(config['save_path'])
+model = My_Model(input_dim=state_dict['layers.0.weight'].shape[1]).to(device)
+model.load_state_dict(state_dict)</code></pre>
+<p>這樣也不必讀訓練資料。代價是程式碼必須知道「第一層的參數叫 <code>layers.0.weight</code>」，model.py 的結構一改（例如在最前面加一層），這行就得跟著改；而且它只救得了欄數，救不了「欄位換了」那種錯。存字典是比較完整的做法，反推形狀是應急。</p>
+
+<h2 id="load">6.4　第 36–40 行：建 test loader、載回權重</h2>
+
+<figure class="listing"><figcaption>predict.py:36–40 — 測試集 loader 與重建模型</figcaption>
+<pre class="py" data-hot="37,40"><code>    test_dataset = COVID19Dataset(x_test)
+    test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False, pin_memory=True)
+
+    model = My_Model(input_dim=x_train.shape[1]).to(device)
+    model.load_state_dict(torch.load(config['save_path']))</code></pre></figure>
+
+<p>第 36–37 行在第 3 章 3.4 節讀過：只傳 x 的 Dataset 每筆只回傳一個 tensor；<code>shuffle=False</code> 是正確性的要求，6.6 節會量化打亂的後果。第 39–40 行在第 4 章 4.8 節讀過：建一個和 train.py 第 126 行同樣的模型（少了行尾註解），<code>torch.load</code> 讀出 state_dict，<code>load_state_dict</code> 依名字複製進去。把三章的說法接起來，載回權重的完整流程是：</p>
+<ol>
+  <li><strong>訓練時</strong>（第 5 章 5.7 節）：每次 valid loss 創新低，<code>torch.save(model.state_dict(), ...)</code> 覆寫 model.ckpt。訓練結束時，檔案裡是第 1483 個 epoch 那一份。</li>
+  <li><strong>預測時重建骨架</strong>（第 39 行）：用同樣的 input_dim 建 <code>My_Model</code>，搬上 GPU。這時權重是新抽的亂數。</li>
+  <li><strong>填回數字</strong>（第 40 行）：讀出 6 個 key 的字典，依名字把 2,033 個數字（第 4 章 4.3 節算過的參數總數）複製進去。名字與形狀必須完全對上，否則報錯（第 4 章 4.8 節）。</li>
+</ol>
+<p>第 40 行還有一個前提：檔案要存在。本機實測，把 models/model.ckpt 移走再執行，前面的讀檔、切分、印形狀都照常完成，到第 40 行才失敗：</p>
+<pre class="shell"><code>FileNotFoundError: [Errno 2] No such file or directory: './models/model.ckpt'</code></pre>
+<p>也就是說，predict.py 永遠載入「最近一次 train.py 存下的最佳」。第 5 章動手做第 4 項提醒過：改了設定重新訓練，model.ckpt 就被覆寫；之後執行 predict.py，pred.csv 反映的是新的那一份。本章所有數字都以 1.661 那一份 model.ckpt 為準：訓練時印出的最佳 valid loss 是 1.661，拿到 539 筆上一次算完的真實 valid MSE 是 2.0685（兩者的差距見第 3 章 3.5 節）。</p>
+
+<h2 id="predict-fn">6.5　predict()：一批一批算，再接成一條</h2>
+
+<figure class="listing"><figcaption>predict.py:10–19 — predict() 全文</figcaption>
+<pre class="py" data-hot="11,15,17,18"><code>def predict(test_loader, model, device):
+    model.eval()  # Set your model to evaluation mode.
+    preds = []
+    for x in tqdm(test_loader):
+        x = x.to(device)
+        with torch.no_grad():
+            pred = model(x)
+            preds.append(pred.detach().cpu())
+    preds = torch.cat(preds, dim=0).numpy()
+    return preds</code></pre></figure>
+
+<p>這個函式和第 5 章 5.6 節的驗證迴圈幾乎是同一個樣子：先 <code>model.eval()</code>（第 11 行），迴圈裡 <code>.to(device)</code> 搬上 GPU（第 14 行），在 <code>torch.no_grad()</code> 裡做 forward（第 15–16 行）。eval 與 no_grad 各管什麼，5.6 節講過；這裡只看和驗證迴圈不同的地方。</p>
+<ul>
+  <li><strong>第 13 行只拿 x。</strong>驗證迴圈是 <code>for x, y in valid_loader</code>；測試集的 Dataset 沒有 y，每個 batch 就是一個 tensor（第 3 章 3.2 節），所以這裡只寫 <code>for x in ...</code>。迴圈外包了 tqdm，那就是 6.2 節 stderr 的那條進度條。</li>
+  <li><strong>沒有 loss。</strong>沒有答案可比，預測值就是全部的產出，第 17 行把它收集起來。</li>
+</ul>
+
+<h3>第 17 行：.detach() 多餘，.cpu() 不可少</h3>
+<p><code>pred</code> 是 GPU 上的 (256,) tensor（第 4 章 4.5 節的形狀，經過 <code>squeeze(1)</code>）。第 17 行對它做兩件事再放進 list：</p>
+<ul>
+  <li><code>.detach()</code>：取出不連著計算圖的版本。但它在 no_grad 區塊裡算出來，本來就沒有計算圖：本機實測 <code>pred.requires_grad</code> 是 False。所以這個 detach 和第 5 章 5.5 節 train loss 那裡的一樣，多餘但無害。</li>
+  <li><code>.cpu()</code>：把 tensor 從 GPU 記憶體複製回主記憶體（第 3 章 3.4 節：搬上 GPU 是複製，搬回來也是）。這一步<strong>不可少</strong>，原因在第 18 行。</li>
+</ul>
+
+<h3>第 18 行：torch.cat 接起來，.numpy() 轉成 NumPy</h3>
+<p>迴圈結束時，<code>preds</code> 是 5 個 tensor 組成的 list。本機實測它們的形狀依序是 (256,)、(256,)、(256,)、(256,)、(54,)，都在 cpu、都是 float32，正是第 3 章 3.3 節 test loader 的 256 × 4 ＋ 54。第 18 行做兩件事：</p>
+<ul>
+  <li><code>torch.cat(preds, dim=0)</code>：沿著第 0 維把 5 個 tensor 首尾相接（第 4 章動手做用過它把 train 與 valid 上下接起來），得到一個 (1078,) 的 tensor。順序就是 list 的順序，也就是 loader 給 batch 的順序。</li>
+  <li><code>.numpy()</code>：轉成 NumPy 陣列。本機實測結果是 <code>ndarray</code>，形狀 (1078,)，dtype float32（第 3 章：模型的參數與運算都是 float32，輸出自然也是）。</li>
+</ul>
+<p><code>.numpy()</code> 只能用在 CPU 上的 tensor：NumPy 陣列住在主記憶體，讀不到 GPU 記憶體。本機實測，對 GPU 上的 tensor 直接呼叫會報錯，錯誤訊息自己就把解法講出來了：</p>
+<pre class="shell"><code>TypeError: can't convert cuda:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first.</code></pre>
+<p>（host memory 就是主記憶體，相對於 GPU 這個 device。）predict() 選擇每個 batch 算完就先搬回 CPU，再在 CPU 上接起來；也可以先在 GPU 上 cat、最後一次搬回，HW01 這麼小的資料量兩種寫法沒有差別。</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 330" role="img" aria-label="predict 的形狀變化：test_loader 依序給出 4 個 256 筆與 1 個 54 筆的 batch，在 GPU 上經過模型得到 5 個一維預測；每個用 cpu 搬回主記憶體後放進 list；torch.cat 沿第 0 維接成 1078 個；最後 numpy 轉成 float32 的 NumPy 陣列交給 save_pred">
+  <defs>
+    <marker id="ar6b" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#93a1af"/>
+    </marker>
+  </defs>
+  <text class="s-sm" x="40" y="22">① test_loader 依序給出的 x，第 14 行搬上 GPU</text>
+  <rect x="40" y="30" width="180" height="30" rx="5" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="130" y="50" text-anchor="middle">(256, 117)</text>
+  <rect x="228" y="30" width="180" height="30" rx="5" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="318" y="50" text-anchor="middle">(256, 117)</text>
+  <rect x="416" y="30" width="180" height="30" rx="5" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="506" y="50" text-anchor="middle">(256, 117)</text>
+  <rect x="604" y="30" width="180" height="30" rx="5" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="694" y="50" text-anchor="middle">(256, 117)</text>
+  <rect x="792" y="30" width="64" height="30" rx="5" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="824" y="50" text-anchor="middle">(54,117)</text>
+
+  <text class="s-sm" x="40" y="86">② 第 16 行 model(x) 的輸出 pred，仍在 GPU</text>
+  <rect x="40" y="94" width="180" height="30" rx="5" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="130" y="114" text-anchor="middle">(256,)</text>
+  <rect x="228" y="94" width="180" height="30" rx="5" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="318" y="114" text-anchor="middle">(256,)</text>
+  <rect x="416" y="94" width="180" height="30" rx="5" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="506" y="114" text-anchor="middle">(256,)</text>
+  <rect x="604" y="94" width="180" height="30" rx="5" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="694" y="114" text-anchor="middle">(256,)</text>
+  <rect x="792" y="94" width="64" height="30" rx="5" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="824" y="114" text-anchor="middle">(54,)</text>
+
+  <text class="s-sm" x="40" y="150">③ 第 17 行 .cpu() 搬回主記憶體，放進 preds（list，5 個 tensor）</text>
+  <rect x="40" y="158" width="180" height="30" rx="5" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="130" y="178" text-anchor="middle">(256,)</text>
+  <rect x="228" y="158" width="180" height="30" rx="5" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="318" y="178" text-anchor="middle">(256,)</text>
+  <rect x="416" y="158" width="180" height="30" rx="5" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="506" y="178" text-anchor="middle">(256,)</text>
+  <rect x="604" y="158" width="180" height="30" rx="5" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="694" y="178" text-anchor="middle">(256,)</text>
+  <rect x="792" y="158" width="64" height="30" rx="5" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="824" y="178" text-anchor="middle">(54,)</text>
+
+  <text class="s-sm" x="40" y="214">④ 第 18 行 torch.cat(preds, dim=0)：首尾相接</text>
+  <rect x="40" y="222" width="816" height="30" rx="5" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="448" y="242" text-anchor="middle">tensor (1078,) float32，第 i 個數字是測試集第 i 列的預測</text>
+
+  <text class="s-sm" x="40" y="278">⑤ .numpy()：轉成 NumPy 陣列，第 19 行回傳</text>
+  <rect x="40" y="286" width="816" height="30" rx="5" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-mono" x="448" y="306" text-anchor="middle">ndarray (1078,) float32 → save_pred（6.6 節）</text>
+
+  <line x1="880" y1="34" x2="880" y2="310" stroke="#93a1af" stroke-width="2" marker-end="url(#ar6b)"/>
+</svg>
+<figcaption>圖 6.2 — predict() 從頭到尾的形狀。5 個 batch 在 GPU 上各自算完、各自搬回 CPU，最後才接成一條。方框寬度大致依筆數，54 筆那格為了放得下文字畫寬了一些。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#3fb950"></i>在 GPU 上</span>
+  <span><i style="background:#58a6ff"></i>在 CPU（主記憶體）上</span>
+</div>
+
+<p>最後回傳的是 NumPy 陣列，而不是 tensor。這是一個分界：從這裡開始，寫檔、統計都在 CPU 上用一般的 Python 與 NumPy 處理，不再需要 PyTorch。</p>
+
+<h2 id="save-pred">6.6　save_pred()：pred.csv 的每一行</h2>
+
+<figure class="listing"><figcaption>utils.py:39–45 — save_pred() 全文</figcaption>
+<pre class="py" data-hot="41,42,43,45"><code>def save_pred(preds, file):
+    """ Save predictions to specified file """
+    with open(file, 'w') as fp:
+        writer = csv.writer(fp)
+        writer.writerow(['id', 'tested_positive'])
+        for i, p in enumerate(preds):
+            writer.writerow([i, p])</code></pre></figure>
+
+<p>七行，逐行看：</p>
+<ul>
+  <li><strong>第 41 行</strong>用 <code>with open(file, 'w') as fp:</code> 以寫入模式開檔：檔案不存在就建立，存在就<strong>清空重寫</strong>，所以每次執行 predict.py 都會蓋掉上一份 pred.csv。<code>with</code> 區塊結束時自動關檔（第 5 章 5.6 節的 <code>with torch.no_grad()</code> 是同一種語法：進入時做一件事、離開時做收尾）。這一行少了一個參數，6.8 節專門談。</li>
+  <li><strong>第 42 行</strong>建立 <code>csv.writer</code>，Python 標準函式庫 csv 模組的寫入器。它負責 CSV 格式的細節：欄位之間放逗號、欄位內容本身有逗號或引號時，用引號把整個欄位包起來，免得被誤認成分隔符號、每列結尾放行尾字元。utils.py 第 3 行 <code>import csv</code> 就是為了它。</li>
+  <li><strong>第 43 行</strong> <code>writerow</code> 寫一列：表頭 <code>id,tested_positive</code>。這兩個欄名是 Kaggle 規定的提交格式，答案欄的名字和訓練資料的最後一欄相同。</li>
+  <li><strong>第 44–45 行</strong>對每個預測寫一列 <code>[i, p]</code>。<code>enumerate</code> 給出 0、1、2…當 id（第 3 章 3.4 節），<code>p</code> 是陣列裡的一個 float32 數字，怎麼變成字串在 6.7 節。</li>
+</ul>
+<p>本機實測寫出的檔案：</p>
+<pre class="shell"><code>$ head -4 pred.csv
+id,tested_positive  «1»
+0,8.850631
+1,7.368863
+2,4.1526003  «2»
+$ tail -2 pred.csv          # 看最後 2 行
+1076,36.028175
+1077,38.698322  «3»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>表頭一行，接著 1,078 行預測，共 1,079 行，15,799 bytes。前四行和第 0 章 0.6 節看到的一樣。</li>
+  <li><span class="mk">2</span>注意 4.1526003 有 8 位數字，8.850631 只有 7 位。不是四捨五入到固定位數，原因在 6.7 節。</li>
+  <li><span class="mk">3</span>最後一個 id 是 1077，所以 id 從 0 數到 1077，正好 1,078 個。最後兩筆的預測都超過 30，比訓練資料裡任何一個答案都高，6.9 節會回來看。</li>
+</ol>
+<p>本機也用 <code>pd.read_csv('pred.csv')</code> 讀回來檢查：欄位是 <code>['id', 'tested_positive']</code>，1,078 列，tested_positive 是 float64（pandas 讀小數的預設型別），數值和模型在 x_test 上的輸出一致（<code>np.allclose</code> 為 True，「在浮點誤差內相等」，第 1 章的 <code>np.isclose</code> 的整個陣列版本）。檔案格式沒有問題。</p>
+
+<h3>id 對得上嗎：第 3 章的前提，實測確認</h3>
+<p>第 3 章 3.4 節說，<code>enumerate</code> 的 i 能當 id，前提是 loader 依原始順序給資料。其實還有第二個前提：測試集本身的 id 欄要正好是 0、1、2…依序排列。如果 covid.test.csv 的列是亂序的，或 id 從 1 開始，<code>enumerate</code> 的 i 就和檔案裡的 id 不一致。本機實測，測試集的 id 欄<strong>正好是 0 到 1077 依序排列</strong>（和 0 到 1077 的整數序列 <code>np.arange(1078)</code> 用 <code>np.array_equal</code> 逐個比較，完全相同）。兩個前提都成立，pred.csv 的第 i 列就是測試集 id i 的預測。</p>
+<p>save_pred 沒有讀測試集的 id 欄，而是自己從 0 數起，這是一種「剛好成立」的寫法。更穩的做法是直接把 <code>x_test</code> 的第 0 欄（也就是 id 欄，第 2 章 select_all 的結果）寫出去，見 6.8 節的「現在的做法」。</p>
+
+<h3>如果 test loader 打亂了：從 1.00 變成 120</h3>
+<p>第 3 章說，test loader 若打亂，每個預測值都算對了，卻被貼上錯的 id，「成績會差到像亂猜」。現在可以量化這句話，只是要先解決一個問題：<strong>測試集沒有答案</strong>，算不出真正的 MSE。</p>
+<p>本章借用一把替代的尺：測試集第 4 天的陽性率（第 101 欄，pandas 欄名 <code>tested_positive.3</code>）。目錄頁的 baseline 表裡，「直接抄第 4 天」當預測，在驗證集上的真實 MSE 是 1.313：第 4 天和真正的答案（第 5 天）相當接近。所以拿預測和第 4 天算 MSE，雖然不是成績，卻能看出預測「離一個合理的參考值有多遠」。下面寫成 MSE(預測, 第 4 天)。</p>
+<p>本機實測，把模型的 1,078 個預測照 pred.csv 的順序和第 4 天比，MSE(預測, 第 4 天) 是 <strong>1.0045</strong>；把 1,078 個預測本身隨機重排（用以 0 為 seed 的 NumPy 亂數產生器 <code>np.random.default_rng(0)</code> 產生排列），模擬「每個預測被貼上隨機的 id」，變成 <strong>120.0056</strong>，大了一百多倍。</p>
+<p>120 有多糟？拿它和最笨的預測比：每一筆都猜同一個數字，猜第 4 天的平均值。這樣的 MSE(預測, 第 4 天) 就是第 4 天陽性率的<strong>變異數</strong>（variance，每個值和平均的差平方後再平均，衡量一組數字散得多開；第 5 章 5.10 節「永遠猜平均」的 MSE 和驗證集答案的變異數幾乎相等，就是這個道理）。本機實測測試集第 4 天的變異數是 59.6773。打亂後的 120 大約是它的 <strong>2 倍</strong>：比「每筆都猜平均」還糟一倍。</p>
+<p>為什麼剛好是 2 倍左右？打亂之後，每一筆的預測和它被配到的第 4 天是兩個互不相干的數字，各自都在平均附近散開，散開的程度都約是變異數；把差拆成「預測離平均多遠」減「第 4 天離平均多遠」（兩者的平均都約 15.17，見 6.9 節，所以可以用同一個平均）：平方展開後，兩項各自的平方平均起來各是一份變異數；交叉項是兩者的乘積，配對既然是隨機的，正負互相抵銷、平均約為 0。所以總和約是兩份變異數。所以第 3 章的「像亂猜」說得還太客氣：打亂 id 的提交，比亂猜一個常數還差。</p>
+
+<h2 id="float">6.7　數字怎麼變成字串：float32 的最短表示</h2>
+<p>pred.csv 裡的 <code>8.850631</code> 和 <code>4.1526003</code>，位數不一樣多。如果是固定四捨五入到小數第幾位，應該一樣長；如果是印出全部精度，應該更長。它們是怎麼來的？</p>
+<p>第 45 行的 <code>p</code>，是對一個 float32 的 NumPy 陣列做 <code>enumerate</code> 取出的元素，型別是 NumPy 的 float32 純量（<code>np.float32</code>），不是 Python 內建的 float。<code>csv.writer</code> 遇到非字串的值，會先把它轉成字串，這裡等於 <code>str(p)</code>。而 NumPy 把 float32 轉字串的規則是：<strong>印出能唯一還原成同一個 float32 的最短十進位數字</strong>。</p>
+<p>拆開來說。第 3 章講過，float32 只有約 7 位有效數字：它能精確表示的數字是一格一格的，相鄰兩格之間的數都存不了。<code>8.850631</code> 這個十進位字串，讀回 float32 時會落在唯一的一格上，正是模型算出的那一格；少一位（8.85063）就會落到別格，多一位則沒有必要。<code>4.1526003</code> 也一樣，只是在 4 附近，要 8 位數字才足以指名那一格。所以位數不固定，取決於那個值附近格子的疏密。</p>
+<p>對照組：同一個預測若先轉成 float64 再印，是 <code>8.850630760192871</code>。後面那串 0760192871 不是模型多算出來的精度，而是 float32 那一格的值用 float64 完整寫出來的樣子（第 3 章 <code>y_train[0]</code> 從 3.7109291 變成 3.7109291553497314 是同一件事）。寫成最短表示 <code>8.850631</code>，資訊一點也沒少：讀回 float32 是完全同一個數。</p>
+<p>這對成績有影響嗎？沒有。pred.csv 寫下的就是模型算出的 float32 值本身；Kaggle 讀進去算 MSE 時，和完整精度的差異遠小於預測本身的誤差（真實 valid MSE 2.07，第 3 章）。值得知道的是另一件事：<strong>檔案裡的位數不代表模型的精度</strong>。模型只算到 float32，寫成 16 位小數是假的精確，寫成 7、8 位才是誠實的。</p>
+
+<h2 id="crlf">6.8　行尾：CRLF 與 newline=''</h2>
+<p>「一行結束」在檔案裡是一兩個看不見的位元組，叫<strong>行尾（line ending）</strong>。歷史上有兩種主流：</p>
+<ul>
+  <li><strong>LF</strong>（line feed，換行），一個位元組，Python 字串裡寫成 <code>\n</code>。Linux 與 macOS 的文字檔用它。</li>
+  <li><strong>CRLF</strong>（carriage return ＋ line feed，歸位加換行），兩個位元組，寫成 <code>\r\n</code>。Windows 的文字檔用它，許多網路協定也規定用它。</li>
+</ul>
+<p>本機是 Linux，直覺上 pred.csv 應該是 LF。但本機實測，用二進位模式（<code>'rb'</code>，原封不動地讀位元組、不轉換行尾，指令見 6.10 節第 2 項）讀出檔案開頭：</p>
+<pre class="shell"><code>b'id,tested_positive\r\n0,8.850631'</code></pre>
+<p>開頭的 <code>b'...'</code> 表示這是 bytes（位元組串，檔案裡原原本本的位元組），不是一般字串。表頭後面是 <code>\r\n</code>：<strong>每一行的結尾都是 CRLF，即使是在 Linux 上產生的</strong>。原因是 <code>csv.writer</code> 預設的行尾設定（<code>lineterminator</code>）就是 <code>'\r\n'</code>，不管在哪個作業系統。CSV 格式的規範 RFC 4180 規定行尾是 CRLF，csv 模組照規範寫；pandas 讀回來也完全正常（6.6 節）。在 Linux 上，這個檔案一切正常。</p>
+
+<h3>問題在 Windows：\r\r\n</h3>
+<p>問題出在第 41 行開檔的方式。Python 以文字模式開檔（<code>'w'</code> 沒有 <code>b</code>）時，寫入的每個 <code>\n</code> 會被換成「這個作業系統的行尾」：Linux 上維持 <code>\n</code>，Windows 上換成 <code>\r\n</code>。csv.writer 寫出的 <code>\r\n</code> 裡也有一個 <code>\n</code>，於是在 Windows 上它又被換一次：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 250" role="img" aria-label="pred.csv 第二行結尾的位元組：本機 Linux 實測是 1 後面接 CR、LF；在 Windows 上沒有 newline 空字串時，文字模式把 LF 換成 CR LF，結果是 CR、CR、LF；加上 newline 空字串後，任何系統都是 CR、LF">
+  <text class="s-lbl" x="20" y="54" font-weight="700">Linux（本機實測）</text>
+  <text class="s-sm" x="20" y="72">open(file, 'w')</text>
+  <rect x="200" y="36" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="222" y="61" text-anchor="middle">0</text>
+  <rect x="248" y="36" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="270" y="61" text-anchor="middle">,</text>
+  <rect x="296" y="36" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="318" y="61" text-anchor="middle">8</text>
+  <rect x="344" y="36" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="366" y="61" text-anchor="middle">.</text>
+  <rect x="392" y="36" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="414" y="61" text-anchor="middle">8</text>
+  <rect x="440" y="36" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="462" y="61" text-anchor="middle">5</text>
+  <rect x="488" y="36" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="510" y="61" text-anchor="middle">0</text>
+  <rect x="536" y="36" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="558" y="61" text-anchor="middle">6</text>
+  <rect x="584" y="36" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="606" y="61" text-anchor="middle">3</text>
+  <rect x="632" y="36" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="654" y="61" text-anchor="middle">1</text>
+  <rect x="680" y="36" width="44" height="40" rx="4" fill="#e3b341" fill-opacity="0.25" stroke="#e3b341"/>
+  <text class="s-mono" x="702" y="61" text-anchor="middle">\r</text>
+  <rect x="728" y="36" width="44" height="40" rx="4" fill="#e3b341" fill-opacity="0.25" stroke="#e3b341"/>
+  <text class="s-mono" x="750" y="61" text-anchor="middle">\n</text>
+  <text class="s-sm" x="784" y="61">CRLF：csv 預設</text>
+
+  <text class="s-lbl" x="20" y="134" font-weight="700">Windows</text>
+  <text class="s-sm" x="20" y="152">open(file, 'w')</text>
+  <text class="s-mono" x="510" y="141" text-anchor="middle">…</text>
+  <rect x="536" y="116" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="558" y="141" text-anchor="middle">6</text>
+  <rect x="584" y="116" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="606" y="141" text-anchor="middle">3</text>
+  <rect x="632" y="116" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="654" y="141" text-anchor="middle">1</text>
+  <rect x="680" y="116" width="44" height="40" rx="4" fill="#e3b341" fill-opacity="0.25" stroke="#e3b341"/>
+  <text class="s-mono" x="702" y="141" text-anchor="middle">\r</text>
+  <rect x="728" y="116" width="44" height="40" rx="4" fill="#f85149" fill-opacity="0.3" stroke="#f85149"/>
+  <text class="s-mono" x="750" y="141" text-anchor="middle">\r</text>
+  <rect x="776" y="116" width="44" height="40" rx="4" fill="#e3b341" fill-opacity="0.25" stroke="#e3b341"/>
+  <text class="s-mono" x="798" y="141" text-anchor="middle">\n</text>
+  <text class="s-sm" x="832" y="141">多一個</text>
+
+  <text class="s-lbl" x="20" y="214" font-weight="700">任何系統</text>
+  <text class="s-sm" x="20" y="232">open(file, 'w', newline='')</text>
+  <text class="s-mono" x="510" y="221" text-anchor="middle">…</text>
+  <rect x="536" y="196" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="558" y="221" text-anchor="middle">6</text>
+  <rect x="584" y="196" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="606" y="221" text-anchor="middle">3</text>
+  <rect x="632" y="196" width="44" height="40" rx="4" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-mono" x="654" y="221" text-anchor="middle">1</text>
+  <rect x="680" y="196" width="44" height="40" rx="4" fill="#e3b341" fill-opacity="0.25" stroke="#e3b341"/>
+  <text class="s-mono" x="702" y="221" text-anchor="middle">\r</text>
+  <rect x="728" y="196" width="44" height="40" rx="4" fill="#e3b341" fill-opacity="0.25" stroke="#e3b341"/>
+  <text class="s-mono" x="750" y="221" text-anchor="middle">\n</text>
+  <text class="s-sm" x="784" y="221">原樣寫出</text>
+</svg>
+<figcaption>圖 6.3 — pred.csv 第二行（<code>0,8.850631</code>）結尾的位元組。csv.writer 一律寫 CRLF；沒有 <code>newline=''</code> 時，Windows 的文字模式把其中的 <code>\n</code> 再換成 <code>\r\n</code>，就成了 <code>\r\r\n</code>。第一列是本機實測；後兩列依 Python 文字模式的規則推得，本書沒有在 Windows 上實測。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#e3b341"></i>檔案裡的位元組</span>
+  <span><i style="background:#f85149"></i>多出來的 \r</span>
+</div>
+
+<p><code>\r\r\n</code> 對許多工具來說是「一個 \r 結束一行，接著 \r\n 又結束一行」，中間夾了一個空行。用一般的文字工具看，pred.csv 就像每行之間都多了空白行；某些 CSV 讀取程式會把它讀成多出來的空列。</p>
+<p>解法是 Python csv 模組文件明文建議的：<strong>開檔時加上 <code>newline=''</code></strong>。這個參數告訴文字模式「不要轉換行尾」，讓 csv.writer 寫什麼就是什麼。第 41 行改成 <code>with open(file, 'w', newline='') as fp:</code>，任何系統上的結果都是圖 6.3 第一列的 CRLF。讀 CSV 時也一樣，文件建議用 <code>newline=''</code> 開檔再交給 <code>csv.reader</code>。</p>
+
+<div class="note"><h4>現在的做法：寫 CSV 的兩種寫法</h4>
+<ul>
+  <li><strong>繼續用 csv 模組，就加上 <code>newline=''</code></strong>，這是它的固定搭配，少了它就是本節的問題。HW01 在 Linux 上不受影響，但同一份程式在 Windows 上執行就會踩到。</li>
+  <li><strong>已經在用 pandas，就讓 pandas 寫。</strong>例如 <code>pd.DataFrame({'id': x_test[:, 0].astype(int), 'tested_positive': preds}).to_csv('pred.csv', index=False)</code>：id 直接取自測試集的 id 欄（6.6 節說的「更穩的做法」），<code>index=False</code> 避免 pandas 多寫一欄列號，行尾也由 pandas 自己處理。這行是示意，本書沒有實測它的輸出。</li>
+</ul>
+</div>
+
+<h2 id="extrapolate">6.9　測試集是陽性率更高的時期：模型在外推</h2>
+<p>6.6 節的最後兩筆預測是 36.03 與 38.70，而訓練集答案的最大值是 30.3046（第 2 章量過 y_train 的範圍到 30.3046，整個訓練集 2,699 列也是這個值）。模型交出了比它見過的任何答案都大的數字。這是偶然，還是普遍？本機統計了全部 1,078 個預測：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>測試集的預測</th><th>值</th></tr></thead>
+<tbody>
+<tr><td>最小</td><td>3.7642</td></tr>
+<tr><td>最大</td><td><strong>44.7035</strong></td></tr>
+<tr><td>平均</td><td>15.1763</td></tr>
+<tr><td>標準差</td><td>7.4867</td></tr>
+<tr><td>超過訓練集答案最大值 30.3046 的筆數</td><td><strong>61</strong></td></tr>
+<tr><td>負值</td><td>沒有</td></tr>
+</tbody>
+</table></div>
+<p>（標準差是變異數開根號，單位和原值相同：預測大致在平均上下 7.5 個百分點的範圍內散開。）平均 15.18，比訓練集答案的平均（全部 2,699 列的 tested_positive.4 是 9.8193）高了五成；有 61 筆超過訓練集的最大值，最大到 44.7。</p>
+<p>第一個懷疑對象是 id。第 1 章說過，測試集的 id 是從 0 重新編的另一套，模型若學到「id 和陽性率有關」，搬到測試集就是錯的訊號；第 4 章 4.7 節又看到 id 在第一層的份量是其他欄的約 400 倍。但實測的結論是：<strong>不是 id，是測試集本身的陽性率就比較高</strong>。</p>
+
+<h3>證據一：測試集的輸入本來就比較高</h3>
+<p>測試集沒有第 5 天的答案，但有前 4 天的陽性率。和訓練集的同一欄比：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>欄位</th><th>訓練集（全部 2,699 列）平均</th><th>訓練集最大</th><th>測試集平均</th><th>測試集最大</th><th>測試集超過 30.3046 的筆數</th></tr></thead>
+<tbody>
+<tr><td>tested_positive（第 1 天）</td><td>9.5997</td><td>30.3046</td><td>14.7545</td><td>46.4835</td><td>50</td></tr>
+<tr><td>tested_positive.3（第 4 天）</td><td>9.7698</td><td>30.3046</td><td><strong>15.1686</strong></td><td><strong>46.9521</strong></td><td>67</td></tr>
+</tbody>
+</table></div>
+<p>測試集第 4 天陽性率的平均 15.1686，和預測的平均 15.1763 幾乎一樣；測試集有 67 筆第 4 天就超過 30.3046。那 61 筆超過 30 的預測，它們的第 4 天陽性率本身就超過 30，例如 id 96 是 32.1、id 835 是 32.08。測試集 37 州都有出現（每州 7–38 列），不是某一州的特例。</p>
+<p>第 1 章 1.6 節已經發現，測試集幾乎全部是訓練集沒涵蓋的日子；這裡補上那段日子的樣子：<strong>那是一段陽性率普遍更高的時期</strong>。</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 300" role="img" aria-label="三組數字在 0 到 50 的陽性率軸上的平均與最大值：訓練集答案平均 9.82、最大 30.30；測試集第 4 天平均 15.17、最大 46.95；模型在測試集的預測平均 15.18、最大 44.70。一條虛線標出訓練集答案的最大值 30.3046，後兩組的最大值都在它右邊">
+  <line x1="556.4" y1="36" x2="556.4" y2="244" stroke="#dde5ec" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text class="s-sm" x="556.4" y="28" text-anchor="middle">訓練集答案的最大值 30.3046</text>
+
+  <text class="s-sm" x="120" y="58">訓練集的答案 tested_positive.4（2,699 列）：平均 9.82，最大 30.30</text>
+  <line x1="261.4" y1="74" x2="556.4" y2="74" stroke="#f85149" stroke-width="3" opacity="0.5"/>
+  <circle cx="261.4" cy="74" r="6" fill="#f85149"/>
+  <path d="M556.4,67 L563.4,74 L556.4,81 L549.4,74 z" fill="#f85149"/>
+
+  <text class="s-sm" x="120" y="128">測試集第 4 天的陽性率 tested_positive.3（1,078 列）：平均 15.17，最大 46.95，67 列超過 30.3046</text>
+  <line x1="338.4" y1="144" x2="796.1" y2="144" stroke="#58a6ff" stroke-width="3" opacity="0.5"/>
+  <circle cx="338.4" cy="144" r="6" fill="#58a6ff"/>
+  <path d="M796.1,137 L803.1,144 L796.1,151 L789.1,144 z" fill="#58a6ff"/>
+
+  <text class="s-sm" x="120" y="198">模型在測試集上的預測（1,078 個）：平均 15.18，最大 44.70，61 個超過 30.3046</text>
+  <line x1="338.5" y1="214" x2="763.7" y2="214" stroke="#3fb950" stroke-width="3" opacity="0.5"/>
+  <circle cx="338.5" cy="214" r="6" fill="#3fb950"/>
+  <path d="M763.7,207 L770.7,214 L763.7,221 L756.7,214 z" fill="#3fb950"/>
+
+  <line x1="120" y1="244" x2="840" y2="244" stroke="#93a1af" stroke-width="1.5"/>
+  <line x1="120" y1="244" x2="120" y2="250" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="120" y="264" text-anchor="middle">0</text>
+  <line x1="264" y1="244" x2="264" y2="250" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="264" y="264" text-anchor="middle">10</text>
+  <line x1="408" y1="244" x2="408" y2="250" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="408" y="264" text-anchor="middle">20</text>
+  <line x1="552" y1="244" x2="552" y2="250" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="552" y="264" text-anchor="middle">30</text>
+  <line x1="696" y1="244" x2="696" y2="250" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="696" y="264" text-anchor="middle">40</text>
+  <line x1="840" y1="244" x2="840" y2="250" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-mono" x="840" y="264" text-anchor="middle">50</text>
+  <text class="s-sm" x="480" y="288" text-anchor="middle">陽性率（tested_positive，單位 %）</text>
+</svg>
+<figcaption>圖 6.4 — 圓點是平均，菱形是最大值。模型的預測（綠）幾乎貼著測試集第 4 天（藍）走；兩者都遠遠越過訓練集答案（紅）到過的範圍。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#f85149"></i>訓練集的答案（預測目標）</span>
+  <span><i style="background:#58a6ff"></i>測試集的輸入欄位</span>
+  <span><i style="background:#3fb950"></i>模型算出的預測</span>
+</div>
+
+<h3>證據二：模型在測試集上的行為和在驗證集上一樣</h3>
+<p>如果 id 讓模型在測試集上「走樣」，它在測試集上的預測，應該會比在驗證集上更偏離合理的參考值。用 6.6 節那把尺（第 4 天的陽性率）分別量驗證集與測試集，同時放上第 2 章那個拿掉 id 重新訓練的模型（真實 valid MSE 1.2403，第 3 章）當對照：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>模型</th><th>MSE(預測, 第 4 天)：驗證集</th><th>MSE(預測, 第 4 天)：測試集</th><th>平均(預測 − 第 4 天)：驗證集</th><th>平均(預測 − 第 4 天)：測試集</th></tr></thead>
+<tbody>
+<tr><td>原版（含 id）</td><td>0.9536</td><td>1.0045</td><td>+0.1567</td><td>+0.0078</td></tr>
+<tr><td>拿掉 id</td><td>0.1711</td><td>0.3029</td><td>+0.0689</td><td>+0.1256</td></tr>
+</tbody>
+</table></div>
+<p>原版模型在測試集上離第 4 天的距離（1.0045）和在驗證集上（0.9536）差不多，平均的偏移甚至更小。它在測試集上沒有走樣，只是照著在驗證集上的老樣子，跟著第 4 天往上預測。</p>
+<p>另外兩個實測把 id 的影響直接隔離出來：</p>
+<ul>
+  <li><strong>把 id 換掉</strong>：把原版模型在測試集上的 id 全部改成 1349（約是訓練集 id 的中位數）再預測，預測的平均只改變 +0.1305，MSE(預測, 第 4 天) 從 1.0045 變成 0.8888。id 確實有影響，但只有零點幾，解釋不了平均高出 5 的差距。</li>
+  <li><strong>拿掉 id 的模型也一樣</strong>：它在測試集上有 65 筆預測超過 30.3046，最大 44.8734，和原版的 61 筆、44.7035 同一個量級。沒有 id 的模型照樣預測出超過 30 的值。</li>
+</ul>
+<p>（第 4 章說 id 在第一層的加權總和裡份量最大，這裡又說換掉 id 只影響零點幾，兩者不矛盾：前者量的是第一層內部的份量，後者量的是把 id 從測試集的 0–1077 換成訓練範圍中段的 1349 之後，最終預測移動多少。）</p>
+
+<h3>外推：在沒見過的範圍裡做預測</h3>
+<p>在訓練資料涵蓋的範圍之外做預測，叫<strong>外推（extrapolation）</strong>；在範圍之內則是內插（interpolation）。模型從沒見過答案超過 30.3 的例子，卻要對第 4 天已經 46.95 的那一列給出第 5 天的值。它的做法是把在範圍內學到的「第 5 天大約等於第 4 天再加一點」這個關係，延伸到範圍外：ReLU 對每個單元只做兩件事之一：原樣放行或輸出 0（第 4 章）。輸入往同一個方向一路變大時，走到夠遠之後，哪些單元放行、哪些輸出 0 就不再改變，整個網路便等於一串固定的 Linear 疊在一起，也就是一個線性函數。所以在訓練範圍之外，預測會沿著直線延伸：第 4 天越高，預測就跟著越高。</p>
+<p>這次的外推大方向是合理的：前一天已經 46.95%，隔天多半不會一下掉回 30% 以下，預測 44.7 比「卡在訓練集最大值」合理得多。但它同時提醒一件事：<strong>驗證集量不到這種情況。</strong>驗證集是從訓練資料隨機切出來的（第 2 章），答案範圍和訓練集一樣，最大只到 29.8157（第 2 章的 y_valid 範圍）。模型在高陽性率時期表現如何，驗證集完全沒測到；Kaggle 的成績卻全部來自這段時期。目錄頁說「驗證方式要符合資料的性質」、第 1 章建議按時間切分，原因就在這裡。</p>
+<p>改進模型（拿掉 id、標準化、按時間驗證、換優化器）是第 7 章的事，本章點到這裡。</p>
+
+<h2 id="lab">6.10　動手做</h2>
+<div class="lab"><h4>動手做：看 pred.csv 的位元組、預測的分布與打亂的代價</h4>
+<p>以下指令都在 <code>HW01/</code> 裡執行，Python 用第 0 章 0.3 節在 repo 根目錄建立的 <code>../.venv/bin/python</code>。需要 <code>models/model.ckpt</code> 是 1.661 那一份（第 5 章動手做最後的還原說明）。第 1 項會重新產生 pred.csv（內容和原本相同）；第 2、3 項只讀檔、不 import config，所以輸出開頭沒有 <code>True</code>、<code>0</code>，第 2、3 項也不需要 GPU；第 4 項要讀出存在 GPU 上的權重，需要 GPU。四項都不會改動 model.ckpt。</p>
+<ol>
+  <li><strong>重跑一次，確認是同一份</strong>：
+<pre class="shell"><code>$ ../.venv/bin/python predict.py 2&gt;/dev/null
+True
+0
+train_data size: (2160, 118) 
+    valid_data size: (539, 118) 
+    test_data size: (1078, 117)
+$ wc -l pred.csv
+1079 pred.csv
+$ md5sum pred.csv
+46a0484b5d4eff1d72c9dd06923e65bb  pred.csv</code></pre>
+  <!-- TODO(本機實測): 確認 wc -l pred.csv 與 md5sum pred.csv 的逐字輸出（FACTS 只有 1079 行與 md5 值，沒有記錄這兩個指令的原樣輸出） -->
+  <code>2&gt;/dev/null</code> 丟掉 stderr 的進度條（第 0 章 0.5 節）。<code>wc -l</code> 數換行字元，1,079 行；<code>md5sum</code> 印出檔案指紋，和 6.2 節的值相同，表示這次的 pred.csv 和之前每一次都一位元組不差。這個指紋只在本書的環境（第 0 章的 torch 版本、這份 model.ckpt）下成立，換了套件版本或 GPU，最後幾位小數可能不同，指紋也就不同。</li>
+  <li><strong>看行尾的位元組</strong>：
+<pre class="shell"><code>$ ../.venv/bin/python -c "print(open('pred.csv', 'rb').read(30))"
+b'id,tested_positive\r\n0,8.850631'
+$ ../.venv/bin/python -c "import csv; print(repr(csv.excel.lineterminator))"
+'\r\n'</code></pre>
+  <!-- TODO(本機實測): 確認第二個指令 repr(csv.excel.lineterminator) 的逐字輸出（FACTS 只記載 lineterminator 預設為 '\r\n'） -->
+  <code>'rb'</code> 是二進位讀取模式，不做任何行尾轉換，<code>read(30)</code> 讀前 30 個位元組（表頭 18 個字元、<code>\r\n</code> 2 個、<code>0,8.850631</code> 10 個），就是 6.8 節的那串。第二個指令用 <code>repr</code> 印出字串的原始寫法（直接 print 的話，換行字元會變成真的換行而看不見），內容是 csv.writer 預設格式（名叫 excel 的格式設定）的行尾：在 Linux 上也是 <code>\r\n</code>。</li>
+  <li><strong>預測的分布與打亂的代價</strong>：
+<pre class="shell"><code>$ ../.venv/bin/python -c "
+import pandas as pd, numpy as np
+p = pd.read_csv('pred.csv')['tested_positive'].values
+d4 = pd.read_csv('covid.test.csv')['tested_positive.3'].values
+print((p &gt; 30.3046).sum(), round(p.max(), 4), (d4 &gt; 30.3046).sum())
+print(round(((p - d4) ** 2).mean(), 4), round(d4.var(), 4))
+s = np.random.default_rng(0).permutation(p)
+print(round(((s - d4) ** 2).mean(), 4))
+"</code></pre>
+  <!-- TODO(本機實測): 這段指令的逐字輸出；並確認 default_rng(0).permutation 的重排方式是否重現 120.0056 -->
+  第一行依序是超過 30.3046 的預測筆數、預測的最大值、第 4 天超過 30.3046 的筆數，應該對得上 6.9 節的 61、44.7035、67；第二行是 MSE(預測, 第 4 天) 與第 4 天的變異數，對應 6.6 節的 1.0045 與 59.6773；第三行是打亂之後的 MSE(預測, 第 4 天)，如果和本機用的是同一種重排方式，應該正好是 6.6 節的 120.0056；換一種重排方式（例如改打亂索引），數字會略有不同，但都在變異數的 2 倍附近。<code>tested_positive.3</code> 是 pandas 給第 4 天陽性率的欄名（第 1 章的後綴規則）。<code>.var()</code> 算變異數，<code>permutation</code> 回傳一個重新排列過的複本，原本的 <code>p</code> 不動。</li>
+  <li><strong>從權重形狀讀出 input_dim</strong>（6.3 節的折衷做法）：
+<pre class="shell"><code>$ ../.venv/bin/python -c "
+import torch
+sd = torch.load('models/model.ckpt')
+print(type(sd).__name__, len(sd), sd['layers.0.weight'].shape[1])
+"</code></pre>
+  <!-- TODO(本機實測): 這段指令的逐字輸出（預期 OrderedDict 6 117） -->
+  應該印出 state_dict 的型別 <code>OrderedDict</code>、6 個 key，以及第一層權重的第二個維度 117：不讀任何 CSV，就拿到了 predict.py 第 25–34 行花力氣算出的那個數字。這裡沒寫 <code>weights_only</code>，用的是 6.3 節驗證過的預設（效果為 True）。</li>
+</ol>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>predict.py 的第 23–34 行和 train.py 第 103–114 行逐字相同，讀入、切分、選特徵五樣東西，只用到 <code>x_test</code> 與 <code>x_train.shape[1]</code>。這段繞路只花約 0.025 秒，問題不在速度，而在預測依賴訓練資料，以及 117 是「現在」重算的，和訓練時用的特徵之間沒有任何檢查。</li>
+  <li>更好的做法是把 input_dim（最好連 feat_idx）和 state_dict 包成字典存進 checkpoint；torch 2.11 的 <code>weights_only</code> 預設實際等於 True，這種字典照樣能載入，含自訂類別的檔案則報 UnpicklingError。不改存檔格式的折衷：從 <code>layers.0.weight</code> 的形狀 (16, 117) 反推。</li>
+  <li><code>predict()</code> 和驗證迴圈同一個樣子，但沒有 y、沒有 loss。第 17 行的 detach 多餘，<code>.cpu()</code> 不可少：GPU 上的 tensor 不能直接 <code>.numpy()</code>。5 個 batch 接成 (1078,) 的 float32 陣列。</li>
+  <li>pred.csv：表頭加 1,078 行，15,799 bytes，id 用 <code>enumerate</code> 從 0 數起；測試集的 id 欄正好是 0–1077 依序，所以對得上。test loader 若打亂，MSE(預測, 第 4 天) 從 1.0045 變成 120.0056，約是變異數 59.6773 的 2 倍：比每筆都猜平均還糟。</li>
+  <li>數字寫成 float32 的最短表示（8.850631、4.1526003），位數不固定，但讀回去是同一個 float32。位數不代表精度。</li>
+  <li>csv.writer 一律寫 CRLF，Linux 上也是；save_pred 開檔沒加 <code>newline=''</code>，在 Windows 上會變成 <code>\r\r\n</code>。用 csv 模組寫檔就固定加 <code>newline=''</code>。</li>
+  <li>測試集是陽性率更高的時期（第 4 天平均 15.17、最大 46.95）。模型的預測跟著第 4 天走，61 筆超過訓練集答案的最大值 30.3046：這是外推，不是 id 造成的。隨機切出的驗證集量不到這段時期的表現。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 有人想省掉切分，把 predict.py 第 26 行刪掉，第 39 行改成 <code>My_Model(input_dim=train_data.shape[1])</code>。會發生什麼事？</summary>
+<p>第 25 行讀進來的 train_data 是 2699 × 118，包含最後一欄答案，所以 <code>shape[1]</code> 是 118，不是 117。第 39 行建出 <code>My_Model(118)</code>，第 40 行載入時，<code>layers.0.weight</code> 的形狀 checkpoint 是 (16, 117)、模型是 (16, 118)，報第 4 章 4.8 節那種 size mismatch 錯誤（這是依 4.8 節的實測推論，118 這個版本本書沒有實際執行）。input_dim 是「選完特徵之後」的欄數，所以 predict.py 才非得把 select_feat 也跑一遍。</p></details>
+<details class="quiz"><summary>2. 把 predict.py 第 17 行改成 <code>preds.append(pred)</code>（不 detach、不 cpu），哪一行會出錯？錯誤訊息怎麼說？</summary>
+<p>第 17 行與 torch.cat 都不會出錯：5 個 GPU 上的 tensor 照樣能接起來，結果也在 GPU 上。出錯的是第 18 行的 <code>.numpy()</code>：<code>TypeError: can't convert cuda:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first.</code>。少了 detach 則不會有任何影響，因為 no_grad 裡算出的 pred 本來就沒有計算圖。</p></details>
+<details class="quiz"><summary>3. 為什麼把預測打亂之後，MSE(預測, 第 4 天) 會接近第 4 天變異數的 2 倍，而不是 1 倍？</summary>
+<p>「每筆都猜平均」時，誤差只來自第 4 天自己的散開，一份變異數。打亂後，預測和被配到的第 4 天是兩個互不相干的數，而且預測本身也散得和第 4 天差不多開（兩者平均都約 15.17，6.9 節）。兩個獨立散開的量相減，差的平方平均是兩份變異數相加，所以約 2 倍：59.6773 × 2 ≈ 119，實測 120.0056。</p></details>
+<details class="quiz"><summary>4. 同學在 Windows 上執行 predict.py，用文字編輯器打開 pred.csv，發現每一行之間都多了空白行。原因是什麼？要改哪一行？</summary>
+<p>csv.writer 每行寫 <code>\r\n</code>，而 utils.py 第 41 行以文字模式開檔、沒加 <code>newline=''</code>，Windows 的文字模式又把其中的 <code>\n</code> 換成 <code>\r\n</code>，每行結尾變成 <code>\r\r\n</code>，被讀成兩次換行。改第 41 行：<code>with open(file, 'w', newline='') as fp:</code>。</p></details>
+<details class="quiz"><summary>5. pred.csv 裡有一筆寫成 <code>4.1526003</code>，有 8 位數字；第 3 章說 float32 只有約 7 位有效數字。多出來的那一位是假的嗎？</summary>
+<p>不是假的，也不是多出來的精度。NumPy 印出的是「能唯一還原成同一個 float32 的最短十進位數字」。在 4.15 附近，float32 的格子排得比較密，只寫 7 位不足以指名模型算出的那一格，所以要 8 位。「約 7 位」是平均的說法，實際需要幾位依數值而定，最多要 9 位（這是 float32 格式的性質，不是本書的實測）。</p></details>
+<details class="quiz"><summary>6. 61 筆預測超過訓練集答案的最大值。這代表模型壞了嗎？為什麼還是值得擔心？</summary>
+<p>不代表壞了：那些列的第 4 天陽性率本身就超過 30，預測跟著第 4 天走是合理的方向；拿掉 id 的模型也有 65 筆。值得擔心的是，模型在這個範圍裡是在外推，訓練時從沒見過這麼高的答案，驗證集（隨機切自訓練資料，最大 29.8）也完全測不到它在這裡準不準，而 Kaggle 的成績正是在這段時期上算的。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://pytorch.org/tutorials/beginner/saving_loading_models.html">PyTorch Tutorials — Saving and Loading Models</a>：state_dict、存成字典的 checkpoint、<code>map_location</code> 的官方說明。</li>
+  <li><a href="https://pytorch.org/docs/stable/generated/torch.load.html">torch.load</a>：<code>weights_only</code> 的行為與允許載入的型別。</li>
+  <li><a href="https://docs.python.org/3/library/csv.html">Python 文件 — csv 模組</a>：<code>csv.writer</code>、<code>lineterminator</code>，以及開檔要加 <code>newline=''</code> 的說明。</li>
+  <li><a href="https://www.rfc-editor.org/rfc/rfc4180">RFC 4180 — Common Format and MIME Type for CSV Files</a>：CSV 格式的規範，行尾規定為 CRLF。</li>
+  <li><a href="https://docs.python.org/3/tutorial/floatingpoint.html">Python Tutorial — Floating-Point Arithmetic: Issues and Limitations</a>：為什麼浮點數印出來的位數和它實際存的值不同。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch05.html">← 第 5 章</a><a href="ch07.html">第 7 章 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW01 讀碼教材 · 對應 commit 717528b · 程式碼引用取自本 repo 的 HW01/；實測輸出取自 2026-10-02、10-03 本機執行</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py；本教材的原始碼全是 .py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>

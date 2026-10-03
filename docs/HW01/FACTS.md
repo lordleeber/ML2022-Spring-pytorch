@@ -77,6 +77,10 @@
   ch05 已講完五步驟、梯度、momentum、train loss「邊更新邊記錄」、第 1483 個 epoch 的幸運分組（§5.7）、lr／momentum 對照組與 lr 1e-4 輸出常數 9.731（§5.10），後面章節回指即可。
   ch05 early_stop 200（**已實測**，2026-10-03）：最後一次存檔是 `Epoch [1260/3000]: Train loss: 1.7980, Valid loss: 1.7165`（印出 `Saving model with loss 1.716...`），在第 1460 個 epoch 停止，共存檔 48 次，跟從存檔清單推算的結果一致（第 1260 個 epoch 之前最長的存檔間隔是 686→860 的 174）。
   注意：上方「ch05 實測」寫「loss=509 就是 ch00 進度條上的 loss=509」，但 ch00 只引用了每個 epoch 結束時的進度條（loss=60.4），沒有 509／136；ch05 §5.5 改寫成「跑完第 1 個 batch 時短暫顯示 loss=509」。
+- ch06：推論（inference）、函式簽名（一句）、pickle／UnpicklingError（weights_only 只放行純資料）、OrderedDict（記住插入順序的 dict）、checkpoint 存成字典（input_dim＋feat_idx＋state_dict）、從 `layers.0.weight.shape[1]` 反推 input_dim、`.cpu()`（GPU→主記憶體）、`.numpy()` 只能用在 CPU tensor、host memory、`torch.cat(dim=0)`（回指 ch04 動手做）、md5（檔案指紋）、`with open(file, 'w')` 清空重寫、`csv.writer`／`writerow`／`lineterminator`／`csv.excel`、float32 的最短往返字串表示（位數不固定、不代表精度）、bytes 與 `b'...'`、二進位模式 `'rb'`、行尾 LF／CRLF、RFC 4180、文字模式的行尾轉換與 Windows 上的 `\r\r\n`、`newline=''`、變異數（＝每筆都猜平均的 MSE）、標準差（變異數開根號，一句）、「MSE(預測, 第 4 天)」這把替代尺（測試集沒答案時用）、獨立的兩數相減 → 約 2 倍變異數、外推／內插、ReLU 網路在範圍外線性延伸、`wc -l`、`md5sum`、`tail -N`、`repr`、`np.arange`、`np.array_equal`、`np.random.default_rng(seed).permutation`。
+  ch06 圖號：圖 6.1 predict.py 的資料流（上排「只為了 117」的繞路）、圖 6.2 predict() 的形狀變化（5 個 batch → cat → (1078,)）、圖 6.3 pred.csv 行尾位元組（Linux 實測 CRLF／Windows \r\r\n／newline=''）、圖 6.4 訓練答案／測試第 4 天／預測的平均與最大值。
+  ch06 已講完：predict.py 重讀訓練資料的兩個問題（依賴訓練資料、117 是當下重算）與存字典的解法、weights_only 預設實際為 True、pred.csv 格式（CRLF、最短表示、id 對齊）、打亂 id 的代價 1.0045 → 120.0056、測試集是高陽性率時期與外推（§6.9）。後面章節回指即可；改進模型留給 ch07。
+  ch06 的 4 個 `TODO(本機實測)` 都在 §6.10 動手做：第 1 項 wc／md5sum 逐字輸出、第 2 項 `repr(csv.excel.lineterminator)` 逐字輸出、第 3 項整段輸出（並確認 permutation 方式是否重現 120.0056）、第 4 項輸出（預期 `OrderedDict 6 117`）。
 
 ## Baseline 實測（2026-10-03，與範例同一驗證集：random_split seed 5201314）
 - 抄第 4 天 tested_positive（第 101 欄）：MSE 1.313
