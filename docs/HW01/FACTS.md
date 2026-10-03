@@ -1,6 +1,17 @@
 # HW01 教材事實清單（維護筆記，不進教材）
 
-教材對應 commit：`717528b`（HW01 程式碼最後變動於 `81d1817`）。
+> **這是什麼**：docs/HW01/ 這本教材（index、outline、ch00–ch07、appendix）背後的事實清單。教材裡的每一個數字、每一段逐字輸出，都要能在這裡或在 repo 原始碼找到出處。這份檔案本身不是教材，HTML 裡不會連到它。
+>
+> **狀態（2026-10-03）**：全書完成，ch00–ch07 與 appendix 都已實測、冷讀、審稿。寫作流程：本機（有 GPU）先把每章需要的數字量好寫進這裡，雲端 session 只引用這裡的數字寫章；PR 回來後，本機補上 `TODO(本機實測)`，並用真的程式核對「改 X 會怎樣」這類題目。
+>
+> **什麼時候要回來看**：
+> - **改了 HW01/ 的程式**：教材引用的是 `81d1817` 時的程式碼。改了之後，用 `grep -l '函式名' docs/HW01/*.html` 找出引用它的章節，核對程式碼節錄與行號（`python3 docs/tools/verify_book.py . docs/HW01/chNN.html` 會逐行比對節錄）；數字有變的，先更新這份檔案，再改章節。
+> - **換了 PyTorch 版本、GPU 或 seed**：訓練結果可能在小數點後幾位不同。重跑 `docs/tools/hw01_run_grid.sh docs/tools/hw01_ch07_runs.txt <out.jsonl>`，其中前兩組（CHECK_orig、CHECK_fixed）應該分別是 1.6611／1483／1883 與 1.7174／2968／3000；對不上，就表示全書的數字都要重量。
+> - **寫其他作業（HW02 以後）的教材**：可以沿用同樣的流程與結構：全書約定 → 每章「實測」→「審稿補測」→ 附錄素材。
+>
+> **工具**（都需要 GPU，在 HW01/ 裡執行）：`docs/tools/hw01_exp.py`（重現 train.py 並可切換改良，`--perm 1` 算 permutation importance）、`docs/tools/hw01_run_grid.sh`（平行跑整份設定清單）、`docs/tools/hw01_lgbm.py`（LightGBM 對照，需另外安裝）、`docs/tools/verify_book.py`（HTML 檢查，不需要 GPU）。
+
+教材對應 commit：`717528b`（HW01 程式碼最後變動於 `81d1817`，寫作期間沒有再改過）。
 原始碼根目錄：`HW01/`。官方原版：`~/poyi/GitHubPublic/ML2022-Spring/HW01/HW01.ipynb`。
 
 ## 全書約定
