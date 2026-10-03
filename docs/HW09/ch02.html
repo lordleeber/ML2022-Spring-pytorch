@@ -902,7 +902,7 @@ print(len(w), round(w[0], 3), 107 in w)
   <li>權重為<strong>正</strong>：把那一塊的 <strong>G（綠）通道</strong>設成整張圖的最大值（本書另外量：圖 0 是 0.9961），R、B 通道保留原圖。</li>
   <li>權重為<strong>負</strong>：把那一塊的 <strong>R（紅）通道</strong>設成最大值，G、B 通道保留原圖。</li>
 </ul>
-<p>所以綠與紅是<strong>疊色</strong>，不是用純綠、純紅把那一塊蓋掉。這解釋了圖 2.1 上的幾個現象：圖 0 披薩本來偏紅黃，R 通道已經不低，再把 G 拉滿，看起來就是亮黃綠色而不是純綠。反過來，一塊本來就很亮、R 通道已經接近最大值的區域（例如白色背景），把 R 設成最大值幾乎沒有變化，<strong>紅色疊上去也看不出來</strong>。<!-- TODO(本機實測): 圖 1、圖 2 被標成負權重（紅）的那幾塊，原圖 R 通道的平均值與整張圖最大值各是多少，用來確認「紅色疊在亮處看不出來」 --></p>
+<p>所以綠與紅是<strong>疊色</strong>，不是用純綠、純紅把那一塊蓋掉。這解釋了圖 2.1 上的幾個現象：圖 0 披薩本來偏紅黃，R 通道已經不低，再把 G 拉滿，看起來就是亮黃綠色而不是純綠。反過來，一塊本來就很亮、R 通道已經接近最大值的區域（例如白色背景），把 R 設成最大值幾乎沒有變化，<strong>紅色疊上去也看不出來</strong>。本書實測了兩張 Dairy product：兩張圖的最大值都是 1.0。圖 1 被標成紅色的 1,227 個像素，原本的 R 通道平均已經是 0.985，其中 95% 的像素 R ≥ 0.9，這 7 塊紅幾乎全落在白色背景上，疊色前後看不出差別；圖 2 的 1,427 個紅色像素，R 平均 0.813（44% ≥ 0.9），疊上去會變成淡淡的粉紅，放大才看得出來。同樣的道理也適用於綠色：亮處的 G 通道本來就高，綠色疊上去也不明顯。</p>
 
 <h3 id="lime-table">10 張圖的權重</h3>
 <p>下表列出每張圖的塊數、|權重| ≥ 0.05 的塊數（正／負）、實際畫出的那最多 11 塊（正／負），以及權重前 3 名。數字來自 <code>explain_cnn.py</code> 的同一次執行：</p>
@@ -924,7 +924,7 @@ print(len(w), round(w[0], 3), 107 in w)
 <p>對照圖 2.1 讀這張表：</p>
 <ul>
   <li><strong>大部分的圖幾乎全綠</strong>：圖 0、6、7、8 畫出的 11 塊全是正權重。這些圖的最強權重都是正的，而且數值很大（圖 7 第 1 名 14.02）。</li>
-  <li><strong>兩張 Dairy product 是例外</strong>：圖 1、圖 2 的前 3 名<strong>全部是負權重</strong>，畫出的塊紅多於綠（4／7、2／9）。這和 2.5 節的表方向一致：遮掉某些塊，這兩張圖的 logit 反而<strong>上升</strong>，那些塊在線性近似裡就得到負權重（留著它會讓 logit 下降）。但在圖 2.1 上，這兩張幾乎看不到紅色：它們的背景與主體都很亮，紅色疊上去不明顯（上面的上色規則）。表上的數字比圖上的顏色可靠。</li>
+  <li><strong>兩張 Dairy product 是例外</strong>：圖 1、圖 2 的前 3 名<strong>全部是負權重</strong>，畫出的塊紅多於綠（4／7、2／9）。這和 2.5 節的表方向一致：遮掉某些塊，這兩張圖的 logit 反而<strong>上升</strong>，那些塊在線性近似裡就得到負權重（留著它會讓 logit 下降）。但在圖 2.1 上，這兩張幾乎看不到紅色：圖 1 的紅色塊幾乎都在白色背景上，疊色後完全看不出；圖 2 的紅色只有淡淡的粉紅（上面的上色規則與實測）。表上的數字比圖上的顏色可靠。</li>
   <li><strong>權重的大小差很多</strong>：圖 1 的第 1 名只有 −1.16，圖 7 是 14.02。權重的單位是 logit，所以這反映了各張圖遮掉一半後 logit 變動的幅度（2.5 節表：圖 1 的樣本 logit 只在 18.84 以上變動，圖 7 從 −60.85 到 11.45）。</li>
   <li><strong>R² 從 0.794 到 0.961</strong>：線性近似對每張圖都不完美，但都解釋了大部分的變化。</li>
 </ul>
@@ -935,13 +935,13 @@ print(len(w), round(w[0], 3), 107 in w)
 <thead><tr><th>參數</th><th>正（綠）</th><th>負（紅）</th><th>說明</th></tr></thead>
 <tbody>
 <tr><td>程式原樣</td><td>11 塊</td><td>0</td><td>3,077 個像素被上色</td></tr>
-<tr><td><code>positive_only=True</code></td><td>11 塊</td><td>0</td><td>前 11 名本來就都是正的，所以一樣</td></tr>
+<tr><td><code>positive_only=True</code></td><td>11 塊（只在 mask 上）</td><td>0</td><td>mask 一樣選出這 11 塊，但回傳的圖<strong>完全沒有上色</strong>（見表下說明）</td></tr>
 <tr><td><code>num_features=5</code></td><td>5 塊</td><td>0</td><td>1,386 個像素</td></tr>
 <tr><td><code>min_weight=0.0</code></td><td>11 塊</td><td>0</td><td>前 11 名都遠大於 0.05，門檻沒有作用</td></tr>
 <tr><td><code>num_features=200</code></td><td>46 塊</td><td>36 塊</td><td>等於「全部」；綠 8,476、紅 5,074 個像素，其餘 |w| &lt; 0.05 的不畫</td></tr>
 </tbody>
 </table></div>
-<!-- TODO(本機實測): positive_only=True 時回傳的 lime_img 上是否仍有綠色疊色（上表只數了 mask） -->
+<p>表裡的塊數都是數回傳的 mask。<code>positive_only=True</code> 這一列要特別注意：依 lime 0.2.0.1 的原始碼，這個分支只把選中的塊「照原圖複製」一次，沒有把 G 通道拉到最大值；實測回傳的圖和原圖逐像素完全相同，3,077 個像素的 mask 是唯一的輸出。所以如果把 <code>explain_cnn.py</code> 改成 <code>positive_only=True</code>，lime.png 上會看不到任何綠色。要讓它有意義，得搭配 <code>hide_rest=True</code>：實測這時回傳的圖只留下這 3,077 個像素，其餘全部變成黑色。</p>
 <p>最後一列可以和上面 10 張圖的表核對：圖 0 有 83 塊 |w| ≥ 0.05，其中 47 正、36 負。負的 36 塊全部畫出來了，正的卻只有 46 塊，少了一塊。少的是<strong>特徵 0</strong>：它的權重 0.158 是正的、也超過 0.05，但它對不到任何像素（2.6 節輸出第 5 行），選中了也沒有地方可畫。這個「幽靈特徵」是下一個主題之一。</p>
 <p>對程式原樣的設定來說，<code>min_weight=0.05</code> 在圖 0 上完全沒有作用：權重的單位是 logit，前 11 名都在 2 以上。這個門檻是不是一直這麼無關緊要？那要看餵給 LIME 的是什麼。</p>
 
@@ -1098,7 +1098,7 @@ print(len(w), round(w[0], 3), 107 in w)
   <li><strong>回傳機率</strong>：照 lime 的介面，<code>classifier_fn</code> 應回傳機率（在 <code>predict</code> 最後做 softmax）。如果刻意要解釋 logits（例如本作業這種機率頂住的模型），就把 <code>min_weight</code> 改成 logit 尺度上有意義的值，並在報告裡說清楚解釋的是哪一種分數。</li>
   <li><strong>編號從 0 開始</strong>：<code>slic(..., start_label=0)</code>，讓 superpixel 編號和 lime 的特徵編號一致。</li>
   <li><strong>推論包在 <code>torch.no_grad()</code> 裡</strong>，不必記錄用不到的計算過程。</li>
-  <li><strong>每個 explainer 自己的亂數</strong>：<code>LimeImageExplainer(random_state=16)</code> 讓 explainer 用自己的亂數產生器，不受全域亂數和前面幾張圖的影響。<!-- TODO(本機實測): 改成 LimeImageExplainer(random_state=16)、不呼叫 np.random.seed，圖 3 單獨跑與在迴圈中第 4 個跑的權重是否完全相同 -->（這一點本書沒有實測，是依 lime 的參數說明推論的。）</li>
+  <li><strong>每個 explainer 自己的亂數</strong>：<code>LimeImageExplainer(random_state=16)</code> 讓 explainer 用自己的亂數產生器，不受全域亂數和前面幾張圖的影響。實測：每張圖都用 <code>LimeImageExplainer(random_state=16)</code>、不呼叫 <code>np.random.seed</code>，圖 3 單獨跑和在迴圈裡第 4 個跑的權重完全相同（前 5 名 40、57、86、52、39）。</li>
   <li><strong>用現成的工具</strong>：目錄頁<a href="index.html#now">〈先說在前面〉</a>提到的 Captum（PyTorch 官方的模型解釋套件）也內建 LIME，介面直接吃 PyTorch 模型與張量，不必自己在 NumPy 與 tensor 之間轉換形狀。</li>
 </ul>
 </div>
