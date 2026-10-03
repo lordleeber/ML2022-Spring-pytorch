@@ -784,3 +784,107 @@ for i in range(10):
   - 10 張的 mask 像素數（綠／紅）：0：3077／0；1：828／1227；2：243／1427；3：1663／667；4：7025／156；5：1906／350；6：4402／0；7：3856／0；8：2941／0；9：2119／765。
 - **`LimeImageExplainer(random_state=16)`（實測）**：不呼叫 np.random.seed，每張圖新建 `LimeImageExplainer(random_state=16)`。圖 3 單獨跑與在迴圈中第 4 個跑，權重完全相同；前 5 名 [40, 57, 86, 52, 39]，和「np.random.seed(16) 後單獨第一個跑」相同，因為兩者都是從 seed 16 的起點開始取數。
 - 雲端手算的幾個數都核對過：cos(0/1 向量, 全 1) = √(k/n)；−21.383 + 33.926 = 12.543；num_features=200 的 46 綠 = 47 個正權重扣掉特徵 0。
+
+## ch03 實測（2026-10-04，本機；指令都在 HW09/ 裡執行）
+工具：`docs/tools/hw09_ch03_grad.py`（在 HW09/ 裡跑；印出下面的數字，並產生 4 張 `docs/HW09/img/ch03_*.png`）。所有 SmoothGrad 變體都先 `torch.manual_seed(0)`，和 explain_cnn.py（沒設 torch seed）的 smoothgrad.png 不是同一批雜訊。
+
+### Saliency：梯度為什麼這麼小
+- 可貼上的指令（需要 GPU）：
+  ```
+  ../.venv/bin/python -c "
+  import torch
+  from model import Classifier
+  from dataset import FoodDataset, get_paths_labels
+  model = Classifier().cuda()
+  model.load_state_dict(torch.load('checkpoint.pth')['model_state_dict'])
+  model.eval()
+  paths, labels = get_paths_labels('./food/')
+  images, labels = FoodDataset(paths, labels, mode='eval').getbatch(range(10))
+  x = images.cuda().requires_grad_()
+  loss = torch.nn.CrossEntropyLoss()(model(x), labels.cuda())
+  loss.backward()
+  print('loss %.6f' % loss.item())
+  for i, s in enumerate(x.grad.abs().amax(dim=(1, 2, 3))):
+      print(i, '%.3e' % s.item())
+  "
+  ```
+  逐字輸出：
+  ```
+  loss 0.000139
+  0 8.480e-07
+  1 3.217e-12
+  2 3.745e-04
+  3 1.370e-07
+  4 4.239e-08
+  5 1.271e-07
+  6 1.518e-17
+  7 1.505e-06
+  8 1.076e-09
+  9 8.522e-08
+  ```
+  （「CNN 實測 → Saliency」表裡的「最大值」就是這一欄；那裡是先對 RGB 取 max 再取整張的 max，數值相同。）
+- 每張圖的 CE loss 剛好等於 1 − p(標籤)（p 接近 1 時 −log p ≈ 1 − p）：圖 0 2.50e-06、圖 2 1.38e-03、圖 7 6.08e-06；圖 1、6、8 在 float32 下是 0（p 存成 1）。
+- 梯度大小的排序大致跟著 1 − p 走：圖 2（1.38e-03）最大 3.7e-04；圖 7（6.1e-06）1.5e-06；圖 0（2.5e-06）8.5e-07。1 − p 是 0 的三張也有梯度，但極小（圖 6 1.5e-17、圖 1 3.2e-12、圖 8 1.1e-09）：float32 的 p 存成 1，梯度卻不是 0。**推測**（沒有另外查證）：CrossEntropyLoss 內部用 log_softmax 計算，其他類別的 p_j 雖然小到不影響 p_y 的顯示，仍是非零的極小值。
+- batch 的 loss 是 10 張的**平均**，所以每張圖拿到的梯度是「單獨算」的 1/10：圖 0 單獨算 max 8.565e-06，在 batch 裡 8.480e-07。各自 normalize 後這個係數消失。
+- **Saliency 表的兩欄**（ch01 已給 1 − p；本章給梯度）可並排成「越有把握 → 梯度越小」。
+
+### 為什麼要逐張 normalize（圖 `img/ch03_saliency_global.png`）
+- 三列：原圖；repo 的做法（逐張 min-max）；改成 10 張一起做一次 min-max。
+- 一起做時各張的最大值：圖 2 = 1.00（定義上最大）；圖 7 4.02e-03、圖 0 2.26e-03、圖 3 3.66e-04、圖 5 3.39e-04、圖 9 2.28e-04、圖 4 1.13e-04、圖 8 2.87e-06、圖 1 8.59e-09、圖 6 4.05e-14。
+- 看得到的：第三列只有圖 2 看得到紅黃色的熱點（牛奶壺左側的輪廓），其他 9 張全黑。第二列 10 張都有熱點。
+- 這就是 ch01 1.8 節預告的「最沒把握的圖 2 為什麼是例外」：只有它的梯度大到在共同尺度上看得見。
+
+### 投影片說「output category 的梯度」（圖 `img/ch03_saliency_logit.png`）
+- 改成對**標籤 logit** 取梯度（`model(x).gather(1, labels).sum().backward()`），每張的最大值變成 1.25–4.90（圖 0 2.044、圖 1 1.402、圖 2 1.743、圖 3 2.403、圖 4 1.683、圖 5 1.251、圖 6 3.029、圖 7 1.685、圖 8 2.333、圖 9 4.896）—— 不再有 1e-17 這種數量級的差異。
+- 兩種熱圖逐張 normalize 後的像素相關係數：圖 0 0.862、圖 1 0.637、圖 2 0.969、圖 3 0.931、圖 4 0.820、圖 5 0.880、圖 6 0.726、圖 7 0.974、圖 8 0.828、圖 9 0.924。形狀大多相似，圖 1（0.637）和圖 6（0.726）差最多。
+- 看得到的：第三列（logit 梯度）整體比第二列（loss 梯度）亮、熱點更分散；圖 5 的荷包蛋輪廓（圓形）在 logit 版更清楚。
+- 理由（公式）：∂L/∂x = Σ_j (p_j − 1[j=y]) ∂z_j/∂x；p 接近 one-hot 時，係數 (p_y − 1) 與其他 p_j 都接近 0，但熱圖的「形狀」主要由最大的那個係數決定，所以兩者形狀相近、數量級完全不同。
+
+### SmoothGrad 的雜訊有多大
+- 程式的 std 每張 0.160–0.178（「CNN 實測 → SmoothGrad」表）；論文式 0.4 × 範圍是 0.38–0.40。
+- **這兩種雜訊下，模型全部認錯**：可貼上的指令（需要 GPU）：
+  ```
+  ../.venv/bin/python -c "
+  import torch
+  from model import Classifier
+  from dataset import FoodDataset, get_paths_labels
+  model = Classifier().cuda()
+  model.load_state_dict(torch.load('checkpoint.pth')['model_state_dict'])
+  model.eval()
+  paths, labels = get_paths_labels('./food/')
+  images, labels = FoodDataset(paths, labels, mode='eval').getbatch(range(10))
+  torch.manual_seed(0)
+  x = images[0]
+  std = (0.4 / (x.max() - x.min()).item()) ** 2
+  noisy = x + torch.randn(500, 3, 128, 128) * std
+  with torch.no_grad():
+      pred = model(noisy.cuda()).argmax(dim=1).cpu()
+  print('std %.4f' % std)
+  print(torch.bincount(pred, minlength=11).tolist())
+  "
+  ```
+  逐字輸出：
+  ```
+  std 0.1613
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 500]
+  ```
+  500 個加雜訊的圖 0 **全部被判成類別 10（Vegetable/Fruit）**。
+- 10 張圖各 500 個樣本（repo 的 std 與論文式 std 都一樣）：**每一張的 500 個樣本都被判成 Vegetable/Fruit**，標籤的平均 logit 是負的（repo std：圖 0 −16.60、1 −7.92、2 −10.50、3 −4.81、4 −3.65、5 −9.91、6 −11.32、7 −16.83、8 −8.84、9 −10.95）。（註：這裡的雜訊用 `torch.randn(500, …) * std` 一次產生，和 smooth_grad 逐次 `normal_` 不是同一批，但分佈相同。）
+- 單一樣本（圖 0，`torch.manual_seed(0)`）：std 0 → p 1.0000、loss 2.5e-06、梯度 max 8.6e-06；std 0.01 → p 1.0000、梯度 1.1e-05；std 0.05 → p 0.6467、loss 0.436、梯度 1.16；std 0.1613（repo）→ p 0.0000、loss 29.6、梯度 1.03；std 0.3984（論文式）→ p 0.0000、loss 27.7、梯度 0.38。
+- 模型對高斯雜訊的耐受度（每張 100 個樣本，10 張平均的正確率）：std 0.005 → 1.00；0.01 → 1.00；0.02 → 0.87；0.03 → 0.54；0.05 → 0.43；0.08 → 0.11；0.1 → 0.01。
+- **意義**：SmoothGrad 原本的想法是「在原圖附近取樣、把梯度的雜訊平均掉」。在這個模型上，std 0.16 的雜訊已經把每個樣本推到「模型認為是 Vegetable/Fruit」的區域，所以平均的是 500 個**被認錯的圖**上、CE loss（約 30）的梯度。ch00/FACTS 原本說的「加雜訊後梯度大了好幾個數量級」原因就在這裡：不是雜訊讓模型「不那麼確定」，而是讓它**完全認錯**。教材應如實寫，並避免宣稱 SmoothGrad 圖顯示「模型判斷 Bread 的依據」。
+
+### SmoothGrad 的變體（圖 `img/ch03_smoothgrad_variants.png`）
+- 四列：原圖；repo（std (0.4/範圍)²，normalize）；不 normalize（程式註解要你試的 `smooth = smooth / epoch`）；論文式 std 0.4 × 範圍。
+- **不 normalize** 時每張的值域（500 次平均）：圖 0 2.94e-03..0.259、1 8.36e-04..0.098、2 1.25e-03..0.496、3 1.48e-03..0.162、4 1.40e-03..0.138、5 1.91e-03..0.167、6 1.30e-03..0.176、7 2.75e-03..0.354、8 1.38e-03..0.129、9 1.85e-03..0.208。全部 < 1，沒有被截斷，只是**很暗**（最大值只有 0.1–0.5）。看得到的：第三列幾乎全黑，只有隱約的輪廓；圖 2 的草莓比較亮。
+- 和 saliency 不同：不 normalize 時 10 張的亮度差不多（最大值同一個數量級），因為加了雜訊後每張的梯度都在 0.1–1 的量級，不再有 1e-17 的差距。
+- 論文式 std（第四列）：整體比 repo 版亮、輪廓更模糊（雜訊大一倍多）。圖 2 兩種版本都只有草莓那一小塊是亮的。
+- 看得到的（repo 版，第二列）：熱圖保留了食物的輪廓與紋理（鬆餅的格子、荷包蛋的圓、生魚片的條紋），彩色，因為 3 個通道各自保留。
+
+### SmoothGrad 取樣次數（圖 `img/ch03_smoothgrad_n.png`，圖 0）
+- 1、10、50、500 次取樣的熱圖，和 500 次的平均絕對差：1 次 0.1563、10 次 0.0585、50 次 0.0257。
+- 看得到的：1 次是一片彩色雜點，看不出形狀；10 次開始看到披薩三角形與刀叉的輪廓；50 次和 500 次差不多，500 次最平滑。
+
+### 其他程式細節（實測）
+- `compute_saliency_maps` 和 `smooth_grad` 都沒有呼叫 `model.zero_grad()`，所以**模型參數的 .grad 會一直累加**：連續呼叫兩次 compute_saliency_maps，`fc[3].weight.grad` 的絕對值總和從 2.150e-02 變成 4.299e-02（剛好 2 倍）。這不影響熱圖（熱圖用的是輸入 x 的 .grad，每次都是新的 tensor），只是多佔記憶體。
+- 執行時間：本次 hw09_ch03_grad.py 裡每個 SmoothGrad 變體 10 張約 52–58 秒，比 explain_cnn.py 內量到的 24.1 秒慢（同一個 process 裡先跑了其他計算，GPU 狀態不同）。教材的耗時請引用 ch00 的逐段計時（24.1 秒），不要引用這裡的數字。
