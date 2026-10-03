@@ -655,7 +655,7 @@ footer.chap-footer {
   <li><code>hw9_bert.zip</code> 下架，Q25–27 無法重現原作業的圖（第 6 章）。</li>
   <li><code>bert_embedding.py</code> 句 5「發振」是錯字、句 1 的括號全形半形混用，原版如此（第 7 章）。</li>
 </ol>
-<p>另外，三支腳本都寫死 <code>.cuda()</code>、沒有 CPU 的替代路徑，這是本 repo 刻意的設計，書中只在第 0 章說明執行環境，不把它當成問題或練習。</p>
+<p>另外，<code>explain_cnn.py</code> 寫死 <code>.cuda()</code>、沒有 CPU 的替代路徑（兩支 BERT 腳本在 CPU 上算），這是本 repo 刻意的設計，書中只在第 0 章說明執行環境，不把它當成問題或練習。</p>
 
 <h2 id="changes">章節安排說明（相對於事實清單的建議章節）</h2>
 <ul>

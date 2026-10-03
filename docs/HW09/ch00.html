@@ -922,7 +922,7 @@ fc in 8192 out (1, 11)  «3»</code></pre>
 </div>
 
 <h2 id="env">0.3　執行環境</h2>
-<p>本 repo 的八份作業共用 repo 根目錄的一個 Python 虛擬環境 <code>.venv</code>，所有腳本都在 <code>HW09/</code> 資料夾裡、用 <code>../.venv/bin/python</code> 執行。環境怎麼從零建起來（uv、<code>requirements.txt</code>、為什麼 PyTorch 要裝 cu128 版本）在 <a href="../HW01/ch00.html#env">HW01 教材第 0 章 0.3 節</a>有完整說明，這裡不重複。HW09 額外需要的套件已經寫在同一份 <code>requirements.txt</code> 的最後幾行（lime、scikit-image、scikit-learn；載入 BERT 用的 Hugging Face 套件 transformers 原本就在清單裡），照那一節的指令安裝就會一起裝好。</p>
+<p>本 repo 的作業（HW05 除外）共用 repo 根目錄的一個 Python 虛擬環境 <code>.venv</code>，所有腳本都在 <code>HW09/</code> 資料夾裡、用 <code>../.venv/bin/python</code> 執行。環境怎麼從零建起來（uv、<code>requirements.txt</code>、為什麼 PyTorch 要裝 cu128 版本）在 <a href="../HW01/ch00.html#env">HW01 教材第 0 章 0.3 節</a>有完整說明，這裡不重複。HW09 額外需要的套件已經寫在同一份 <code>requirements.txt</code> 的最後幾行（lime、scikit-image、scikit-learn；載入 BERT 用的 Hugging Face 套件 transformers 原本就在清單裡），照那一節的指令安裝就會一起裝好。</p>
 <p>本書的實測環境如下（2026-10-03）：</p>
 <div class="tablewrap"><table>
 <thead><tr><th>項目</th><th>版本</th></tr></thead>
@@ -941,7 +941,7 @@ fc in 8192 out (1, 11)  «3»</code></pre>
   <li><strong><code>explain_cnn.py</code> 需要 NVIDIA GPU。</strong>它在 <code>explain_cnn.py:288</code> 用 <code>Classifier().cuda()</code> 把模型搬上 GPU，各個解釋方法也把圖片 <code>.cuda()</code> 過去，程式裡沒有改用 CPU 的分支。這是本 repo 刻意的寫法。</li>
   <li><strong>兩支 BERT 腳本在 CPU 上算。</strong><code>bert_hidden_states.py</code> 與 <code>bert_embedding.py</code> 載入模型後沒有呼叫 <code>.cuda()</code>，模型和輸入都留在 CPU；程式裡出現的 <code>torch.cuda</code> 只有固定亂數種子的那幾行，而且先用 <code>torch.cuda.is_available()</code> 檢查過。</li>
 </ul>
-<p>兩支 BERT 腳本第一次執行時會從 Hugging Face 下載模型（<code>bert-base-chinese</code> 約 400 MB），存在 <code>~/.cache/huggingface</code>，之後就直接讀快取，所以第一次執行需要網路。<!-- TODO(本機實測): deepset/bert-base-cased-squad2 第一次下載的大小 --></p>
+<p>兩支 BERT 腳本第一次執行時會從 Hugging Face 下載模型（權重檔 <code>model.safetensors</code>：<code>deepset/bert-base-cased-squad2</code> 433,270,764 bytes、<code>bert-base-chinese</code> 411,553,788 bytes，各約 410–430 MB），存在 <code>~/.cache/huggingface</code>，之後就直接讀快取，所以第一次執行需要網路。</p>
 
 <h2 id="data">0.4　資料與輸出：為什麼 repo 裡看不到</h2>
 <p>打開 <code>HW09/</code>，你只會看到五個 <code>.py</code> 檔和投影片 <code>HW09.pdf</code>，看不到模型權重、看不到圖片，也看不到任何輸出圖。原因在這個資料夾自己的 <code>.gitignore</code>：</p>
@@ -964,12 +964,16 @@ hw9_bert/</code></pre></figure>
 </table></div>
 
 <h3 id="getdata">資料從哪來</h3>
-<p>原版 Colab notebook 用 <code>!gdown</code> 從 Google Drive 下載資料。本 repo 用的是課程在 Kaggle（一個資料科學競賽網站，課程在上面發布作業資料）提供的壓縮檔 <code>ml2022spring-hw9.zip</code>。<!-- TODO(本機實測): ml2022spring-hw9.zip 的 Kaggle 下載網址或 kaggle CLI 指令 --> 這個壓縮檔裡有兩個檔案：</p>
+<p>原版 Colab notebook 用 <code>!gdown</code> 從 Google Drive 下載資料。這些連結（<code>food.zip</code>、<code>checkpoint.pth</code>，還有 Part 2 的字型）在 2026-10-03 都已經回 HTTP 404。本 repo 用的是一份本機保存的壓縮檔 <code>ml2022spring-hw9.zip</code>（127,524,956 bytes），檔名沿用課程在 Kaggle（一個資料科學競賽網站）發布其他作業資料時的命名；但 HW09 沒有排行榜，Kaggle 上也沒有 <code>ml2022spring-hw9</code> 這個競賽頁（同樣的網址換成 hw1、hw8 都還在）。所以這份資料目前沒有公開的下載來源，要向手上有這個檔案的人取得。壓縮檔裡有兩個檔案：</p>
 <ul>
   <li><code>checkpoint.pth</code>（170,002,879 bytes）：直接放到 <code>HW09/checkpoint.pth</code>。</li>
   <li><code>food.zip</code>（621,495 bytes）：解壓縮到 <code>HW09/food/</code>。</li>
 </ul>
-<!-- TODO(本機實測): 從 ml2022spring-hw9.zip 解出 checkpoint.pth 與 food/ 的逐字指令（food.zip 內是否自帶 food/ 這一層資料夾） -->
+<p>壓縮檔裡兩個檔案都包在 <code>ml2022spring-hw9/</code> 這一層資料夾底下；<code>food.zip</code> 裡面則自帶 <code>food/</code> 這一層。所以在 <code>HW09/</code> 裡這樣解（<code>&lt;路徑&gt;</code> 換成壓縮檔所在的位置；<code>-j</code> 表示丟掉壓縮檔裡的資料夾層次，直接放在目前目錄）：</p>
+<pre class="shell cmd"><code>$ cd HW09
+$ unzip -j &lt;路徑&gt;/ml2022spring-hw9.zip ml2022spring-hw9/checkpoint.pth ml2022spring-hw9/food.zip
+$ unzip food.zip
+$ rm food.zip</code></pre>
 <p>放好之後，<code>HW09/</code> 應該長這樣（<code>output/</code> 是腳本第一次執行時自己建的，不用先建）：</p>
 <pre class="diagram">HW09/
 ├── HW09.pdf               投影片（20 頁）
@@ -1043,7 +1047,7 @@ saved ./output/integrated_gradients.png  «5»</code></pre>
   <li><span class="mk">5</span>Integrated Gradients 是最後一個。看到這一行就表示整支腳本跑完了，<code>output/</code> 裡有 7 張圖。</li>
 </ol>
 <p>stderr 上另外會出現 10 條 tqdm 進度條（tqdm 是一個在終端機畫進度條的套件）。它們來自 LIME：lime 套件替每張圖跑一條進度條，每條數到 <code>1000/1000</code>，因為 LIME 對每張圖取樣 1,000 次（第 2 章）。</p>
-<p><strong>跑多久：</strong>這裡的時間是在指令前面加上 shell 的 <code>time</code>（例如 <code>time ../.venv/bin/python explain_cnn.py</code>）量到的，跑完會多印 real、user 等幾種時間。實測 real time 50.9 秒；在新環境第一次跑是 1 分 52 秒，多出來的時間花在載入套件與 GPU 第一次運算的暖機。real time 是牆上時鐘實際經過的時間；另一個常見的數字 user time 是所有 CPU 核心花的時間加總，實測是 17 分 31 秒，比 real time 大很多，因為 LIME 切圖與擬合時同時用了多個 CPU 核心。腳本本身不會印各段的耗時；本書另外逐段計時，時間最多花在兩段：SmoothGrad 每張圖要取樣 500 次、10 張約 25 秒；LIME 每張約 1.3–1.6 秒（圖 1 是 2.81 秒），10 張約 15–17 秒。</p>
+<p><strong>跑多久：</strong>這裡的時間是在指令前面加上 shell 的 <code>time</code>（例如 <code>time ../.venv/bin/python explain_cnn.py</code>）量到的，跑完會多印 real、user 等幾種時間。實測 real time 50.7 秒（另一次是 50.9 秒）；在新環境第一次跑是 1 分 52 秒，多出來的時間花在載入套件與 GPU 第一次運算的暖機。real time 是牆上時鐘實際經過的時間；另一個常見的數字 user time 是所有 CPU 核心花的時間加總，同一次（50.7 秒那次）是 653.6 秒，約 10 分 54 秒，比 real time 大很多，因為 LIME 切圖與擬合時同時用了多個 CPU 核心。腳本本身不會印各段的耗時；本書另外逐段計時：LIME 14.7 秒、Saliency map 0.4 秒、SmoothGrad 24.1 秒、Filter explanation 2.3 秒（cnn[6]）與 2.9 秒（cnn[23]）、Integrated Gradients 0.7 秒。時間幾乎都花在 SmoothGrad（每張圖取樣 500 次）和 LIME（每張圖取樣 1,000 次，約 1.3–1.6 秒，圖 1 是 2.81 秒）。</p>
 
 <h3 id="run-hidden">bert_hidden_states.py：每一層的 hidden states（Q25–27）</h3>
 <figure class="listing"><figcaption>bert_hidden_states.py:125–138 — 主程式：有 hw9_bert/ 就用，沒有就下載替代模型</figcaption>
@@ -1070,7 +1074,7 @@ saved ./output/bert_q3_layer{1..12}.png</code></pre>
 <ol class="notes">
   <li><span class="mk">1</span>每一組問答只印一行，但實際存了 12 張圖（Layer 1 到 Layer 12 各一張）。<code>{1..12}</code> 是程式<strong>原樣印出</strong>的字（<code>bert_hidden_states.py:122</code> 的 f-string 用 <code>{{1..12}}</code> 印出大括號），借用 shell 的寫法表示「1 到 12」，並不是 12 行輸出被縮寫。檔名中的 <code>q1</code>、<code>q2</code>、<code>q3</code> 就是第 1、2、3 組問答。三行合計 36 張圖。</li>
 </ol>
-<p><strong>跑多久：</strong>實測 real time 12.3 秒（第一次執行還要加上下載模型的時間）。<!-- TODO(本機實測): 12.3 s 與 6.7 s 是否為模型已在 HF 快取時的時間（不含第一次下載） --></p>
+<p><strong>跑多久：</strong>實測 real time 12.3 秒。這是模型已經在快取裡的時間；第一次執行還要加上下載模型的時間。下面 <code>bert_embedding.py</code> 的 6.7 秒也一樣。</p>
 
 <h3 id="run-embed">bert_embedding.py：「蘋果」的向量（Q28–30）</h3>
 <figure class="listing"><figcaption>bert_embedding.py:85–94 — 主程式前段：字型、模型與 tokenizer</figcaption>
@@ -1116,7 +1120,7 @@ saved ./output/bert_q3_layer{1..12}.png</code></pre>
 </tbody>
 </table></div>
 <p>Q21–24 沒有對應的程式，要在瀏覽器裡用 exBERT 網站（第 6 章說明它的現況）。</p>
-<p>因為 <code>output/</code> 不進 git，本書另外把同一次執行（2026-10-03）產生的 44 張圖複製到 <code>docs/HW09/img/</code>，各章用的就是這一批。你自己跑出來的圖應該和書上的一樣；如果不一樣，先回頭核對套件版本（0.3 節的表），再看該章有沒有提到亂數。在 <code>HW09/</code> 裡可以這樣印出你自己的版本，和 0.3 節的表對照：</p>
+<p>因為 <code>output/</code> 不進 git，本書另外把同一次執行（2026-10-03）產生的 44 張圖複製到 <code>docs/HW09/img/</code>，各章用的就是這一批。同一台機器重跑一次，實測結果分三種：<code>images.png</code>、<code>lime.png</code>、<code>saliency.png</code> 與 37 張 BERT 圖逐位元相同；<code>smoothgrad.png</code> 每次都不一樣，因為它的雜訊用 PyTorch 的亂數產生，而 <code>explain_cnn.py</code> 只固定了 NumPy 的種子（給 LIME 用的 <code>np.random.seed(16)</code>），沒有固定 PyTorch 的；<code>filter_cnn6.png</code>、<code>filter_cnn23.png</code>、<code>integrated_gradients.png</code> 只有極細微的差異（GPU 上的運算順序不保證每次相同，累加出來的浮點數尾數會變），肉眼看不出來。如果你的圖和書上差很多，先回頭核對套件版本（0.3 節的表）。在 <code>HW09/</code> 裡可以這樣印出你自己的版本，和 0.3 節的表對照：</p>
 <pre class="shell cmd"><code>$ ../.venv/bin/python -c "from importlib.metadata import version; print([version(p) for p in ['torch', 'lime', 'transformers', 'scikit-image', 'scikit-learn']])"</code></pre>
 <p>接下來的第 1 章從 <code>explain_cnn.py</code> stdout 的前兩行開始：<code>checkpoint.pth</code> 裡裝了哪些東西、10 張圖怎麼被讀進來並排成圖 0–9，以及模型對這 10 張圖的預測。</p>
 
@@ -1140,7 +1144,7 @@ saved ./output/bert_q3_layer{1..12}.png</code></pre>
 <details class="quiz"><summary>3. 如果把 <code>model.py</code> 第 35 行的 Linear 換成「先 global average pooling、再接 <code>Linear(512, 11)</code>」，全模型的參數會剩多少？（只手算，不用改程式。）</summary>
 <p>cnn 不變，5,761,920；新的 fc 只有 512 × 11 + 11 = 5,643；pooling 沒有參數。合計 5,767,563，大約是原本的 41%。（這是手算；本書沒有實際改模型去跑。改了之後原本的 <code>checkpoint.pth</code> 也載入不了，因為權重的形狀對不上。）</p></details>
 <details class="quiz"><summary>4. 在 repo 根目錄執行 <code>.venv/bin/python HW09/explain_cnn.py</code> 會怎樣？為什麼？</summary>
-<p><code>from model import Classifier</code> 會成功（Python 把腳本所在的 <code>HW09/</code> 加進模組搜尋路徑），但資料路徑 <code>./checkpoint.pth</code>、<code>./food/</code>、<code>./output/</code> 相對的是目前所在的資料夾，也就是 repo 根目錄：第 285 行先在根目錄建出一個 <code>output/</code>，第 289 行讀 <code>./checkpoint.pth</code> 時找不到檔案而停止。要先 <code>cd HW09</code> 再用 <code>../.venv/bin/python explain_cnn.py</code>。（本書沒有實際這樣跑，所以不列錯誤訊息。）</p></details>
+<p><code>from model import Classifier</code> 會成功（Python 把腳本所在的 <code>HW09/</code> 加進模組搜尋路徑），但資料路徑 <code>./checkpoint.pth</code>、<code>./food/</code>、<code>./output/</code> 相對的是目前所在的資料夾，也就是 repo 根目錄：第 285 行先在根目錄建出一個 <code>output/</code>，第 289 行讀 <code>./checkpoint.pth</code> 時找不到檔案而停止。實測最後一行是 <code>FileNotFoundError: [Errno 2] No such file or directory: './checkpoint.pth'</code>，而 repo 根目錄確實多了一個空的 <code>output/</code>。要先 <code>cd HW09</code> 再用 <code>../.venv/bin/python explain_cnn.py</code>。</p></details>
 <details class="quiz"><summary>5. <code>bert_hidden_states.py</code> 只印了 3 行 <code>saved …</code>，為什麼 <code>output/</code> 裡多了 36 張圖？</summary>
 <p>每組問答畫 Layer 1 到 Layer 12 共 12 張，但只在畫完後印一行；那一行裡的 <code>{1..12}</code> 是程式原樣印出的字，代表 1 到 12。3 組 × 12 層 = 36 張。</p></details>
 

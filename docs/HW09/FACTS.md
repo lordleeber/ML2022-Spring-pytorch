@@ -20,7 +20,7 @@
 ## 環境（實測 2026-10-03）
 - Python 3.12.3、torch 2.11.0+cu128、torchvision 0.26.0+cu128、numpy 2.5.3、matplotlib 3.11.2、lime 0.2.0.1（`lime.__version__` 不存在，要用 `importlib.metadata.version('lime')`）、scikit-image 0.26.0、scikit-learn 1.9.1、transformers 5.18.0。
 - GPU：NVIDIA RTX PRO 4000 Blackwell（sm_120，24 GB），WSL2。
-- 共用 venv 在 repo 根目錄 `.venv`；在 `HW09/` 裡用 `../.venv/bin/python <script>.py`。所有腳本都寫死 `.cuda()`，沒有 CPU fallback，**這是刻意的設計**，教材以中性描述，不列為問題或練習。
+- 共用 venv 在 repo 根目錄 `.venv`；在 `HW09/` 裡用 `../.venv/bin/python <script>.py`。`explain_cnn.py` 寫死 `.cuda()`，沒有 CPU fallback（兩支 BERT 腳本沒有 `.cuda()`，在 CPU 上算；2026-10-03 ch00 審稿更正），**這是刻意的設計**，教材以中性描述，不列為問題或練習。
 - 原版 Colab 指定 `lime==0.1.1.37`（投影片 p.7）、`transformers==4.5.0`；本 repo 改用上面的新版，requirements.txt 有 pin lime/scikit-image/scikit-learn。
 
 ## 資料與檔案
@@ -437,3 +437,17 @@
   - 本章用的手算（由上面逐層表推得，不是另外量的）：各 stage 參數 299,520／443,520／1,476,864／1,181,184／2,360,832；GAP 版 fc `Linear(512, 11)` = 5,643，全模型 5,767,563。
   - **更正「環境」一節**：只有 `explain_cnn.py` 寫死 `.cuda()`；`bert_hidden_states.py`、`bert_embedding.py` 沒有 `.cuda()`（只有 `same_seeds` 裡先檢查 `torch.cuda.is_available()` 的種子設定），模型與輸入都在 CPU。ch00 照原始碼寫；index（「三支腳本都把模型和資料寫死成 `.cuda()`」）與 outline #findings 末段的同一句需要改。
   - 在 repo 根目錄跑 `HW09/explain_cnn.py`：import 會成功（sys.path[0] 是腳本所在目錄），會在根目錄建 `output/`，然後 `torch.load('./checkpoint.pth')` 失敗。這是由 Python 規則推得，沒有實跑。
+
+## ch00 審稿補測（2026-10-03，本機）
+- 雲端的更正正確：只有 `explain_cnn.py` 有 `.cuda()`；兩支 BERT 腳本在 CPU（「環境」一節、index、outline 已改）。
+- ch00 引用的所有行號（model.py、explain_cnn.py、bert_*.py）逐一核對，全對。
+- **在 repo 根目錄跑 `.venv/bin/python HW09/explain_cnn.py`（實跑）**：根目錄多出空的 `output/`，最後一行 `FileNotFoundError: [Errno 2] No such file or directory: './checkpoint.pth'`（traceback 經 torch/serialization.py 的 `_open_file_like`）。
+- **重新計時（`/usr/bin/time`，模型已在 HF 快取）**：explain_cnn.py real 50.65 s／user 653.59 s／sys 7.57 s；bert_hidden_states.py real 12.80 s／user 33.71 s；bert_embedding.py real 5.92 s／user 12.04 s。先前的 12.3 s、6.7 s 也是快取後的時間。注意：「執行實測」裡的 user 17 分 31 秒是**第一次（real 1 分 52 秒）**那次的，不能和 50.9 s 配對。
+- **explain_cnn.py 逐段計時**（同一 process、模型已載入、`torch.cuda.synchronize()` 後量）：LIME 14.7 s、Saliency 0.4 s、SmoothGrad 24.1 s、Filter cnn[6] 2.3 s、cnn[23] 2.9 s、IG 0.7 s。
+- **重跑的圖是否相同**（同一台機器，和 docs/HW09/img/ 逐位元比）：44 張中 40 張相同（images、lime、saliency、37 張 BERT）。不同的 4 張：
+  - `smoothgrad.png`：雜訊用 PyTorch 亂數，explain_cnn.py 只設了 `np.random.seed(16)`，沒設 torch seed → 每次不同。像素差最大 38/255，約 16% 像素有差、0.3% 差超過 16。
+  - `filter_cnn6.png`、`filter_cnn23.png`、`integrated_gradients.png`：GPU 非確定性（沒開 cudnn.deterministic），浮點尾數不同。filter_cnn6 最大 91/255 但只有 0.05% 像素差超過 16；filter_cnn23 最大 30；IG 最大 1。數值上：filter visualization（cnn[6]）總和兩次分別 299581.10、299577.31；IG 圖 0 總和 0.2728119、0.2727914。
+- **下載大小**（HF 快取裡的 `model.safetensors`）：deepset/bert-base-cased-squad2 433,270,764 bytes；bert-base-chinese 411,553,788 bytes。
+- **資料來源**：`ml2022spring-hw9.zip` 127,524,956 bytes。Kaggle 沒有 `ml2022spring-hw9` 競賽頁（`kaggle.com/competitions/ml2022spring-hw9` 回 404，同網址 hw1、hw8 回 200；投影片 p.17 也說 HW09 沒有排行榜）。原版 Colab 的三個 Google Drive id（food.zip `1QntUQuWJoVR8h5FoeDa56xrQSdcCwFeD`、checkpoint `1-Qw-oIJ0cSo2iG_n_U9mcJqXc2-LCSdV`、字型 `1JWHUSlcPwoEzmr0VE6J71jcnwinH10G6`）2026-10-03 全部 404。目前沒有公開下載來源。
+- **zip 結構**：外層 `ml2022spring-hw9/checkpoint.pth`、`ml2022spring-hw9/food.zip`；`food.zip` 內含 `food/` 資料夾與 10 張 jpg。解壓指令（在 HW09/）：`unzip -j <路徑>/ml2022spring-hw9.zip ml2022spring-hw9/checkpoint.pth ml2022spring-hw9/food.zip`、`unzip food.zip`、`rm food.zip`。
+- ch00 0.6 的版本指令實測輸出：`['2.11.0+cu128', '0.2.0.1', '5.18.0', '0.26.0', '1.9.1']`。
