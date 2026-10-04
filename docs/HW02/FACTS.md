@@ -321,6 +321,7 @@
 ## 已在前面章節定義過的名詞
 （寫章的 session 每章追加；後續章節不必重講，可簡短回指。）
 - ch00：音素、音框、MFCC、logits、LSTM（概念層次）、gate（只說 4 組，細節在 ch04）、`h_n`/`h_c`、過擬合、wall clock、stdout/stderr 與 tqdm、多數類別基準（ch00 成績表先出現，ch01 定義）。
+- ch06：load_state_dict 需要先建同樣的模型、test_acc/test_lengths 殘骸、np.concatenate 平方成長與 int32→int64、Id ＝依 test_split 順序接起來的格號、測試集不能打亂、混淆（成對錯誤）、prediction.csv 被追蹤與 git checkout 還原。
 - ch05：same_seeds 各行的作用、cuDNN deterministic/benchmark、CrossEntropyLoss（mean）、AdamW 預設（betas 0.9/0.999、eps 1e-8、weight_decay 0.01，實測）、704 = 64×11 攤平、torch.max 回傳 (值, 位置)、Train Acc 的量測條件、state_dict、驗證指標沒有偏差的四條理由、val loss 是 11 格平均、過擬合、early stopping（本 repo 沒有）、圖 5.1。
 - ch04：RNN、h_t/c_t、四組閘公式（i,f,g,o，PyTorch 疊放順序 ii|if|ig|io）、初始狀態 None=全 0、層間 dropout 9 處、因果性（causal）、雙向 LSTM（輸出 1024 維、Linear 要改）、圖 4.2 各位置準確率（顏色：單向 #3987e5、雙向 #d95926，已過 dataviz 驗證）、model_dnn.py 是死碼、3 層 vs 10 層。
 - ch03：Dataset 約定（__len__/__getitem__）、一筆＝一格、collate、drop_last、shuffle 在迭代時才抽亂數、view 與 -1、batch_first、TensorDataset。
@@ -351,3 +352,12 @@
 - c4b.py（CPU）：`Classifier(429, hidden_layers=1/6, 512)` 的 `lstm.num_layers` 都是 10、參數都是 20064809；`lstm_out.is_contiguous()` False；`lstm_out[:,-1] == h_n[-1]` True、`== h_n[0]` False。
 - `lstm_out.stride()` = `(512, 32768, 1)`（CPU，batch 64）：內部以 (時間, batch, hidden) 排列，batch_first 回傳的是轉置後的 view。`m.out(lo)` 與 `m.out(lo.contiguous())`：`torch.equal` False、`torch.allclose` True（浮點捨入差異）。
 - 把 `m.lstm` 換成 `bidirectional=True` 而不改 Linear：`RuntimeError: mat1 and mat2 shapes cannot be multiplied (704x1024 and 512x41)`。
+
+## ch06 實測（2026-10-05，本機；在 HW02/ 裡）
+- `hw02_facts.py ckpt`（model.ckpt、驗證集中間格）：full-set 169842 / 264570 = 0.641955；只看「不受邊界補值影響」的內部列（每句去掉前後 5 格，260,280 列）各位置準確率 `[0.4479, 0.5181, 0.5629, 0.5954, 0.6188, 0.6365, 0.6503, 0.6607, 0.6678, 0.6734, 0.6778]`。
+  - per-class 最好 5 類（類別, acc, 驗證格數）：(0, 0.964, 46898)、(2, 0.822, 13538)、(23, 0.784, 4690)、(11, 0.762, 2676)、(39, 0.752, 9395)。最差 5 類：(1, **0.0**, 1856)、(22, 0.166, 712)、(17, 0.191, 664)、(38, 0.236, 1649)、(18, 0.294, 1315)。
+  - 最常見錯誤（真, 猜）: 次數：(8,2) 1993、(27,31) 1636、(25,37) 1381、(40,36) 1281、(19,5) 1229、(37,25) 1228、(19,4) 1201、(2,8) 1050。
+  - 驗證集預測第 0 類比例 0.1959，真實 0.1773。
+- c6a.py（test_split 前三句格數）：`1963-142776-0022` 818 → Id 0..817；`1841-150351-0006` 657 → 818..1474；`481-123720-0082` 220 → 1475..1694。
+- c6b.py（模擬 10,097 批 64 + 1 批 60，CPU）：逐批 `np.concatenate` 4.980 s（再跑 5.056 s），結果 int64、646268 筆；收進 list 最後接一次 0.0012 s（再跑 0.0014 s），兩者相同。
+- prediction.csv（repo 版＝model.ckpt 重跑版）：646,269 行，檔尾有換行；最後兩行 `646266,0`、`646267,0`。預測次數最少：第 1 類 64、第 20 類 166、第 17 類 554、第 22 類 917、第 18 類 1870。
