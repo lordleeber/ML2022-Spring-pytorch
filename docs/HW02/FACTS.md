@@ -312,6 +312,7 @@
 ## 已在前面章節定義過的名詞
 （寫章的 session 每章追加；後續章節不必重講，可簡短回指。）
 - ch00：音素、音框、MFCC、logits、LSTM（概念層次）、gate（只說 4 組，細節在 ch04）、`h_n`/`h_c`、過擬合、wall clock、stdout/stderr 與 tqdm、多數類別基準（ch00 成績表先出現，ch01 定義）。
+- ch02：shift、concat_feat 的三步（repeat → view+permute → shift ×10 → permute+view）、contiguous、view 與 storage、標籤拼接（中間第 5 欄＝原標籤）、預先配置 max_len、虛擬位址 vs RSS、overcommit。
 - ch01：utterance（句）、句子 id 格式「說話者-章節-句號」、CMVN（逐句做）、segment（連續相同標籤的一段）、frame shift（只說「投影片沒給」）、以句為單位切分與洩漏、多數類別基準 0.177261。
 
 ## ch01 實測（2026-10-04，本機；指令都在 HW02/ 裡執行，輸出已逐字放進 ch01）
@@ -320,3 +321,10 @@
 - c1a.py（讀 `2007-149877-0023.pt`）輸出：`<class 'torch.Tensor'> torch.float32 torch.Size([500, 39])`；`x[0,:6]` = `[-2.0803, -0.7538, -0.4708, -0.1630, 0.5476, -0.4360]`；`mean(0)[:4]` = `[1.1539e-07, 0.0000e+00, -5.3406e-08, -6.8665e-08]`；`std(0)[:4]` = `[1., 1., 1., 1.]`。
 - c1b.py（Counter）：`4286 utterances, 2644158 frames, 41 classes`；前 5：0 17.42%、31 6.03%、2 5.28%、4 4.97%、5 4.79%；後 3：22 0.29%、17 0.20%、20 0.05%。前 10 類合計 55.83%。
 - c1c.py（重現切分）：`4286 3857 3857 429`；`['5049-25947-0112', '1898-145724-0020', '6019-3185-0096']`；`250 184 0`。
+
+## ch02 實測（2026-10-04，本機；在 HW02/ 裡、PYTHONPATH=.，輸出已逐字放進 ch02）
+- c2a.py：`x = torch.arange(1., 9.).view(4, 2)`，印 x、`shift(x,1)`、`shift(x,-1)`、`concat_feat(x,3)`、`concat_feat(x,5)`，輸出與上面「拼接」一節相同。
+- c2b.py：`x.repeat(1,3)` → 每列同一格重複 3 次；`view(4,3,2).permute(1,0,2)` → `torch.Size([3, 4, 2]) False`；`z[0]` 等於 x；再 permute 回來 `is_contiguous()` → True。
+- c2c.py：`concat_feat(torch.LongTensor([0,0,0,29,29,39,39,39]).view(-1,1), 5)` → 8×5，中間欄（第 2 欄）＝輸入。
+- c2d.py：`torch.empty(3000000,429)` storage 5148000000；切成 `[:264570]` 後 storage 仍 5148000000；需要 454002120。
+- c2e.py（/proc/self/status VmRSS）：import 後 514624 kB；`torch.empty(3000000,429)` 後 515200 kB（+576 kB）；寫入前 264,570 列後 959680 kB（+444,480 kB ≈ 455 MB）。
