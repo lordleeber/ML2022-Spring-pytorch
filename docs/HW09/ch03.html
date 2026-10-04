@@ -703,7 +703,7 @@ The partial derivative of the loss with respect to the input image shows how muc
   <li><strong>第 80 行</strong> <code>model.eval()</code>：每個解釋方法開頭的保險（第 1 章 <a href="ch01.html#mode">1.7 節</a>）。</li>
   <li><strong>第 81、84 行</strong>：<code>x</code> 是第 1 章 <code>getbatch</code> 讀進來的 <code>(10, 3, 128, 128)</code> 張量，放在 CPU 上。<code>x.cuda()</code> 複製一份到 GPU，函式裡的 <code>x</code> 從此指向這份新的張量；第 84 行再把它標記成需要梯度。結尾的底線是 PyTorch 的命名慣例，表示「就地修改這個張量」，不回傳新的。主程式裡原本那份 <code>images</code> 不受影響，後面的 SmoothGrad 拿到的仍是乾淨的原圖。</li>
   <li><strong>第 86–89 行</strong>：forward 得到 <code>(10, 11)</code> 的 logits，和標籤算 CE loss（10 張的平均），然後 <code>loss.backward()</code>。這一行之後，<code>x.grad</code> 就是 loss 對 49,152 × 10 個像素的偏微分，形狀 <code>(10, 3, 128, 128)</code>。</li>
-  <li><strong>第 92 行</strong>：三件事。<code>.abs()</code> 取絕對值，因為這裡只關心「影響多大」，不管方向（偏微分是正是負只代表像素變亮會讓 loss 變大還是變小）。<code>.detach().cpu()</code> 把結果從計算記錄中切開、搬回 CPU。<code>torch.max(..., dim=1)</code> 沿著第 1 維（R、G、B 三個通道）取最大值，三個通道併成一個，形狀變成 <code>(10, 128, 128)</code>；<code>torch.max</code> 指定維度時會同時回傳最大值和它的位置（第幾個通道），程式只要前者，所以用 <code>saliencies, _</code> 接。本書另外數了每個像素的最大值落在哪個通道：大約 R 35%、G 41%、B 22%（本書只記錄了約略值，三者相加不到 100%），三個通道都有份。<!-- TODO(本機實測): saliency 每個像素取到最大值的通道比例的精確值（R/G/B 三者，以及是否有平手的像素） --></li>
+  <li><strong>第 92 行</strong>：三件事。<code>.abs()</code> 取絕對值，因為這裡只關心「影響多大」，不管方向（偏微分是正是負只代表像素變亮會讓 loss 變大還是變小）。<code>.detach().cpu()</code> 把結果從計算記錄中切開、搬回 CPU。<code>torch.max(..., dim=1)</code> 沿著第 1 維（R、G、B 三個通道）取最大值，三個通道併成一個，形狀變成 <code>(10, 128, 128)</code>；<code>torch.max</code> 指定維度時會同時回傳最大值和它的位置（第幾個通道），程式只要前者，所以用 <code>saliencies, _</code> 接。本書另外數了 10 張圖、163,840 個像素的最大值各落在哪個通道：R 36.0%、G 41.7%、B 22.4%，沒有任何像素是兩個通道平手。每一張圖都是 G 最多、B 最少，但三個通道都有份。</li>
   <li><strong>第 91 行</strong>是被註解掉的另一種寫法：不取最大值，保留三個通道。SmoothGrad 走的就是這條路（3.10 節）。</li>
   <li><strong>第 95 行</strong>：對 10 張圖<strong>一張一張</strong>呼叫 <code>normalize</code>，再用 <code>torch.stack</code> 疊回 <code>(10, 128, 128)</code>。第 1 章 <a href="ch01.html#helpers">1.5 節</a>說過，<code>normalize</code> 是對傳進去的整個陣列取最大最小值，所以「誰跟誰一起正規化」由呼叫的人決定。這裡的決定是每張圖自己一組，第 94 行的註解說明了理由：「各張圖的梯度大小可能差很多」。3.5 節實測這個選擇有多重要。</li>
 </ul>
@@ -837,7 +837,7 @@ for i, s in enumerate(x.grad.abs().amax(dim=(1, 2, 3))):
 <p>還有兩個細節：</p>
 <ul>
   <li><strong>批次平均讓每張圖的梯度再縮小 10 倍。</strong><code>CrossEntropyLoss()</code> 預設取 10 張的平均，平均就是每張的 loss 乘上 1/10，所以每張圖拿到的梯度是「單獨算」時的十分之一。本書實測圖 0 單獨算時梯度最大值是 8.565 × 10<sup>−6</sup>，在 10 張的批次裡是 8.480 × 10<sup>−7</sup>。這個係數對 10 張圖都一樣，各自正規化之後就消失了，不影響熱圖。（兩個數字不是剛好 10 倍，因為單張和批次算出的 logit 在小數第 3 位就有差異，第 1 章<a href="ch01.html#batch-effect">〈同一張圖，logit 的小數第 3 位會變〉</a>。）</li>
-  <li><strong>1 − p 是 0，梯度卻不是 0。</strong>圖 1、6、8 的 p(標籤) 在 float32 裡存成剛好 1（第 1 章 <a href="ch01.html#confidence">1.6 節</a>），照上面的式子，標籤那一項的權重 p<sub>y</sub> − 1 應該是 0，但實測的梯度仍有 10<sup>−9</sup> 到 10<sup>−17</sup>。本書<strong>推測</strong>（沒有另外查證）是因為 <code>CrossEntropyLoss</code> 在內部直接從 logits 算 log-softmax（用上面那一行式子 −z<sub>y</sub> + log Σ e<sup>z<sub>k</sub></sup> 算出 log p<sub>y</sub>，而不是先把 p<sub>y</sub> 算成 float32 再取 log），其他類別的 p<sub>j</sub> 雖然小到不影響 p<sub>y</sub> 的顯示，本身仍是非零的極小值，加總起來就是那一點點梯度。<!-- TODO(本機實測): 印出圖 1、6、8 在批次計算時其他 10 類的 softmax 機率 p_j（float32），確認它們非零、量級和梯度相符 --></li>
+  <li><strong>1 − p 是 0，梯度卻不是 0。</strong>圖 1、6、8 的 p(標籤) 在 float32 裡存成剛好 1（第 1 章 <a href="ch01.html#confidence">1.6 節</a>），照上面的式子，標籤那一項的權重 p<sub>y</sub> − 1 應該是 0，但實測的梯度仍有 10<sup>−9</sup> 到 10<sup>−17</sup>。本書<strong>推測</strong>（沒有另外查證）是因為 <code>CrossEntropyLoss</code> 在內部直接從 logits 算 log-softmax（用上面那一行式子 −z<sub>y</sub> + log Σ e<sup>z<sub>k</sub></sup> 算出 log p<sub>y</sub>，而不是先把 p<sub>y</sub> 算成 float32 再取 log），其他類別的 p<sub>j</sub> 雖然小到不影響 p<sub>y</sub> 的顯示，本身仍是非零的極小值，加總起來就是那一點點梯度。本書事後把這三張圖批次計算時的 softmax 機率印出來：p(標籤) 在 float32 裡確實剛好是 1.0，但其他 10 類的機率都不是 0，加總分別是圖 1 2.8 × 10<sup>−11</sup>、圖 6 3.4 × 10<sup>−17</sup>、圖 8 4.9 × 10<sup>−9</sup>。這三個數的排序和梯度最大值的排序（圖 1 3.2 × 10<sup>−12</sup>、圖 6 1.5 × 10<sup>−17</sup>、圖 8 1.1 × 10<sup>−9</sup>）相同，梯度最小的圖 6，其他類別的機率也最小。這支持上面的推測：梯度來自那些被 float32 的 1.0 吃掉、但本身不是 0 的 p<sub>j</sub>。（PyTorch 內部怎麼算 log-softmax 本書沒有去讀原始碼。）</li>
 </ul>
 
 <h2 id="normalize">3.5　為什麼每張圖要各自正規化</h2>
@@ -945,7 +945,8 @@ ref: https://arxiv.org/pdf/1706.03825.pdf
 <img src="img/smoothgrad.png" alt="上下兩列各 10 格。上列是原圖；下列是偏暗的彩色圖，帶綠灰色調，看得到披薩三角形、奶油塊、蛋糕、鬆餅格子、荷包蛋圓形、碗的圓圈等輪廓；圖 2 幾乎全黑，只有左下角一小塊亮">
 <figcaption>圖 3.6 — <code>smoothgrad.png</code>：上列原圖，下列是 SmoothGrad 的結果（彩色，因為三個通道各自保留）。食物的輪廓和紋理都看得出來；圖 2 例外，幾乎全黑。</figcaption>
 </figure>
-<p>和圖 3.1 比，下列不再是黑底紅黃的熱圖，而是偏暗、帶綠灰色調的彩色圖。形狀比 saliency map 清楚得多：披薩（圖 0，類別是 Bread）的三角形、奶油塊、蛋糕的層次、鬆餅的格子、荷包蛋的圓、生魚片的條紋、湯碗的圓圈都認得出來。圖 2 是例外：幾乎整張都是暗的，只有左下角（草莓的位置）一小塊亮。<!-- TODO(本機實測): smoothgrad.png 下列整體偏綠灰的原因；量 10 張圖 SmoothGrad 結果（normalize 後）R、G、B 三個通道各自的平均值 --></p>
+<p>和圖 3.1 比，下列不再是黑底紅黃的熱圖，而是偏暗、帶綠灰色調的彩色圖。形狀比 saliency map 清楚得多：披薩（圖 0，類別是 Bread）的三角形、奶油塊、蛋糕的層次、鬆餅的格子、荷包蛋的圓、生魚片的條紋、湯碗的圓圈都認得出來。圖 2 是例外：幾乎整張都是暗的，只有左下角（草莓的位置）一小塊亮。</p>
+<p>為什麼偏綠灰？圖 3.6 那一次的數值沒有存下來，本書用 3.10 節同樣的程式原樣變體（固定 <code>torch.manual_seed(0)</code>，不是同一批雜訊）量了正規化後三個通道各自的平均值：10 張合起來 R 0.243、G 0.259、B 0.190；逐張看，除了圖 1（R 0.338、G 0.336，幾乎相同）之外都是 G 最高，B 則每一張都最低，但三者差得不多。三個通道差不多亮，看起來就是灰；G 稍微多一點、B 少一點，就偏綠（偏黃綠）。整體平均只有 0.2–0.3，所以是暗的。這和 3.3 節 saliency 的「最大值落在哪個通道」G 最多、B 最少是同一個方向。至於模型為什麼對 G 通道比較敏感，本書沒有答案。</p>
 <p>要注意的是，這張圖<strong>每次重跑都不一樣</strong>：雜訊用的是 PyTorch 的亂數，<code>explain_cnn.py</code> 只固定了 NumPy 的種子（第 2 章 <a href="ch02.html#seed">2.10 節</a>的 <code>np.random.seed(16)</code>），沒有固定 PyTorch 的，第 0 章 <a href="ch00.html#outputs">0.6 節</a>已經實測過。所以你自己跑出來的圖會和圖 3.6 有細微差異，大輪廓應該相同。</p>
 <p>看起來 SmoothGrad 達到了它的目的。但這張圖其實藏著一件更重要的事，要先從雜訊有多大說起。</p>
 
@@ -1015,13 +1016,13 @@ print(torch.bincount(pred, minlength=11).tolist())
 <thead><tr><th>雜訊標準差</th><th>p(Bread)</th><th>CE loss</th><th>|梯度| 最大值</th></tr></thead>
 <tbody>
 <tr><td>0（原圖，單獨算）</td><td>1.0000</td><td>2.5e-06</td><td>8.6e-06</td></tr>
-<tr><td>0.01</td><td>1.0000</td><td>—</td><td>1.1e-05</td></tr>
+<tr><td>0.01</td><td>1.0000</td><td>3.6e-06</td><td>1.1e-05</td></tr>
 <tr><td>0.05</td><td>0.6467</td><td>0.436</td><td>1.16</td></tr>
 <tr><td><b>0.1613（程式）</b></td><td>0.0000</td><td><b>29.6</b></td><td>1.03</td></tr>
 <tr><td>0.3984（論文式）</td><td>0.0000</td><td>27.7</td><td>0.38</td></tr>
 </tbody>
 </table></div>
-<p>（標準差 0.01 那一列的 loss 本書沒有記錄，以「—」表示。）讀這張表：</p>
+<p>讀這張表：</p>
 <ul>
   <li>標準差 0.01 時，模型仍然 100% 確定，梯度也還是 10<sup>−5</sup> 的量級，和原圖差不多。</li>
   <li>標準差 0.05 時，p(Bread) 掉到 0.6467，梯度最大值一下子跳到 1.16，比原圖大了五個數量級。<strong>只要模型不再飽和在 p ≈ 1，CE loss 的梯度就不再接近 0</strong>：3.4 節式子裡的權重 p<sub>j</sub> − 1[j = y] 不再是接近 0 的數。</li>
@@ -1030,8 +1031,8 @@ print(torch.bincount(pred, minlength=11).tolist())
 <p>所以「加了雜訊之後梯度大了好幾個數量級」的真正原因是：<strong>SmoothGrad 的 500 個樣本，在這個模型眼裡全部是 Vegetable/Fruit</strong>。程式平均的，是 500 張「被認錯的圖」上、CE loss 約 30 的梯度。</p>
 
 <h3 id="meaning">那 SmoothGrad 的圖還代表什麼</h3>
-<p>這直接影響圖 3.6 該怎麼讀。SmoothGrad 原本的構想是「在原圖附近取樣，模型對這些樣本的判斷和原圖差不多，把梯度裡的雜點平均掉」。在這個模型上，前提不成立：樣本並不在模型認為「這是麵包」的範圍裡。用 3.4 節的式子推論（本書沒有逐項量測）：p<sub>y</sub> ≈ 0 時，標籤那一項的權重 p<sub>y</sub> − 1 ≈ −1；Vegetable/Fruit 那一項的權重是它自己的機率 p<sub>VF</sub>。如果 Vegetable/Fruit 拿走了大部分的機率，梯度就大約是 ∂z<sub>VF</sub>/∂x − ∂z<sub>y</sub>/∂x，混合了「什麼讓標籤分數上升」和「什麼讓 Vegetable/Fruit 分數下降」兩件事。<!-- TODO(本機實測): 程式的雜訊標準差下，10 張圖各 500 個樣本的 p(Vegetable/Fruit) 平均值（確認 Vegetable/Fruit 是否拿走了大部分機率） --></p>
-<p>因此，<strong>圖 3.6 不能解讀成「模型判斷這是 Bread 的依據」</strong>：產生它的 500 個樣本裡，模型沒有一次判斷成 Bread。它顯示的是：在這些被認錯的雜訊圖上，哪些位置的像素對「正確答案的 loss」最敏感。圖上看得到食物的輪廓和紋理，代表梯度確實集中在那些區域，但這和 3.6 節的 saliency map 回答的不是同一個問題。至於這張圖「正確」該怎麼讀，本書沒有答案；能確定的只有它是怎麼算出來的，以及它的前提在這個模型上不成立。換成雜訊小到模型仍然認得出來的標準差（上表大約 0.01 以下），結果會是什麼樣子，本書沒有實測。<!-- TODO(本機實測): 用雜訊標準差 0.01（模型仍 100% 正確）跑 smooth_grad 500 次，存圖並和 smoothgrad.png 比較 --></p>
+<p>這直接影響圖 3.6 該怎麼讀。SmoothGrad 原本的構想是「在原圖附近取樣，模型對這些樣本的判斷和原圖差不多，把梯度裡的雜點平均掉」。在這個模型上，前提不成立：樣本並不在模型認為「這是麵包」的範圍裡。用 3.4 節的式子推論（本書沒有逐項量測）：p<sub>y</sub> ≈ 0 時，標籤那一項的權重 p<sub>y</sub> − 1 ≈ −1；Vegetable/Fruit 那一項的權重是它自己的機率 p<sub>VF</sub>。本書事後量了這個前提（程式的標準差、每張圖 500 個樣本、<code>torch.manual_seed(0)</code>）：p(Vegetable/Fruit) 的平均值，10 張裡 8 張是 1.0000，圖 1 是 0.9996、圖 2 是 0.9990，最低的單一樣本也有 0.9693（圖 2）；標籤的平均機率在 10<sup>−6</sup> 到 10<sup>−12</sup> 之間。Vegetable/Fruit 幾乎拿走了全部的機率，所以梯度大約就是 ∂z<sub>VF</sub>/∂x − ∂z<sub>y</sub>/∂x，混合了「什麼讓標籤分數上升」和「什麼讓 Vegetable/Fruit 分數下降」兩件事。</p>
+<p>因此，<strong>圖 3.6 不能解讀成「模型判斷這是 Bread 的依據」</strong>：產生它的 500 個樣本裡，模型沒有一次判斷成 Bread。它顯示的是：在這些被認錯的雜訊圖上，哪些位置的像素對「正確答案的 loss」最敏感。圖上看得到食物的輪廓和紋理，代表梯度確實集中在那些區域，但這和 3.6 節的 saliency map 回答的不是同一個問題。至於這張圖「正確」該怎麼讀，本書沒有答案；能確定的只有它是怎麼算出來的，以及它的前提在這個模型上不成立。換成雜訊小到模型仍然認得出來的標準差（上表大約 0.01 以下），結果會是什麼樣子，3.12 節實測。</p>
 
 <h2 id="variants">3.10　彩色、不 normalize、論文式：三種變體並排</h2>
 <p>本書把 <code>smooth_grad</code> 的兩個地方各改一次，和程式原樣並排。改法：</p>
@@ -1065,6 +1066,24 @@ print(torch.bincount(pred, minlength=11).tolist())
 <p>1 次取樣（等於「加一次雜訊的 saliency」）是一片彩色雜點，看不出形狀；10 次開始看得到披薩三角形與刀叉的輪廓；50 次和 500 次差不多，500 次最平滑。和 500 次的結果逐像素比，平均絕對差是：1 次 0.1563、10 次 0.0585、50 次 0.0257，越多次越接近。</p>
 <p>正規化之前的數值也有同樣的趨勢。本書在另一次量測（和圖 3.8 不是同一批雜訊）裡記錄了圖 0 平均梯度的最大值：1 次 0.902、10 次 0.311、50 次 0.271、500 次 0.256。取樣越多，個別樣本的極端值被平均掉，最大值就往下收斂。這也是 3.9 節開頭「0.256」的出處。</p>
 
+<h2 id="small-noise">3.12　雜訊小到模型認得出來時</h2>
+<p>3.9 節留下一個問題：如果雜訊小到模型仍然判斷正確，SmoothGrad 會畫出什麼？耐受度表上，標準差 0.01 時 10 張圖的正確率是 1.00，單一樣本的 p(Bread) 也還是 1.0000（3.9 節的表）。本書把 <code>smooth_grad</code> 的雜訊標準差直接設成 0.01，其他不變（500 次、CE loss、三通道一起正規化），和程式原樣並排：</p>
+<figure class="fig">
+<img src="img/ch03_smoothgrad_small.png" alt="四列各 10 格。第一列原圖；第二列 saliency.png 的熱圖；第三列程式原樣的 SmoothGrad，偏暗的綠灰色輪廓；第四列標準差 0.01 的 SmoothGrad，很暗、帶彩色雜點，形狀和第二列相近">
+<figcaption>圖 3.9 — 第一列原圖；第二列 saliency map（saliency (repo)，和圖 3.1 下列相同）；第三列程式原樣的 SmoothGrad（repo: std (0.4/range)^2）；第四列雜訊標準差 0.01（std 0.01）。後兩列都先 <code>torch.manual_seed(0)</code>，和圖 3.6 不是同一批雜訊。</figcaption>
+</figure>
+<p>看得到的：第四列很暗，帶著紅綠藍的細碎雜點，不像第三列那樣有清楚、平滑的食物輪廓。它的形狀反而接近第二列的 saliency map：圖 1 奶油塊的方形輪廓（偏綠、比較亮）、圖 2 牛奶壺的弧線、圖 5 荷包蛋的圓。</p>
+<p>用數字確認：把兩種 SmoothGrad 都對 RGB 取最大值、各自正規化，再和 saliency map 逐像素算相關係數（3.6 節用過的 Pearson）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th></tr></thead>
+<tbody>
+<tr><td>標準差 0.01 vs saliency</td><td>0.937</td><td>0.446</td><td>0.932</td><td>0.736</td><td>0.959</td><td>0.925</td><td>0.953</td><td>0.939</td><td>0.857</td><td>0.909</td></tr>
+<tr><td>程式原樣 vs saliency</td><td>0.176</td><td>0.363</td><td>0.377</td><td>0.357</td><td>0.502</td><td>0.485</td><td>0.379</td><td>0.300</td><td>0.429</td><td>0.298</td></tr>
+</tbody>
+</table></div>
+<p>標準差 0.01 時，10 張裡有 8 張和 saliency map 的相關係數在 0.85 以上；程式原樣的 SmoothGrad 和 saliency map 只有 0.18–0.50。也就是說：雜訊小到模型還認得出來時，SmoothGrad 畫出來的大致就是 saliency map 本身（再平滑一點）；程式用的雜訊畫出的那張「好看」的圖，和 saliency map 是很不一樣的東西，這和 3.9 節「樣本全被認錯」的結論一致。</p>
+<p>這不代表標準差 0.01 才是「正確」的設定：雜訊這麼小，平均掉雜點的效果也有限（第四列仍然很碎）。論文的建議範圍是對別的模型量出來的；這個只看過乾淨圖片的模型，承受不了能讓熱圖變平滑的雜訊量。本書只呈現這個取捨，不判定該選哪一個。</p>
+
 <div class="note"><h4>現在的做法</h4>
 <ul>
   <li><strong>只對輸入取梯度</strong>：用 <code>torch.autograd.grad(loss, x)</code> 直接拿到輸入的梯度，不會寫進權重的 <code>.grad</code>；或者先把模型參數的 <code>requires_grad</code> 關掉。這樣就不必擔心本章看到的權重梯度累加。</li>
@@ -1084,6 +1103,7 @@ print(torch.bincount(pred, minlength=11).tolist())
   <li>SmoothGrad 每張圖取樣 500 次、一次一張，整段 24.1 秒。雜訊標準差是 (0.4 ÷ 範圍)²（<code>normal_</code> 的第二個參數是標準差），論文是 0.4 × 範圍；這 10 張圖上約為論文的 40%。</li>
   <li>不論哪一種標準差，10 張圖的 500 個雜訊樣本全部被判成 Vegetable/Fruit（模型在標準差 0.1 時正確率就只剩 0.01）。「加雜訊後梯度大了好幾個數量級」是因為樣本全被認錯、CE loss 約 30，所以 SmoothGrad 的圖不能讀成「模型判斷標籤的依據」。</li>
   <li>SmoothGrad 保留三個通道、一起正規化，所以結果是彩色的；不 normalize 時最大值只有約 0.1–0.5，整張很暗但沒有被截斷。取樣 50 次已經和 500 次相近。</li>
+  <li>雜訊標準差改成 0.01（模型仍 100% 判對）時，SmoothGrad 和 saliency map 的相關係數 10 張裡有 8 張在 0.85 以上；程式原樣只有 0.18–0.50。程式用的雜訊畫出的圖，和 saliency map 是不同的東西。</li>
   <li>兩個函式都沒有 <code>model.zero_grad()</code>，權重梯度會累加（不影響熱圖）；<code>smoothgrad.png</code> 每次重跑都不同，因為沒有固定 PyTorch 的種子。</li>
 </ul>
 </div>
@@ -1092,7 +1112,7 @@ print(torch.bincount(pred, minlength=11).tolist())
 <details class="quiz"><summary>1. 把第 95 行改成 <code>saliencies = normalize(saliencies)</code>（10 張一起正規化），<code>saliency.png</code> 的下列會變成什麼樣子？為什麼？</summary>
 <p>只有圖 2 看得到熱點（牛奶壺左側的輪廓），其他 9 張全黑（圖 3.4 第三列）。一起正規化時，整批最大的值是圖 2 的梯度，變成 1；其他圖的梯度至少小兩個數量級，正規化後最亮的也只有 0.004（圖 7），在 <code>hot</code> 色表上是黑的。圖 2 是唯一 p(標籤) 不到 1.0000 的圖（0.9986），CE loss 的梯度由 1 − p 決定，所以它的梯度遠大於其他圖。</p></details>
 <details class="quiz"><summary>2. 圖 6 的 p(標籤) 在 float32 裡剛好是 1，照「p<sub>y</sub> − 1」算，梯度應該是 0。為什麼實測仍有 1.52 × 10<sup>−17</sup>？</summary>
-<p>梯度不只來自標籤那一項，而是 11 項 (p<sub>j</sub> − 1[j = y]) ∂z<sub>j</sub>/∂x 的加總。p<sub>y</sub> 顯示成 1，不代表其他類別的 p<sub>j</sub> 剛好是 0；它們可以是非零的極小值，小到加進 p<sub>y</sub> 時被 float32 的精度吃掉，但在梯度的加總裡仍留下一點點。這是本書的推測，沒有另外量出圖 6 其他類別的 p<sub>j</sub>。</p></details>
+<p>梯度不只來自標籤那一項，而是 11 項 (p<sub>j</sub> − 1[j = y]) ∂z<sub>j</sub>/∂x 的加總。p<sub>y</sub> 顯示成 1，不代表其他類別的 p<sub>j</sub> 剛好是 0；它們可以是非零的極小值，小到加進 p<sub>y</sub> 時被 float32 的精度吃掉，但在梯度的加總裡仍留下一點點。本書事後印出圖 6 其他 10 類的 p<sub>j</sub>：加總 3.4 × 10<sup>−17</sup>，不是 0，量級和梯度最大值 1.5 × 10<sup>−17</sup> 相近（3.4 節）。</p></details>
 <details class="quiz"><summary>3. 同學說：「SmoothGrad 的雜訊太小了，改成論文的 0.4 × 範圍，模型就會在原圖附近取樣，熱圖才有意義。」這句話哪裡不對？</summary>
 <p>方向反了。程式的標準差（約 0.16）已經讓 10 張圖的 500 個樣本全部被判成 Vegetable/Fruit；論文式（約 0.4）更大，實測同樣 100% 被判成 Vegetable/Fruit。這個模型在標準差 0.1 時正確率就只剩 0.01。要讓樣本留在「模型仍然認得出原圖」的範圍，雜訊要更小（耐受度表上大約 0.01 以下），而不是更大。論文式的雜訊在其他模型上可能合適，但在這個只看過乾淨圖片的模型上不合適。</p></details>
 <details class="quiz"><summary>4. 照第 140 行的註解，把第 139 行換成 <code>smooth = smooth / epoch</code>（不 normalize），<code>smoothgrad.png</code> 會整張變白（被截斷）還是變暗？</summary>
