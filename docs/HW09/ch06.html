@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 6 章　BERT 的 attention 與 hidden states — HW09 Explainable AI</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch05.html">← 第 5 章</a><a href="ch07.html">第 7 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW09 讀碼教材</p>
+  <h1>第 6 章　BERT 的 attention 與 hidden states</h1>
+  <p class="chap-lead">從這一章開始是作業的 Topic II：解釋 BERT。Q21–24 要在 exBERT 網站上看 attention，沒有程式；Q25–27 用 <code>bert_hidden_states.py</code> 把 BERT 每一層為每個 token 輸出的向量（hidden states）用 PCA 壓成 2 維畫出來，看三組英文問答在 12 層裡怎麼變。本章先把需要的 BERT 概念補齊（token、[CLS]／[SEP]、attention、hidden states），再逐行讀程式，最後照實描述圖上看得到的東西。有一件事要先說在前面：助教的資料已經下架，本 repo 改用另一個公開的問答模型，所以這些圖<strong>不是作業的答案</strong>，作業問的「哪一層在做哪一步」也沒有標準答案可以對。</p>
+</header>
+<main>
+
+<h2 id="start">6.1　起點：Topic II 的三種方法</h2>
+<p>投影片第 12–15 頁是 Topic II 的開頭與前兩種方法。全部文字如下（用 PDF 文字擷取工具抽出，逐字照錄；第一行「T opic」中間的空格是抽字造成的，投影片上沒有）：</p>
+<pre class="shell"><code>=== p.12
+T opic II: BERT explanation
+=== p.13
+Task
+● Run the sample code and ﬁnish 10 questions (all multiple choice form)
+● We’ll cover 3 explanation approaches
+○ Attention Visualization
+○ Embedding Visualization
+○ Embedding analysis
+● You need to:
+○ Know the basic idea of each method
+○ Run the code and observe the results
+○ For some cases, you may need to modify a small part of the code
+=== p.14
+Attention Visualization
+Question 21 to 24
+● Visualize attention mechanism of
+bert using
+https://exbert.net/exBERT.html
+Alternative link:
+https://huggingface.co/exbert/
+Ref: https://arxiv.org/pdf/1910.05276.pdf
+Tutorial: https://youtu.be/e31oyfo_thY
+=== p.15
+Embedding Visualization
+Question 25 to 27
+● Visualize embedding across
+layers of BERT using PCA
+(Principal Component Analysis)
+● Fine-tuned for Question
+Answering</code></pre>
+<p>第 13 頁說 Topic II 有 10 題（Q21–30，全部是選擇題），分成三種方法：<strong>Attention Visualization</strong>（Q21–24，本章 6.2 節）、<strong>Embedding Visualization</strong>（Q25–27，本章其餘各節）、<strong>Embedding analysis</strong>（Q28–30，第 7 章）。第 14 頁的 Ref 是一篇論文的網址，Tutorial 是一部影片的網址，本書只照錄，沒有查證它們的內容。和 Topic I 一樣，題目本身在 Gradescope 上、不在 repo 裡（第 0 章 <a href="ch00.html#questions">0.1 節〈30 題在問什麼〉</a>），本書不知道 Q21–27 實際問什麼，所以不逐題作答。</p>
+<p>程式這一邊，<code>bert_hidden_states.py</code> 開頭的 docstring 把兩種方法各寫了一段：</p>
+<figure class="listing"><figcaption>bert_hidden_states.py:12–32 — 檔頭說明：Attention 用網站，Embedding 看四個步驟</figcaption>
+<pre class="py" data-hot="15,19-23,25,27-30"><code>"""# Homework 9 - Explainable AI (Part 2 BERT)
+
+## Attention Visualization (Q21~24)
+Use https://exbert.net/exBERT.html directly in the browser.
+
+## Embedding Visualization (Q25~27)
+We have a pre-trained model which is fine-tuned for QA.
+Solving QA requires 4 steps: (steps are NOT in order)
+1. Clustering similar words together (based on relation of words in context)
+2. Answer extraction
+3. Clustering similar words together (based on meaning of words)
+4. Matching questions with relevant information in context
+
+Can you find out the functionalities of each layer just by looking into the embedding of hidden states?
+
+The Colab notebook loads the TA's tokenizer and saved hidden states from hw9_bert.zip,
+but that Google Drive file is gone (404). If hw9_bert/ exists it is still used;
+otherwise the hidden states are computed with a public BERT fine-tuned on SQuAD,
+so the figures will differ from the slides.
+Figures are saved to output/bert_q{QUESTION}_layer{N}.png.
+"""</code></pre></figure>
+<ul>
+  <li><strong>第 15 行</strong>：Q21–24 直接在瀏覽器裡用 exBERT，這支腳本沒有對應的程式。</li>
+  <li><strong>第 19–25 行</strong>是 Q25–27 的題目核心：BERT 回答問題需要四個步驟（「順序不是照編號」），問你能不能只看 hidden states 的圖，就找出每一層的功能。6.10 節會回到這段，說明為什麼本 repo 的圖對這個問題<strong>沒有標準答案</strong>。</li>
+  <li><strong>第 27–30 行</strong>是本 repo 加的說明：原作業的資料已經不在了，改用公開的模型，圖會和投影片不同。6.3 節細說。</li>
+</ul>
+<p>腳本的主程式（第 125–138 行：有 <code>hw9_bert/</code> 就照原版用，沒有就下載替代模型、三組問答各畫 12 張）、執行指令與 stdout、12.3 秒的執行時間，以及載入模型時 stderr 的 LOAD REPORT，第 0 章 <a href="ch00.html#run-hidden">0.5 節</a>與 <a href="ch00.html#load-report">〈LOAD REPORT〉</a>都講過了，本章不重複。第 0 章 <a href="ch00.html#outputs">0.6 節</a>也實測過：這 36 張圖重跑一次逐位元相同。本章從第 75 行的 <code>visualize</code> 讀起。</p>
+
+<h2 id="exbert">6.2　Q21–24：exBERT 與 attention</h2>
+<h3 id="attention">attention 是什麼（直覺）</h3>
+<p>目錄頁和第 0 章用一句話介紹過 BERT：先把一段文字切成一個個 <strong>token</strong>（字或字的片段，6.3 節細說），每個 token 經過 12 層運算，每一層都為每個 token 輸出一個向量。這裡補上「每一層在做什麼」的直覺。</p>
+<p>每一層的核心是 <strong>attention</strong>（注意力機制）：算某個 token 在這一層的新向量時，模型會看<strong>序列裡所有的 token</strong>，替每一個 token 打一個權重（全部加起來是 1），再依這些權重把它們的資訊混合進來。權重大的 token，就是這個 token 這一層「參考比較多」的對象。例如問句「What is Emily afraid of?」裡的 <code>afraid</code>，可能會比較參考 <code>Emily</code> 與 <code>of</code>；這只是說明用的假想例子，本書沒有量過任何一個 attention 權重。這個模型每一層有 12 組各自獨立的權重，稱為 12 個 <strong>attention head</strong>（6.3 節的模型規格），每個 head 可以學會參考不同的東西。attention 之後，每個 token 再各自經過一個小的兩層網路（768 維 → 3072 維 → 768 維），這一層的輸出就是下一層的輸入。</p>
+<p>所以「看 attention」就是看這些權重：第幾層、第幾個 head，哪個 token 參考了哪個 token、比重多少。這是 Q21–24 的主題；Q25–27 看的則是每一層的<strong>輸出向量</strong>本身（hidden states，6.6 節）。</p>
+
+<h3 id="exbert-now">exBERT 的現況（2026-10-04）</h3>
+<p><strong>exBERT</strong> 是一個在瀏覽器裡看 Transformer 模型（BERT 屬於這一類）attention 的網站：輸入一句話，選一層、一個 head，它把每個 token 對其他 token 的權重畫成連線。投影片第 14 頁給了兩個網址。原版 notebook 的做法是把網站直接嵌進 notebook：</p>
+<pre class="shell"><code>You are highly recommended to visualize on this website directly: https://exbert.net/exBERT.html</code></pre>
+<pre class="py"><code>display.IFrame("https://exbert.net/exBERT.html", width=1600, height=1600)</code></pre>
+<p>（原版 notebook 的一段說明文字與一行程式；notebook 不在本 repo 裡。）本 repo 是腳本，沒有 notebook 可以嵌網頁，只在 docstring 第 15 行留了一句「直接在瀏覽器裡用」。本書 2026-10-04 實測兩個網址：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>網址</th><th>結果</th></tr></thead>
+<tbody>
+<tr><td><code>https://exbert.net/exBERT.html</code>（投影片的主網址）</td><td>15 秒逾時，連不上（和 2026-10-03 相同）</td></tr>
+<tr><td><code>https://huggingface.co/exbert/</code>（投影片的替代網址）</td><td>轉址到 <code>https://huggingface.co/spaces/exbert-project/exbert</code>，HTTP 200</td></tr>
+</tbody>
+</table></div>
+<p>後者是 Hugging Face 上的一個 <strong>Space</strong>（放網頁小程式的地方，目錄頁介紹過）。目錄頁寫的是「網址存在，但那個 Space 現在能不能正常使用沒有檢查」；這次多查了兩件事：Hugging Face 的 API 回報這個 Space 的狀態是 <strong>RUNNING</strong>（最後修改日期 2023-05-12），它的網頁（<code>https://exbert-project-exbert.hf.space/</code>，會轉到 <code>/client/exBERT.html</code>）回 HTTP 200，傳回標題為 exBERT 的頁面。也就是說，<strong>頁面載得到</strong>；但選模型、輸入句子、看 attention 這些<strong>互動功能能不能用，本書沒有在瀏覽器裡試過</strong>。要做 Q21–24，請直接打開替代網址試試看；如果互動功能不能用，6.11 節的「現在的做法」框有一個不靠網站、自己取出 attention 權重的方向。</p>
+
+<h2 id="model">6.3　模型與 tokenizer：hw9_bert.zip 不在了</h2>
+<h3 id="substitute">替代模型</h3>
+<p>原作業的 Q25–27 不在本機跑模型：助教把 tokenizer 與三組問答預先算好的 hidden states 放在 <code>hw9_bert.zip</code>，notebook 下載解壓後直接讀。這個檔案已經下架（2026-10-03 兩個下載網址都回 HTTP 404，目錄頁〈第二層〉），列在<a href="outline.html#findings">教學大綱〈讀 code 不盡信文件〉</a>的第 7 項。助教用的是哪一個模型，無從得知。本 repo 改用的模型寫在檔案開頭：</p>
+<figure class="listing"><figcaption>bert_hidden_states.py:34–36 — 輸出資料夾、原版資料夾、替代模型的名字</figcaption>
+<pre class="py" data-hot="36"><code>output_dir = './output/'
+hw9_bert_dir = './hw9_bert/'
+qa_model_name = 'deepset/bert-base-cased-squad2'</code></pre></figure>
+<p><code>deepset/bert-base-cased-squad2</code> 是 Hugging Face 上公開的模型：標準尺寸的 BERT（BERT-base），在 SQuAD 2.0 問答資料集上微調過（目錄頁〈第二層〉）。名字裡的 <strong>cased</strong> 是「分大小寫」：<code>Cats</code> 和 <code>cats</code> 是不同的 token（6.4 節會用到這一點）。本書把它載入後印出的規格：</p>
+<ul>
+  <li>12 層，每個 token 的向量是 768 維，每層 12 個 attention head，attention 之後那個小網路的中間層是 3072 維，最長可以處理 512 個 token。</li>
+  <li>參數 107,721,218 個，大約是第 0 章 CNN（14,162,827）的 7.6 倍（手算）。</li>
+  <li>模型類別是 <code>BertForQuestionAnswering</code>：12 層的 BERT 本體，加上最後一個 <code>qa_outputs = Linear(768, 2)</code>，為每個 token 算兩個分數：「答案從這裡<strong>開始</strong>」的分數與「答案在這裡<strong>結束</strong>」的分數（6.5 節）。第 0 章 LOAD REPORT 說的 pooler 用不到，就是因為答案是逐 token 找的。</li>
+</ul>
+
+<h3 id="tokenizer">tokenizer：WordPiece 與 ## 片段</h3>
+<p><strong>tokenizer</strong> 是把文字切成 token、再換成編號（token id）的工具，和模型成對發布，必須用同一套切法，模型才看得懂。這個模型的 tokenizer 是 <strong>WordPiece</strong>：詞彙表裡有 28,996 個片段，常見的字整個是一個 token；詞彙表裡沒有的字，就拆成幾個片段，<strong>開頭以外的片段前面加 <code>##</code></strong>，表示「接在前一個片段後面，中間沒有空白」。第 1 組問答的 <code>Tesla</code> 被切成 <code>Te</code>、<code>##sla</code>；第 3 組的 <code>Sheep</code> 變成 <code>She</code>、<code>##ep</code>，<code>Mice</code> 變成 <code>Mi</code>、<code>##ce</code>，<code>Winona</code> 變成 <code>Win</code>、<code>##ona</code>。第 1 組文章裡的西里爾字母（塞爾維亞文的「Никола Тесла」）幾乎全部被拆成單一字母：<code>Н</code>、<code>##и</code>、<code>##к</code>……。</p>
+<p>tokenizer 還會加上幾個<strong>特殊 token</strong>：</p>
+<ul>
+  <li><strong>[CLS]</strong>（id 101）：放在序列最前面。在問答模型裡，它還有一個用途：「這段文章裡沒有答案」時，模型會把起點和終點都指向它（6.5 節）。</li>
+  <li><strong>[SEP]</strong>（id 102）：分隔符。問題後面放一個，文章後面再放一個。</li>
+  <li>另外還有 [PAD]（id 0，補齊長度用）與 [UNK]（id 100，切不出來的字），本章的三組問答用不到。</li>
+</ul>
+<p>同時送進一個問題和一段文章時，tokenizer 還會產生 <strong>token_type_ids</strong>：每個 token 一個 0 或 1，告訴模型它屬於第一段（問題，含 [CLS] 與第一個 [SEP]，是 0）還是第二段（文章，含最後的 [SEP]，是 1）。三組問答的 0 與 1 分別有 11／67、13／107、8／48 個。</p>
+<p>程式在 <code>visualize</code> 的開頭做這件事：</p>
+<figure class="listing"><figcaption>bert_hidden_states.py:75–87 — 編碼、找出問題與文章的範圍、算出 hidden states</figcaption>
+<pre class="py" data-hot="77,80,81,87"><code>def visualize(Tokenizer, model, QUESTION):
+    # Tokenize and encode question and paragraph into model's input format
+    inputs = Tokenizer(questions[QUESTION-1], contexts[QUESTION-1], return_tensors='pt')
+
+    # Get the [start, end] positions of [question, context] in encoded sequence for plotting
+    question_start, question_end = 1, inputs['input_ids'][0].tolist().index(102) - 1
+    context_start, context_end = question_end + 2, len(inputs['input_ids'][0]) - 2
+
+    if model is None:
+        outputs_hidden_states = torch.load(f"{hw9_bert_dir}output/model_q{QUESTION}")
+    else:
+        with torch.no_grad():
+            outputs_hidden_states = model(**inputs).hidden_states</code></pre></figure>
+<ul>
+  <li><strong>第 77 行</strong>把問題與文章一起編碼。<code>return_tensors='pt'</code> 要求回傳 PyTorch 張量；<code>inputs</code> 是一個類似 dict 的物件，裡面有 <code>input_ids</code>（token id，形狀 <code>(1, 序列長度)</code>）、<code>token_type_ids</code> 與 <code>attention_mask</code>（標出哪些位置是真的 token、哪些是補齊的；這裡只有一個序列、沒有補齊，全部是 1）。<code>QUESTION</code> 是 1、2、3，所以用 <code>QUESTION-1</code> 取 list 的第 0、1、2 個。</li>
+  <li><strong>第 80 行</strong>：問題從位置 1 開始（位置 0 是 [CLS]）；<code>.index(102)</code> 找<strong>第一個</strong> [SEP] 的位置，減 1 就是問題的最後一個 token。</li>
+  <li><strong>第 81 行</strong>：文章從第一個 [SEP] 的下一格開始，到倒數第 2 格結束（最後一格是第二個 [SEP]）。</li>
+  <li><strong>第 83–87 行</strong>：沒有模型（<code>model is None</code>，也就是有 <code>hw9_bert/</code> 的原版情況）就讀預存的 hidden states；否則在 <code>torch.no_grad()</code> 裡跑一次 forward（第 1 章 <a href="ch01.html#predict">1.6 節</a>：只是不記錄梯度），取出 <code>.hidden_states</code>。<code>model(**inputs)</code> 的 <code>**</code> 把 dict 拆成關鍵字參數，等於 <code>model(input_ids=…, token_type_ids=…, attention_mask=…)</code>。它有 <code>.hidden_states</code> 是因為第 134 行載入模型時給了 <code>output_hidden_states=True</code>。</li>
+</ul>
+<p>以第 3 組問答為例，編出來的 56 個 token 如圖 6.1：</p>
+<figure class="fig">
+<svg viewBox="0 0 900 330" role="img" aria-label="第 3 組問答編碼後的 56 個 token：位置 0 是 [CLS]，1 到 6 是問題（紅），7 是第一個 [SEP]，8 到 54 是文章（綠），55 是最後一個 [SEP]；位置 12 的 cats 是答案（藍），位置 43 的 Cats 大寫所以不算答案；token_type_ids 在問題那段是 0、文章那段是 1">
+  <text class="s-sm" x="20" y="22">Tokenizer(問題, 文章) 編出來的序列（第 77 行）。框上是 token，框下是位置與 token_type_ids</text>
+  <rect x="20" y="40" width="56" height="38" rx="6" class="s-box" style="stroke:#93a1af;stroke-width:2"/>
+  <text class="s-mono" x="48.0" y="64" text-anchor="middle" style="fill:#93a1af">[CLS]</text>
+  <text class="s-mono" x="48.0" y="96" text-anchor="middle">0</text>
+  <text class="s-sm" x="48.0" y="112" text-anchor="middle">0</text>
+  <rect x="81" y="40" width="56" height="38" rx="6" class="s-box" style="stroke:#ff7b72;stroke-width:2"/>
+  <text class="s-mono" x="109.0" y="64" text-anchor="middle" style="fill:#ff7b72">What</text>
+  <text class="s-mono" x="109.0" y="96" text-anchor="middle">1</text>
+  <text class="s-sm" x="109.0" y="112" text-anchor="middle">0</text>
+  <rect x="142" y="40" width="56" height="38" rx="6" class="s-box" style="stroke:#ff7b72;stroke-width:2"/>
+  <text class="s-mono" x="170.0" y="64" text-anchor="middle" style="fill:#ff7b72">is</text>
+  <text class="s-mono" x="170.0" y="96" text-anchor="middle">2</text>
+  <text class="s-sm" x="170.0" y="112" text-anchor="middle">0</text>
+  <rect x="203" y="40" width="56" height="38" rx="6" class="s-box" style="stroke:#ff7b72;stroke-width:2"/>
+  <text class="s-mono" x="231.0" y="64" text-anchor="middle" style="fill:#ff7b72">Emily</text>
+  <text class="s-mono" x="231.0" y="96" text-anchor="middle">3</text>
+  <text class="s-sm" x="231.0" y="112" text-anchor="middle">0</text>
+  <rect x="264" y="40" width="56" height="38" rx="6" class="s-box" style="stroke:#ff7b72;stroke-width:2"/>
+  <text class="s-mono" x="292.0" y="64" text-anchor="middle" style="fill:#ff7b72">afraid</text>
+  <text class="s-mono" x="292.0" y="96" text-anchor="middle">4</text>
+  <text class="s-sm" x="292.0" y="112" text-anchor="middle">0</text>
+  <rect x="325" y="40" width="56" height="38" rx="6" class="s-box" style="stroke:#ff7b72;stroke-width:2"/>
+  <text class="s-mono" x="353.0" y="64" text-anchor="middle" style="fill:#ff7b72">of</text>
+  <text class="s-mono" x="353.0" y="96" text-anchor="middle">5</text>
+  <text class="s-sm" x="353.0" y="112" text-anchor="middle">0</text>
+  <rect x="386" y="40" width="56" height="38" rx="6" class="s-box" style="stroke:#ff7b72;stroke-width:2"/>
+  <text class="s-mono" x="414.0" y="64" text-anchor="middle" style="fill:#ff7b72">?</text>
+  <text class="s-mono" x="414.0" y="96" text-anchor="middle">6</text>
+  <text class="s-sm" x="414.0" y="112" text-anchor="middle">0</text>
+  <rect x="447" y="40" width="56" height="38" rx="6" class="s-box" style="stroke:#93a1af;stroke-width:2"/>
+  <text class="s-mono" x="475.0" y="64" text-anchor="middle" style="fill:#93a1af">[SEP]</text>
+  <text class="s-mono" x="475.0" y="96" text-anchor="middle">7</text>
+  <text class="s-sm" x="475.0" y="112" text-anchor="middle">0</text>
+  <rect x="508" y="40" width="56" height="38" rx="6" class="s-box" style="stroke:#3fb950;stroke-width:2"/>
+  <text class="s-mono" x="536.0" y="64" text-anchor="middle" style="fill:#3fb950">Wolves</text>
+  <text class="s-mono" x="536.0" y="96" text-anchor="middle">8</text>
+  <text class="s-sm" x="536.0" y="112" text-anchor="middle">1</text>
+  <rect x="569" y="40" width="56" height="38" rx="6" class="s-box" style="stroke:#3fb950;stroke-width:2"/>
+  <text class="s-mono" x="597.0" y="64" text-anchor="middle" style="fill:#3fb950">are</text>
+  <text class="s-mono" x="597.0" y="96" text-anchor="middle">9</text>
+  <text class="s-sm" x="597.0" y="112" text-anchor="middle">1</text>
+  <rect x="630" y="40" width="56" height="38" rx="6" class="s-box" style="stroke:#3fb950;stroke-width:2"/>
+  <text class="s-mono" x="658.0" y="64" text-anchor="middle" style="fill:#3fb950">afraid</text>
+  <text class="s-mono" x="658.0" y="96" text-anchor="middle">10</text>
+  <text class="s-sm" x="658.0" y="112" text-anchor="middle">1</text>
+  <rect x="691" y="40" width="56" height="38" rx="6" class="s-box" style="stroke:#3fb950;stroke-width:2"/>
+  <text class="s-mono" x="719.0" y="64" text-anchor="middle" style="fill:#3fb950">of</text>
+  <text class="s-mono" x="719.0" y="96" text-anchor="middle">11</text>
+  <text class="s-sm" x="719.0" y="112" text-anchor="middle">1</text>
+  <rect x="752" y="40" width="56" height="38" rx="6" class="s-box" style="stroke:#58a6ff;stroke-width:2"/>
+  <text class="s-mono" x="780.0" y="64" text-anchor="middle" style="fill:#58a6ff">cats</text>
+  <text class="s-mono" x="780.0" y="96" text-anchor="middle">12</text>
+  <text class="s-sm" x="780.0" y="112" text-anchor="middle">1</text>
+  <rect x="813" y="40" width="56" height="38" rx="6" class="s-box" style="stroke:#3fb950;stroke-width:2"/>
+  <text class="s-mono" x="841.0" y="64" text-anchor="middle" style="fill:#3fb950">.</text>
+  <text class="s-mono" x="841.0" y="96" text-anchor="middle">13</text>
+  <text class="s-sm" x="841.0" y="112" text-anchor="middle">1</text>
+  <rect x="20" y="150" width="56" height="38" rx="6" class="s-box" style="stroke:#3fb950;stroke-width:2"/>
+  <text class="s-mono" x="48.0" y="174" text-anchor="middle" style="fill:#3fb950">She</text>
+  <text class="s-mono" x="48.0" y="206" text-anchor="middle">14</text>
+  <text class="s-sm" x="48.0" y="222" text-anchor="middle">1</text>
+  <rect x="81" y="150" width="56" height="38" rx="6" class="s-box" style="stroke:#3fb950;stroke-width:2"/>
+  <text class="s-mono" x="109.0" y="174" text-anchor="middle" style="fill:#3fb950">##ep</text>
+  <text class="s-mono" x="109.0" y="206" text-anchor="middle">15</text>
+  <text class="s-sm" x="109.0" y="222" text-anchor="middle">1</text>
+  <text class="s-lbl" x="154" y="176" text-anchor="middle">…</text>
+  <rect x="171" y="150" width="56" height="38" rx="6" class="s-box" style="stroke:#3fb950;stroke-width:2"/>
+  <text class="s-mono" x="199.0" y="174" text-anchor="middle" style="fill:#3fb950">sheep</text>
+  <text class="s-mono" x="199.0" y="206" text-anchor="middle">26</text>
+  <text class="s-sm" x="199.0" y="222" text-anchor="middle">1</text>
+  <text class="s-lbl" x="244" y="176" text-anchor="middle">…</text>
+  <rect x="261" y="150" width="56" height="38" rx="6" class="s-box" style="stroke:#3fb950;stroke-width:2"/>
+  <text class="s-mono" x="289.0" y="174" text-anchor="middle" style="fill:#3fb950">Cats</text>
+  <text class="s-mono" x="289.0" y="206" text-anchor="middle">43</text>
+  <text class="s-sm" x="289.0" y="222" text-anchor="middle">1</text>
+  <text class="s-lbl" x="334" y="176" text-anchor="middle">…</text>
+  <rect x="351" y="150" width="56" height="38" rx="6" class="s-box" style="stroke:#3fb950;stroke-width:2"/>
+  <text class="s-mono" x="379.0" y="174" text-anchor="middle" style="fill:#3fb950">Win</text>
+  <text class="s-mono" x="379.0" y="206" text-anchor="middle">49</text>
+  <text class="s-sm" x="379.0" y="222" text-anchor="middle">1</text>
+  <rect x="412" y="150" width="56" height="38" rx="6" class="s-box" style="stroke:#3fb950;stroke-width:2"/>
+  <text class="s-mono" x="440.0" y="174" text-anchor="middle" style="fill:#3fb950">##ona</text>
+  <text class="s-mono" x="440.0" y="206" text-anchor="middle">50</text>
+  <text class="s-sm" x="440.0" y="222" text-anchor="middle">1</text>
+  <text class="s-lbl" x="485" y="176" text-anchor="middle">…</text>
+  <rect x="502" y="150" width="56" height="38" rx="6" class="s-box" style="stroke:#3fb950;stroke-width:2"/>
+  <text class="s-mono" x="530.0" y="174" text-anchor="middle" style="fill:#3fb950">.</text>
+  <text class="s-mono" x="530.0" y="206" text-anchor="middle">54</text>
+  <text class="s-sm" x="530.0" y="222" text-anchor="middle">1</text>
+  <rect x="563" y="150" width="56" height="38" rx="6" class="s-box" style="stroke:#93a1af;stroke-width:2"/>
+  <text class="s-mono" x="591.0" y="174" text-anchor="middle" style="fill:#93a1af">[SEP]</text>
+  <text class="s-mono" x="591.0" y="206" text-anchor="middle">55</text>
+  <text class="s-sm" x="591.0" y="222" text-anchor="middle">1</text>
+  <text class="s-sm" x="20" y="262">位置 1–6：question_start..question_end（第 80 行，找第一個 [SEP]＝id 102）　位置 8–54：context_start..context_end（第 81 行）</text>
+  <text class="s-sm" x="20" y="284">藍＝答案（第 103 行：word in answers.split()，逐字比對、分大小寫）；位置 43 的 Cats 大寫，畫成綠色</text>
+  <text class="s-sm" x="20" y="306">灰＝[CLS] 與兩個 [SEP]：不畫（第 109–110 行），但仍參加 PCA 的 fit；She ##ep、Mi ##ce、Win ##ona 是 WordPiece 拆開的片段</text>
+  <text class="s-sm" x="20" y="326">框下第二列數字＝token_type_ids：問題那段（含 [CLS]、第一個 [SEP]）0，文章那段 1</text>
+</svg>
+<figcaption>圖 6.1 — 第 3 組問答的 token 序列（中段省略）。顏色就是散布圖上的顏色：紅＝問題、綠＝文章、藍＝答案；灰色的特殊 token 不畫。</figcaption>
+</figure>
+<p>三組問答的範圍：第 1 組 78 個 token，問題 1..9、文章 11..76（[SEP] 在 10、77）；第 2 組 120 個，問題 1..11、文章 13..118；第 3 組 56 個，問題 1..6、文章 8..54。</p>
+
+<h2 id="data">6.4　三組問答與紅、綠、藍</h2>
+<p>三組問答寫在模組層的三個 list 裡。程式的註解寫 Question 1／2／3；本書照第 0 章 <a href="ch00.html#questions">0.1 節</a>的約定，稱為「第 1／2／3 組問答」，以免和作業題號 Q1–Q30 混淆：</p>
+<figure class="listing"><figcaption>bert_hidden_states.py:51–72 — 三組問答：文章、問題、答案</figcaption>
+<pre class="py" data-hot="57,58,65,66,71,72"><code>contexts, questions, answers = [], [], []
+
+# Question 1
+contexts += ["Nikola Tesla (Serbian Cyrillic: Никола Тесла; 10 July 1856 – 7 January 1943) was a Serbian American inventor, electrical engineer, \
+            mechanical engineer, physicist, and futurist best known for his contributions to the design of the modern alternating current \
+            (AC) electricity supply system."]
+questions += ["In what year was Nikola Tesla born?"]
+answers += ["1856"]
+
+# Question 2
+contexts += ['Currently detention is one of the most common punishments in schools in the United States, the UK, Ireland, Singapore and other countries. \
+            It requires the pupil to remain in school at a given time in the school day (such as lunch, recess or after school); or even to attend \
+            school on a non-school day, e.g. "Saturday detention" held at some schools. During detention, students normally have to sit in a classroom \
+            and do work, write lines or a punishment essay, or sit quietly.']
+questions += ['What is a common punishment in the UK and Ireland?']
+answers += ['detention']
+
+# Question 3
+contexts += ['Wolves are afraid of cats. Sheep are afraid of wolves. Mice are afraid of sheep. Gertrude is a mouse. Jessica is a mouse. \
+            Emily is a wolf. Cats are afraid of sheep. Winona is a wolf.']
+questions += ['What is Emily afraid of?']
+answers += ['cats']</code></pre></figure>
+<p>這三組和原版 notebook 逐字相同。三組的性質不同：第 1 組（Tesla 哪一年出生）答案就寫在文章裡的日期中；第 2 組（英國與愛爾蘭常見的處罰）答案 <code>detention</code> 在文章裡出現三次；第 3 組（Emily 怕什麼）要推理兩步：Emily 是狼，狼怕貓，所以答案是 <code>cats</code>，文章裡沒有任何一句直接說 Emily 怕什麼。</p>
+<p>文章字串很長，用行尾的 <code>\</code> 接到下一行。續行開頭的 12 個空白會留在字串裡（例如第 1 組在 <code>engineer,</code> 之後多了一串空白），但 tokenizer 把連續空白當作一個分隔，切出來的 token 不受影響。</p>
+<p>畫圖時每個 token 用什麼顏色，由下面這段決定：</p>
+<figure class="listing"><figcaption>bert_hidden_states.py:89–122 — 逐層 PCA、逐 token 畫點、存檔</figcaption>
+<pre class="py" data-hot="91,95,101,103,105,107,109,111"><code>    ##### Traverse hidden state of all layers #####
+    # "outputs_hidden_state" is a tuple with 13 elements, the 1st element is embedding output, the other 12 elements are attention hidden states of layer 1 - 12
+    for layer_index, embeddings in enumerate(outputs_hidden_states[1:]):  # 1st element is skipped
+
+        # "embeddings" has shape [1, sequence_length, 768], where 768 is the dimension of BERT's hidden state
+        # Dimension of "embeddings" is reduced from 768 to 2 using PCA (Principal Component Analysis)
+        reduced_embeddings = PCA(n_components=2, random_state=0).fit_transform(embeddings[0])
+
+        fig = plt.figure(figsize=(12, 10))
+        ##### Draw embedding of each token #####
+        for i, token_id in enumerate(inputs['input_ids'][0]):
+            x, y = reduced_embeddings[i]  # Embedding has 2 dimensions, each corresponds to a point
+            word = Tokenizer.decode(token_id)  # Decode token back to word
+            # Scatter points of answer, question and context in different colors
+            if word in answers[QUESTION-1].split():  # Check if word in answer
+                plt.scatter(x, y, color='blue', marker='d')
+            elif question_start &lt;= i &lt;= question_end:
+                plt.scatter(x, y, color='red')
+            elif context_start &lt;= i &lt;= context_end:
+                plt.scatter(x, y, color='green')
+            else:  # skip special tokens [CLS], [SEP]
+                continue
+            plt.text(x + 0.1, y + 0.2, word, fontsize=12)  # Plot word next to its point
+
+        # Plot "empty" points to show labels
+        plt.plot([], label='answer', color='blue', marker='d')
+        plt.plot([], label='question', color='red', marker='o')
+        plt.plot([], label='context', color='green', marker='o')
+        plt.legend(loc='best')  # Display the area describing the elements in the plot
+        plt.title('Layer ' + str(layer_index + 1))  # Add title to the plot
+        path = os.path.join(output_dir, f'bert_q{QUESTION}_layer{layer_index + 1}.png')
+        fig.savefig(path, bbox_inches='tight')
+        plt.close(fig)
+    print(f'saved {output_dir}bert_q{QUESTION}_layer{{1..12}}.png')</code></pre></figure>
+<p>先看顏色的規則（第 99–111 行，對每個 token 跑一次）：</p>
+<ul>
+  <li><strong>第 101 行</strong>把單一個 token id 解碼回文字。單獨解碼一個片段時，<code>##</code> 會留著，所以圖上看得到 <code>##sla</code>、<code>##ep</code> 這種字（本書核對過，三組的每個 token 解碼結果都和 tokenizer 記錄的 token 字串完全相同）。</li>
+  <li><strong>第 103 行先判斷是不是答案</strong>：<code>answers[QUESTION-1].split()</code> 把答案字串用空白切開（這三組的答案都只有一個字，切完是 <code>['1856']</code>、<code>['detention']</code>、<code>['cats']</code>），再檢查這個 token 的文字<strong>是否完全等於</strong>其中一個。是的話畫藍色菱形（<code>marker='d'</code>）。
+    <ul>
+      <li>這是逐 token 比對字串，不管位置。第 2 組文章裡有三個 <code>detention</code>（位置 14、86、94），<strong>三個都畫成藍點</strong>，雖然一般會把第一個（「Currently detention is…」）當作答案。</li>
+      <li>比對分大小寫。第 3 組文章最後幾句的 <code>Cats are afraid of sheep</code>，句首大寫的 <code>Cats</code>（位置 43）不等於 <code>cats</code>，<strong>畫成綠色</strong>；只有位置 12「Wolves are afraid of <code>cats</code>」那一個是藍的。</li>
+      <li>因為答案判斷在前，如果答案字也出現在問題裡，它會被畫成藍色而不是紅色。這三組的答案字都不在問題裡，所以沒有發生。</li>
+    </ul></li>
+  <li><strong>第 105–108 行</strong>：其次看位置，落在問題範圍的畫紅點，落在文章範圍的畫綠點。</li>
+  <li><strong>第 109–110 行</strong>：剩下的是 [CLS] 與兩個 [SEP]，<code>continue</code> 跳過，不畫點也不寫字。</li>
+  <li><strong>第 111 行</strong>在點的右上方 (+0.1, +0.2) 寫上文字。這個位移是資料座標，而圖的座標範圍有好幾十（6.7 節），所以字幾乎就貼在點上，點多的地方字會疊成一團。</li>
+  <li><strong>第 114–117 行</strong>畫三條「空的」線只是為了產生圖例（answer／question／context）。</li>
+</ul>
+<p>第 91、95 行（逐層與 PCA）是 6.6、6.7 節的主題；第 119–122 行存檔，每組 12 張，最後印一行（第 0 章 0.5 節解釋過 <code>{1..12}</code> 是程式原樣印出的字）。</p>
+
+<h2 id="answer">6.5　這個模型自己的答案</h2>
+<p>這支腳本只拿 hidden states 來畫圖，<strong>不會印出模型的答案</strong>。但既然要描述「這個模型」的圖，先知道它自己怎麼回答這三題是有用的。本書另外用同一個模型，取出 <code>qa_outputs</code> 給每個 token 的起點分數（start logit）與終點分數（end logit）：一段答案的分數是「起點的起點分數 + 終點的終點分數」。</p>
+<p>這裡要先說 <strong>SQuAD 2.0</strong> 的一個特點：這個問答資料集裡有一部分問題，在給定的文章裡<strong>找不到答案</strong>。在這種資料上訓練的模型，學會在「沒有答案」時把起點和終點都指向位置 0 的 [CLS]。所以模型的輸出有兩種可能：一段文章裡的片段，或者 [CLS]（無答案）。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>組</th><th>分數最高的起點／終點</th><th>[CLS]（無答案）分數</th><th>最好的非空答案</th><th>它的分數</th><th>起點分數前 3 名</th></tr></thead>
+<tbody>
+<tr><td>第 1 組</td><td>32／32 <code>1856</code></td><td>−0.114</td><td><code>1856</code>（32..32）</td><td>7.576</td><td><code>1856</code> 3.47、<code>10</code> 0.16、<code>[CLS]</code> −0.12</td></tr>
+<tr><td>第 2 組</td><td>0／0 <code>[CLS]</code></td><td>11.720</td><td><code>detention</code>（14..14）</td><td>−0.487</td><td><code>[CLS]</code> 6.26、<code>detention</code> 0.91、<code>requires</code> −3.26</td></tr>
+<tr><td>第 3 組</td><td>0／0 <code>[CLS]</code></td><td>4.580</td><td><code>sheep</code>（26..26）</td><td>−1.322</td><td><code>[CLS]</code> 1.69、<code>sheep</code> −1.53、<code>cats</code> −1.84</td></tr>
+</tbody>
+</table></div>
+<p>（「非空答案」限制在文章範圍內、長度不超過 30 個 token。）讀這張表：</p>
+<ul>
+  <li><strong>第 1 組答對</strong>：<code>1856</code>（位置 32）的分數 7.576，遠高於無答案的 −0.114。</li>
+  <li><strong>第 2 組模型說「沒有答案」</strong>：[CLS] 的 11.720 遠高於任何片段。不過如果硬要選一段，最好的就是第一個 <code>detention</code>（位置 14）。</li>
+  <li><strong>第 3 組模型也說「沒有答案」</strong>；非空答案裡最好的是 <code>sheep</code>（位置 26，「Mice are afraid of <code>sheep</code>」），這是錯的。正確答案 <code>cats</code> 在起點分數只排第 3。</li>
+</ul>
+<p>這只描述這個替代模型的行為，和作業題目無關；助教的模型怎麼回答，無從得知。但它提醒讀圖時的一件事：圖上的藍點是程式<strong>用字串標出來的</strong>「正確答案」，不是模型選的答案。第 2、3 組的模型其實沒有選它們。</p>
+
+<h2 id="hidden">6.6　hidden_states：13 個元素</h2>
+<p><code>model(**inputs).hidden_states</code> 是一個有 <strong>13 個元素</strong>的 tuple，每個元素的形狀都是 <code>(1, 序列長度, 768)</code>：1 是批次（一組問答），每個 token 一個 768 維的向量。第 90 行的註解說明了它們的順序：</p>
+<ul>
+  <li><strong>第 0 個</strong>是 embedding 層的輸出：每個 token 的 id 先查表換成一個 768 維向量，加上表示位置與 token_type 的向量，還沒有經過任何 attention，所以這時每個 token 的向量只和「它是哪個字、在哪個位置、屬於哪一段」有關，看不到上下文。本書核對過：<code>hidden_states[0]</code> 和直接呼叫模型的 embedding 層 <code>model.bert.embeddings(input_ids, token_type_ids)</code> 結果相同。</li>
+  <li><strong>第 1–12 個</strong>是第 1 到第 12 層的輸出。第 k 個是經過 k 層 attention 之後的向量。</li>
+  <li>最後一層就是拿來找答案的那一層：本書核對過，把 <code>hidden_states[12]</code> 送進 <code>qa_outputs</code>，結果和模型輸出的起點、終點分數相同。</li>
+</ul>
+<p>「hidden states」這個名字的意思是「中間的狀態」：它們不是模型的最終輸出（最終輸出是起點與終點分數），而是每一層傳給下一層的向量。第 0 章說這份作業的 embedding「就是每一層為每個 token 輸出的向量，程式裡叫 hidden states」，指的就是這 13 個。</p>
+<figure class="fig">
+<svg viewBox="0 0 900 400" role="img" aria-label="BERT 的 13 個 hidden states：token 先經過 embedding 層得到 hidden_states[0]（程式跳過），再依序經過第 1 到 12 層，每一層輸出一個 hidden_states[k]，形狀都是 1 × 序列長度 × 768；最後一層再經過 qa_outputs 得到每個 token 的起點與終點分數；程式對 hidden_states[1] 到 [12] 各自做一次 PCA，把 768 維壓成 2 維，各畫一張圖">
+  <defs><marker id="ar61g" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto"><path d="M0,0 L7,3.2 L0,6.4 z" fill="#3fb950"/></marker>
+  <marker id="ar61p" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto"><path d="M0,0 L7,3.2 L0,6.4 z" fill="#a371f7"/></marker></defs>
+  <rect x="20" y="40" width="120" height="70" rx="10" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-lbl" x="80" y="68" text-anchor="middle" font-weight="700">input_ids</text>
+  <text class="s-sm" x="80" y="90" text-anchor="middle">56 個 token id</text>
+  <rect x="170" y="40" width="108" height="70" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="224" y="70" text-anchor="middle" font-weight="700">embedding 層</text>
+  <text class="s-sm" x="224" y="92" text-anchor="middle">沒有 attention</text>
+  <rect x="296" y="40" width="108" height="70" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="350" y="70" text-anchor="middle" font-weight="700">第 1 層</text>
+  <text class="s-sm" x="350" y="92" text-anchor="middle">attention + FFN</text>
+  <rect x="422" y="40" width="108" height="70" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="476" y="70" text-anchor="middle" font-weight="700">第 2 層</text>
+  <text class="s-sm" x="476" y="92" text-anchor="middle">attention + FFN</text>
+  <text class="s-lbl" x="568" y="80" text-anchor="middle">…</text>
+  <rect x="588" y="40" width="108" height="70" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="642" y="70" text-anchor="middle" font-weight="700">第 11 層</text>
+  <text class="s-sm" x="642" y="92" text-anchor="middle">attention + FFN</text>
+  <rect x="714" y="40" width="108" height="70" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="768" y="70" text-anchor="middle" font-weight="700">第 12 層</text>
+  <text class="s-sm" x="768" y="92" text-anchor="middle">attention + FFN</text>
+  <line x1="142" y1="75" x2="166" y2="75" stroke="#3fb950" stroke-width="2" marker-end="url(#ar61g)"/>
+  <line x1="280" y1="75" x2="292" y2="75" stroke="#3fb950" stroke-width="2" marker-end="url(#ar61g)"/>
+  <line x1="406" y1="75" x2="418" y2="75" stroke="#3fb950" stroke-width="2" marker-end="url(#ar61g)"/>
+  <line x1="532" y1="75" x2="584" y2="75" stroke="#3fb950" stroke-width="2" marker-end="url(#ar61g)"/>
+  <line x1="698" y1="75" x2="710" y2="75" stroke="#3fb950" stroke-width="2" marker-end="url(#ar61g)"/>
+  <line x1="224" y1="112" x2="224" y2="146" stroke="#3fb950" stroke-width="2" marker-end="url(#ar61g)"/>
+  <rect x="170" y="150" width="108" height="46" rx="8" class="s-box" style="stroke:#93a1af;stroke-dasharray:5 4"/>
+  <text class="s-mono" x="224" y="171" text-anchor="middle">hs[0]</text>
+  <text class="s-sm" x="224" y="188" text-anchor="middle">(1, 56, 768)</text>
+  <text class="s-sm" x="224" y="222" text-anchor="middle" style="fill:#ff7b72">程式跳過</text>
+  <text class="s-sm" x="224" y="240" text-anchor="middle" style="fill:#ff7b72">（第 91 行 [1:]）</text>
+  <line x1="350" y1="112" x2="350" y2="146" stroke="#3fb950" stroke-width="2" marker-end="url(#ar61g)"/>
+  <rect x="296" y="150" width="108" height="46" rx="8" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="350" y="171" text-anchor="middle">hs[1]</text>
+  <text class="s-sm" x="350" y="188" text-anchor="middle">(1, 56, 768)</text>
+  <line x1="350" y1="198" x2="350" y2="226" stroke="#a371f7" stroke-width="2" marker-end="url(#ar61p)"/>
+  <rect x="296" y="230" width="108" height="56" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-sm" x="350" y="252" text-anchor="middle">PCA 768 → 2</text>
+  <text class="s-mono" x="350" y="272" text-anchor="middle">layer1.png</text>
+  <line x1="476" y1="112" x2="476" y2="146" stroke="#3fb950" stroke-width="2" marker-end="url(#ar61g)"/>
+  <rect x="422" y="150" width="108" height="46" rx="8" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="476" y="171" text-anchor="middle">hs[2]</text>
+  <text class="s-sm" x="476" y="188" text-anchor="middle">(1, 56, 768)</text>
+  <line x1="476" y1="198" x2="476" y2="226" stroke="#a371f7" stroke-width="2" marker-end="url(#ar61p)"/>
+  <rect x="422" y="230" width="108" height="56" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-sm" x="476" y="252" text-anchor="middle">PCA 768 → 2</text>
+  <text class="s-mono" x="476" y="272" text-anchor="middle">layer2.png</text>
+  <line x1="642" y1="112" x2="642" y2="146" stroke="#3fb950" stroke-width="2" marker-end="url(#ar61g)"/>
+  <rect x="588" y="150" width="108" height="46" rx="8" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="642" y="171" text-anchor="middle">hs[11]</text>
+  <text class="s-sm" x="642" y="188" text-anchor="middle">(1, 56, 768)</text>
+  <line x1="642" y1="198" x2="642" y2="226" stroke="#a371f7" stroke-width="2" marker-end="url(#ar61p)"/>
+  <rect x="588" y="230" width="108" height="56" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-sm" x="642" y="252" text-anchor="middle">PCA 768 → 2</text>
+  <text class="s-mono" x="642" y="272" text-anchor="middle">layer11.png</text>
+  <line x1="768" y1="112" x2="768" y2="146" stroke="#3fb950" stroke-width="2" marker-end="url(#ar61g)"/>
+  <rect x="714" y="150" width="108" height="46" rx="8" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-mono" x="768" y="171" text-anchor="middle">hs[12]</text>
+  <text class="s-sm" x="768" y="188" text-anchor="middle">(1, 56, 768)</text>
+  <line x1="768" y1="198" x2="768" y2="226" stroke="#a371f7" stroke-width="2" marker-end="url(#ar61p)"/>
+  <rect x="714" y="230" width="108" height="56" rx="8" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-sm" x="768" y="252" text-anchor="middle">PCA 768 → 2</text>
+  <text class="s-mono" x="768" y="272" text-anchor="middle">layer12.png</text>
+  <line x1="768" y1="288" x2="768" y2="316" stroke="#3fb950" stroke-width="2" marker-end="url(#ar61g)"/>
+  <rect x="564" y="320" width="258" height="60" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="693" y="344" text-anchor="middle" font-weight="700">qa_outputs = Linear(768, 2)</text>
+  <text class="s-sm" x="693" y="366" text-anchor="middle">每個 token 一個起點分數、一個終點分數</text>
+  <text class="s-sm" x="20" y="300">hs[k] 是 hidden_states[k] 的簡寫。</text>
+  <text class="s-sm" x="20" y="320">綠＝模型 forward；紫＝程式自己的步驟：</text>
+  <text class="s-sm" x="20" y="340">每一層各自 fit 一次 PCA（第 95 行），</text>
+  <text class="s-sm" x="20" y="360">所以 12 張圖的座標軸互不相通。</text>
+  <text class="s-sm" x="20" y="22">model(**inputs).hidden_states（第 87 行）：13 個元素的 tuple；這裡以第 3 組問答（56 個 token）為例</text>
+</svg>
+<figcaption>圖 6.2 — BERT 的 13 個 hidden states 與程式畫的 12 張圖。第 91 行 <code>outputs_hidden_states[1:]</code> 跳過 embedding 層，所以檔名的 layer1 是 <code>hidden_states[1]</code>；每一層的向量各自用 PCA 壓成 2 維。</figcaption>
+</figure>
+<p>第 91 行的 <code>enumerate(outputs_hidden_states[1:])</code> 從第 1 個元素開始取，<code>layer_index</code> 是 0..11，所以標題與檔名用 <code>layer_index + 1</code>：<code>bert_q3_layer1.png</code> 畫的是 <code>hidden_states[1]</code>，<code>layer12</code> 畫的是 <code>hidden_states[12]</code>。<strong>embedding 層（第 0 個）沒有畫</strong>。6.7 節的變異比例表把它補上，作為對照。</p>
+<p>一個順帶的觀察：每個 token 向量的平均長度（第 1 組），從 embedding 層的 19.31，經過第 1–11 層大約在 22.75 到 25.89 之間，到第 12 層掉回 20.79；第 2、3 組的形狀相同（第 1–11 層約 22–26，第 12 層約 20.3–20.8）。最後一層和前面幾層不太一樣，這在後面的 PCA 與 cosine 數字裡還會再看到。</p>
+
+<h2 id="pca">6.7　PCA：768 維怎麼畫在平面上</h2>
+<h3 id="pca-what">主成分與 explained variance</h3>
+<p>每個 token 是 768 維空間裡的一個點，第 3 組有 56 個點。要畫在紙上只能留 2 個座標，<strong>PCA</strong>（Principal Component Analysis，主成分分析）的做法是：</p>
+<ol>
+  <li>在 768 維空間裡找一個方向，讓所有點投影到這個方向上之後<strong>散得最開</strong>（數值的變異最大）。這個方向叫第 1 <strong>主成分</strong>（principal component）。</li>
+  <li>再找一個和第 1 主成分垂直、讓剩下的散布最大的方向，叫第 2 主成分。</li>
+  <li>每個點在這兩個方向上的投影值，就是它在圖上的 (x, y)。</li>
+</ol>
+<p>兩個方向能保留多少資訊，用 <strong>explained variance ratio</strong>（解釋的變異比例）衡量：投影到這兩個方向上的變異，占全部 768 個方向變異總和的比例。比例是 1，代表點本來就排在一個平面上，圖完全忠實；比例越低，代表有越多的差異在投影時被壓掉了：圖上靠在一起的兩個點，在 768 維空間裡可能離得很遠。</p>
+<p>第 95 行對每一層做這件事：<code>PCA(n_components=2, random_state=0).fit_transform(embeddings[0])</code>。<code>embeddings[0]</code> 去掉批次維度，是 <code>(序列長度, 768)</code>；<code>fit</code> 用這一層的全部 token 找出兩個主成分，<code>transform</code> 把每個 token 投影上去，回傳 <code>(序列長度, 2)</code>。直接傳進去的是 PyTorch 張量，sklearn 會自己轉成 NumPy。<code>random_state=0</code> 固定 sklearn 內部可能用到的亂數，這支腳本重跑結果逐位元相同（第 0 章 0.6 節）。</p>
+<div class="warn"><h4>讀這 12 張圖之前要知道的三件事</h4>
+<ul>
+  <li><strong>每一層各自 fit 一次 PCA。</strong>第 1 層的兩個主成分和第 12 層的兩個主成分是不同的方向，所以<strong>不同層的圖，座標軸不能互相比較</strong>：某個 token 在第 4 層的 x 是 5、第 8 層的 x 是 −3，不代表它「往左移了」。能比較的只有同一張圖裡，點與點之間的相對位置。</li>
+  <li><strong>主成分的正負號是任意的。</strong>一個方向和它的反方向，散布一樣大，PCA 選哪一個都對。所以整張圖左右或上下翻過來，意義完全相同；「答案在左邊」本身沒有意義，「答案離其他點很遠」才有。</li>
+  <li><strong>PCA 是用全部 token（含 [CLS] 與兩個 [SEP]）fit 的，但圖上不畫它們</strong>（第 109–110 行）。你看不到的點也影響了主成分的方向。例如第 2 組第 12 層，全部 token 的 y 座標範圍是 −24.6 到 4.6，畫出來的點最低卻只到 −9.6（第一個 <code>detention</code>），所以 y 最低的那個點一定是不畫的 [CLS] 或 [SEP] 之一（由這兩個數推得；是哪一個本書沒有查）。<!-- TODO(本機實測): 第 2 組第 12 層 y = −24.6 的是 [CLS] 還是哪個 [SEP]；三組各層的特殊 token 座標 --></li>
+</ul>
+</div>
+
+<h3 id="variance">保留了多少變異</h3>
+<p>本書把三組問答每一層的 explained variance ratio（前 2 個主成分合計）都算出來，包括程式沒畫的 layer 0（embedding 層）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>layer</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th></tr></thead>
+<tbody>
+<tr><td>第 1 組</td><td>0.144</td><td>0.145</td><td>0.154</td><td>0.136</td><td>0.139</td><td>0.142</td><td>0.148</td><td>0.150</td><td>0.169</td><td>0.188</td><td>0.223</td><td>0.243</td><td><b>0.376</b></td></tr>
+<tr><td>第 2 組</td><td>0.139</td><td>0.139</td><td>0.127</td><td>0.122</td><td>0.119</td><td>0.123</td><td>0.129</td><td>0.130</td><td>0.151</td><td>0.168</td><td>0.187</td><td>0.221</td><td><b>0.485</b></td></tr>
+<tr><td>第 3 組</td><td>0.240</td><td>0.261</td><td>0.260</td><td>0.239</td><td>0.230</td><td>0.235</td><td>0.228</td><td>0.223</td><td>0.222</td><td>0.225</td><td>0.227</td><td>0.264</td><td><b>0.491</b></td></tr>
+</tbody>
+</table></div>
+<figure class="fig">
+<img src="img/ch06_pca_variance.png" alt="折線圖，橫軸 layer 0 到 12（0 是 embedding 輸出，程式沒畫），縱軸是前 2 個主成分保留的變異比例。三條線：question set 1 藍、2 橘、3 綠。第 3 組一直在 0.22 到 0.26，第 1、2 組在 0.12 到 0.19；三條線從 layer 10、11 開始上升，layer 12 跳到 0.38 到 0.49">
+<figcaption>圖 6.3 — 前 2 個主成分保留的變異比例。layer 0–10 大致持平，layer 11 起上升，layer 12 跳到 0.38–0.49（圖例的 question set 1／2／3 就是第 1／2／3 組問答）。</figcaption>
+</figure>
+<p>讀這張表：</p>
+<ul>
+  <li>程式畫的 layer 1–12，前 2 個主成分保留的變異在 <strong>0.12 到 0.49</strong> 之間（教學大綱說的「只保留 12–49%」）。layer 1–11 大多不到四分之一：<strong>前面幾層的圖，丟掉了七、八成的差異</strong>，圖上的遠近只能當作粗略的參考。</li>
+  <li>layer 12 一下跳到 0.38–0.49：最後一層的 token 向量比較集中在少數幾個方向上，2 維的圖比較忠實。但即使如此，也還有一半以上的變異沒畫出來。</li>
+  <li>第 3 組每一層都比另外兩組高。第 3 組的文章由幾個重複的短句組成（「X are afraid of Y」「X is a Y」），可能是原因，但這是本書的推測，沒有驗證。</li>
+</ul>
+<p>座標範圍也每層不同。以第 1 組為例，layer 1 的 x 從 −8.0 到 13.5、y 從 −7.6 到 12.1；layer 12 的 x 從 −28.3 到 4.6、y 從 −6.6 到 13.9。這再次說明不同層的刻度不能比。</p>
+
+<h2 id="read">6.8　讀圖：三組問答，四個層</h2>
+<p>每組 12 張圖，這裡各挑 layer 1、4、8、12 四張拼成一張（左上 Layer 1、右上 Layer 4、左下 Layer 8、右下 Layer 12；原本的單張圖都在 <code>img/bert_q{1,2,3}_layer{1..12}.png</code>）。以下描述是逐張看圖得到的，<strong>只寫看得到的</strong>；它們是這個替代模型的樣子，不是作業的答案。</p>
+
+<h3 id="read-q3">第 3 組：Emily 怕什麼</h3>
+<figure class="fig">
+<img src="img/ch06_q3_layers.png" alt="四張散布圖，紅點是問題、綠點是文章、藍色菱形是答案 cats。Layer 1：所有 afraid 在右下角一群，is、are、of、a、句號在左邊一群，動物名詞在右上，人名在中間一條斜線上，cats 在動物群裡。Layer 4：afraid 仍在下方，左邊是虛詞一大團，右上是動物，中間是人名。Layer 8：句號在下方排成一直列，問題的 6 個紅點在中間排開，動物在右上，cats 在其中。Layer 12：問題紅點聚在右側，和大部分文章 token 擠在一起，sheep、wolves、wolf 在左邊，句號在上方，cats 靠近左邊的動物">
+<figcaption>圖 6.4 — 第 3 組問答，layer 1／4／8／12。藍色菱形是程式標的答案 <code>cats</code>（位置 12）。</figcaption>
+</figure>
+<ul>
+  <li><strong>Layer 1</strong>：同一個字的點疊在一起，問題裡的字（紅）緊貼文章裡的同一個字（綠）。所有的 <code>afraid</code>（含問題裡那一個）在右下角自成一群；<code>is</code>、<code>are</code>、<code>of</code>、<code>a</code>、句號在左邊一群；動物名詞（sheep、wolf、wolves、Wolves、cats、Cats、mouse）在右上；人名與拆開的片段（Gertrude、Emily、Jessica、Win、##ona、She、Mi、##ep）在中間一條斜線上。答案 <code>cats</code> 在動物群裡，和 <code>Wolves</code>、<code>Cats</code> 貼在一起。</li>
+  <li><strong>Layer 4</strong>：<code>afraid</code> 仍在下方一群；左邊是虛詞的一大團；右上是動物；中間是人名。</li>
+  <li><strong>Layer 8</strong>：句號在下方排成一直列；問題的 6 個紅點（What、?、is、of、afraid、Emily）在中間排開，和文章裡的同一個字分開了：文章的 <code>afraid</code>、<code>is</code>、<code>of</code> 在左上，問題的在中間。動物在右上，<code>cats</code> 在其中；人名在右側中段。</li>
+  <li><strong>Layer 12</strong>：問題的紅點聚在右側，和大部分文章 token 擠成一團；動物（sheep、wolves、wolf）在左邊；句號在上方；<code>cats</code> 在 (−15.8, 0.0)，靠近左邊的動物群。</li>
+</ul>
+<p>從 layer 1 到 layer 8，一個看得到的變化是：layer 1 裡問題的字和文章裡同一個字疊在一起，layer 8 裡它們分開了。layer 1 幾乎只看「是哪個字」，這和 6.6 節說的 embedding 層「看不到上下文」相符；後面的層加入了上下文，同一個字在問題裡和在文章裡就不再一樣。這是描述，不是「第幾層做哪一步」的結論。</p>
+
+<h3 id="read-q1">第 1 組：Tesla 哪一年出生</h3>
+<figure class="fig">
+<img src="img/ch06_q1_layers.png" alt="四張散布圖。Layer 1：西里爾字母片段在右下角一群，electrical、engineer、mechanical、physicist 在上方一群，1856 在中間偏右，數字與月份在中下方。Layer 4：西里爾字母仍在右邊，問題的紅點在左下聚在一起，1856 在中下方靠近 1943、10、January、July。Layer 8：問題紅點在上方一群，1856 在中間。Layer 12：1856 獨自在左上角，離其他點都很遠，問題紅點和大部分文章 token 擠在右側">
+<figcaption>圖 6.5 — 第 1 組問答，layer 1／4／8／12。藍色菱形是答案 <code>1856</code>（位置 32）。</figcaption>
+</figure>
+<ul>
+  <li><strong>Layer 1</strong>：西里爾字母片段（Н、##и、##к… 與 Т、##е…）在右下角一群；<code>electrical</code>、<code>engineer</code>、<code>mechanical</code>、<code>physicist</code> 在上方一群；<code>1856</code> 在中間偏右，附近有 <code>born</code>、<code>known</code>、<code>Te</code>；數字 <code>10</code>、<code>7</code>、<code>1943</code> 與 <code>January</code>、<code>July</code> 在中下方。</li>
+  <li><strong>Layer 4</strong>：西里爾字母仍在右邊一群；問題的紅點（In、what、year、born、was、?）在左下聚在一起；<code>1856</code> 在中下方，靠近 <code>1943</code>、<code>10</code>、<code>January</code>、<code>July</code>。</li>
+  <li><strong>Layer 8</strong>：紅點（what、year、In、was、born、?）在上方一群；<code>1856</code> 在中間，旁邊是 <code>Nikola</code>、<code>10</code>、<code>July</code>。</li>
+  <li><strong>Layer 12</strong>：<code>1856</code> 獨自在左上角（x = −28.3，就是整張圖 x 範圍的最左端），離其他點都很遠；其次往左的是 <code>10</code>、<code>)</code>、<code>;</code>、<code>1943</code>；問題的紅點和大部分文章 token 擠在右側。</li>
+</ul>
+
+<h3 id="read-q2">第 2 組：英國與愛爾蘭常見的處罰</h3>
+<figure class="fig">
+<img src="img/ch06_q2_layers.png" alt="四張散布圖，藍色菱形有三個 detention。Layer 1：三個 detention 疊在右上角，和三個 punishment 在一起，school 與 schools 在右下角，虛詞在左邊一團。Layer 4：國家名在上方一群，問題裡的 UK、Ireland 也在其中，punishment、detention、pupil 在右側中段。Layer 8：多數紅點在右下一群，紅色 Ireland、UK、and 在右上靠近國家名，detention 在左側中段。Layer 12：紅點全部擠在右側一大團，三個 detention 都在左半邊，其中一個在左下角最遠處，上方是 school、lunch、work、essay">
+<figcaption>圖 6.6 — 第 2 組問答，layer 1／4／8／12。三個藍色菱形都是 <code>detention</code>（位置 14、86、94）。</figcaption>
+</figure>
+<ul>
+  <li><strong>Layer 1</strong>：三個 <code>detention</code> 疊在右上角，和三個 <code>punishment</code>（含問題裡的紅色 <code>punishment</code>）在一起；<code>school</code>、<code>schools</code> 在右下角一群；虛詞在左邊一團。</li>
+  <li><strong>Layer 4</strong>：國家名（UK、Ireland、United、States、Singapore、countries）在上方一群，問題裡的紅色 <code>UK</code>、<code>Ireland</code> 也在其中；<code>punishment</code>、<code>detention</code>、<code>pupil</code> 在右側中段。</li>
+  <li><strong>Layer 8</strong>：紅點（What、is、a、in、the、common、punishment…）多數在右下一群；紅色 <code>Ireland</code>、<code>UK</code>、<code>and</code> 在右上，靠近文章裡的國家名；<code>detention</code> 在左側中段。</li>
+  <li><strong>Layer 12</strong>：紅點全部擠在右側那一大團；三個 <code>detention</code> 都在左半邊，位置 14 那個在左下角最遠處 (−18.6, −9.6)；上方是 school、lunch、work、essay 等。</li>
+</ul>
+<p>三個 <code>detention</code> 在 layer 1 疊在一起，座標是 (11.4, 8.1)、(11.8, 7.1)、(11.9, 7.3)；到了 layer 12 分開成 (−18.6, −9.6)、(−9.1, 1.0)、(−12.2, −0.1)（依序是位置 14、86、94）。離群最遠的是第一個，也就是「Currently detention is…」那一個，6.5 節模型的非空答案也是它。同一個字在三個不同的句子裡，到最後一層已經是三個不同的向量。</p>
+
+<h3 id="read-common">三組共同看得到的</h3>
+<ul>
+  <li><strong>前面的層，同一個字（或同一類字）聚在一起。</strong>layer 1 裡，同字的點疊在一起，問題與文章的同一個字也疊在一起；同類的字（動物、國家名、數字、職業、西里爾字母片段）各自成群。</li>
+  <li><strong>中間的層，問題的字和文章的字分開。</strong>layer 8 時，三組的紅點都自成一群或排在一起，不再和文章裡的同一個字重疊。</li>
+  <li><strong>最後一層，答案離群，其他的擠在一起。</strong>layer 12 時，紅點和大部分文章 token 擠成一大團；第 1 組的 <code>1856</code>、第 2 組的第一個 <code>detention</code> 是全圖最遠的點之一，第 3 組的 <code>cats</code> 則靠在左邊的動物群旁。</li>
+</ul>
+<p>答案在 layer 12 的位置：第 1 組 <code>1856</code> (−28.3, 7.9)、第 2 組第一個 <code>detention</code> (−18.6, −9.6)、第 3 組 <code>cats</code> (−15.8, 0.0)。注意第 2、3 組的模型其實選了「無答案」（6.5 節），但答案字在最後一層仍然和其他 token 分得很開。這些都只是這個模型、這三組問答的觀察，不能推廣成「BERT 第 12 層一定這樣」。</p>
+
+<h2 id="cosine">6.9　不經過 PCA：768 維的相似度</h2>
+<p>PCA 只保留 12–49% 的變異，圖上的「靠近」不一定可靠。本書另外直接在 768 維裡算 <strong>cosine similarity</strong>（餘弦相似度）：兩個向量方向一致時是 1、垂直時是 0、相反時是 −1，只看方向不看長度。第 7 章會正式定義它與歐氏距離，這裡只用它的直覺。三個平均值：</p>
+<ul>
+  <li><strong>q-q</strong>：問題 token 兩兩之間的 cosine 平均；<strong>c-c</strong>：文章 token 兩兩之間；<strong>q-c</strong>：問題 token 對文章 token。</li>
+  <li><strong>答案→問題</strong>：答案 token 對所有問題 token 的平均 cosine。括號是把文章裡每個 token 都這樣算、排名後答案排第幾（1 = 最像問題）。第 2 組用第一個 <code>detention</code>。</li>
+</ul>
+<div class="tablewrap"><table>
+<thead><tr><th>組（文章 token 數）</th><th>layer</th><th>q-q</th><th>c-c</th><th>q-c</th><th>答案→問題（排名）</th></tr></thead>
+<tbody>
+<tr><td rowspan="5">第 1 組 <code>1856</code>（66）</td><td>0</td><td>0.059</td><td>0.074</td><td>0.014</td><td>−0.005（第 47）</td></tr>
+<tr><td>6</td><td>0.270</td><td>0.290</td><td>0.219</td><td>0.215（第 36）</td></tr>
+<tr><td>9</td><td>0.380</td><td>0.305</td><td>0.221</td><td>0.226（第 30）</td></tr>
+<tr><td>11</td><td>0.505</td><td>0.520</td><td>0.376</td><td>0.209（第 66，最後）</td></tr>
+<tr><td>12</td><td><b>0.861</b></td><td><b>0.755</b></td><td><b>0.775</b></td><td>−0.358（第 66）</td></tr>
+<tr><td rowspan="4">第 2 組 <code>detention</code>（106）</td><td>0</td><td>0.126</td><td>0.105</td><td>0.063</td><td>−0.003（第 83）</td></tr>
+<tr><td>9</td><td>0.372</td><td>0.407</td><td>0.279</td><td>0.280（第 57）</td></tr>
+<tr><td>11</td><td>0.561</td><td>0.625</td><td>0.512</td><td>0.298（第 106，最後）</td></tr>
+<tr><td>12</td><td><b>0.948</b></td><td><b>0.798</b></td><td><b>0.827</b></td><td>0.033（第 106）</td></tr>
+<tr><td rowspan="5">第 3 組 <code>cats</code>（47）</td><td>0</td><td>0.105</td><td>0.134</td><td>0.070</td><td>−0.025（第 41）</td></tr>
+<tr><td>9</td><td>0.429</td><td>0.504</td><td>0.349</td><td>0.347（第 25）</td></tr>
+<tr><td>10</td><td>0.501</td><td>0.582</td><td>0.423</td><td>0.448（第 13）</td></tr>
+<tr><td>11</td><td>0.525</td><td>0.646</td><td>0.488</td><td>0.485（第 27）</td></tr>
+<tr><td>12</td><td><b>0.893</b></td><td><b>0.689</b></td><td><b>0.698</b></td><td>0.216（第 45）</td></tr>
+</tbody>
+</table></div>
+<p>（本書只摘了幾層；13 層完整的數字在量測工具的輸出裡，見 6.11 節前的說明框。）</p>
+<ul>
+  <li><strong>所有 token 的方向越來越像。</strong>三組的 q-q、c-c、q-c 都隨層變大，到 layer 12 一下跳到 0.69–0.95。這和 6.7 節 layer 12 的變異比例大增一致：點都擠向少數幾個方向，2 個主成分就能抓住比較多。兩者一致是本書的推論，不是另外的實驗。</li>
+  <li><strong>答案在最後幾層，反而和問題最不像。</strong>第 1、2 組的答案「像不像問題」的排名在 layer 11、12 掉到最後一名，第 3 組在 layer 12 是 47 個裡的第 45。這和 PCA 圖上 layer 12 答案離群一致。</li>
+  <li><strong>答案的最近鄰一直是同一類字。</strong>在 768 維裡和答案 cosine 最高的 5 個 token：第 1 組 layer 0–6 以 <code>1943</code> 開頭（1943、–、July、January、10、7 這類日期）、layer 7–11 以 <code>10</code> 開頭，layer 12 是 <code>[CLS]</code>、<code>10</code>、<code>)</code>、<code>1943</code>、<code>;</code>；第 2 組 layer 0–5 是另外兩個 <code>detention</code> 與三個 <code>punishment</code>，layer 12 是 <code>detention</code>、<code>pupil</code>、<code>requires</code>、<code>lunch</code>、<code>detention</code>；第 3 組 layer 0–6 以 <code>Cats</code> 開頭，layer 7–12 以 <code>wolves</code> 開頭，都是動物名詞。</li>
+</ul>
+<p>第 3 組另外按字的種類分組，算組內的平均 cosine：layer 1 時，動物名詞彼此 0.231、句號彼此 0.857、人名彼此 0.255、動物對句號 0.123；layer 6 時依序是 0.523、0.849、0.514、0.414；layer 12 時 0.662、0.903、0.763、0.586。句號（<code>.</code>，同一個字出現 8 次）從頭到尾都非常像彼此；動物、人名到後面幾層才變得比較像；但到了 layer 12，連「動物對句號」也有 0.586，所有東西都變得比較像。所以 layer 12 的高 cosine，要先扣掉「大家都變像了」這個背景，再談哪些 token 特別像。</p>
+<p>這些數字是描述性的，同樣不能拿來回答「第幾層做哪一步」。</p>
+
+<h2 id="no-answer">6.10　為什麼 Q25–27 沒有標準答案</h2>
+<p>回到 docstring 第 19–25 行的問題：BERT 回答問題的四個步驟（1. 依照字在文章裡的關係把相似的字聚在一起；2. 抽出答案；3. 依照字的意思把相似的字聚在一起；4. 把問題和文章裡相關的資訊對上），「順序不是照編號」，要你只看 hidden states 的圖，找出每一層的功能。原版 notebook 另有一段中文說明，內容相同，並強調「這些步驟並不按照順序排列」。</p>
+<p>這類題目是用<strong>助教的模型</strong>的圖出的：題目預期你在那一份圖上看到某些層有某種結構。本 repo 用的是另一個模型（6.3 節），即使同樣是 BERT-base、同樣在問答資料上微調過，訓練過程不同，每一層長出的結構就不一定相同；而且助教的模型是哪一個無從得知，沒有辦法核對。所以：</p>
+<ul>
+  <li>本章 6.8、6.9 節的描述，只是<strong>這個替代模型</strong>在這三組問答上的樣子。</li>
+  <li>本書<strong>不會</strong>說「第幾層負責第幾步」。例如 6.8 節看到 layer 1 同字聚在一起、layer 12 答案離群，這些是觀察；把它們對應成四個步驟中的哪一步，需要一個這份 repo 給不了的標準答案。</li>
+  <li>如果你在寫作業，請以作業實際提供的資料與題目為準；如果只是想理解方法，本章的觀察與「讀圖要注意的三件事」（6.7 節）就是重點。</li>
+</ul>
+<p>另外，這 12 張圖本身就有限制：layer 1–11 的 PCA 只保留不到四分之一的變異（6.7 節），只看兩維的圖去判斷「某層在做什麼」，本來就要很小心。</p>
+
+<div class="note"><h4>本章「另外量的」數字從哪來</h4>
+<p><code>bert_hidden_states.py</code> 只畫圖、只印存檔路徑。本章的模型規格、token 清單、模型自己的答案（6.5 節）、hidden states 的核對與向量長度（6.6 節）、變異比例與座標（6.7、6.8 節）、cosine（6.9 節），都來自本書另外寫的量測程式 <code>docs/tools/hw09_ch06_bert.py</code>。它載入同一個模型、import <code>bert_hidden_states.py</code> 取三組問答，並產生圖 6.3–6.6（<code>img/ch06_*.png</code>；圖 6.4–6.6 是把 <code>bert_q{N}_layer{1,4,8,12}.png</code> 拼成 2×2）。在 <code>HW09/</code> 裡、裝好本 repo 的環境（第 0 章 <a href="ch00.html#env">0.3 節</a>）後執行；用 CPU 就夠，模型不在快取時會自動下載：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python ../docs/tools/hw09_ch06_bert.py</code></pre>
+<p>它會把上面這些數字印在 stdout，並把 4 張 <code>ch06_*.png</code> 寫進 <code>docs/HW09/img/</code>（會覆蓋書裡的圖）。本書沒有在本章逐字列出它的輸出。</p>
+</div>
+
+<h2 id="now">6.11　現在的做法</h2>
+<div class="note"><h4>現在的做法</h4>
+<ul>
+  <li><strong>不靠網站看 attention</strong>：transformers 的模型在呼叫時可以要求回傳每一層的 attention 權重（和本章的 <code>output_hidden_states=True</code> 同一類的選項，叫 <code>output_attentions=True</code>），拿到之後自己畫成熱圖。這樣就不受 exBERT 網站能不能用的影響。本書沒有用它跑過這三組問答。</li>
+  <li><strong>直接問模型答案</strong>：6.5 節的「起點分數 + 終點分數」是問答模型的標準讀法；transformers 也有包好的問答 pipeline，會處理「無答案」與長度限制。本書的數字是自己從 start/end logits 算的，沒有用 pipeline 核對。</li>
+  <li><strong>降維不只 PCA</strong>：PCA 是線性投影，只保留變異最大的方向。要看「誰和誰是鄰居」，也常用 t-SNE、UMAP 這類非線性方法，但它們的距離同樣不能照字面解讀。本書沒有用它們畫過這份資料。</li>
+  <li><strong>先看數字再看圖</strong>：6.7 節的 explained variance 與 6.9 節的 768 維 cosine 都只要幾行程式，能告訴你一張 2 維圖可信到什麼程度。</li>
+</ul>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>Topic II 有 10 題（Q21–30）、三種方法。Q21–24 用 exBERT 看 attention（每個 token 參考其他 token 的權重），沒有程式；2026-10-04 實測主網址連不上，替代網址轉到 Hugging Face Space，狀態 RUNNING、頁面載得到，互動功能本書沒試。</li>
+  <li><code>hw9_bert.zip</code> 下架，本 repo 改用 <code>deepset/bert-base-cased-squad2</code>（BERT-base、cased、SQuAD 2.0 微調、107,721,218 個參數），所以圖不是作業的答案。</li>
+  <li>tokenizer 是 WordPiece，字典沒有的字拆成片段，接續的片段帶 <code>##</code>；序列是 [CLS] 問題 [SEP] 文章 [SEP]，token_type_ids 標出兩段（0／1）。</li>
+  <li>顏色由第 103 行決定：先比對答案字串（分大小寫、不管位置），再看位置。第 2 組三個 <code>detention</code> 都是藍點，第 3 組句首的 <code>Cats</code> 是綠點；[CLS]／[SEP] 不畫。</li>
+  <li>模型自己的答案：第 1 組 <code>1856</code>（對）；第 2、3 組都是 [CLS]（SQuAD 2.0 的「無答案」），第 3 組最好的非空答案是 <code>sheep</code>（錯），<code>cats</code> 起點分數排第 3。</li>
+  <li><code>hidden_states</code> 有 13 個元素：第 0 個是 embedding 層（程式跳過），第 1–12 個是各層輸出，每個 <code>(1, 序列長度, 768)</code>；<code>hidden_states[12]</code> 經過 <code>qa_outputs</code> 就是起點與終點分數。</li>
+  <li>每一層各自做一次 PCA（768 → 2），保留 12–49% 的變異（layer 12 最高）；不同層的座標軸不能比，主成分正負號任意，fit 時含不畫的特殊 token。</li>
+  <li>看得到的：前面的層同字、同類字聚在一起；中間的層問題和文章的同一個字分開；layer 12 答案離群、其他擠在一起，768 維的 cosine 全部變大（0.69–0.95）。這些都不是「哪層做哪一步」的答案。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. <code>bert_q2_layer1.png</code> 畫的是 <code>hidden_states</code> 的第幾個元素？embedding 層的圖在哪裡？</summary>
+<p>第 1 個，<code>hidden_states[1]</code>，也就是第 1 層的輸出。第 91 行用 <code>outputs_hidden_states[1:]</code> 跳過了第 0 個元素（embedding 層），<code>layer_index</code> 從 0 開始，檔名用 <code>layer_index + 1</code>。embedding 層沒有畫，36 張圖裡沒有它；6.7 節的變異比例表把它補上作為對照（layer 0）。</p></details>
+<details class="quiz"><summary>2. 為什麼第 2 組的圖上有三個藍點，第 3 組文章最後的 <code>Cats</code> 卻是綠的？</summary>
+<p>第 103 行判斷答案的方式是「這個 token 解碼後的字串，是否完全等於答案字串切開後的某一個字」。它不看位置，所以文章裡三個 <code>detention</code>（位置 14、86、94）都符合，都畫藍色。它也分大小寫，而且這個模型是 cased，<code>Cats</code> 是獨立的 token，<code>'Cats'</code> 不等於 <code>'cats'</code>，所以位置 43 的 <code>Cats</code> 畫成綠色。</p></details>
+<details class="quiz"><summary>3. 同學比較第 3 組的 layer 4 與 layer 8，說：「<code>cats</code> 在 layer 4 的 x 比較大、layer 8 比較小，所以它往左移了。」這句話有什麼問題？</summary>
+<p>每一層各自 fit 一次 PCA（第 95 行），兩張圖的兩個主成分是不同的方向，座標軸根本不是同一把尺；而且主成分的正負號是任意的，整張圖左右翻過來意義相同。所以跨層比較座標沒有意義。能說的只有同一張圖裡的相對位置，例如「layer 8 時 <code>cats</code> 在動物群裡」。</p></details>
+<details class="quiz"><summary>4. 這個模型對第 3 組問答的回答是什麼？圖上的藍點代表模型選了 <code>cats</code> 嗎？</summary>
+<p>模型的起點與終點都指向 [CLS]，也就是 SQuAD 2.0 的「無答案」（分數 4.580）。如果只看文章裡的片段，最好的是 <code>sheep</code>（−1.322），是錯的；<code>cats</code> 的起點分數只排第 3。藍點是程式第 103 行用字串標出的「正確答案」，和模型選了什麼無關（6.5 節）。</p></details>
+<details class="quiz"><summary>5. 第 3 組 layer 12 的圖保留了 49% 的變異，layer 4 只有 23%。可以說 layer 12 的圖「比較可信」嗎？</summary>
+<p>就「2 維的圖保留了多少 768 維的差異」而言可以：layer 12 的圖丟掉的比較少，圖上的遠近比較接近真實的遠近。但它仍丟掉了一半以上的變異；而且 layer 12 所有 token 的方向都變得很像（6.9 節，q-q 0.893、c-c 0.689），變異集中在少數方向，部分原因就是大家擠在一起。可信度高，不代表那張圖就回答了「這一層在做什麼」。</p></details>
+<details class="quiz"><summary>6. 如果把第 103 行改成 <code>if word.lower() in answers[QUESTION-1].split():</code>，36 張圖會有什麼不同？</summary>
+<p>由程式推得（本書沒有實際跑過）：只有第 3 組會變。位置 43 的 <code>Cats</code> 轉成小寫後等於 <code>cats</code>，會從綠點變成藍色菱形，第 3 組就有兩個藍點。第 1 組的 <code>1856</code> 沒有大小寫；第 2 組文章裡的 <code>detention</code> 本來就都是小寫，三個藍點不變。點的位置不會變，因為 PCA 和顏色無關。<!-- TODO(本機實測): 照字面改第 103 行跑一次，確認只有第 3 組多一個藍點 --></p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://arxiv.org/abs/1810.04805">Devlin et al., 2018, BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding</a>：BERT 的原始論文，[CLS]、[SEP]、segment（token_type）與 WordPiece 都在這篇定義。</li>
+  <li><a href="https://arxiv.org/pdf/1910.05276.pdf">投影片第 14 頁的參考論文（arXiv 1910.05276）</a>：投影片列給 exBERT 的參考資料，本書沒有查證內容。</li>
+  <li><a href="https://huggingface.co/spaces/exbert-project/exbert">exBERT 的 Hugging Face Space</a>：投影片替代網址最後轉到的地方。</li>
+  <li><a href="https://huggingface.co/deepset/bert-base-cased-squad2">deepset/bert-base-cased-squad2 的模型頁</a>：本 repo 用的替代模型。</li>
+  <li><a href="https://rajpurkar.github.io/SQuAD-explorer/">SQuAD 官方網站</a>：SQuAD 2.0 資料集，以及「無答案」問題的說明。</li>
+  <li><a href="https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html">scikit-learn — PCA</a>：<code>n_components</code>、<code>random_state</code> 與 <code>explained_variance_ratio_</code> 的說明。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch05.html">← 第 5 章</a><a href="ch07.html">第 7 章 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW09 讀碼教材 · 對應 commit b2dbe4c · 程式碼引用取自本 repo 的 HW09/；實測輸出取自 2026-10-03／04 本機執行</footer>
+</body>
+</html>
