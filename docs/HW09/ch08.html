@@ -585,7 +585,7 @@ footer.chap-footer {
 <header class="chap-header">
   <p class="book-title">ML2022 Spring · HW09 讀碼教材</p>
   <h1>第 8 章　五種方法並排看，與三級題庫</h1>
-  <p class="chap-lead">第 2–5 章各自讀完了 Part 1（解釋 CNN，Q1–20；Part 2 是第 6、7 章的 BERT）的五種方法：LIME、Saliency map、SmoothGrad、Filter explanation、Integrated Gradients。這一章把它們放在同一張圖上：同一張食物照片，五種方法各畫出什麼、各自回答的是哪一個問題、用到了什麼（標籤？梯度？），以及彼此到底一不一致。本章用兩個新的量（Spearman 等級相關與前 10% 像素的 IoU）把「像不像」變成數字，再用一個簡單的 sanity check 確認這些圖真的依賴模型學到的東西。最後是入門、進階、挑戰三級題庫，每一題都有本書實測過的答案，並指回對應的章節。</p>
+  <p class="chap-lead">第 2–5 章各自讀完了 Part 1（解釋 CNN，Q1–20；Part 2 是第 6、7 章的 BERT）的五種方法：LIME、Saliency map、SmoothGrad、Filter explanation、Integrated Gradients。這一章把它們放在同一張圖上：同一張食物照片，五種方法各畫出什麼、各自回答的是哪一個問題、用到了什麼（標籤？梯度？），以及彼此到底一不一致。本章用兩個新的量（Spearman 等級相關與前 10% 像素的 IoU）把「像不像」變成數字，再用一個簡單的 sanity check 檢查這些圖是不是真的依賴模型學到的東西。最後是入門、進階、挑戰三級題庫，每一題都有本書實測過的答案，並指回對應的章節。</p>
 </header>
 <main>
 
@@ -760,12 +760,40 @@ footer.chap-footer {
 <tr><td>IG repo</td><td>0.161</td><td>0.020</td><td>0.110</td><td>0.143</td><td>0.208</td><td>0.165</td><td>0.182</td><td>0.175</td><td>0.151</td><td>0.114</td><td>0.14</td></tr>
 </tbody>
 </table></div>
-<p>相關很低（平均 0.19 與 0.14），隨機模型的 saliency 和 Sobel 邊緣的相關也只有 0.054。所以這兩種方法的圖<strong>確實依賴模型學到的東西</strong>，不是只把輸入圖的邊緣描出來。這個檢查只說明「沒有犯最基本的錯」，不代表圖就是對的；而且本書只對 Saliency 與 IG 做了，LIME、SmoothGrad、Filter explanation 沒有做。<!-- TODO(本機實測): 若要完整，對 LIME 與 SmoothGrad 也做隨機權重模型的 Spearman --></p>
+<p>相關很低（平均 0.19 與 0.14），隨機模型的 saliency 和 Sobel 邊緣的相關也只有 0.054。所以這兩種方法的圖<strong>確實依賴模型學到的東西</strong>，不是只把輸入圖的邊緣描出來。這個檢查只說明「沒有犯最基本的錯」，不代表圖就是對的。</p>
+<p>其他三種方法本書在審稿時補做了同樣的檢查（同一個隨機模型、同樣的種子與設定；量測程式 <code>docs/tools/hw09_ch08_review.py</code>），結果<strong>沒有那麼乾淨</strong>：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>方法</th><th>和訓練好的模型的 Spearman（10 張平均）</th><th>10 張的範圍</th><th>切掉外圍 8 像素後</th></tr></thead>
+<tbody>
+<tr><td>Saliency</td><td>0.19</td><td>0.077–0.279</td><td>0.054</td></tr>
+<tr><td>IG repo</td><td>0.14</td><td>0.020–0.208</td><td>0.019</td></tr>
+<tr><td>SmoothGrad</td><td>0.47</td><td>0.217–0.701</td><td>0.293</td></tr>
+<tr><td>LIME</td><td>0.43</td><td>0.293–0.682</td><td>0.410</td></tr>
+<tr><td>cnn[6] filter 0 activation</td><td>0.003</td><td>−0.167–+0.244</td><td>—</td></tr>
+<tr><td>cnn[23] filter 0 activation</td><td>0.30</td><td>−0.121–+0.582</td><td>—</td></tr>
+</tbody>
+</table></div>
+<ul>
+  <li><strong>切掉外圍</strong>：只比第 8–119 列、第 8–119 行，看相關有多少來自圖的邊框。Saliency 和 IG 掉到接近 0（0.054、0.019），表示它們剩下的那一點相關幾乎都來自邊框：隨機模型的圖有 15.7%（Saliency）、17.6%（IG）的總和落在這圈佔 23.4% 面積的外框上，訓練好的模型只有 9.5%、8.7%。SmoothGrad 切掉後仍有 0.293。</li>
+  <li><strong>LIME</strong>：隨機模型的權重極小（每張圖最大的 |權重| 只有 1.8e-07–5.4e-07，沒有一塊達到 <code>min_weight=0.05</code>，程式的圖不會上任何顏色），但「哪一塊比較大」的排名仍和訓練好的模型有 0.43 的相關。改成每塊 superpixel 算一個值（不按像素數加權）是 0.34。一個實測到的共同因素是<strong>塊的大小</strong>：|權重| 和該塊面積的 Spearman，訓練好的模型平均 0.36、隨機模型 0.40——大塊被遮住時，不管模型是什麼，輸出都變得比較多（推論）。</li>
+  <li><strong>隨機模型讓 repo 的 LIME 直接出錯</strong>：<code>explain_instance</code> 預設 <code>top_labels=5</code>，只替模型分數最高的 5 類做解釋。隨機模型對 10 張圖的前 5 類都是 6、10、3、1、9，圖 0、3、4、6、8 的標籤（0、2、2、5、8）不在裡面，程式的 <code>get_image_and_mask(label=…)</code> 會丟出 <code>KeyError: 'Label not in explanation'</code>。上表的 LIME 是改成 <code>explain_instance(…, labels=(標籤,), top_labels=None)</code> 算的；這樣抽到的樣本和原本相同，對訓練好的模型結果也和原程式相同（圖 0 前 5 名、圖 3 前 5 名都和第 2 章一致）。</li>
+  <li><strong>Filter activation</strong>：cnn[6] 換成隨機權重後和原本無關（0.003），符合「它只描述某個 filter」；cnn[23] 仍有 0.30（原因本書沒有追）。</li>
+</ul>
+<p>所以這個最簡單的 sanity check 裡，Saliency 和 IG 最明確地「跟著模型變」；SmoothGrad 與 LIME 有相當一部分不隨模型改變，至少有一部分來自圖本身的結構（LIME 的塊大小）。為什麼 SmoothGrad 切掉外圍後還有 0.293，本書沒有再拆解。</p>
 
 <div class="note"><h4>本章的數字從哪來</h4>
 <p>本章 8.1–8.5 節與挑戰 1 的圖與數字，都來自本書另外寫的量測程式 <code>docs/tools/hw09_ch08_compare.py</code>。它 import <code>explain_cnn.py</code> 直接呼叫裡面的函式，不修改它；重跑兩次數字逐位相同。需要 GPU、<code>checkpoint.pth</code> 與 <code>food/</code>（第 0 章 <a href="ch00.html#data">0.4 節</a>），以及第 0 章 <a href="ch00.html#env">0.3 節</a>建好的 <code>.venv</code>，在 <code>HW09/</code> 裡執行：</p>
 <pre class="shell cmd"><code>$ ../.venv/bin/python ../docs/tools/hw09_ch08_compare.py</code></pre>
-<p>它把數字印在 stdout，並把 4 張 <code>ch08_*.png</code> 寫進 <code>docs/HW09/img/</code>（會覆蓋書裡的圖；要還原成 repo 裡的版本，在 repo 根目錄執行 <code>git checkout -- docs/HW09/img/</code>）。本書沒有逐字列出它的輸出。<!-- TODO(本機實測): 若要讓讀者逐字對照，補一段 stdout 節錄（例如 Spearman 矩陣那幾行） -->它在同一個 process 裡量到的時間（LIME 14.1 秒、Saliency 0.12 秒、SmoothGrad 22.2 秒、兩層 filter activation 0.02 秒、IG 0.41 秒）只供參考；各方法的正式計時以第 0 章 <a href="ch00.html#run-cnn">0.5 節</a>的逐段計時為準（LIME 14.7 秒、Saliency 0.4 秒、SmoothGrad 24.1 秒、Filter explanation 2.3／2.9 秒、IG 0.7 秒；後者的 filter 包含 100 步優化）。題庫各題的答案則來自各章自己的實測，題目旁會註明。</p>
+<p>它把數字印在 stdout，並把 4 張 <code>ch08_*.png</code> 寫進 <code>docs/HW09/img/</code>（會覆蓋書裡的圖；要還原成 repo 裡的版本，在 repo 根目錄執行 <code>git checkout -- docs/HW09/img/</code>）。Spearman 那一段的開頭幾行長這樣（節錄，「…」是省略的行）：</p>
+<pre class="shell"><code>===== Spearman rank correlation between methods, mean over 10 images (min..max)
+    LIME |w| vs Saliency  : rho +0.412 (+0.274..+0.557) | top-10% IoU 0.153 (0.040..0.225)
+…
+    Saliency vs SmoothGrad: rho +0.484 (+0.251..+0.648) | top-10% IoU 0.143 (0.062..0.229)
+…
+    Saliency vs IG (repo) : rho +0.677 (+0.560..+0.779) | top-10% IoU 0.340 (0.225..0.441)
+…
+   IG (repo) vs IG x x    : rho +0.905 (+0.817..+0.995) | top-10% IoU 0.597 (0.430..0.853)</code></pre>
+<p>每行是一對方法：<code>rho</code> 是 10 張的平均 Spearman，括號是最小..最大；後半是前 10% 的 IoU。它在同一個 process 裡量到的時間（LIME 14.1 秒、Saliency 0.12 秒、SmoothGrad 22.2 秒、兩層 filter activation 0.02 秒、IG 0.41 秒）只供參考；各方法的正式計時以第 0 章 <a href="ch00.html#run-cnn">0.5 節</a>的逐段計時為準（LIME 14.7 秒、Saliency 0.4 秒、SmoothGrad 24.1 秒、Filter explanation 2.3／2.9 秒、IG 0.7 秒；後者的 filter 包含 100 步優化）。題庫各題的答案則來自各章自己的實測，題目旁會註明。</p>
 </div>
 
 <h2 id="bank">8.6　題庫（一）入門</h2>
@@ -823,7 +851,7 @@ footer.chap-footer {
   <li>三種梯度方法中度一致，Saliency–IG repo 最像（0.68，10 張都 &gt; 0.5），但前 10% 只重疊 0.340；LIME 和它們 0.34–0.46；filter activation 和其他方法幾乎無關（0.06–0.29、IoU ≈ 隨機），因為它不看類別。</li>
   <li>SmoothGrad 最分散（最亮 10% 佔 0.198）、LIME 最集中（0.500）；有類別資訊的方法都偏中央；每種方法都有一部分在描邊（和 Sobel 0.23–0.31），但都不只是邊緣偵測。</li>
   <li>換成第 2 名類別：Saliency 幾乎不變（Spearman 0.805–1.000，因為 CE 梯度只差正負與大小），IG 比較有區別（0.577–0.811）。圖 1、6 的 Spearman 也很高，但兩個原始梯度的 cosine 接近 0 而不是 −1，和推導不符，原因未完全確定。</li>
-  <li>sanity check：隨機權重的模型算出的 Saliency、IG 和原本只有 0.19、0.14 的相關，所以這些圖確實依賴模型學到的東西。</li>
+  <li>sanity check：隨機權重的模型算出的 Saliency、IG 和原本只有 0.19、0.14 的相關（切掉外框後接近 0），這兩種圖確實依賴模型學到的東西；SmoothGrad（0.47）與 LIME（0.43）有相當一部分不隨模型改變。隨機模型還會讓 repo 的 LIME 因 <code>top_labels=5</code> 丟出 KeyError。</li>
   <li>三級題庫的答案都來自實測，並指回第 1–7 章。</li>
 </ul>
 </div>
