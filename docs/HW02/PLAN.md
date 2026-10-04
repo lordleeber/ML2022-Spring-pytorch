@@ -2,10 +2,13 @@
 
 HW02（phoneme classification，LibriSpeech 音框分類）的 HTML 教材還沒開始寫。流程照 [docs/TEXTBOOK_WORKFLOW.md](../TEXTBOOK_WORKFLOW.md)，這份檔案只記 HW02 特有的事。開始寫之後，量到的數字放在同一個目錄的 `FACTS.md`。
 
-## 狀態（2026-10-03）
+## 狀態（2026-10-04）
 
-- 還沒開始。下一步是 Phase 0，在本機（有 GPU）的 session 做。
-- HW02 的程式可以在共用的 .venv 跑完；2026-10-03 跑過一次，val acc 0.642。
+- Phase 0 完成：大綱 `outline.html`（ch00–ch07 + appendix）使用者已核可；驗證指標沒有偏差（印出 0.642 = 整個驗證集一次算完 0.641955，見 FACTS「驗證指標檢查」）。
+- 使用者的決定：用新版共用樣式；事實一次量完；ch07 用同一套縮小規格（batch 64 × 5 epoch）並排比，另附一次原規格 20 epoch 的完整紀錄。
+- Phase 1：style/enhance、FACTS.md、`docs/tools/hw02_exp.py`（已驗證與 train.py 逐位一致）、`hw02_facts.py`、`hw02_run_grid.sh` + `hw02_ch07_runs.txt` 已建立。
+- 進行中：原規格 baseline（20 epoch，約 4–5 小時）與 ch07 實驗清單在本機背景執行；跑完補進 FACTS 的「執行實測」「ch07 實測」，以及峰值 RSS、predict.py 的時間與輸出。
+- 下一步：baseline 數字補齊後，給雲端寫 index + ch00 的 prompt。
 
 ## Phase 0 要做的事
 

@@ -1,0 +1,14 @@
+# ch07 reduced spec: batch 64, 5 epochs, train_ratio 0.9, concat 11 unless the line says otherwise.
+# The repo's own LSTM at this spec is epochs 1-5 of the 20-epoch baseline (same RNG stream), so it is not rerun here.
+sample_official --arch dnn --concat 1 --bs 512 --epochs 5 --layers 1 --hidden 256 --ratio 0.8
+sample_r09      --arch dnn --concat 1 --bs 512 --epochs 5 --layers 1 --hidden 256
+dnn_c11         --arch dnn --layers 1 --hidden 512 --epochs 5
+q1a_deep        --arch dnn --layers 6 --hidden 1024 --epochs 5
+q1b_wide        --arch dnn --layers 2 --hidden 1700 --epochs 5
+q2_d25          --arch dnn --layers 6 --hidden 1024 --dropout 0.25 --epochs 5
+q2_d50          --arch dnn --layers 6 --hidden 1024 --dropout 0.5 --epochs 5
+q2_d75          --arch dnn --layers 6 --hidden 1024 --dropout 0.75 --epochs 5
+strong_bn_d25   --arch dnn --layers 6 --hidden 1024 --dropout 0.25 --bn 1 --epochs 5
+lstm_3layers    --layers 3 --epochs 5
+lstm_lossmid    --loss mid --epochs 5
+bilstm          --arch bilstm --epochs 5

@@ -1,0 +1,211 @@
+# HW02 教材事實清單（維護筆記，不進教材）
+
+> **這是什麼**：docs/HW02/ 這本教材背後的事實清單。教材裡的每一個數字、每一段逐字輸出，都要能在這裡或 repo 原始碼找到出處。這份檔案本身不是教材，HTML 裡不會連到它。
+>
+> **寫作分工**：本機（有 GPU）把全書需要的數字一次量完，寫在這裡（使用者 2026-10-04 選「一次量完」）；雲端 session 沒有 GPU、沒有資料、不跑程式，只引用這裡的數字寫章。這裡找不到的，標 `<!-- TODO(本機實測): 要量什麼 -->`，PR 回來後由本機補。
+>
+> **重現方法**（需要 GPU 與 `HW02/libriphone/`）：在 `HW02/` 裡跑
+> - `PYTHONPATH=. ../.venv/bin/python ../docs/tools/hw02_facts.py [env data split concat memory shapes model ckpt]`：資料、形狀、模型、checkpoint 評估（唯讀）。
+> - `PYTHONPATH=. ../.venv/bin/python ../docs/tools/hw02_exp.py --name X [選項]`：訓練實驗，預設參數就是 train.py，不寫檔（除非給 `--save`）。
+
+教材對應 commit：`7f11c7e`（HW02 程式最後一次改動是 `a517359`，之後沒改過）。
+原始碼根目錄：`HW02/`。官方原版：`~/poyi/GitHubPublic/ML2022-Spring/HW02/HW02.ipynb`（Colab notebook，不在 repo 裡，下面「原版 vs 本 repo」列了差異）。作業投影片：`HW02/hw2_slides 2022.pdf`（25 頁，已在 repo）。
+
+## 全書約定
+- 樣式：用 mySkills **新版共用資產**（`completed-repo-to-html-textbook/assets/style.css`、`enhance.js`；與 docs/HW09 相同），使用者 2026-10-04 選的。**不要**複製 docs/HW01 的舊版。
+- 指令塊：讀者要貼上執行的用 `<pre class="shell cmd">`，輸出用 `<pre class="shell">`。Python 用 `<pre class="py">`。
+- listing 的 `data-hot` 寫**原始碼行號**（與 figcaption `檔名:起–迄` 同一套）。
+- 檢查：`python3 docs/tools/verify_book.py . docs/HW02/chNN.html`（依 HTML 所在資料夾找原始碼，`docs/HW02/x.html` 引用 `HW02/<file>`）。
+- 每本書的規則（使用者指定）：ch00 要有「模型總覽」（架構 SVG、每層 tensor 形狀、參數量：手算 + PyTorch 印出、哪個檔案定義模型），放在任務說明之後；目錄頁有「2022 vs 現在」導論；2022 寫法過時的地方加「現在的做法」框。參考 docs/HW01 的 ch00 §0.2、圖 0.1。
+- 大綱：`docs/HW02/outline.html`（使用者 2026-10-04 核可：ch00–ch07 + appendix）。
+- ch07 實驗規格（使用者 2026-10-04 選）：所有對照組用**同一套縮小規格**並排比，另附一次原規格（20 epoch）的完整紀錄。縮小規格見「ch07 實測」。
+
+## 環境（實測 2026-10-04）
+- Python 3.12.3、torch 2.11.0+cu128、numpy 2.5.3、tqdm 4.70.1、cuDNN 91900。
+- GPU：NVIDIA RTX PRO 4000 Blackwell（23.9 GiB），WSL2；RAM 47 GB。
+- 共用 venv 在 repo 根目錄 `.venv`；在 `HW02/` 裡用 `../.venv/bin/python train.py`。`train.py:12`、`predict.py:15` 寫死 `device = "cuda"`，**這是刻意的設計**，教材以中性描述，不列為問題或練習。
+
+## 資料與檔案
+- 來源：本機 Kaggle zip `ml2022spring-hw2.zip`（480,098,274 bytes，Windows Documents/poyi/ml_2022_data；zip 內是巢狀的 `libriphone/libriphone/`）。解到 `HW02/libriphone/`，約 511 MB。官方 notebook 用 `wget` 從 GitHub release 下載 `libriphone.zip`。
+- `HW02/.gitignore`：`libriphone/*`、`*.csv`、`*.ckpt`。但 `HW02/prediction.csv`（6,066,399 bytes，646,269 行）**在 .gitignore 之前就被加進 git，所以仍被追蹤**；重跑 predict.py 會改到它。`HW02/model.ckpt`（80,264,975 bytes）沒被追蹤。
+- `libriphone/` 的內容：
+  - `train_split.txt` 69,380 bytes、4286 行（訓練＋驗證的句子 id）；`train_labels.txt` 6,903,008 bytes、4286 行；`test_split.txt` 17,440 bytes、1078 行。（`wc -l` 印 4285／1077，因為最後一行沒有換行字元。）
+  - `feat/train/` 4286 個 `.pt`、`feat/test/` 1078 個 `.pt`。
+  - 句子 id 格式 `說話者-章節-句號`，例如 `2007-149877-0023`。前 3 個訓練 id：`2007-149877-0023`、`60-121082-0044`、`5688-41232-0018`；前 3 個測試 id：`1963-142776-0022`、`1841-150351-0006`、`481-123720-0082`。
+- `train_labels.txt` 一行一句：`句子id 標籤 標籤 …`，每個音框一個 0–40 的整數。第一行開頭：`2007-149877-0023 0 0 0 …（45 個 0）… 29 29 29 29 29 29 39 39 …`。
+- 每個 `.pt` 是 `torch.load` 讀出來的 float32 tensor，形狀 (T, 39)。例：`2007-149877-0023.pt` 是 (500, 39)，檔案 78,699 bytes；第 0 格前 8 維 `[-2.0803, -0.7538, -0.4708, -0.1630, 0.5476, -0.4360, 1.2979, -0.3249]`。
+- 每一句的 39 維**各自**平均 ≈ 0（全部句子、全部維度 |平均| 最大 4.6e-07）、標準差 ≈ 1（0.99999994–1.00000012）：投影片 p.11 說的「39-dim MFCC w/ CMVN」，CMVN 是逐句做的。
+- 每一句的音框數 T 與標籤數完全相同（4286 句全部核過）。
+- 音框數：訓練＋驗證 **2,644,158** 格；T 最小 139、p10 293、中位數 620、平均 616.9、p90 933、最大 998。測試 **646,268** 格；T 最小 176、中位數 598、最大 998。
+- **投影片與資料不一致**：投影片 p.10 寫「Training: 4268 preprocessed audio features with labels (total 2644158 frames)」，實際是 **4286** 句；音框數 2,644,158 一致（4268 應是 4286 的筆誤）。測試「1078 … total 646268 frames」一致。
+- 41 類（id 0–40）。投影片與 repo 都**沒有**給 id 對應的音素名稱，教材不要自己編。各類音框數（全部 4286 句）：
+
+  | id | 音框數 | 比例 | | id | 音框數 | 比例 | | id | 音框數 | 比例 |
+  |---|---|---|---|---|---|---|---|---|---|---|
+  | 0 | 460,513 | 0.1742 | | 37 | 83,036 | 0.0314 | | 9 | 41,980 | 0.0159 |
+  | 31 | 159,347 | 0.0603 | | 36 | 75,033 | 0.0284 | | 29 | 40,291 | 0.0152 |
+  | 2 | 139,635 | 0.0528 | | 25 | 72,454 | 0.0274 | | 26 | 39,782 | 0.0150 |
+  | 4 | 131,318 | 0.0497 | | 8 | 69,750 | 0.0264 | | 24 | 35,515 | 0.0134 |
+  | 5 | 126,718 | 0.0479 | | 10 | 67,376 | 0.0255 | | 3 | 34,806 | 0.0132 |
+  | 27 | 104,399 | 0.0395 | | 28 | 64,611 | 0.0244 | | 15 | 30,466 | 0.0115 |
+  | 39 | 97,567 | 0.0369 | | 6 | 64,547 | 0.0244 | | 13 | 26,633 | 0.0101 |
+  | 30 | 88,165 | 0.0333 | | 40 | 61,729 | 0.0233 | | 11 | 26,191 | 0.0099 |
+  | 19 | 85,522 | 0.0323 | | 14 | 52,479 | 0.0198 | | 34 | 23,968 | 0.0091 |
+  | | | | | 23 | 47,634 | 0.0180 | | 21 | 18,381 | 0.0070 |
+  | | | | | 35 | 47,302 | 0.0179 | | 16 | 17,678 | 0.0067 |
+  | | | | | 12 | 46,158 | 0.0175 | | 38 | 16,303 | 0.0062 |
+  | | | | | 32 | 44,775 | 0.0169 | | 1 | 15,485 | 0.0059 |
+  | | | | | 33 | 44,615 | 0.0169 | | 7 | 14,095 | 0.0053 |
+  | | | | | | | | | 18 | 13,496 | 0.0051 |
+  | | | | | | | | | 22 | 7,696 | 0.0029 |
+  | | | | | | | | | 17 | 5,365 | 0.0020 |
+  | | | | | | | | | 20 | 1,344 | 0.0005 |
+
+  （由多到少，分三欄排；最多的第 0 類 460,513 格，最少的第 20 類 1,344 格，差 343 倍。）
+- 第 0 類：4286 句裡有 4281 句**第一格**是 0、4244 句**最後一格**是 0。據此推測它是靜音／停頓，但**資料沒有標明**，教材要寫成推測。
+- 連續相同標籤的一段（segment）：共 276,010 段；每段平均 9.58 格、中位數 7、p90 16、最大 305；**73.12% 的段短於 11 格**（也就是 11 格的視窗常常橫跨兩個以上的音素）。
+- 投影片 p.8：每格 25 ms（投影片原文 "each frame only contains 25 ms of speech"）。投影片沒寫 frame shift，教材不要自己補。
+
+## 切分（utils.py:54-60，config.py:5）
+- `train_ratio = 0.9`（config.py:5）會傳進 `preprocess_data`，蓋掉函式預設的 0.8（utils.py:42）。`train_val_seed=1337` 用預設值。
+- 以**句**為單位切：`random.seed(1337)` 後 `random.shuffle` 4286 行，前 `int(4286*0.9)=3857` 句當訓練，後 429 句當驗證。
+  - 訓練 3,857 句、**2,379,588** 格；驗證 429 句、**264,570** 格（與 train.py 印出的形狀一致）。
+  - 前 3 個驗證 id：`5049-25947-0112`、`1898-145724-0020`、`6019-3185-0096`。
+- 說話者：訓練 250 人、驗證 184 人、測試 231 人；**驗證的 184 人全部也出現在訓練集；測試的 231 人也全部出現在訓練＋驗證**。所以驗證集量的是「看過的說話者、沒看過的句子」，與測試集同一種情況。
+- 驗證集多數類別：第 0 類 46,898 格，佔 **0.177261**。也就是「全部猜 0」在驗證集上的準確率是 0.177261（多數類別基準）。
+- 官方 sample 的比例 0.8：訓練 3,428 句、2,116,368 格；驗證 858 句、527,790 格（與本 repo 的驗證集不同）。
+
+## 拼接（utils.py:13-39；ch02）
+- `hw02_facts.py concat` 的逐字輸出（T=4、每格 2 維的小例子）：
+  ```
+  x (T=4, dim=2):
+  tensor([[1., 2.],
+          [3., 4.],
+          [5., 6.],
+          [7., 8.]])
+  shift(x, 1):
+  tensor([[3., 4.],
+          [5., 6.],
+          [7., 8.],
+          [7., 8.]])
+  shift(x, -1):
+  tensor([[1., 2.],
+          [1., 2.],
+          [3., 4.],
+          [5., 6.]])
+  concat_feat(x, 3):
+  tensor([[1., 2., 1., 2., 3., 4.],
+          [1., 2., 3., 4., 5., 6.],
+          [3., 4., 5., 6., 7., 8.],
+          [5., 6., 7., 8., 7., 8.]])
+  concat_feat(x, 5):
+  tensor([[1., 2., 1., 2., 1., 2., 3., 4., 5., 6.],
+          [1., 2., 1., 2., 3., 4., 5., 6., 7., 8.],
+          [1., 2., 3., 4., 5., 6., 7., 8., 7., 8.],
+          [3., 4., 5., 6., 7., 8., 7., 8., 7., 8.]])
+  ```
+  注意 `shift(x, n)` 的 n>0 是「往後看 n 格」（第 t 列變成第 t+n 格，尾端用最後一格補），n<0 是往前看。concat 後每一列由左到右是第 t−k … t … t+k 格。
+- 標籤也拼（本 repo 的改動，utils.py:83-84）：`2007-149877-0023` 拼 11 格後第 44–50 列：
+  ```
+  tensor([[ 0,  0,  0,  0,  0,  0, 29, 29, 29, 29, 29],
+          [ 0,  0,  0,  0,  0, 29, 29, 29, 29, 29, 29],
+          [ 0,  0,  0,  0, 29, 29, 29, 29, 29, 29, 39],
+          [ 0,  0,  0, 29, 29, 29, 29, 29, 29, 39, 39],
+          [ 0,  0, 29, 29, 29, 29, 29, 29, 39, 39, 39],
+          [ 0, 29, 29, 29, 29, 29, 29, 39, 39, 39, 39],
+          [29, 29, 29, 29, 29, 29, 39, 39, 39, 39, 39]])
+  ```
+  第 j 欄 = 第 t−5+j 格的標籤，中間第 5 欄（0 起算）就是原本那一格的標籤。
+- 實際特徵：(500, 39) → (500, 429)；第 0 列的前 6 個 39 維區塊（第 −5..0 格）都等於第 0 格（句首用第 0 格補）；第 10 列的最後一塊（第 10 塊）等於第 15 格。
+
+## 記憶體（utils.py:69-73、86-95；ch02）
+- `torch.empty(3000000, 429)` float32：5,148,000,000 bytes（4.794 GiB）。標籤緩衝 `torch.empty(3000000, 11, dtype=torch.long)`：264,000,000 bytes（0.246 GiB）。
+- `X = X[:idx, :]` 是 view，**仍保留整塊 5,148,000,000 bytes**；驗證集只需要 454,002,120 bytes（264,570 × 429 × 4）。train 與 val 各配一次，所以兩塊加起來約 10.3 GB 一直留在記憶體（`del train_X, …` 刪掉的只是名字，Dataset 還握著同一塊 storage）。
+- `LibriDataset.__init__` 的 `torch.LongTensor(y)`：y 已經是 int64 tensor 時**不複製**（與 y 共用記憶體，實測 data_ptr 相同）。
+- 官方 sample 的 `max_len = 3000000` 同樣寫法（concat 1 時只有 39 欄，約 0.47 GB）。
+- <!-- 尚未量：train.py 的峰值 RSS（/usr/bin/time -v 的 Maximum resident set size），baseline 跑完後補 -->
+
+## 形狀（ch03）
+- 每個 epoch 的 batch 數（batch_size 64）：train 37,182（最後一個 batch 4 筆）、val 4,134（最後一個 58 筆）、test 10,098（最後一個 60 筆）。
+- 一個 batch：features (64, 429) float32、labels (64, 11) int64；`features.view(-1, 11, 39)` → (64, 11, 39)。
+- `view` 可以直接用，因為 429 欄的排列是「第 −5 格的 39 維、第 −4 格的 39 維、…」（frame-major），正好是 (11, 39) 的 row-major 排列。
+
+## 模型（model.py；ch00 模型總覽、ch04）
+- `print(model)`（train.py:39）逐字：
+  ```
+  Classifier(
+    (lstm): LSTM(39, 512, num_layers=10, batch_first=True, dropout=0.5)
+    (out): Linear(in_features=512, out_features=41, bias=True)
+  )
+  ```
+- 參數：
+  - 第 0 層：`weight_ih_l0` (2048, 39) 79,872；`weight_hh_l0` (2048, 512) 1,048,576；`bias_ih_l0`、`bias_hh_l0` 各 (2048,) 2,048。小計 **1,132,544**。2048 = 4 個 gate × 512。
+  - 第 1–9 層每層：`weight_ih` (2048, 512) 1,048,576 + `weight_hh` (2048, 512) 1,048,576 + 兩個 bias 4,096 = **2,101,248**；9 層 18,911,232。
+  - `out`：(41, 512) 20,992 + 41 = **21,033**。
+  - 總計 **20,064,809**（手算 1,132,544 + 9 × 2,101,248 + 21,033 = 20,064,809）。checkpoint 80,264,975 bytes ≈ 20,064,809 × 4 bytes + key 名稱等額外資訊。
+  - 公式：每層 4·h·(輸入維度 + h) + 2·4·h（PyTorch 的 LSTM 有 `bias_ih`、`bias_hh` 兩組 bias）。
+- 形狀：輸入 (64, 11, 39) → `lstm_out` (64, 11, 512)、`h_n` (10, 64, 512)、`c_n` (10, 64, 512) → `out` (64, 11, 41)。`lstm_out[:, -1]` 等於 `h_n[-1]`（最後一層的最後時間點；model.py:25 的註解只在這個意義下對）。
+- `Classifier(input_dim=429, hidden_layers=1, hidden_dim=512)`：`input_dim`、`hidden_layers` 傳進去**沒被用到**（model.py:9 寫死 `input_size=39`、model.py:11 寫死 `num_layers=10`）；只有 `hidden_dim` 有作用。
+- **單向（因果）**：把 eval 模式下輸入的第 6–10 格換成別的亂數，中間第 5 格的輸出**完全不變**（`torch.equal` 為 True），最後一格的輸出會變。所以被評分的中間格只看得到第 0–5 格（前 5 格加自己）。
+- `model_dnn.py`：官方 sample 的模型，沒有任何程式 import 它（train.py:2、predict.py:6 都是 `from model import *`）。官方 sample 設定（輸入 39、hidden 256、1 個 hidden layer）參數 **86,569**；若用本 repo 的 config（429、1、512）是 503,849。
+- model.py 的註解是簡體中文、從 MNIST 的 RNN 範例抄來的：model.py:9「图片每行的数据像素点」、model.py:12 解釋 batch_first、model.py:20「h_n 是分线, h_c 是主线」、model.py:24-25「选取最后一个时间点的 r_out 输出」；model.py:27 留著原本的 `out = self.out(lstm_out[:, -1, :])  - original`，實際用的是 model.py:28 的全部位置。
+
+## 原版 notebook vs 本 repo（index「2022 vs 現在」與 ch07 的素材）
+- 一個 notebook 拆成 7 個檔：config.py、utils.py、data_loader.py、model.py、model_dnn.py、train.py、predict.py。Colab 專屬的 `!nvidia-smi`、`!wget`、`!unzip` 拿掉。
+- 超參數（原版 → 本 repo）：`concat_nframes` 1 → **11**；`train_ratio` 0.8 → **0.9**；`batch_size` 512 → **64**；`num_epoch` 5 → **20**；`hidden_dim` 256 → **512**；`seed` 0、`learning_rate` 0.0001、`hidden_layers` 1 不變（但 hidden_layers 在本 repo 沒作用）。新增 `input_dim_lstm = 39`。
+- 模型：原版 `BasicBlock`(Linear+ReLU) 疊成的 DNN（現在在 model_dnn.py，沒被用）→ **10 層單向 LSTM**，hidden 512、dropout 0.5，對 11 個位置各輸出 41 類。
+- 標籤：原版每格 1 個標籤 `y` (N,) → 本 repo 拼成 (N, 11)（utils.py:73、83-84、89；原版那行留成 `- original` 註解）。
+- 訓練：原版 `loss = criterion(outputs, labels)` → 本 repo 把 (64, 11, 41) 攤成 (704, 41) 對 704 個標籤算 loss（11 個位置一起算），準確率只取中間第 5 格（train.py:63-72、93-100，標 `# new`）。
+- 預測：多了 `features.view(...)` 與取中間格（predict.py:39、43）。
+- 原版的 `same_seeds` 也是在建 DataLoader 之後、建模型之前呼叫，本 repo 順序相同。
+- 原版的 device 是 `'cuda:0' if torch.cuda.is_available() else 'cpu'`，本 repo 寫死 `"cuda"`（刻意的，見「環境」）。
+
+## 投影片重點（hw2_slides 2022.pdf）
+- p.4：資料前處理（從波形抽 MFCC）助教已經做好；學生做的是逐音框（framewise）音素分類。
+- p.5：phoneme 定義與例子「Machine Learning → M AH SH IH N L ER N IH NG」，每個音素佔好幾格。
+- p.6–7：39 維 MFCC（另提 80 維 filter bank）。
+- p.8：每格只有 25 ms，一個音素通常橫跨好幾格 → 把相鄰的格拼起來；圖示 11 格 × 39 = 429 維、shape (1, 429)。「Finding testing labels or doing human labeling are strictly prohibited!」
+- p.10：LibriSpeech train-clean-100 的子集；訓練 4268（應為 4286，見上）句 2,644,158 格；測試 1078 句 646,268 格；41 類。
+- p.11–12：檔案結構；每個 .pt 是 (T, 39)；使用額外資料成績 × 0.9。
+- p.14：Kaggle 4%、程式 2%、報告 4%。
+- p.15 Kaggle public baselines（逐字）：Simple **0.45797**（sample code）；Medium **0.69747**（concat n frames, add layers）；Strong **0.75028**（concat n, batchnorm, dropout, add layers）；Boss **0.82324**（sequence-labeling(using RNN)）。
+- p.16：評估指標 accuracy；截止 2022/3/18 23:59 (UTC+8)。p.18：每天最多 5 次上傳、選 2 個進 private leaderboard。
+- p.20 報告題（逐字要點）：1. (2%) 參數量差不多的兩個模型，(A) 窄而深（例 hidden_layers=6, hidden_dim=1024）、(B) 寬而淺（例 hidden_layers=2, hidden_dim=1700），報告 training/validation accuracy。2. (2%) 加 dropout，報告 dropout rate (A) 0.25、(B) 0.5、(C) 0.75 的 training/validation accuracy。
+- 本 repo **沒有** Kaggle 測試集的分數（沒有上傳紀錄）。教材只能說驗證集準確率落在哪兩條基準線之間，**不能宣稱通過了哪條 Kaggle 基準線**。
+
+## 驗證指標檢查（Phase 0，2026-10-04；ch05）
+- 結論：**沒有偏差**。2026-10-03 那次訓練（`HW02/model.ckpt`）印出的最佳 val acc 是 0.642；同一個 checkpoint 在整個驗證集上一次算完：中間格答對 **169,842 / 264,570 = 0.641955**。
+- 原因（與 HW01 不同）：
+  1. `val_loader` 是 `shuffle=False`（train.py:32），而且順序本來就不影響總和。
+  2. `val_acc` 是逐 batch 累加**答對的個數**（train.py:104），最後除以 `len(val_set)`（train.py:108），不是各 batch 平均再平均；最後一個 58 筆的 batch 權重正確。
+  3. 驗證時 `model.eval()`（dropout 關掉）＋ `torch.no_grad()`。
+  4. 唯一的「挑選」是 20 個 epoch 裡挑 val acc 最高的存檔（train.py:112-115），驗證集同時被拿來選 epoch，所以 0.642 對沒看過的資料略為樂觀；但數字本身就是那個 checkpoint 在整個驗證集上的真實準確率。
+- 印出的 val loss 是各 batch 平均再平均（train.py:105、108 除以 `len(val_loader)`），最後一個 batch 只有 58 筆卻佔一樣的權重；只影響 loss 的第 4 位小數級，不影響 acc。<!-- 精確差多少待 baseline 跑完用 hw02_exp.py 補 -->
+- train acc（train.py:76、108）是在 `model.train()`（dropout 開著）下、邊更新邊量的，所以和 val acc 不能直接比。
+- 同一個 checkpoint 各位置（第 0–10 格，第 5 格是中間）的準確率：
+  `[0.4555, 0.525, 0.5692, 0.6013, 0.6244, 0.642, 0.6556, 0.6659, 0.6728, 0.6783, 0.6827]`
+  單調上升：越後面的位置看得到越多過去的格子。第 10 格的 0.6827 比中間格高，但它預測的是**另一格**（t+5）的標籤，不能拿來當作中間格的答案。
+
+## 執行實測
+<!-- baseline（原規格 20 epoch）2026-10-04 在 scratch 複本執行中；跑完補：每 epoch 逐字輸出、時間、最佳 epoch、峰值 RSS、predict.py 時間與輸出 -->
+- 2026-10-03 跑過一次（使用者紀錄）：val acc 0.642。
+
+## 實驗工具（docs/tools/hw02_exp.py、hw02_run_grid.sh）
+- `hw02_exp.py` 預設參數就是 train.py；亂數順序照 train.py：preprocess（python random，seed 1337）→ 建 DataLoader → `same_seeds(0)` → 建模型 → AdamW。
+- 2026-10-04 驗證：`--epochs 1` 印出 `[001/001] Train Acc: 0.495127 Loss: 1.802524 | Val Acc: 0.576195 loss: 1.500938`，與 train.py 第 1 個 epoch 的四個數字逐位相同。因為 batch 64 時亂數流與 train.py 相同，`--epochs 5` 的結果就是 20 epoch baseline 的前 5 個 epoch。
+- `hw02_run_grid.sh <runs.txt> <out.jsonl> [parallel]`：ch07 的實驗清單是 `docs/tools/hw02_ch07_runs.txt`。
+- 時間：本機 GPU 同時有別的 session 的工作，所以每個 epoch 的秒數只是「量級」，不是乾淨的基準（例：驗證用的 1 epoch run 花了 942 s，同時有 baseline 與另一個 session 在跑）。
+
+## repo 問題清單（教材附錄素材；本 repo 照原樣保留，未修）
+1. config.py:17 `hidden_layers = 1` 沒作用，model.py:11 寫死 10 層；`input_dim` 也沒作用（model.py:9 寫死 39）。
+2. model.py 註解從 MNIST 範例抄來，與實際用途不符（見「模型」）。
+3. 單向 LSTM：被評分的中間格看不到未來 5 格。
+4. model_dnn.py 沒被 import（死碼）。
+5. utils.py:69-70 預先配 3,000,000 × 429 float32（5.15 GB），切片後仍保留整塊，train/val 合計約 10.3 GB。
+6. 投影片 p.10「4268」句，實際 4286 句。
+7. predict.py:29-30 `test_acc`、`test_lengths` 宣告了沒用。
+8. prediction.csv 被 git 追蹤（在 .gitignore 加 `*.csv` 之前就加入了），重跑 predict.py 會改到它。
+9. 印出的 val loss 是 batch 平均再平均（最後一個 batch 58 筆），只影響 loss，不影響 acc。
+
+## 已在前面章節定義過的名詞
+（寫章的 session 每章追加；後續章節不必重講，可簡短回指。）
