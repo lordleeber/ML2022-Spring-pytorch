@@ -421,6 +421,17 @@
   - 前面頁面改動：index〈第二層〉exBERT 那句改成 2026-10-04 的現況（Space RUNNING、頁面載得到、互動功能沒試）；outline 預計 TODO 第 6 章那條改成已完成。
   - 回指（不重講）：ch00 0.1 題目不在 repo 與「第 N 組問答」約定、0.3 環境、0.5 主程式 125–138／stdout／12.3 s、LOAD REPORT、0.6 BERT 圖重跑逐位元相同與 img/ 複本；ch01 1.6 torch.no_grad()；index 的 Hugging Face、Space、〈第二層〉hw9_bert.zip 404。
 
+- ch07（第 7 章，2026-10-04 雲端）：
+  - 圖號：圖 7.1（img/bert_embedding.png）、圖 7.2（img/ch07_unimplemented.png）、圖 7.3（距離矩陣讀法 SVG：layer 12「蘋」歐氏矩陣 10×10、格色依實測值近似 viridis；紅框水果 0–4、藍框公司 5–9；白虛線 (2,6)／(6,2) 都是 12.85；右側說明對角線、對稱、歐氏暗＝近 vs cosine 亮＝像）、圖 7.4（img/ch07_cosine.png）、圖 7.5（img/ch07_layer0.png）、圖 7.6（img/ch07_layer_sweep.png）、圖 7.7（img/ch07_layer8.png）、圖 7.8（img/ch07_guo.png）、圖 7.9（img/ch07_font_droid_only.png）、圖 7.10（img/ch07_font_none.png）。
+  - 本章正式定義的名詞：本書的分組（水果 0–4、公司 5–9；句 2 蘋果茶、句 7 蘋果手機）、bert-base-chinese 一字一 token、英文 [UNK]、`BertModel`（沒有 qa_outputs）、TODO 區的四個可改處（select_word_index、兩個函式、METRIC、LAYER）、word（tokenizer 的 word）vs 字元 vs token、`word_to_tokens`／`TokenSpan`（.start／.end）、`char_to_token`、歐氏距離（公式）、L2 norm、`np.linalg.norm`、cosine similarity（公式、內積）、距離 vs 相似度方向相反、`pairwise_distances`（metric 給字串或函式，對角線也呼叫）、`colorbar`、`np.ndenumerate`、`plt.text(x, y)` 的參數順序、token／position／token_type embedding、LayerNorm（一句）、組內／組間、組間 ÷ 組內比值、最近鄰檢查、CJK、`plt.rcParams`（全域設定）、`font_manager.fontManager.addfont`、font fallback（font.family 清單）、`gdown`（一句）、sklearn `metric='cosine'` 是 1 − cosine similarity（現在的做法框）。
+  - 本章用語：句子編號 0–9（和 list 一致）；「把第 N 行改成…」＝改 HW09/bert_embedding.py 後在 HW09/ 重跑 `../.venv/bin/python bert_embedding.py`。
+  - 本章手算（由本 FACTS 推得）：組間 ÷ 組內（水果／公司）L0 0.91／1.83、L4 1.23／1.29、L8 1.37／1.38、L9 1.39／1.45、L10 1.39／1.40、L11 1.40／1.36、L12 1.34／1.18；cosine 組內 − 組間 layer 4–11 約 0.06–0.11、L12 水果 0.163／公司 0.094；layer 4–12 歐氏組間 − 組內 ≥ 2.8；layer 12 最近的一句 8 句同組（錯句 2、7），句 5、8、9 的第 2／3 近也有句 2。
+  - 標明為推論或未驗證的：第 116 行轉置（由參數順序推得）；句 7 靠近句 0 是表層句型；句 5 離群是 [UNK] 還是「發振」沒拆開；句 2 偏公司、「蘋」與「果」不同的原因不明。
+  - TODO：量測工具 stdout 節錄與執行時間（可選）。
+  - **雲端發現的 FACTS 疑點**：(1)「BERT 實測 → Q28–30」說「layer 8–9 分得最開（組間 − 組內 = 4.2–4.9）」——用差值看 layer 6、8–12 都在 3.9–4.9；用比值看 layer 8–11 都在 1.36–1.45（layer 9 最高），ch07 改寫成「layer 8–11 維持最開、layer 9 略高」。(2)「ch07 實測 → 各層」看圖描述說 cosine「layer 4–9 差距最大」——照表 layer 8–10 的差距最大（0.09–0.11），layer 12 水果組 0.163 是全表最大；ch07 照表寫。
+  - 前面頁面改動：outline 對照表 ch07 的「字型 20–24」改成 22–24。
+  - 回指（不重講）：ch00 0.1 題目不在 repo、0.3 環境、0.5 主程式 85–94／117–120、stdout、6.7 s、LOAD REPORT、0.6 重跑逐位元相同；ch01 1.6 torch.no_grad()；ch04 4.5 viridis；ch06 6.3 tokenizer／WordPiece／[CLS]／[SEP]／[UNK]／token_type_ids／`model(**…)`、6.6 hidden_states 13 個元素與 layer 0、6.9 cosine 直覺；index〈先說在前面〉第二層。
+
 ## index／outline 審稿補測（2026-10-03，本機）
 - 舊版套件能不能裝（用 `uv pip install --target <scratch>` 試，不動 .venv）：
   - `lime==0.1.1.37`：**裝得起來**，在 Python 3.12 上也能跑。它另外依賴 `progressbar`（2.5），pip 會一起裝。舊版的進度條是 `progressbar` 的 `|####|` 樣式，不是 tqdm。用它對圖 0 跑同一段 LIME（seed 16、start_label=1、logits）：前 5 名 (21, 5.5216)、(25, 3.5899)、(38, 3.1247)、(27, 3.0233)、(40, 2.9437)，R² 0.8423，**和 0.2.0.1 完全相同**。所以換版本不影響 Q1–4 的結果。
