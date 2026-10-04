@@ -410,6 +410,17 @@
   - 冷讀後補的：5.5 節加「本章另外量的數字從哪來」框（點名 `docs/tools/hw09_ch05_ig.py`、在 HW09/ 裡跑）；自我測驗第 1 題附照字面改第 265 行的示意碼（未執行，標 TODO）。
   - 回指（不重講）：ch00 0.1 題目不在 repo、0.5 IG 0.7 s、0.6 重跑極細微差異；ch01 1.4 getbatch、1.5 normalize／permute、1.6 預測表與批次 vs 單張、1.7 model.eval()；ch03 3.2 鏈鎖律、3.3 requires_grad_()／.grad 累加／zero_grad、3.6 logit 梯度與 softmax 飽和、3.7 unsqueeze 與 float64 累加器、3.10 彩色、Pearson、hot、torch.autograd.grad；ch04 第 203 行 hook 已拿掉、自我測驗第 2 題（權重被改）、4.7 batch 互不影響、白雜訊、requires_grad_(False)。
 
+- ch06（第 6 章，2026-10-04 雲端）：
+  - 圖號：圖 6.1（第 3 組問答 56 個 token 序列 SVG：位置 0–13、14/15/26/43/49/50/54/55，框上 token、框下位置與 token_type_ids；紅＝問題、綠＝文章、藍＝答案 cats(12)、灰＝[CLS]/[SEP]；Cats(43) 綠）、圖 6.2（13 個 hidden states SVG：input_ids → embedding 層 → hs[0]（灰虛線「程式跳過」，第 91 行 [1:]）→ 第 1…12 層 → hs[k] (1, 56, 768) → 紫框 PCA 768→2 → layerk.png；hs[12] → qa_outputs Linear(768, 2)）、圖 6.3（img/ch06_pca_variance.png）、圖 6.4（img/ch06_q3_layers.png）、圖 6.5（img/ch06_q1_layers.png）、圖 6.6（img/ch06_q2_layers.png）。
+  - 本章正式定義的名詞：Topic II 三種方法（Attention Visualization／Embedding Visualization／Embedding analysis）、attention（直覺：權重和為 1 的加權混合）、attention head、feed-forward network（FFN，768→3072→768）、Transformer（一句：BERT 所屬的模型類別）、exBERT、Hugging Face Space（回指 index）、cased、`transformers` 套件（一句）、pooler（一句，回指 ch00 LOAD REPORT）、tokenizer、WordPiece 與 `##` 片段、token id、[CLS]（101，含問答的「無答案」用途）／[SEP]（102）／[PAD]（0）／[UNK]（100）、token_type_ids、attention_mask（一句）、`return_tensors='pt'`、`**inputs`、BertForQuestionAnswering 與 qa_outputs、起點／終點分數（start/end logit；答案分數 = 起點 + 終點）、SQuAD 2.0 的「無答案」、hidden_states（13 個元素；hidden states 名稱的意思）、embedding 層（查表 + 位置 + token_type，看不到上下文）、PCA（主成分、投影）、explained variance ratio、sklearn 的 `fit_transform`、PCA 的 random_state（近似算法的亂數）、cosine similarity（直覺一句，正式定義在第 7 章）、q-q／c-c／q-c／答案→問題排名（本章自訂的量）、步驟 1 與 3 的差別（本書的讀法）、t-SNE／UMAP、`output_attentions=True`、問答 pipeline（現在的做法框，一句，未實測）。
+  - 本章用語：「第 1／2／3 組問答」（不寫 Q1–Q3）；「layer k」＝`hidden_states[k]`、layer 0＝embedding 層；「讀圖要注意的三件事」（6.7 warn 框：各層各自 fit、正負號任意、fit 含不畫的特殊 token）。
+  - 本章手算／推得（由本 FACTS 推得，非另外量）：參數 107,721,218 ÷ 14,162,827 ≈ 7.6 倍；第 2 組 layer 12 y 範圍 −24.6 而畫出的點最低 −9.6 → 最低點是不畫的 [CLS] 或 [SEP]（哪一個標 TODO）；第 3 組句號 8 個。
+  - 標明為推論的：第 3 組變異比例較高可能因為重複短句；layer 1 接近 embedding 層是因為一次 attention 混進的上下文還不多；layer 12 高 cosine 與高變異比例一致；步驟 1／3 的讀法。
+  - TODO：第 2 組第 12 層 y = −24.6 的特殊 token 是哪一個；自我測驗第 6 題（第 103 行改成 `word.lower()`）照字面跑一次；量測工具 stdout 節錄（可選）。
+  - **雲端發現的 FACTS 疑點**：「ch06 實測 → PCA 保留的變異比例」說「三條線在 layer 0–10 大致平（0.12–0.26），layer 11 起上升」——照同一張表，第 1、2 組從 layer 8 就逐步上升（第 1 組 0.150 → 0.169 → 0.188 → 0.223），只有第 3 組到 layer 10 持平。ch06 照表寫。
+  - 前面頁面改動：index〈第二層〉exBERT 那句改成 2026-10-04 的現況（Space RUNNING、頁面載得到、互動功能沒試）；outline 預計 TODO 第 6 章那條改成已完成。
+  - 回指（不重講）：ch00 0.1 題目不在 repo 與「第 N 組問答」約定、0.3 環境、0.5 主程式 125–138／stdout／12.3 s、LOAD REPORT、0.6 BERT 圖重跑逐位元相同與 img/ 複本；ch01 1.6 torch.no_grad()；index 的 Hugging Face、Space、〈第二層〉hw9_bert.zip 404。
+
 ## index／outline 審稿補測（2026-10-03，本機）
 - 舊版套件能不能裝（用 `uv pip install --target <scratch>` 試，不動 .venv）：
   - `lime==0.1.1.37`：**裝得起來**，在 Python 3.12 上也能跑。它另外依賴 `progressbar`（2.5），pip 會一起裝。舊版的進度條是 `progressbar` 的 `|####|` 樣式，不是 tqdm。用它對圖 0 跑同一段 LIME（seed 16、start_label=1、logits）：前 5 名 (21, 5.5216)、(25, 3.5899)、(38, 3.1247)、(27, 3.0233)、(40, 2.9437)，R² 0.8423，**和 0.2.0.1 完全相同**。所以換版本不影響 Q1–4 的結果。
