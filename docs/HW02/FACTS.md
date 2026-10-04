@@ -321,6 +321,7 @@
 ## 已在前面章節定義過的名詞
 （寫章的 session 每章追加；後續章節不必重講，可簡短回指。）
 - ch00：音素、音框、MFCC、logits、LSTM（概念層次）、gate（只說 4 組，細節在 ch04）、`h_n`/`h_c`、過擬合、wall clock、stdout/stderr 與 tqdm、多數類別基準（ch00 成績表先出現，ch01 定義）。
+- ch07：縮小規格、hw02_exp.py 的用法（docs/tools，不進 listing）、欠擬合、圖 7.1 階梯（單色 #3987e5、Kaggle 基準線黃虛線）、單一種子的限制、Optuna（現在的做法）。
 - ch06：load_state_dict 需要先建同樣的模型、test_acc/test_lengths 殘骸、np.concatenate 平方成長與 int32→int64、Id ＝依 test_split 順序接起來的格號、測試集不能打亂、混淆（成對錯誤）、prediction.csv 被追蹤與 git checkout 還原。
 - ch05：same_seeds 各行的作用、cuDNN deterministic/benchmark、CrossEntropyLoss（mean）、AdamW 預設（betas 0.9/0.999、eps 1e-8、weight_decay 0.01，實測）、704 = 64×11 攤平、torch.max 回傳 (值, 位置)、Train Acc 的量測條件、state_dict、驗證指標沒有偏差的四條理由、val loss 是 11 格平均、過擬合、early stopping（本 repo 沒有）、圖 5.1。
 - ch04：RNN、h_t/c_t、四組閘公式（i,f,g,o，PyTorch 疊放順序 ii|if|ig|io）、初始狀態 None=全 0、層間 dropout 9 處、因果性（causal）、雙向 LSTM（輸出 1024 維、Linear 要改）、圖 4.2 各位置準確率（顏色：單向 #3987e5、雙向 #d95926，已過 dataviz 驗證）、model_dnn.py 是死碼、3 層 vs 10 層。
@@ -361,3 +362,6 @@
 - c6a.py（test_split 前三句格數）：`1963-142776-0022` 818 → Id 0..817；`1841-150351-0006` 657 → 818..1474；`481-123720-0082` 220 → 1475..1694。
 - c6b.py（模擬 10,097 批 64 + 1 批 60，CPU）：逐批 `np.concatenate` 4.980 s（再跑 5.056 s），結果 int64、646268 筆；收進 list 最後接一次 0.0012 s（再跑 0.0014 s），兩者相同。
 - prediction.csv（repo 版＝model.ckpt 重跑版）：646,269 行，檔尾有換行；最後兩行 `646266,0`、`646267,0`。預測次數最少：第 1 類 64、第 20 類 166、第 17 類 554、第 22 類 917、第 18 類 1870。
+
+## ch07 實測補充（2026-10-05，本機）
+- 舊 `model.ckpt` 載入雙向結構（LSTM bidirectional=True、Linear(1024,41)）：`RuntimeError: Error(s) in loading state_dict for Classifier: Missing key(s) in state_dict: "lstm.weight_ih_l0_reverse", ...`，訊息裡也有 size mismatch。
