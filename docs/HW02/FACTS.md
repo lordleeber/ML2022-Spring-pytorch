@@ -321,6 +321,7 @@
 ## 已在前面章節定義過的名詞
 （寫章的 session 每章追加；後續章節不必重講，可簡短回指。）
 - ch00：音素、音框、MFCC、logits、LSTM（概念層次）、gate（只說 4 組，細節在 ch04）、`h_n`/`h_c`、過擬合、wall clock、stdout/stderr 與 tqdm、多數類別基準（ch00 成績表先出現，ch01 定義）。
+- ch05：same_seeds 各行的作用、cuDNN deterministic/benchmark、CrossEntropyLoss（mean）、AdamW 預設（betas 0.9/0.999、eps 1e-8、weight_decay 0.01，實測）、704 = 64×11 攤平、torch.max 回傳 (值, 位置)、Train Acc 的量測條件、state_dict、驗證指標沒有偏差的四條理由、val loss 是 11 格平均、過擬合、early stopping（本 repo 沒有）、圖 5.1。
 - ch04：RNN、h_t/c_t、四組閘公式（i,f,g,o，PyTorch 疊放順序 ii|if|ig|io）、初始狀態 None=全 0、層間 dropout 9 處、因果性（causal）、雙向 LSTM（輸出 1024 維、Linear 要改）、圖 4.2 各位置準確率（顏色：單向 #3987e5、雙向 #d95926，已過 dataviz 驗證）、model_dnn.py 是死碼、3 層 vs 10 層。
 - ch03：Dataset 約定（__len__/__getitem__）、一筆＝一格、collate、drop_last、shuffle 在迭代時才抽亂數、view 與 -1、batch_first、TensorDataset。
 - ch02：shift、concat_feat 的三步（repeat → view+permute → shift ×10 → permute+view）、contiguous、view 與 storage、標籤拼接（中間第 5 欄＝原標籤）、預先配置 max_len、虛擬位址 vs RSS、overcommit。
