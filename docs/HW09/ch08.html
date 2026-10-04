@@ -11,7 +11,7 @@
 <header class="chap-header">
   <p class="book-title">ML2022 Spring · HW09 讀碼教材</p>
   <h1>第 8 章　五種方法並排看，與三級題庫</h1>
-  <p class="chap-lead">第 2–5 章各自讀完了 Part 1 的五種方法：LIME、Saliency map、SmoothGrad、Filter explanation、Integrated Gradients。這一章把它們放在同一張圖上：同一張食物照片，五種方法各畫出什麼、各自回答的是哪一個問題、用到了什麼（標籤？梯度？），以及彼此到底一不一致。本章用兩個新的量（Spearman 等級相關與前 10% 像素的 IoU）把「像不像」變成數字，再用一個簡單的 sanity check 確認這些圖真的依賴模型學到的東西。最後是入門、進階、挑戰三級題庫，每一題都有本書實測過的答案，並指回對應的章節。</p>
+  <p class="chap-lead">第 2–5 章各自讀完了 Part 1（解釋 CNN，Q1–20；Part 2 是第 6、7 章的 BERT）的五種方法：LIME、Saliency map、SmoothGrad、Filter explanation、Integrated Gradients。這一章把它們放在同一張圖上：同一張食物照片，五種方法各畫出什麼、各自回答的是哪一個問題、用到了什麼（標籤？梯度？），以及彼此到底一不一致。本章用兩個新的量（Spearman 等級相關與前 10% 像素的 IoU）把「像不像」變成數字，再用一個簡單的 sanity check 確認這些圖真的依賴模型學到的東西。最後是入門、進階、挑戰三級題庫，每一題都有本書實測過的答案，並指回對應的章節。</p>
 </header>
 <main>
 
@@ -25,7 +25,7 @@
 <img src="img/ch08_side_by_side_b.png" alt="同樣 8 欄，列是圖 5 到 9（Egg、Meat、Noodles/Pasta、Seafood、Soup）">
 <figcaption>圖 8.2 — 圖 5–9，同樣 8 欄。</figcaption>
 </figure>
-<p>八欄的來源與畫法：</p>
+<p>八欄的來源與畫法（本章的表格與內文把最後兩欄簡寫成 <strong>IG repo</strong> 與 <strong>IG×x</strong>；圖 8.4 的標籤寫成 IG (repo)、IG x x，是同兩個東西）：</p>
 <ul>
   <li><strong>LIME</strong>：照原程式（<code>np.random.seed(16)</code> 在迴圈外設一次、10 張依序跑、logits、<code>start_label=1</code>、同樣的 <code>get_image_and_mask</code> 參數）。本書核對過圖 0 的前 3 名和第 2 章相同，所以這一欄就是 <code>lime.png</code> 的內容。</li>
   <li><strong>Saliency</strong>：直接呼叫 <code>compute_saliency_maps</code>（10 張一批），就是 <code>saliency.png</code>；二維、<code>plt.cm.hot</code>。</li>
@@ -97,8 +97,9 @@
 <p>兩張圖之間算兩個量，每個量 10 張圖各算一次再平均：</p>
 <ul>
   <li><strong>Spearman 等級相關</strong>（Spearman rank correlation）：先把每張圖的 16,384 個像素各自依數值排名（最小的第 1 名、最大的最後一名），再對兩組<strong>名次</strong>算第 3 章 <a href="ch03.html#logit">3.6 節</a>的 Pearson 相關係數。它只看「誰大誰小的順序」，不管實際數值差多少，所以適合比較單位完全不同的圖（權重、梯度、activation）。1 是順序完全相同，0 是無關。</li>
-  <li><strong>前 10% 像素的 IoU</strong>（Intersection over Union，交集比聯集）：兩張圖各取最亮的 10% 像素（各 1,638 個左右），算「兩邊都選到的像素數 ÷ 至少一邊選到的像素數」。1 是完全重疊，0 是完全不重疊。兩張隨機的圖各選 10%，預期重疊 1%，IoU 約 0.01 ÷ 0.19 ≈ 0.053（手算），這是「純屬巧合」的水準。</li>
+  <li><strong>前 10% 像素的 IoU</strong>（Intersection over Union，交集比聯集）：兩張圖各取最亮的 10% 像素（各 1,638 個左右），算「兩邊都選到的像素數 ÷ 至少一邊選到的像素數」。1 是完全重疊，0 是完全不重疊。兩張隨機的圖各選 10%，預期重疊 1%，IoU 約 0.01 ÷ 0.19 ≈ 0.053（手算；聯集是 10% + 10% − 重疊的 1% = 19%），這是「純屬巧合」的水準。</li>
 </ul>
+<p>同值的像素（例如 LIME 同一塊 superpixel 裡的幾百個像素）怎麼處理，照量測程式的寫法：Spearman 用 SciPy 的 <code>spearmanr</code>，同值的像素給它們名次的平均（例如並列第 3、4、5 名的三個像素都算 4）；「最亮的 10%」是取所有大於等於第 90 百分位數的像素，所以切在某一塊中間時，同值的整塊都算進去，選到的像素可能略多於 10%。LIME 的數字因此帶有「一塊同值」的影響，這是它的單位本來就粗造成的，本書沒有另外量這個影響有多大。</p>
 
 <h3 id="spearman">Spearman：哪兩種最像</h3>
 <figure class="fig">
@@ -155,7 +156,7 @@
 <ul>
   <li><strong>集中程度</strong>（最亮的 1%／10% 像素佔整張圖總和的比例）：如果每個像素一樣大，最亮的 10% 就佔 10%。SmoothGrad 最分散（10% 只佔 0.198；加雜訊平均把值抹開了），LIME 最集中（0.500；只有少數幾塊權重大，而且一塊裡的像素同值）。括號裡的原因是本書的解讀。</li>
   <li><strong>中央 64×64</strong>（第 32–95 列、第 32–95 行，面積是整張的 25%）佔總和的比例：25% 代表完全均勻。有類別資訊的方法都高於 25%：LIME 0.437、IG 0.40 左右、Saliency 0.392，SmoothGrad 低一些（0.324）；filter activation 接近均勻（cnn6 0.260、cnn23 0.287）。這 10 張的食物多在中央，所以這個結果和「它們看的是食物」相符（推論）。</li>
-  <li><strong>和純邊緣的相關</strong>：<strong>Sobel</strong> 是一個經典的 3×3 卷積濾波器，量每個像素附近的亮度變化有多大，結果就是一張「邊緣有多強」的圖。把原圖轉成灰階算 Sobel，再和各方法的圖算 Spearman：七種都在 0.23–0.31。每種方法都有一部分是在描邊，但沒有一種只是邊緣偵測。作為對照，隨機權重模型的 saliency 和 Sobel 只有 0.054（8.5 節）。</li>
+  <li><strong>和純邊緣的相關</strong>：<strong>Sobel</strong> 是一個經典的 3×3 卷積濾波器，量每個像素附近的亮度變化有多大，結果就是一張「邊緣有多強」的圖。把原圖轉成灰階算 Sobel，再和各方法的圖算 Spearman：七種都在 0.23–0.31。每種方法都有一部分是在描邊，但沒有一種只是邊緣偵測（「只是描邊」的話，和 Sobel 的相關應該接近 1；本書沒有另外定門檻）。作為對照，隨機權重模型的 saliency 和 Sobel 只有 0.054（8.5 節）。</li>
 </ul>
 <p>LIME 那一欄還有兩個細節值得對照第 2 章：superpixel 的實際塊數是 107、141、151、101、66、120、108、94、128、109（圖 0–9；<code>n_segments=200</code> 只是目標）；程式的 mask（<code>num_features=11</code>、<code>min_weight=0.05</code>）上色的塊數（綠／紅）是 11/0、4/7、2/9、7/4、10/1、10/1、11/0、11/0、11/0、8/3，<strong>圖 1、2 紅塊比綠塊多</strong>，和第 2 章 <a href="ch02.html#lime-table">2.7 節〈10 張圖的權重〉</a>的觀察一致。上色面積佔整張圖的比例（綠／紅）：圖 0 0.188/0、1 0.051/0.075、2 0.015/0.087、3 0.102/0.041、4 0.429/0.010、5 0.116/0.021、6 0.269/0、7 0.235/0、8 0.180/0、9 0.129/0.047。</p>
 
@@ -185,7 +186,7 @@
 <tr><td>IG repo</td><td>0.161</td><td>0.020</td><td>0.110</td><td>0.143</td><td>0.208</td><td>0.165</td><td>0.182</td><td>0.175</td><td>0.151</td><td>0.114</td><td>0.14</td></tr>
 </tbody>
 </table></div>
-<p>相關很低（平均 0.19 與 0.14），隨機模型的 saliency 和 Sobel 邊緣的相關也只有 0.054。所以這兩種方法的圖<strong>確實依賴模型學到的東西</strong>，不是只把輸入圖的邊緣描出來。這個檢查只說明「沒有犯最基本的錯」，不代表圖就是對的。</p>
+<p>相關很低（平均 0.19 與 0.14），隨機模型的 saliency 和 Sobel 邊緣的相關也只有 0.054。所以這兩種方法的圖<strong>確實依賴模型學到的東西</strong>，不是只把輸入圖的邊緣描出來。這個檢查只說明「沒有犯最基本的錯」，不代表圖就是對的；而且本書只對 Saliency 與 IG 做了，LIME、SmoothGrad、Filter explanation 沒有做。<!-- TODO(本機實測): 若要完整，對 LIME 與 SmoothGrad 也做隨機權重模型的 Spearman --></p>
 
 <div class="note"><h4>本章的數字從哪來</h4>
 <p>本章 8.1–8.5 節的圖與數字，都來自本書另外寫的量測程式 <code>docs/tools/hw09_ch08_compare.py</code>。它 import <code>explain_cnn.py</code> 直接呼叫裡面的函式，不修改它；重跑兩次數字逐位相同。需要 GPU、<code>checkpoint.pth</code> 與 <code>food/</code>（第 0 章 <a href="ch00.html#data">0.4 節</a>），在 <code>HW09/</code> 裡執行：</p>
@@ -229,7 +230,7 @@
   <li>目標是標籤 y、模型很有把握（p<sub>y</sub> ≈ 1）時，對輸入的梯度是 Σ<sub>j≠y</sub> p<sub>j</sub> ∇z<sub>j</sub> − (1 − p<sub>y</sub>) ∇z<sub>y</sub>。如果其他類的機率主要集中在第 2 名，它大約是 p<sub>第2名</sub> · (∇z<sub>第2名</sub> − ∇z<sub>y</sub>)。</li>
   <li>目標換成第 2 名時，梯度大約是 ∇z<sub>y</sub> − ∇z<sub>第2名</sub>。</li>
 </ul>
-<p>兩者方向相反、大小差很多，但 Saliency 會取絕對值再各自 normalize，方向和大小都被消掉，所以圖幾乎一樣。實測兩個原始梯度（不取絕對值，CE 用 <code>reduction='sum'</code>）的 cosine：圖 0 −0.942、2 −0.848、3 −0.992、4 −0.989、5 <b>−1.000</b>、7 −0.934、8 −0.943、9 −0.997，確實接近 −1（方向相反）。「第 2 名佔其他類機率的比例」：圖 0–9 依序 0.49、0.999、0.51、0.86、0.90、0.99、0.996、0.44、0.57、1.000；圖 5、9 最接近 1，cosine 也最接近 −1，和推導相符。</p>
+<p>兩者方向相反、大小差很多，但 Saliency 會取絕對值再各自 normalize，方向和大小都被消掉，所以圖幾乎一樣。實測兩個原始梯度（不取絕對值；CE 用 <code>reduction='sum'</code>，也就是不除以批次大小，只差一個倍數，不影響 cosine）的 cosine：圖 0 −0.942、2 −0.848、3 −0.992、4 −0.989、5 <b>−1.000</b>、7 −0.934、8 −0.943、9 −0.997，確實接近 −1（方向相反）。「第 2 名佔其他類機率的比例」：圖 0–9 依序 0.49、0.999、0.51、0.86、0.90、0.99、0.996、0.44、0.57、1.000；圖 5、9 最接近 1，cosine 也最接近 −1，和推導相符。</p>
 <p><strong>例外是圖 1 與圖 6</strong>：cosine 只有 −0.020 與 −0.000，雖然它們的比例是 0.999 與 0.996。這兩張圖最有把握：logit 差（標籤 − 第 2 名）是 24.31 與 37.93，1 − p(標籤) 只有 2.76e-11 與 3.38e-17，原始梯度最大值只有 3.22e-11 與 1.52e-16（第 3 章那個 10<sup>−17</sup> 級的梯度就是這個）。float32 算 <code>1 − softmax</code> 時，圖 1、6、8 都是 0（表示不了這麼接近 1 的差），可能和這個捨入有關；但圖 8 也是 0，cosine 卻是 −0.943，所以不只這個原因。<strong>原因未完全確定</strong>，本書沒有逐層驗證。</p>
 <p>IG 對 logit 取梯度（不經過 softmax），沒有這種「正負相反、大小被消掉」的機制，所以換類別時比 Saliency 有區別（8.4 節）。</p></details>
 <details class="quiz"><summary>挑戰 2. 怎麼證明 Saliency 與 IG 的圖不是只把輸入圖的邊緣描出來？</summary>
