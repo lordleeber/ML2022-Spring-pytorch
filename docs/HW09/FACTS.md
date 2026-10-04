@@ -1186,3 +1186,132 @@ Ref: https://reurl.cc/mGZNbA
   （工具把存檔名換成 ch05_quiz1.png，照字面改的話是 integrated_gradients.png。）四捨五入到 3 位和「ch05 實測」表的「Σ 程式輸出 × x」完全相同。
 - 看得到的（改後的圖，沒有放進書裡）：第二列仍是灰底、粉紅／綠細紋，輪廓位置和原本的 integrated_gradients.png 相同，肉眼分不太出差別。
 - 雲端在 ch05 指出的 FACTS 疑點已核對並更正：(1) 中點 10 步比左 10 差的是圖 0、4、7、9（不是 2、4、9）；(2) 工具產生 4 張 ch05_*.png，不是 5 張。另：ch05_path.png 右圖 α ≈ 0.15 附近跌到約 −25，看圖確認屬實。
+
+## ch06 實測（2026-10-04，本機；指令都在 HW09/ 裡執行，CPU）
+工具：`docs/tools/hw09_ch06_bert.py`（在 HW09/ 裡跑，`HF_HUB_OFFLINE=1` 用快取的模型；import `bert_hidden_states` 取三組問答與模型名稱；印出下面的數字，並產生 4 張 `docs/HW09/img/ch06_*.png`：`ch06_q{1,2,3}_layers.png` 是把現有的 `bert_q{N}_layer{1,4,8,12}.png` 拼成 2×2，`ch06_pca_variance.png` 是新畫的折線圖）。
+
+### 行號（以本檔為準）
+- bert_hidden_states.py：import 1–9；docstring 12–32（Part 2 標題 12、Attention 14–15、Embedding 17–25 含四個步驟 19–23、本 repo 的說明 27–31）；`output_dir` 34、`hw9_bert_dir` 35、`qa_model_name` 36；`same_seeds` 40–48；三組問答 51–72（第 1 組 53–58、第 2 組 60–66、第 3 組 68–72）；`visualize` 75–122（tokenize 77、question／context 範圍 80–81、讀預存或現算 83–87、逐層迴圈 91、PCA 95、figure 97、逐 token 畫點 99–111、判斷答案 103、圖例 114–117、標題 118、存檔 119–121、print 122）；main 125–138。
+- outline 寫的「docstring 12–32、三題資料 51–72、visualize 75–122、main 125–138」都正確。
+
+### 投影片 p.12–15（pypdf 抽出，逐字）
+```
+=== p.12
+T opic II: BERT explanation
+=== p.13
+Task
+● Run the sample code and ﬁnish 10 questions (all multiple choice form)
+● We’ll cover 3 explanation approaches
+○ Attention Visualization
+○ Embedding Visualization
+○ Embedding analysis
+● You need to:
+○ Know the basic idea of each method
+○ Run the code and observe the results
+○ For some cases, you may need to modify a small part of the code
+=== p.14
+Attention Visualization
+Question 21 to 24
+● Visualize attention mechanism of 
+bert using 
+https://exbert.net/exBERT.html
+Alternative link: 
+https://huggingface.co/exbert/
+Ref: https://arxiv.org/pdf/1910.05276.pdf
+Tutorial: https://youtu.be/e31oyfo_thY
+=== p.15
+Embedding Visualization
+Question 25 to 27
+● Visualize embedding across 
+layers of BERT using PCA 
+(Principal Component Analysis)
+● Fine-tuned for Question 
+Answering
+```
+（「T opic」的空格是 PDF 抽字的結果。）
+
+### exBERT 現況（2026-10-04 重測）
+- `https://exbert.net/exBERT.html`：15 秒逾時，curl 回 000（和 10-03 相同）。
+- `https://huggingface.co/exbert/` → 302 到 `https://huggingface.co/exbert` → 最後是 `https://huggingface.co/spaces/exbert-project/exbert`（HTTP 200）。
+- HF API `api/spaces/exbert-project/exbert`：runtime stage **RUNNING**、sdk docker、lastModified 2023-05-12。Space 的 app 網址 `https://exbert-project-exbert.hf.space/` 302 到 `/client/exBERT.html`，HTTP 200，回傳 `<title>exBERT</title>` 的頁面。**頁面載得到；互動功能（選模型、輸入句子、看 attention）能不能用沒有在瀏覽器裡試**。
+- 原版 notebook（cell 38–39）：Markdown「You are highly recommended to visualize on this website directly: https://exbert.net/exBERT.html」，程式 `display.IFrame("https://exbert.net/exBERT.html", width=1600, height=1600)`。本 repo 只在 docstring 第 15 行留一句。
+
+### 原版 notebook 的 Part 2a（cell 41–53，`~/poyi/GitHubPublic/ML2022-Spring/HW09/HW09.ipynb`）
+- cell 41：`!pip install transformers==4.5.0`；import `BertModel, BertTokenizerFast`（沒有 BertForQuestionAnswering）；`plt.rcParams['figure.figsize'] = [12, 10]`；`same_seeds` 和本 repo 第 40–48 行相同，`same_seeds(0)`。
+- cell 43：四個步驟的中英文說明（中文：1. 將類似的文字分羣（根據文字在文章中的關係）2. 提取答案 3. 將類似的文字分羣（根據文字的意思）4. 從文章中尋找與問題有關的資訊；「這些步驟並**不**按照順序排列」；「你可以在只看見模型 hidden states embedding 的情況下，找出各個layer的功能嗎?」）。本 repo docstring 19–25 只留英文。
+- cell 45：`!gdown --id '1h3akaNdouiIGItOqEs6kUZE-hAF0QeDk' --output hw9_bert.zip`、`!unzip`；cell 47：`BertTokenizerFast.from_pretrained("hw9_bert/Tokenizer")`。
+- cell 49：三組問答，和本 repo 51–72 逐字相同。
+- cell 51：`QUESTION = 1`（「Choose from 1, 2, 3」，TODO 區）。
+- cell 53：visualize 的本體，和本 repo 77–118 的邏輯相同，差別：原版讀 `torch.load(f"hw9_bert/output/model_q{QUESTION}")`（不跑模型）、沒有 `plt.figure`（用 rcParams 的 12×10）、最後 `plt.show()`；本 repo 包成函式、多了 `model is None` 分支（83–87）、`fig.savefig` 與 `plt.close`。
+
+### 模型與 tokenizer
+- `BertForQuestionAnswering`：12 層、hidden 768、12 個 attention head、intermediate 3072、max_position 512、vocab 28,996；參數 107,721,218；`qa_outputs = Linear(768, 2)`（每個 token 兩個分數：起點、終點）。
+- 特殊 token id：[CLS] 101、[SEP] 102、[PAD] 0、[UNK] 100；`do_lower_case` False（cased）。所以第 80 行的 `index(102)` 是找第一個 [SEP]。
+- `hidden_states[0]` 和 `model.bert.embeddings(input_ids, token_type_ids)` 的輸出相同（`allclose` True）：第 0 個是 embedding 層的輸出（還沒經過任何 attention）。`qa_outputs(hidden_states[12])` 等於模型的 start/end logits（True）：最後一層就是拿來找答案的那一層。
+- `token_type_ids`：問題那段（含 [CLS]、第一個 [SEP]）是 0，文章那段（含最後的 [SEP]）是 1。Q1 11／67、Q2 13／107、Q3 8／48。
+- 每層 token 向量的平均長度（L2 norm），layer 0→12：Q1 19.31 22.75 23.28 23.15 23.74 24.76 25.43 24.91 24.48 25.43 25.83 25.89 **20.79**；Q2、Q3 同樣形狀（layer 1–11 約 22–26，layer 12 掉回約 20.3–20.8）。
+
+### 三組問答的 token 與標色
+- context 字串用 `\` 續行，續行的 12 個空白會留在字串裡（Q1 2 處、Q2 3 處、Q3 1 處；例如 Q1 `'al engineer,             mec'`）；tokenizer 把空白當分隔，不影響 token。
+- Q1：78 tokens，question 1..9、context 11..76，[SEP] 在 10、77。藍點 [32] `1856`。
+- Q2：120 tokens，question 1..11、context 13..118，[SEP] 在 12、119。tokens 全部：`['[CLS]', 'What', 'is', 'a', 'common', 'punishment', 'in', 'the', 'UK', 'and', 'Ireland', '?', '[SEP]', 'Currently', 'detention', 'is', 'one', 'of', 'the', 'most', 'common', 'punishment', '##s', 'in', 'schools', 'in', 'the', 'United', 'States', ',', 'the', 'UK', ',', 'Ireland', ',', 'Singapore', 'and', 'other', 'countries', '.', 'It', 'requires', 'the', 'pupil', 'to', 'remain', 'in', 'school', 'at', 'a', 'given', 'time', 'in', 'the', 'school', 'day', '(', 'such', 'as', 'lunch', ',', 're', '##cess', 'or', 'after', 'school', ')', ';', 'or', 'even', 'to', 'attend', 'school', 'on', 'a', 'non', '-', 'school', 'day', ',', 'e', '.', 'g', '.', '"', 'Saturday', 'detention', '"', 'held', 'at', 'some', 'schools', '.', 'During', 'detention', ',', 'students', 'normally', 'have', 'to', 'sit', 'in', 'a', 'classroom', 'and', 'do', 'work', ',', 'write', 'lines', 'or', 'a', 'punishment', 'essay', ',', 'or', 'sit', 'quietly', '.', '[SEP]']`。藍點 [14, 86, 94] 三個 `detention`。
+- Q3：56 tokens，question 1..6、context 8..54，[SEP] 在 7、55。藍點 [12] `cats`。
+- 三組都檢查過：`Tokenizer.decode(單一 id)` 和 `convert_ids_to_tokens` 結果完全一樣（`##sla` 這類片段 decode 出來仍帶 `##`）。
+
+### 這個模型自己的答案（start/end logits）
+| 組 | argmax 起點／終點 | [CLS]（無答案）分數 | 最好的非空答案 | 分數 | 起點分數前 3 |
+|---|---|---|---|---|---|
+| 1 | 32／32 `1856` | −0.114 | `1856`（32..32） | 7.576 | `1856` 3.47、`10` 0.16、`[CLS]` −0.12 |
+| 2 | 0／0 `[CLS]` | 11.720 | `detention`（14..14） | −0.487 | `[CLS]` 6.26、`detention` 0.91、`requires` −3.26 |
+| 3 | 0／0 `[CLS]` | 4.580 | `sheep`（26..26） | −1.322 | `[CLS]` 1.69、`sheep` −1.53、`cats` −1.84 |
+（分數 = 起點 logit + 終點 logit；非空答案限制在 context 內、長度 ≤ 30 token。）
+- 第 2 組：模型認為「沒有答案」的分數遠高於任何片段，但非空答案裡最好的就是第一個 `detention`。
+- 第 3 組：正確答案是 cats（Emily 是狼，狼怕貓），模型選「無答案」；非空裡最好的是 `sheep`（錯），`cats` 在起點分數排第 3。
+- 這只說明這個替代模型的行為，和作業題目無關。
+
+### PCA 保留的變異比例（含程式沒畫的 layer 0；圖 `img/ch06_pca_variance.png`）
+- Q1：0.144 0.145 0.154 0.136 0.139 0.142 0.148 0.150 0.169 0.188 0.223 0.243 **0.376**
+- Q2：0.139 0.139 0.127 0.122 0.119 0.123 0.129 0.130 0.151 0.168 0.187 0.221 **0.485**
+- Q3：0.240 0.261 0.260 0.239 0.230 0.235 0.228 0.223 0.222 0.225 0.227 0.264 **0.491**
+（layer 1–12 和「BERT 實測」記錄的兩位小數一致。）看得到的：三條線在 layer 0–10 大致平（0.12–0.26），layer 11 起上升，layer 12 跳到 0.38–0.49。
+- PCA 座標範圍（決定圖的刻度）：Q1 layer 1 x −8.0..13.5、y −7.6..12.1；layer 12 x −28.3..4.6、y −6.6..13.9。Q2 layer 12 x −21.2..6.5、y −24.6..4.6（註：這是全部 token 的範圍，含不畫的 [CLS]/[SEP]；圖上畫出的點最低到 detention 的 −9.6，y 軸刻度依 matplotlib 自動決定）。Q3 layer 12 x −18.4..7.9、y −7.4..14.5。第 111 行把字寫在點的右上方 (+0.1, +0.2)（資料座標），刻度範圍大時字和點幾乎重疊。
+
+### 答案 token 在 PCA 平面上的位置
+- Q1 `1856`：layer 1 (2.4, 1.3)；layer 12 (−28.3, 7.9)，就是 x 範圍的最左端，**整張圖最遠的離群點**。
+- Q2 三個 `detention`：layer 1 (11.4, 8.1)、(11.8, 7.1)、(11.9, 7.3)（三個疊在一起）；layer 12 位置 14 (−18.6, −9.6)、86 (−9.1, 1.0)、94 (−12.2, −0.1)。第一個 `detention`（「Currently detention is…」，也是模型非空答案的那一個）在 layer 12 離群最遠。
+- Q3 `cats`：layer 1 (7.8, 9.4)；layer 12 (−15.8, 0.0)。
+
+### 看得到的（拼圖 `img/ch06_q{1,2,3}_layers.png`，2×2：左上 Layer 1、右上 Layer 4、左下 Layer 8、右下 Layer 12）
+- **第 3 組**：
+  - Layer 1：同一個字的點疊在一起，問題裡的字（紅）緊貼文章裡同一個字（綠）：所有 `afraid`（含問題的）在右下角自成一群；`is`/`are`/`of`/`a`/`.` 在左邊一群；動物名詞（sheep、wolf、wolves、Wolves、cats、Cats、mouse）在右上；人名與拆開的片段（Gertrude、Emily、Jessica、Win、##ona、She、Mi、##ep）在中間一條斜線上。答案 `cats`（藍）在動物群裡，和 `Wolves`、`Cats` 貼在一起。
+  - Layer 4：`afraid` 仍在下方一群；左邊是虛詞的一大團；右上是動物；中間是人名。（只在拼圖的縮小版上看過，細節以原圖 bert_q3_layer4.png 為準。）
+  - Layer 8：句號 `.` 在下方排成一直列；問題的 6 個紅點（What、?、is、of、afraid、Emily）在中間排開，和文章裡的同一個字分開了（文章的 `afraid`、`is`、`of` 在左上，問題的在中間）；動物在右上，`cats` 在其中；人名在右側中段。
+  - Layer 12：問題的紅點聚在右側，和大部分文章 token 擠成一團；動物（sheep、wolves、wolf）在左邊；句號在上方；`cats`（藍）在 (−15.8, 0.0)，靠近左邊的動物群。（「BERT 實測」對這張圖的描述：句號一群、問題 tokens 與 Emily/is/afraid 聚在右側、動物名詞聚在左側。）
+- **第 1 組**：
+  - Layer 1：西里爾字母片段（Н、##и、##к… 與 Т、##е…）在右下角一群；`electrical`、`engineer`、`mechanical`、`physicist` 在上方一群；`1856`（藍）在中間偏右，附近有 `born`、`known`、`Te`；數字 `10`、`7`、`1943`、`January`、`July` 在中下方。
+  - Layer 4：西里爾字母仍在右邊一群；問題的紅點（In、what、year、born、was、?）在左下聚在一起；`1856` 在中下方，靠近 `1943`、`10`、`January`、`July`。
+  - Layer 8：紅點（what、year、In、was、born、?）在上方一群；`1856` 在中間，旁邊是 `Nikola`、`10`、`July`。
+  - Layer 12：`1856` 獨自在左上角（x −28.3），離其他點都很遠；其次往左的是 `10`、`)`、`;`、`1943`；問題的紅點和大部分文章 token 擠在右側。
+- **第 2 組**：
+  - Layer 1：三個 `detention` 疊在右上角，和三個 `punishment`（含問題裡的紅色 `punishment`）在一起；`school`/`schools` 在右下角一群；虛詞在左邊一團。
+  - Layer 4：國家名（UK、Ireland、United、States、Singapore、countries）在上方一群，問題裡的紅色 `UK`/`Ireland` 也在其中；`punishment`、`detention`、`pupil` 在右側中段。
+  - Layer 8：紅點（What、is、a、in、the、common、punishment…）多數在右下一群；紅色 `Ireland`、`UK`、`and` 在右上，靠近文章的國家名；`detention` 在左側中段。
+  - Layer 12：紅點全部擠在右側那一大團；三個 `detention` 都在左半邊，位置 14 那個在左下角最遠處 (−18.6, −9.6)；上方是 school、lunch、work、essay 等。
+- 這些描述是逐張看圖得到的；「哪一層對應作業四個步驟的哪一步」本 repo 沒有標準答案（換了模型）。
+
+### 768 維的量（不經過 PCA）
+- 每層 cosine 平均（q-q：問題 token 兩兩；c-c：文章 token 兩兩；q-c：問題對文章）；「answer→question」是答案 token 對所有問題 token 的平均 cosine，括號是它在文章所有 token 裡的排名（1 = 最像問題）；NN 是答案 token 在全部 token 裡最像的 5 個（不含自己）。
+  - Q1（`1856`，66 個文章 token）：layer 0 q-q 0.059 c-c 0.074 q-c 0.014，answer→q −0.005（第 47）；layer 6 0.270／0.290／0.219，0.215（第 36）；layer 9 0.380／0.305／0.221，0.226（第 30）；layer 11 0.505／0.520／0.376，0.209（第 66，最後）；layer 12 **0.861／0.755／0.775**，−0.358（第 66）。NN：layer 0–6 都是 `1943` 開頭（1943、–、July、January、10、7）；layer 7–11 `10` 開頭；layer 12 `[CLS]`、`10`、`)`、`1943`、`;`。
+  - Q2（第一個 `detention`，106 個文章 token）：layer 0 0.126／0.105／0.063，−0.003（第 83）；layer 9 0.372／0.407／0.279，0.280（第 57）；layer 11 0.561／0.625／0.512，0.298（第 106，最後）；layer 12 **0.948／0.798／0.827**，0.033（第 106）。NN：layer 0–5 是另外兩個 `detention` 與三個 `punishment`；layer 6–11 是兩個 `detention` 加 `Currently`、`is` 等；layer 12 `detention`、`pupil`、`requires`、`lunch`、`detention`。
+  - Q3（`cats`，47 個文章 token）：layer 0 0.105／0.134／0.070，−0.025（第 41）；layer 9 0.429／0.504／0.349，0.347（第 25）；layer 10 0.501／0.582／0.423，**0.448（第 13）**；layer 11 0.525／0.646／0.488，0.485（第 27）；layer 12 **0.893／0.689／0.698**，0.216（第 45）。NN：layer 0–6 `Cats` 第一、其次 wolves、sheep；layer 7–12 `wolves` 第一，都是動物名詞。
+  - 完整 13 層的數字在工具輸出（每層一行）；上面只摘幾層。
+- 觀察：(1) 三組的 q-q、c-c、q-c 都隨層變大，layer 12 一下跳到 0.69–0.95（所有 token 的方向變得很像，和 PCA 在 layer 12 保留的變異大增一致，推論）。(2) 答案 token「像不像問題」的排名在 layer 11–12 掉到最後或接近最後：答案在最後幾層反而和問題最不像（和 PCA 圖上 layer 12 答案離群一致）。(3) 答案 token 的最近鄰在前幾層是「同一個字或同類字」（另外的 detention、Cats、1943），後面幾層仍是同類（動物、數字）。這些都是描述，不是「哪層做哪一步」的答案。
+- Q3 三組 token 的平均 cosine（動物名詞 14 個含拆開的 She/##ep/Mi/##ce；句號 `.`；人名 Emily/Gertrude/Jessica/Win/##ona）：layer 1 動物-動物 0.231、句號-句號 0.857、人名-人名 0.255、動物-句號 0.123；layer 6 0.523／0.849／0.514／0.414；layer 12 0.662／0.903／0.763／0.586。
+
+### 程式細節（讀碼＋實測）
+- 第 91 行 `enumerate(outputs_hidden_states[1:])`：layer_index 0..11，標題與檔名用 `layer_index + 1`，所以檔名的 layer1 是 hidden_states[1]（第 1 層 attention 之後），layer 0（embedding）沒有畫。
+- 第 95 行 `PCA(...).fit_transform(embeddings[0])`：直接傳 torch 張量（模型分支在 `torch.no_grad()` 裡算，不需要梯度），sklearn 會轉成 NumPy。每一層各自 fit 一次 PCA，所以**不同層的圖座標軸不能互相比**（每層的 2 個主成分方向不同；主成分的正負號也是任意的）。
+- 第 103 行先判斷答案，所以答案字即使在問題裡出現也會畫成藍色（這三組的答案字都不在問題裡）。
+- 第 109–110 行：[CLS] 與兩個 [SEP] 不畫（它們不在 question/context 範圍、也不是答案）；但 PCA 是用**全部** token（含 [CLS]、[SEP]）fit 的。
+- `same_seeds(0)`（第 126 行）：這支腳本在 CPU 上、模型在 eval 模式、PCA 有 `random_state=0`，本身沒有用到亂數；ch00 0.6 節實測 36 張圖重跑逐位元相同。
+- 計時引用 ch00：real time 12.3 秒（模型已在快取）。LOAD REPORT 的 UNEXPECTED（pooler）ch00 已講。
