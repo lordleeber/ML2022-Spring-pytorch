@@ -255,6 +255,44 @@
 - `hw02_run_grid.sh <runs.txt> <out.jsonl> [parallel]`：ch07 的實驗清單是 `docs/tools/hw02_ch07_runs.txt`。
 - 時間：本機 GPU 同時有別的 session 的工作，所以每個 epoch 的秒數只是「量級」，不是乾淨的基準（例：驗證用的 1 epoch run 花了 942 s，同時有 baseline 與另一個 session 在跑）。
 
+## ch07 實測（2026-10-04，本機；hw02_exp.py，在 HW02/ 裡執行）
+- 縮小規格（使用者選）：batch 64、**5 個 epoch**、lr 1e-4、AdamW、seed 0、train_ratio 0.9、concat 11，除非下表另註。官方 sample 兩列照 notebook 用 batch 512。
+- 「最佳 val」是 5 個 epoch 裡最高的那個（照 train.py 的存檔規則）；每一組都另外用最佳權重在整個驗證集上一次算完，**全部與印出值相同**。
+- 原始 JSON：`docs/tools/hw02_ch07_runs.jsonl`（含每個 epoch 的 train/val acc 與 loss）。重跑：`docs/tools/hw02_run_grid.sh docs/tools/hw02_ch07_runs.txt <out.jsonl> 1`。
+- 本 repo 的 10 層 LSTM 在同一規格下 = 原規格 baseline 的第 1–5 epoch（同一條亂數流）：最佳第 5 epoch **0.627588**，train acc 0.622775，val loss 1.316813。
+- 參數量都是 PyTorch 數的。秒數是整個 run（含載入資料約 1 分鐘）；dnn_c11、q1a_deep 與 baseline 同時跑，秒數偏大。
+
+| run | 設定 | 參數量 | 最佳 epoch | 最佳 val | 第 5 epoch train acc | 第 5 epoch val | 第 5 epoch val loss | 秒 |
+|---|---|---|---|---|---|---|---|---|
+| sample_official | 官方 sample（DNN，concat 1，hidden 256，1 層，batch 512，ratio 0.8） | 86,569 | 5 | 0.457758 | 0.4608 | 0.4578 | 1.8898 | 143 |
+| sample_r09 | 官方 sample，但 ratio 0.9（本 repo 的驗證集） | 86,569 | 5 | 0.458215 | 0.4611 | 0.4582 | 1.8867 | 144 |
+| dnn_c11 | model_dnn.py + 本 repo config（concat 11，hidden 512，1 層） | 503,849 | 5 | 0.671459 | 0.6938 | 0.6715 | 1.0513 | 1279 |
+| q1a_deep | 報告題 1 (A) 窄深：DNN 6 層 × 1024 | 6,779,945 | 5 | 0.687270 | 0.7683 | 0.6873 | 1.0710 | 1551 |
+| q1b_wide | 報告題 1 (B) 寬淺：DNN 2 層 × 1700 | 6,584,141 | 3 | 0.687470 | 0.8128 | 0.6787 | 1.1559 | 317 |
+| q2_d25 | 報告題 2 (A)：6×1024 + dropout 0.25 | 6,779,945 | 5 | 0.690010 | 0.6710 | 0.6900 | 0.9815 | 440 |
+| q2_d50 | 報告題 2 (B)：6×1024 + dropout 0.5 | 6,779,945 | 5 | 0.650421 | 0.5987 | 0.6504 | 1.1445 | 415 |
+| q2_d75 | 報告題 2 (C)：6×1024 + dropout 0.75 | 6,779,945 | 5 | 0.512235 | 0.4577 | 0.5122 | 1.8975 | 420 |
+| strong_bn_d25 | 6×1024 + BatchNorm + dropout 0.25（strong baseline 的提示） | 6,794,281 | 5 | 0.690154 | 0.6560 | 0.6902 | 0.9748 | 537 |
+
+- 每個 epoch 的 val acc：
+  - sample_official：0.4406、0.4496、0.4538、0.4561、0.4578
+  - sample_r09：0.4437、0.4517、0.4552、0.4573、0.4582
+  - dnn_c11：0.6317、0.6517、0.6612、0.6680、0.6715
+  - q1a_deep：0.6554、0.6775、0.6836、0.6869、0.6873
+  - q1b_wide：0.6677、0.6859、0.6875、0.6835、0.6787
+  - q2_d25：0.6387、0.6633、0.6754、0.6846、0.6900
+  - q2_d50：0.5996、0.6230、0.6368、0.6462、0.6504
+  - q2_d75：0.4218、0.4626、0.4828、0.5029、0.5122
+  - strong_bn_d25：0.6428、0.6611、0.6735、0.6835、0.6902
+- 解讀（寫章時可用，數字都在上表）：
+  - 官方 sample 0.457758 ≈ 投影片 simple baseline 0.45797（驗證集不是 Kaggle 測試集，只能說「相當」）。ratio 0.8 與 0.9 只差 0.0005。
+  - 只把 concat 1 改成 11（dnn_c11，同樣 1 個 hidden layer）：0.4582 → 0.6715，是所有改動裡最大的一步。
+  - 報告題 1：A 窄深 0.687270（6,779,945 參數）與 B 寬淺 0.687470（6,584,141 參數）幾乎相同；差別在過擬合：B 第 3 epoch 後 val 下降、第 5 epoch train 0.8128 vs val 0.6787；A 第 5 epoch train 0.7683 vs val 0.6873 還在進步。
+  - 報告題 2：dropout 0.25 → 0.690010（比無 dropout 的 0.687270 好），0.5 → 0.650421，0.75 → 0.512235。5 個 epoch 內 dropout 越大學得越慢；0.5、0.75 的 val loss 到第 5 epoch 都還在降，是**欠擬合**不是 dropout 無效。train acc 在 model.train() 下量（dropout 開著），所以 dropout 越大 train acc 越低，甚至低於 val acc。
+  - BN + dropout 0.25：0.690154，與只加 dropout 0.25 幾乎相同（+0.00014），val loss 最低（0.9748）。
+  - 5 個 epoch 下，上面所有 6×1024 的 DNN（約 680 萬參數）都**勝過**本 repo 的 10 層 LSTM（2,006 萬參數，0.627588）；LSTM 20 個 epoch 也只到 0.641955。沒有一組到 medium baseline 0.69747（驗證集）。
+- <!-- 尚未跑（等使用者放行，每組約 45–90 分鐘）：lstm_3layers、lstm_lossmid、bilstm；以及無干擾的 train.py 1 epoch 計時 -->
+
 ## repo 問題清單（教材附錄素材；本 repo 照原樣保留，未修）
 1. config.py:17 `hidden_layers = 1` 沒作用，model.py:11 寫死 10 層；`input_dim` 也沒作用（model.py:9 寫死 39）。
 2. model.py 註解從 MNIST 範例抄來，與實際用途不符（見「模型」）。
