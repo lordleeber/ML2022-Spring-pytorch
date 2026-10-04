@@ -1115,20 +1115,35 @@ FONT_PATH = '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf'</code></
 <img src="img/ch07_font_droid_only.png" alt="同一張矩陣，y 軸的中文句子正常，但格子裡的所有數字、colorbar 的刻度、x 軸刻度、英文標題，以及句子裡的 12.3%、iPhone、Face ID 和半形右括號，全部變成方框">
 <figcaption>圖 7.9 — 只設 Droid Sans Fallback：中文正常，所有英數字變成方框。</figcaption>
 </figure>
-<p>stderr 出現 568 次缺字警告、共 38 種字，例如：</p>
-<pre class="shell"><code>Glyph 73 (I) missing from font(s) Droid Sans Fallback.</code></pre>
+<p>stderr 出現 38 條缺字警告，每一種缺的字一條（matplotlib 畫圖時其實觸發了 568 次，但 Python 對同一個位置、同一句警告預設只印第一次）。每條兩行，第一行是警告，第二行是觸發它的那行程式（第 118 行的 <code>fig.savefig</code>：字是在存檔、真正畫出來時才找字型的），例如：</p>
+<pre class="shell"><code>bert_embedding.py:118: UserWarning: Glyph 41 ()) missing from font(s) Droid Sans Fallback.
+  fig.savefig(path, bbox_inches=&#x27;tight&#x27;)
+bert_embedding.py:118: UserWarning: Glyph 49 (1) missing from font(s) Droid Sans Fallback.
+  fig.savefig(path, bbox_inches=&#x27;tight&#x27;)</code></pre>
+<p>（前兩條。本書跑的是只改了第 91 行的複本，警告開頭的檔名是複本的路徑，這裡換回 <code>bert_embedding.py</code>；第一條的 <code>)</code> 是句 1 的半形右括號。38 條裡也有 <code>Glyph 73 (I)</code>，就是 Face ID 的 I。）</p>
 <p>缺的 38 種全部是英數與符號：a–i、m–p、r、s、B–F、I、P、R、T、W、0–9、<code>%</code>、<code>)</code>、<code>.</code>（就是這張圖用到的那些）。也就是說，這個字型<strong>沒有拉丁字母和數字</strong>，不只是「Face ID」的 I。畫出來中文句子正常，但格子裡的數字、colorbar、x 軸刻度、英文標題、句子裡的英數（12.3%、iPhone、Face ID）和半形 <code>)</code> 全部變成方框。</p>
 <p>反過來，如果 <code>FONT_PATH</code> 指到一個不存在的檔案，第 88 行的 if 不成立，只剩預設的 DejaVu Sans：</p>
 <figure class="fig">
 <img src="img/ch07_font_none.png" alt="同一張矩陣，數字、標題、colorbar 都正常，但 y 軸句子裡的中文全部變成方框，只剩括號、12.3%、iPhone、Face ID 這些英數看得到">
 <figcaption>圖 7.10 — 找不到中文字型：數字與英文正常，y 軸的中文全變方框。</figcaption>
 </figure>
-<p>這次是 210 次缺字警告，例如 <code>Glyph 20170 (\N{CJK UNIFIED IDEOGRAPH-4ECA}) missing from font(s) DejaVu Sans.</code>（U+4ECA 是「今」）。數字、標題、英數都正常，y 軸句子的中文全變方框。在你自己的電腦上，如果沒有 <code>/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf</code>，就會得到這張圖；照第 23 行的註解，把 <code>FONT_PATH</code> 改成你有的任何一個中文字型檔即可。</p>
+<p>這次是 71 條缺字警告（71 種中文字各一條；實際觸發 210 次），例如 <code>Glyph 20170 (\N{CJK UNIFIED IDEOGRAPH-4ECA}) missing from font(s) DejaVu Sans.</code>（U+4ECA 是「今」）。數字、標題、英數都正常，y 軸句子的中文全變方框。在你自己的電腦上，如果沒有 <code>/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf</code>，就會得到這張圖；照第 23 行的註解，把 <code>FONT_PATH</code> 改成你有的任何一個中文字型檔即可。</p>
 
 <div class="note"><h4>本章「另外量的」數字從哪來</h4>
 <p><code>bert_embedding.py</code> 只存一張圖。本章的模型規格、token 清單、word 與字元的對照、印出來的矩陣、最近鄰、各層的組內／組間表，以及圖 7.2、7.4–7.10 這些變體，都來自本書另外寫的量測程式 <code>docs/tools/hw09_ch07_embedding.py</code>。它 import <code>bert_embedding.py</code> 取句子與函式；變體是把 <code>bert_embedding.py</code> 的原始碼文字改掉幾行（例如 <code>LAYER = 8</code>、<code>return 0</code>）之後執行同一份主程式，只把存檔路徑換掉，<code>bert_embedding.py</code> 本身沒有被修改。在 <code>HW09/</code> 裡、裝好本 repo 的環境（第 0 章 <a href="ch00.html#env">0.3 節</a>）後執行，CPU 就夠，模型不在快取時會自動下載：</p>
 <pre class="shell cmd"><code>$ ../.venv/bin/python ../docs/tools/hw09_ch07_embedding.py</code></pre>
-<p>它把數字印在 stdout，並把 8 張 <code>ch07_*.png</code> 寫進 <code>docs/HW09/img/</code>（會覆蓋書裡的圖）。要自己試 TODO 區的改法，不需要這支量測程式：直接改 <code>bert_embedding.py</code> 的第 59–60、72、76 行，再照 7.4 節開頭的指令執行 <code>bert_embedding.py</code> 本身，圖會存成 <code>output/bert_embedding.png</code>。<!-- TODO(本機實測): 量測程式 stdout 的節錄（對應本章各表）與執行時間 --></p>
+<p>它把數字印在 stdout，並把 8 張 <code>ch07_*.png</code> 寫進 <code>docs/HW09/img/</code>（會覆蓋書裡的圖）。要自己試 TODO 區的改法，不需要這支量測程式：直接改 <code>bert_embedding.py</code> 的第 59–60、72、76 行，再照 7.4 節開頭的指令執行 <code>bert_embedding.py</code> 本身，圖會存成 <code>output/bert_embedding.png</code>。</p>
+<p>本書的機器上它整支跑完約 5.9 秒（real time，模型已在快取）。stdout 的節錄（7.4 節 word／字元對照表與 7.9 節最近鄰表的來源，逐字；其他行省略）：</p>
+<pre class="shell">  sentence 1 index 2: char &#x27;蘋&#x27;, char_to_token -&gt; 3; word_to_tokens -&gt; TokenSpan(start=3, end=4) token &#x27;蘋&#x27;
+  sentence 1 index 13: char &#x27;下&#x27;, char_to_token -&gt; 14; word_to_tokens -&gt; TokenSpan(start=14, end=15) token &#x27;下&#x27;
+  sentence 1 index 15: char &#x27;1&#x27;, char_to_token -&gt; 16; word_to_tokens -&gt; TokenSpan(start=16, end=17) token &#x27;12&#x27;
+  sentence 1 index 16: char &#x27;2&#x27;, char_to_token -&gt; 16; word_to_tokens -&gt; TokenSpan(start=17, end=18) token &#x27;.&#x27;
+  sentence 1 index 17: char &#x27;.&#x27;, char_to_token -&gt; 17; word_to_tokens -&gt; TokenSpan(start=18, end=19) token &#x27;3&#x27;
+  sentence 1 index 18: char &#x27;3&#x27;, char_to_token -&gt; 18; word_to_tokens -&gt; TokenSpan(start=19, end=20) token &#x27;%&#x27;
+  sentence 1 index 19: char &#x27;%&#x27;, char_to_token -&gt; 19; word_to_tokens -&gt; None token None
+蘋: correct out of 10, layer 0..12: [3, 8, 8, 9, 10, 10, 9, 9, 10, 10, 10, 10, 8]
+果: correct out of 10, layer 0..12: [3, 6, 6, 7, 10, 9, 9, 10, 10, 10, 10, 10, 10]</pre>
+<p>（第 1 行起的 <code>sentence 1</code> 就是句 1；<code>index k</code> 對應 7.4 節表的 k。）</p>
 </div>
 
 <div class="note"><h4>現在的做法</h4>
@@ -1166,7 +1181,7 @@ FONT_PATH = '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf'</code></
 <details class="quiz"><summary>5. 在 layer 12，用「蘋」時句 2（蘋果茶）靠近公司、句 7（蘋果手機）靠近水果。換成「果」會怎樣？為什麼？</summary>
 <p>換成「果」後兩句都回到自己的組：句 2 的「果」和水果句 12.14–14.70、和公司句 16.30–18.82；句 7 和公司句 12.24–14.65、和水果句 16.46–17.51（圖 7.8）。為什麼同一個詞的兩個字表現不同，本書不知道原因，只能記錄現象。這也說明作業的結論會隨選哪個字、哪一層、哪種距離而改變。</p></details>
 <details class="quiz"><summary>6. 為什麼第 91 行的字型清單要把 <code>'DejaVu Sans'</code> 放在 Droid Sans Fallback 前面？只設 Droid Sans Fallback 會怎樣？</summary>
-<p><code>font.family</code> 是一個清單，matplotlib 每個字依序找第一個有這個字的字型（逐字 fallback）。Droid Sans Fallback 沒有拉丁字母和數字，只設它的話，所有英數字（格子裡的數字、colorbar、刻度、標題、12.3%、iPhone、Face ID）都會變成方框，stderr 印 568 次缺字警告。把 DejaVu Sans 放前面，英數由它畫，中文它沒有，才輪到 Droid Sans Fallback（7.11 節、圖 7.9）。</p></details>
+<p><code>font.family</code> 是一個清單，matplotlib 每個字依序找第一個有這個字的字型（逐字 fallback）。Droid Sans Fallback 沒有拉丁字母和數字，只設它的話，所有英數字（格子裡的數字、colorbar、刻度、標題、12.3%、iPhone、Face ID）都會變成方框，stderr 印 38 條缺字警告。把 DejaVu Sans 放前面，英數由它畫，中文它沒有，才輪到 Droid Sans Fallback（7.11 節、圖 7.9）。</p></details>
 
 <h2 id="further">延伸閱讀</h2>
 <ul>
