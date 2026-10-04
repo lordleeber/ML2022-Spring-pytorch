@@ -432,6 +432,16 @@
   - 前面頁面改動：outline 對照表 ch07 的「字型 20–24」改成 22–24。
   - 回指（不重講）：ch00 0.1 題目不在 repo、0.3 環境、0.5 主程式 85–94／117–120、stdout、6.7 s、LOAD REPORT、0.6 重跑逐位元相同；ch01 1.6 torch.no_grad()；ch04 4.5 viridis；ch06 6.3 tokenizer／WordPiece／[CLS]／[SEP]／[UNK]／token_type_ids／`model(**…)`、6.6 hidden_states 13 個元素與 layer 0、6.9 cosine 直覺；index〈先說在前面〉第二層。
 
+- ch08（第 8 章，2026-10-04 雲端）：
+  - 圖號：圖 8.1（img/ch08_side_by_side_a.png）、圖 8.2（img/ch08_side_by_side_b.png）、圖 8.3（四格 SVG：橫軸用不用梯度、縱軸用不用標籤；LIME（紫）／Saliency、SmoothGrad、IG（黃）／Filter activation（綠）／Filter visualization（黃））、圖 8.4（img/ch08_agreement.png）、圖 8.5（img/ch08_random_model.png）。
+  - 本章正式定義的名詞：Spearman 等級相關（名次的 Pearson；同值給平均名次，SciPy `spearmanr`）、前 10% 像素的 IoU（Intersection over Union；隨機基準 0.01 ÷ 0.19 ≈ 0.053；取 ≥ 第 90 百分位數，同值整塊算入）、集中程度（最亮 1%／10% 佔總和）、中央 64×64 比例（均勻 = 25%）、Sobel（3×3 邊緣濾波器，一句）、sanity check／model randomization test（Adebayo et al. 2018）、隨機權重模型、「第 2 名類別」、IG repo／IG×x 的簡寫、每種方法「回答的問題、用不用標籤、用不用梯度」對照表。
+  - 本章用語：入門／進階／挑戰三級題庫（8.6–8.8），每題答案指回 ch01–ch07 的節。
+  - 本章手算（由本 FACTS 推得）：IoU 隨機基準 0.053；逐張四對的平均 0.484／0.677／0.494／0.376（= 矩陣的 0.48／0.68／0.49／0.38）；隨機模型 Spearman 平均 0.19／0.14。
+  - 標明為本書的解讀或推論的：Saliency 與 IG 最像的原因（IG 後幾個 α 接近原圖）；SmoothGrad 分散、LIME 集中的原因；偏中央 = 看的是食物；圖 1、6 cosine 例外「原因未完全確定」（float32 1 − softmax 為 0 可能有關，但圖 8 也是 0 卻 −0.943）。
+  - TODO：量測工具 stdout 節錄（可選）；LIME 與 SmoothGrad 的隨機權重 sanity check（可選，本書只做了 Saliency 與 IG）。
+  - **雲端發現的 FACTS 小疑點**：(1)「集中程度」說「LIME 最集中」——最亮 1% 時 LIME 和 Saliency 同為 0.090，只有 10% 時 LIME 0.500 最高；ch08 以 10% 為準寫。(2)「中央比例」說「有類別資訊的方法都偏中央」——SmoothGrad 只有 0.324（高於均勻 0.25，但明顯低於 LIME／Saliency／IG 的 0.39–0.44）；ch08 把 SmoothGrad 分開寫。
+  - 回指（不重講）：ch00 0.3／0.4／0.5 計時／0.6 SmoothGrad 每次不同；ch01 1.7 model.train()；ch02 2.7〈10 張圖的權重〉、2.8 softmax、2.9 start_label；ch03 3.4 CE 梯度、3.6 Pearson 與 logit 版、3.10 變體、3.11 取樣次數；ch04 4.9 白雜訊／clamp／lr=1；ch05 5.4、5.8、5.9；ch07 7.9、7.10。
+
 ## index／outline 審稿補測（2026-10-03，本機）
 - 舊版套件能不能裝（用 `uv pip install --target <scratch>` 試，不動 .venv）：
   - `lime==0.1.1.37`：**裝得起來**，在 Python 3.12 上也能跑。它另外依賴 `progressbar`（2.5），pip 會一起裝。舊版的進度條是 `progressbar` 的 `|####|` 樣式，不是 tqdm。用它對圖 0 跑同一段 LIME（seed 16、start_label=1、logits）：前 5 名 (21, 5.5216)、(25, 3.5899)、(38, 3.1247)、(27, 3.0233)、(40, 2.9437)，R² 0.8423，**和 0.2.0.1 完全相同**。所以換版本不影響 Q1–4 的結果。
