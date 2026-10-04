@@ -120,10 +120,11 @@
 
 ## 記憶體（utils.py:69-73、86-95；ch02）
 - `torch.empty(3000000, 429)` float32：5,148,000,000 bytes（4.794 GiB）。標籤緩衝 `torch.empty(3000000, 11, dtype=torch.long)`：264,000,000 bytes（0.246 GiB）。
-- `X = X[:idx, :]` 是 view，**仍保留整塊 5,148,000,000 bytes**；驗證集只需要 454,002,120 bytes（264,570 × 429 × 4）。train 與 val 各配一次，所以兩塊加起來約 10.3 GB 一直留在記憶體（`del train_X, …` 刪掉的只是名字，Dataset 還握著同一塊 storage）。
+- `X = X[:idx, :]` 是 view，storage 仍是整塊 5,148,000,000 bytes（`untyped_storage().nbytes()` 實測）；驗證集實際只用到 454,002,120 bytes（264,570 × 429 × 4）。`del train_X, …` 刪掉的只是名字，Dataset 還握著同一塊 storage。
+- **但沒寫到的部分不佔實體記憶體**：`torch.empty` 只向作業系統要虛擬位址，頁面第一次被寫入才真的配置。train.py 實測峰值 RSS（`/usr/bin/time -v` 的 Maximum resident set size）是 **6,029,716 KB ≈ 6.0 GB**，接近實際寫入的量：訓練特徵 4,083,373,008 bytes（2,379,588 × 429 × 4）＋驗證特徵 454,002,120 ＋兩份標籤（(2,379,588 + 264,570) × 11 × 8 = 232,685,904）≈ 4.77 GB，再加上 PyTorch/CUDA 本身。**不要寫成「佔了 10 GB 記憶體」**；正確說法是「預約了兩塊各 5.15 GB 的位址空間，實際用到約 4.8 GB」。在不允許 overcommit 的系統（或 Windows）上，這種寫法才會真的要求 10 GB。
+- predict.py 峰值 RSS 2,117,040 KB ≈ 2.1 GB（測試特徵 646,268 × 429 × 4 = 1,108,995,888 bytes）。
 - `LibriDataset.__init__` 的 `torch.LongTensor(y)`：y 已經是 int64 tensor 時**不複製**（與 y 共用記憶體，實測 data_ptr 相同）。
 - 官方 sample 的 `max_len = 3000000` 同樣寫法（concat 1 時只有 39 欄，約 0.47 GB）。
-- <!-- 尚未量：train.py 的峰值 RSS（/usr/bin/time -v 的 Maximum resident set size），baseline 跑完後補 -->
 
 ## 形狀（ch03）
 - 每個 epoch 的 batch 數（batch_size 64）：train 37,182（最後一個 batch 4 筆）、val 4,134（最後一個 58 筆）、test 10,098（最後一個 60 筆）。
@@ -180,15 +181,73 @@
   2. `val_acc` 是逐 batch 累加**答對的個數**（train.py:104），最後除以 `len(val_set)`（train.py:108），不是各 batch 平均再平均；最後一個 58 筆的 batch 權重正確。
   3. 驗證時 `model.eval()`（dropout 關掉）＋ `torch.no_grad()`。
   4. 唯一的「挑選」是 20 個 epoch 裡挑 val acc 最高的存檔（train.py:112-115），驗證集同時被拿來選 epoch，所以 0.642 對沒看過的資料略為樂觀；但數字本身就是那個 checkpoint 在整個驗證集上的真實準確率。
-- 印出的 val loss 是各 batch 平均再平均（train.py:105、108 除以 `len(val_loader)`），最後一個 batch 只有 58 筆卻佔一樣的權重；只影響 loss 的第 4 位小數級，不影響 acc。<!-- 精確差多少待 baseline 跑完用 hw02_exp.py 補 -->
+- 印出的 val loss 是各 batch 平均再平均（train.py:105、108 除以 `len(val_loader)`），最後一個 batch 只有 58 筆卻佔一樣的權重；實測最佳 checkpoint：印出式（batch 平均再平均）1.299442（＝ train.py 第 15 epoch 印的值）、逐筆加權 1.299457，差 1.5e-5；最後一個 batch 58 筆、loss 0.6341。只算中間格的 val loss 是 1.197084（印出的 loss 是 11 個位置的平均，比中間格高，因為前面的位置看到的過去比較少）。不影響 acc。
 - train acc（train.py:76、108）是在 `model.train()`（dropout 開著）下、邊更新邊量的，所以和 val acc 不能直接比。
 - 同一個 checkpoint 各位置（第 0–10 格，第 5 格是中間）的準確率：
   `[0.4555, 0.525, 0.5692, 0.6013, 0.6244, 0.642, 0.6556, 0.6659, 0.6728, 0.6783, 0.6827]`
   單調上升：越後面的位置看得到越多過去的格子。第 10 格的 0.6827 比中間格高，但它預測的是**另一格**（t+5）的標籤，不能拿來當作中間格的答案。
 
-## 執行實測
-<!-- baseline（原規格 20 epoch）2026-10-04 在 scratch 複本執行中；跑完補：每 epoch 逐字輸出、時間、最佳 epoch、峰值 RSS、predict.py 時間與輸出 -->
-- 2026-10-03 跑過一次（使用者紀錄）：val acc 0.642。
+## 執行實測（2026-10-04，在 HW02 的複本裡跑，libriphone 用 symlink）
+- `../.venv/bin/python train.py`（`/usr/bin/time -v` 包著）：wall clock **3:04:48**、user 8,852 s、sys 2,099 s、峰值 RSS 6,029,716 KB、exit 0。GPU 同時有別的工作（前半段有 2 個 hw02_exp.py 與另一個 session），所以 3 小時只是上限的量級；乾淨的單一 epoch 時間待補（使用者選 (a)：實驗全部跑完、GPU 沒別的工作時單跑 1 epoch）。<!-- TODO(本機實測): 無干擾的 1 epoch 時間 -->
+- 每個 epoch 訓練迴圈 37,182 步：有干擾時 10–14 分鐘，GPU 只剩它（與另一個 session）時約 8 分 20 秒（約 74 it/s）；驗證 4,134 步約 10–20 秒。
+- stdout 逐字（tqdm 進度條在 stderr，這裡略去）：
+  ```
+  DEVICE: cuda
+  [Dataset] - # phone classes: 41, number of utterances for train: 3857
+  [INFO] train set
+  torch.Size([2379588, 429])
+  torch.Size([2379588, 11])
+  [Dataset] - # phone classes: 41, number of utterances for val: 429
+  [INFO] val set
+  torch.Size([264570, 429])
+  torch.Size([264570, 11])
+  Classifier(
+    (lstm): LSTM(39, 512, num_layers=10, batch_first=True, dropout=0.5)
+    (out): Linear(in_features=512, out_features=41, bias=True)
+  )
+  [001/020] Train Acc: 0.495127 Loss: 1.802524 | Val Acc: 0.576195 loss: 1.500938
+  saving model with acc 0.576
+  [002/020] Train Acc: 0.577339 Loss: 1.492246 | Val Acc: 0.599297 loss: 1.409000
+  saving model with acc 0.599
+  [003/020] Train Acc: 0.597845 Loss: 1.419920 | Val Acc: 0.610678 loss: 1.376042
+  saving model with acc 0.611
+  [004/020] Train Acc: 0.611049 Loss: 1.373563 | Val Acc: 0.621337 loss: 1.340509
+  saving model with acc 0.621
+  [005/020] Train Acc: 0.622775 Loss: 1.331375 | Val Acc: 0.627588 loss: 1.316813
+  saving model with acc 0.628
+  [006/020] Train Acc: 0.631520 Loss: 1.300601 | Val Acc: 0.632608 loss: 1.301389
+  saving model with acc 0.633
+  [007/020] Train Acc: 0.638695 Loss: 1.275846 | Val Acc: 0.635012 loss: 1.293533
+  saving model with acc 0.635
+  [008/020] Train Acc: 0.644886 Loss: 1.255450 | Val Acc: 0.635745 loss: 1.294502
+  saving model with acc 0.636
+  [009/020] Train Acc: 0.649985 Loss: 1.236995 | Val Acc: 0.638398 loss: 1.290916
+  saving model with acc 0.638
+  [010/020] Train Acc: 0.655303 Loss: 1.220799 | Val Acc: 0.636406 loss: 1.299407
+  [011/020] Train Acc: 0.659873 Loss: 1.205578 | Val Acc: 0.640451 loss: 1.291020
+  saving model with acc 0.640
+  [012/020] Train Acc: 0.664004 Loss: 1.191596 | Val Acc: 0.639993 loss: 1.296353
+  [013/020] Train Acc: 0.668320 Loss: 1.178405 | Val Acc: 0.640420 loss: 1.296682
+  [014/020] Train Acc: 0.671785 Loss: 1.165417 | Val Acc: 0.640088 loss: 1.300400
+  [015/020] Train Acc: 0.675382 Loss: 1.153714 | Val Acc: 0.641955 loss: 1.299442
+  saving model with acc 0.642
+  [016/020] Train Acc: 0.678926 Loss: 1.142452 | Val Acc: 0.641305 loss: 1.304638
+  [017/020] Train Acc: 0.682067 Loss: 1.131953 | Val Acc: 0.641006 loss: 1.303436
+  [018/020] Train Acc: 0.685094 Loss: 1.121886 | Val Acc: 0.641343 loss: 1.308557
+  [019/020] Train Acc: 0.688006 Loss: 1.112876 | Val Acc: 0.639249 loss: 1.318320
+  [020/020] Train Acc: 0.690659 Loss: 1.104173 | Val Acc: 0.641936 loss: 1.316187
+  ```
+- 解讀要點：最佳是**第 15 個 epoch**（0.641955），共存檔 11 次；val loss 最低是第 11 個 epoch 的 1.291020，之後 val loss 緩升、train acc 持續上升（0.675 → 0.691）→ 輕微過擬合。val acc 從第 11 epoch 起停在 0.639–0.642。
+- **可重現**：這次產生的 `model.ckpt` 與 2026-10-03 那次的 `HW02/model.ckpt` **逐位元組相同**（`cmp` 無差異），所以 `HW02/model.ckpt` 就是第 15 epoch 的權重，上面「驗證指標檢查」的數字都適用。
+- 印出的 `saving model with acc` 只有 3 位小數（train.py:115），epoch 行是 6 位。
+- `../.venv/bin/python predict.py`（複本裡，同一個 checkpoint）：wall clock **27.05 s**、峰值 RSS 2.1 GB。stdout：
+  ```
+  DEVICE: cuda
+  [Dataset] - # phone classes: 41, number of utterances for test: 1078
+  [INFO] test set
+  torch.Size([646268, 429])
+  ```
+  產生的 `prediction.csv` 與 repo 裡被追蹤的 `HW02/prediction.csv` **逐位元組相同**（646,269 行，開頭 `Id,Class`、`0,0`、`1,0`）。預測裡 41 類都有出現；最多的是第 0 類 126,222 格（0.1953）、第 31 類 40,981（0.0634）、第 2 類 37,541（0.0581）。
 
 ## 實驗工具（docs/tools/hw02_exp.py、hw02_run_grid.sh）
 - `hw02_exp.py` 預設參數就是 train.py；亂數順序照 train.py：preprocess（python random，seed 1337）→ 建 DataLoader → `same_seeds(0)` → 建模型 → AdamW。
@@ -201,7 +260,7 @@
 2. model.py 註解從 MNIST 範例抄來，與實際用途不符（見「模型」）。
 3. 單向 LSTM：被評分的中間格看不到未來 5 格。
 4. model_dnn.py 沒被 import（死碼）。
-5. utils.py:69-70 預先配 3,000,000 × 429 float32（5.15 GB），切片後仍保留整塊，train/val 合計約 10.3 GB。
+5. utils.py:69-70 預先配 3,000,000 × 429 float32（5.15 GB 位址空間），切片後 storage 仍是整塊；Linux 上沒寫入的頁不佔實體記憶體（峰值 RSS 6.0 GB），但寫法本身浪費且依賴 overcommit。
 6. 投影片 p.10「4268」句，實際 4286 句。
 7. predict.py:29-30 `test_acc`、`test_lengths` 宣告了沒用。
 8. prediction.csv 被 git 追蹤（在 .gitignore 加 `*.csv` 之前就加入了），重跑 predict.py 會改到它。
