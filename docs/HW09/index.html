@@ -616,7 +616,7 @@ footer.chap-footer {
 <p>這一層比較麻煩，因為不是改幾行程式就能解決：</p>
 <ul>
   <li><strong>助教的 <code>hw9_bert.zip</code> 已經下架。</strong>這個壓縮檔原本放著 Q25–27 要用的 tokenizer（把文字切成 token 的工具）與預先算好的 BERT hidden states（隱藏狀態，也就是 BERT 每一層的輸出向量）。它放在 Google Drive 上，2026-10-03 用兩個下載網址去抓都回 HTTP 404。本 repo 的 <code>bert_hidden_states.py</code> 改成：資料夾裡有 <code>hw9_bert/</code> 就照原版用；沒有的話，改用 Hugging Face（一個公開分享模型的網站，<code>transformers</code> 套件也是他們做的）上的 <code>deepset/bert-base-cased-squad2</code> 自己算。這是一個 12 層的標準尺寸 BERT（BERT-base），在 SQuAD 2.0 問答資料集上再訓練過（微調），專門做「從一段文章裡找出問題的答案」。</li>
-  <li><strong>exBERT 網站連不上。</strong>Q21–24 要在瀏覽器裡用 exBERT 這個網站觀察 BERT 的 attention（每個 token 在計算時「參考」了哪些其他 token，以及參考的比重）。2026-10-03 實測 <code>exbert.net</code> 連線逾時；投影片第 14 頁給的替代網址 <code>huggingface.co/exbert/</code> 會轉到 Hugging Face 上的一個 Space（Hugging Face 用來放網頁小程式的地方；網址存在，但那個 Space 現在能不能正常使用沒有檢查）。</li>
+  <li><strong>exBERT 網站連不上。</strong>Q21–24 要在瀏覽器裡用 exBERT 這個網站觀察 BERT 的 attention（每個 token 在計算時「參考」了哪些其他 token，以及參考的比重）。2026-10-03 實測 <code>exbert.net</code> 連線逾時；投影片第 14 頁給的替代網址 <code>huggingface.co/exbert/</code> 會轉到 Hugging Face 上的一個 Space（Hugging Face 用來放網頁小程式的地方）。2026-10-04 再查：那個 Space 的狀態是 RUNNING、頁面載得到，但互動功能有沒有正常運作沒有在瀏覽器裡試過（第 6 章）。</li>
   <li><strong>中文字型換掉了。</strong>原版下載「台北思源黑體」來畫中文；本 repo 改用系統內建的 Droid Sans Fallback（第 7 章細說）。</li>
 </ul>
 <div class="warn"><h4>Q25–27 沒有標準答案</h4>
