@@ -323,7 +323,7 @@
   | 11 | 10.618 | 10.910 | 14.818 |
   | 12 | 13.776 | 15.652 | 18.481 |
   - Layer 0（embedding 層，還沒看上下文）：組間 5.596 **小於**水果組內 6.142 → 完全分不開；同一個字「蘋」的向量只差在位置 embedding（公司句的「蘋」幾乎都在句首，所以公司組內只有 3.064）。
-  - 從 layer 4 起組間明顯大於兩個組內（差 +2.8 到 +4.9）；layer 8–9 分得最開（組間 − 組內 = 4.2–4.9）。layer 12 對水果組 +4.7、對公司組只剩 +2.8。
+  - 從 layer 4 起組間明顯大於兩個組內（差 +2.8 到 +4.9）；layer 8–11 一直分得最開（用比值「組間 ÷ 組內」看都在 1.36–1.45，layer 9 最高；用差值看 layer 6、8–12 都在 3.9–4.9；ch07 審稿更正，原本寫「layer 8–9 分得最開（組間 − 組內 = 4.2–4.9）」）。layer 12 對水果組 +4.7、對公司組只剩 +2.8。
   - 歐氏距離的絕對值會隨層變（layer 12 整體變大），跨層比較要看比值或用 cosine。
 - 同上，cosine similarity（蘋）：layer 0 水果 0.956／公司 0.976／組間 0.959；layer 9 0.886／0.892／0.781；layer 12 0.788／0.719／0.625。
 - 「果」（第二行 index）的趨勢相同：layer 0 組間 5.944 < 水果組內 6.602；layer 8 組內 12.646／12.342、組間 17.445；layer 12 組內 12.375／11.570、組間 17.130。cosine layer 12：0.854／0.874／0.726。
@@ -1436,7 +1436,7 @@ Answering
   - 蘋 cosine：L0 0.956/0.976/0.959 · L1 0.912/0.924/0.901 · L2 0.892/0.912/0.875 · L3 0.883/0.905/0.852 · L4 0.874/0.885/0.811 · L5 0.885/0.884/0.806 · L6 0.895/0.891/0.807 · L7 0.885/0.882/0.803 · L8 0.885/0.886/0.786 · L9 0.886/0.892/0.781 · L10 0.901/0.897/0.806 · L11 0.908/0.902/0.824 · L12 0.788/0.719/0.625
   - 果 歐氏：L0 6.602/3.282/5.944 · L1 10.573/8.200/10.068 · L2 11.058/8.957/10.602 · L3 11.343/9.839/11.525 · L4 13.333/11.807/14.812 · L5 12.065/11.728/15.238 · L6 11.327/11.269/15.295 · L7 12.302/12.284/16.289 · L8 12.646/12.342/17.445 · L9 12.557/11.966/17.459 · L10 11.506/10.774/16.451 · L11 11.387/10.819/16.261 · L12 12.375/11.570/17.130
   - 果 cosine：L0 0.940/0.967/0.946 · L1 0.908/0.940/0.915 · L2 0.893/0.928/0.901 · L3 0.874/0.903/0.869 · L4 0.850/0.880/0.815 · L5 0.872/0.878/0.797 · L6 0.895/0.895/0.811 · L7 0.883/0.880/0.795 · L8 0.864/0.865/0.739 · L9 0.860/0.869/0.730 · L10 0.878/0.890/0.751 · L11 0.890/0.900/0.777 · L12 0.854/0.874/0.726
-- 看得到的（ch07_layer_sweep.png，蘋，左歐氏、右 cosine）：歐氏的「組間」線從 layer 1 起都在兩條組內線上方，layer 4 起拉開；cosine 的「組間」線從 layer 1 起都在兩條組內線下方，layer 4–9 差距最大，layer 12 三條一起往下掉。
+- 看得到的（ch07_layer_sweep.png，蘋，左歐氏、右 cosine）：歐氏的「組間」線從 layer 1 起都在兩條組內線上方，layer 4 起拉開；cosine 的「組間」線從 layer 1 起都在兩條組內線下方，layer 4 起拉開（照表，layer 4–11 裡差距最大的是 layer 8–10，0.09–0.11；ch07 審稿更正，原本寫「layer 4–9 差距最大」），layer 12 三條一起往下掉。
 - **最近鄰檢查**（每句在 cosine 下最像的另一句，是否同組；10 句裡對幾句）：
   - 蘋：layer 0→12 = 3, 8, 8, 9, 10, 10, 9, 9, 10, 10, 10, 10, **8**
   - 果：layer 0→12 = 3, 6, 6, 7, 10, 9, 9, 10, 10, 10, 10, 10, **10**
@@ -1455,10 +1455,18 @@ Answering
 ### 字型（圖 `img/ch07_font_droid_only.png`、`img/ch07_font_none.png`）
 - `FONT_PATH` 的檔案存在，family 名稱 `Droid Sans Fallback`。
 - 本 repo 的設定 `['DejaVu Sans', 'Droid Sans Fallback']`：沒有任何缺字警告（這次所有變體都是 0 個 Glyph 警告）。
-- 只設 Droid Sans Fallback（第 91 行拿掉 'DejaVu Sans'）：Glyph 警告 568 次、38 種字，全部是英數與符號：a–i、m–p、r、s、B–F、I、P、R、T、W、0–9、`%`、`)`、`.`。例如 `Glyph 73 (I) missing from font(s) Droid Sans Fallback.`。看得到的：中文句子正常，但所有數字（格內的兩位小數、colorbar、x 軸刻度）、英文標題、句子裡的英數（12.3%、iPhone、Face ID）和半形 `)` 都變成方框。→ 這個字型**沒有拉丁字母和數字**，不只缺「Face ID」的 I、D（「原版 vs 本 repo」那條只舉了 I）。
-- 找不到字型（`FONT_PATH` 指到不存在的檔案，第 88 行的 if 不成立，只用預設 DejaVu Sans）：Glyph 警告 210 次，例如 `Glyph 20170 (\N{CJK UNIFIED IDEOGRAPH-4ECA}) missing from font(s) DejaVu Sans.`（U+4ECA 是「今」）。看得到的：數字、標題、英數都正常，y 軸句子的中文全變方框，只剩 `(`、`)`、`12.3%`、`iPhone`、`Face ID` 這些英數。
+- 只設 Droid Sans Fallback（第 91 行拿掉 'DejaVu Sans'）：Glyph 警告觸發 568 次（`catch_warnings` + `simplefilter('always')` 數的）、38 種字；**正常執行時 stderr 只印 38 條**（ch07 審稿補測），全部是英數與符號：a–i、m–p、r、s、B–F、I、P、R、T、W、0–9、`%`、`)`、`.`。例如 `Glyph 73 (I) missing from font(s) Droid Sans Fallback.`。看得到的：中文句子正常，但所有數字（格內的兩位小數、colorbar、x 軸刻度）、英文標題、句子裡的英數（12.3%、iPhone、Face ID）和半形 `)` 都變成方框。→ 這個字型**沒有拉丁字母和數字**，不只缺「Face ID」的 I、D（「原版 vs 本 repo」那條只舉了 I）。
+- 找不到字型（`FONT_PATH` 指到不存在的檔案，第 88 行的 if 不成立，只用預設 DejaVu Sans）：Glyph 警告觸發 210 次（正常執行時 stderr 印 71 條，ch07 審稿補測），例如 `Glyph 20170 (\N{CJK UNIFIED IDEOGRAPH-4ECA}) missing from font(s) DejaVu Sans.`（U+4ECA 是「今」）。看得到的：數字、標題、英數都正常，y 軸句子的中文全變方框，只剩 `(`、`)`、`12.3%`、`iPhone`、`Face ID` 這些英數。
 
 ### 其他
 - 執行時間引用 ch00：real time 6.7 秒。LOAD REPORT（cls.predictions／seq_relationship）ch00 已講。
 - `same_seeds(0)`：CPU、eval、沒有亂數操作；ch00 0.6 節實測 bert_embedding.png 重跑逐位元相同。
 - `pairwise_distances(embeddings, metric=函式)`：sklearn 對每一對呼叫一次函式，對角線也呼叫（所以 cosine 版對角線是 1、不是 0）；結果完全對稱。
+
+## ch07 審稿補測（2026-10-04，本機；PR #17）
+- **字型警告在 stderr 的實際條數**：把 bert_embedding.py 複製一份、只改第 91 行（或第 24 行），照一般方式執行（不攔截 warnings）。
+  - 只設 Droid Sans Fallback：stderr 有 **38 條** `UserWarning: Glyph … missing from font(s) Droid Sans Fallback.`（每種缺字一條），每條後面跟一行原始碼 `  fig.savefig(path, bbox_inches='tight')`（第 118 行：字型是存檔時才真正找的）。前兩條：`…:118: UserWarning: Glyph 41 ()) missing from font(s) Droid Sans Fallback.`、`…:118: UserWarning: Glyph 49 (1) missing from font(s) Droid Sans Fallback.`。
+  - 找不到字型（只用 DejaVu Sans）：stderr 有 **71 條**（71 種中文字各一條），第一條 `Glyph 20170 (\N{CJK UNIFIED IDEOGRAPH-4ECA}) missing from font(s) DejaVu Sans.`。
+  - 「ch07 實測」記錄的 568／210 是 matplotlib 實際觸發的次數；Python 預設的 warnings 規則對同一位置、同一訊息只印第一次。ch07 已改成「38 條（觸發 568 次）」「71 條（觸發 210 次）」。
+- **量測工具執行時間**：`hw09_ch07_embedding.py` 整支 real 5.89 s（模型已在快取；`/usr/bin/time`）。重跑一次 stdout 和前一次逐字相同。ch07 6.11 節後的說明框補了 stdout 節錄（句 1 的 7 行 index 對照與兩行最近鄰）。
+- 雲端在 ch07 指出的兩個 FACTS 疑點（「BERT 實測」的「layer 8–9 分得最開」、「ch07 實測」的「cosine layer 4–9 差距最大」）都核對屬實，已更正。
