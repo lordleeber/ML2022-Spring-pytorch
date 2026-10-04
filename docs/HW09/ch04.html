@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 4 章　Filter explanation：讓一個 filter 最興奮 — HW09 Explainable AI</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW09 讀碼教材</p>
+  <h1>第 4 章　Filter explanation：讓一個 filter 最興奮</h1>
+  <p class="chap-lead">前兩章的方法都在問「模型的<strong>輸出</strong>和輸入的關係」。這一章換一個角度：打開模型，看<strong>中間某一層的某一個 filter</strong>。第一步用 forward hook 把中間層的輸出抓出來，看原圖哪些地方讓這個 filter 有反應；第二步把權重固定，改用優化器修改「圖片」本身，找出讓這個 filter 輸出最大的圖。本章逐行讀 <code>explain_cnn.py</code> 的這一段（Q14–17），再用實測數字說明：優化 100 步之間圖片發生了什麼、像素值跑出 [0, 1] 之後怎麼畫，以及程式從原圖出發、投影片寫從白雜訊出發，差在哪裡。</p>
+</header>
+<main>
+
+<h2 id="start">4.1　起點：filter_cnn6.png 與 filter_cnn23.png</h2>
+<p>第 0 章 <a href="ch00.html#run-cnn">0.5 節</a>執行 <code>explain_cnn.py</code> 後，stdout 的第 7、8 行是 <code>saved ./output/filter_cnn6.png</code> 與 <code>saved ./output/filter_cnn23.png</code>。這兩行來自同一個函式 <code>filter_explain</code> 被主程式呼叫兩次（第 1 章 <a href="ch01.html#helpers">1.5 節</a>）：</p>
+<figure class="listing"><figcaption>explain_cnn.py:310–311 — 主程式呼叫兩次，一次看 cnn[6]、一次看 cnn[23]</figcaption>
+<pre class="py" data-hot="310,311"><code>    filter_explain(model, images, cnnid=6)
+    filter_explain(model, images, cnnid=23)</code></pre></figure>
+<p>先看第一張：</p>
+<figure class="fig">
+<img src="img/filter_cnn6.png" alt="三列各 10 格。第一列是 10 張原圖；第二列是藍綠色底的圖，物體邊緣像浮雕一樣一側亮一側暗；第三列是洋紅色細紋鋪滿的圖，隱約看得到披薩三角形、鬆餅格子、荷包蛋圓圈等原圖輪廓">
+<figcaption>圖 4.1 — <code>filter_cnn6.png</code>：第一列原圖；第二列是 cnn[6] 第 0 個 filter 對原圖的輸出（filter activation）；第三列是優化 100 步之後、讓這個 filter 輸出變大的圖（filter visualization）。</figcaption>
+</figure>
+<p>只用眼睛看：</p>
+<ul>
+  <li><strong>第二列</strong>是藍綠色的底，物體的邊緣像浮雕一樣，一側亮（黃綠）、一側暗（深藍）：奶油塊的稜線、鬆餅的格子、荷包蛋的圓圈、披薩旁的叉子都看得出來。注意它的配色和第 3 章的熱圖不同，不是黑紅黃，4.5 節會說明這是哪一種色表、為什麼。</li>
+  <li><strong>第三列</strong>是洋紅色的細紋鋪滿整張，紋理底下還隱約看得到原圖的輪廓：圖 0 的披薩三角形、圖 4 的鬆餅格子、圖 5 荷包蛋的圓。有幾張的最右邊有一條橘紅色的直條。</li>
+</ul>
+<p>第二張是同一件事換到比較深的一層：</p>
+<figure class="fig">
+<img src="img/filter_cnn23.png" alt="三列各 10 格。第一列原圖；第二列是 32×32 的方格圖，黃綠色為主，物體輪廓處有深藍的線條；第三列偏灰，有細小的彩色點狀紋理，原圖輪廓隱約可見">
+<figcaption>圖 4.2 — <code>filter_cnn23.png</code>：同樣三列，換成 cnn[23] 的第 0 個 filter。第二列只有 32×32 格，所以看起來一格一格的（座標軸刻度只標到 20）。</figcaption>
+</figure>
+<p>第二列是 32×32 的方格（注意座標軸的刻度只標到 20，不是第一列的 100：它只有 32 格），黃綠色為主，物體輪廓的地方有深藍色的線條或區塊：披薩三角形的邊、奶油塊的方框、荷包蛋的同心圓、湯碗的圓。第三列整體偏灰，有細小的彩色點狀紋理，原圖的輪廓比圖 4.1 的第三列更清楚一些（披薩、鬆餅、荷包蛋、生魚片）。</p>
+
+<h3 id="name">方法的名字</h3>
+<p>這個方法在投影片和程式裡的名字不一樣。投影片第 10 頁的標題是 Filter Visualization，全部的文字只有這幾行（用 PDF 文字擷取工具抽出，逐字照錄）：</p>
+<pre class="shell"><code>Filter Visualization
+Question 14 to 17
+● Use Gradient Ascent method to ﬁnd the image that activates the selected
+ﬁlter the most and plot them (start from white noise).
+Ref: https://reurl.cc/mGZNbA</code></pre>
+<p>直譯是：「用 Gradient Ascent 方法，找出讓選定的 filter 最興奮（activate 最多）的圖片並畫出來（從白雜訊開始）。」最後一行的短網址指到哪裡，本書沒有查證。程式的段落標題則寫 Filter Explanation：</p>
+<figure class="listing"><figcaption>explain_cnn.py:157–162 — Filter Explanation 段落的標題</figcaption>
+<pre class="py" data-hot="158,159,161"><code>"""## Filter Explanation (Q14~17)
+- Filter activation: pick up some images, and check which part of the image activates the filter
+- Filter visualization: look for which kind of image can activate the filter the most
+
+A forward hook grabs the output of an intermediate CNN layer without changing forward().
+"""</code></pre></figure>
+<p>這段 docstring 把 Filter Explanation 拆成兩件事，正好對應圖 4.1 的第二、三列：</p>
+<ul>
+  <li><strong>Filter activation</strong>（第 158 行）：拿幾張圖，看圖上哪些部分讓這個 filter 有反應。這是第二列。</li>
+  <li><strong>Filter visualization</strong>（第 159 行）：找出「什麼樣的圖」最能讓這個 filter 有反應。這是第三列，也是投影片第 10 頁講的那件事。</li>
+</ul>
+<p>本書沿用程式的標題，把整個方法叫做 Filter explanation（目錄頁也是這樣稱呼），投影片的 Filter visualization 是其中的第二步。第 161 行說的 forward hook 是本章的第一個新工具，4.3 節介紹。</p>
+<p>關於作業題目：Q14–17 的題目本身在 Gradescope 上，不在 repo 裡（第 0 章 <a href="ch00.html#questions">0.1 節〈30 題在問什麼〉</a>），本書不逐題作答，而是把回答這類問題需要的觀念與觀察講清楚。投影片的「從白雜訊開始」和程式不同，4.9 節實測兩者的差別。</p>
+
+<h2 id="layers">4.2　cnn[6] 與 cnn[23] 是哪一層</h2>
+<p>第 0 章 <a href="ch00.html#layer-table">0.2 節的逐層表</a>先標過這兩列：cnn[6] 是 stage 1 的第 3 個卷積層，cnn[23] 是 stage 3 的第 2 個卷積層。現在回到 <code>model.py</code> 對照一次，因為本章的結論有一半取決於「它們是卷積層本身，不是 ReLU 之後」：</p>
+<figure class="listing"><figcaption>model.py:26–32 — model.cnn 由五次 stack_blocks 串成</figcaption>
+<pre class="py" data-hot="27,29"><code>        cnn_list = []
+        cnn_list += stack_blocks(3, 128, 3)
+        cnn_list += stack_blocks(128, 128, 3)
+        cnn_list += stack_blocks(128, 256, 3)
+        cnn_list += stack_blocks(256, 512, 1)
+        cnn_list += stack_blocks(512, 512, 1)
+        self.cnn = nn.Sequential(*cnn_list)</code></pre></figure>
+<p>每次 <code>stack_blocks</code> 產生若干組「Conv、BN、ReLU」三層，最後補一個 MaxPool（第 0 章 <a href="ch00.html#model">0.2 節</a>）。全部倒進一個 <code>nn.Sequential</code>，從 0 開始編號，所以可以這樣數：</p>
+<ul>
+  <li>第 27 行（stage 1）產生 cnn[0]–[9]：Conv 是 0、3、6，BN 是 1、4、7，ReLU 是 2、5、8，MaxPool 是 9。<strong>cnn[6] 是第 3 個 Conv</strong>，<code>Conv2d(128, 128, 3×3, stride 1, padding 1)</code>，緊接著是 cnn[7] <code>BatchNorm2d(128)</code>、cnn[8] <code>ReLU()</code>。輸出形狀 <code>(N, 128, 128, 128)</code>：128 個 filter，每個的 activation 是 128×128。</li>
+  <li>第 28 行（stage 2）是 cnn[10]–[19]；第 29 行（stage 3）產生 cnn[20]–[29]，Conv 是 20、23、26。<strong>cnn[23] 是 stage 3 的第 2 個 Conv</strong>，<code>Conv2d(256, 256, …)</code>，後面接 cnn[24] <code>BatchNorm2d(256)</code>、cnn[25] <code>ReLU()</code>。這時圖已經過兩次 MaxPool，輸出形狀 <code>(N, 256, 32, 32)</code>。</li>
+</ul>
+<p>以上的層名是本書另外把 <code>model.cnn[i]</code> 逐一印出確認的。程式只看每一層的第 0 個 filter（4.5 節的 <code>filterid=0</code>），它的權重是 <code>cnn[6].weight</code>（形狀 <code>(128, 128, 3, 3)</code>）的第 0 塊，形狀 <code>(128, 3, 3)</code>：一個 128 通道 × 3 × 3 的權重塊，對應第 0 章說的「filter 是 c_in × 3 × 3 的權重塊」。</p>
+
+<h3 id="sign">Conv 的輸出有正有負</h3>
+<p>因為 hook 掛在 Conv 本身，抓到的是還沒經過 BN、ReLU 的值。ReLU 會把負數變成 0，但 Conv 的輸出沒有這個限制。本書把 10 張原圖送進模型，同時抓了 filter 0 在 Conv、BN、ReLU 三個位置的輸出：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>位置</th><th>最小值</th><th>最大值</th><th>平均</th><th>&lt; 0 的比例</th><th>= 0 的比例</th></tr></thead>
+<tbody>
+<tr><td><b>cnn[6] Conv</b></td><td>−53.050</td><td>48.331</td><td>−2.172</td><td>0.693</td><td>0</td></tr>
+<tr><td>cnn[7] BN</td><td>−6.949</td><td>5.848</td><td>−0.527</td><td>0.778</td><td>0</td></tr>
+<tr><td>cnn[8] ReLU</td><td>0</td><td>5.848</td><td>0.182</td><td>0</td><td>0.778</td></tr>
+<tr><td><b>cnn[23] Conv</b></td><td>−175.011</td><td>33.615</td><td>−30.689</td><td>0.911</td><td>0</td></tr>
+<tr><td>cnn[24] BN</td><td>−3.823</td><td>2.277</td><td>0.397</td><td>0.286</td><td>0</td></tr>
+<tr><td>cnn[25] ReLU</td><td>0</td><td>2.277</td><td>0.592</td><td>0</td><td>0.286</td></tr>
+</tbody>
+</table></div>
+<p>（10 張圖、filter 0 的所有位置一起統計；cnn[6] 每張 128 × 128 個值，cnn[23] 每張 32 × 32 個。）讀這張表：</p>
+<ul>
+  <li>Conv 的輸出大部分是<strong>負的</strong>：cnn[6] 有 69.3%、cnn[23] 有 91.1% 的值小於 0。把每張圖 filter 0 的 activation 加總，10 張全部是負數，例如 cnn[6] 圖 0 是 −31,896、圖 1 是 −44,248；10 張合計 −355,931。cnn[23] 的 10 張合計是 −314,252。這兩個合計數 4.6 節會再出現：它們就是優化的起點。</li>
+  <li>ReLU 之後就沒有負數了：小於 0 的部分全部變成 0（「= 0 的比例」剛好等於 BN 那一列「&lt; 0 的比例」）。</li>
+</ul>
+<p>那麼「讓 Conv 的輸出最大」和「讓 BN 或 ReLU 之後的輸出最大」是同一件事嗎？推論模式下，BN 對每個通道做的是一個固定的一次函數：減掉長期平均（running_mean）、除以長期標準差（running_var 開根號），再乘上倍率 γ、加上平移 β（第 0 章 <a href="ch00.html#layers">0.2 節</a>）。從 checkpoint 讀出通道 0 的這四個數：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>BN 層（通道 0）</th><th>γ（倍率）</th><th>β（平移）</th><th>running_mean</th><th>running_var</th></tr></thead>
+<tbody>
+<tr><td>cnn[7]（接在 cnn[6] 後）</td><td>1.2184</td><td>−0.5347</td><td>−2.2347</td><td>93.1679</td></tr>
+<tr><td>cnn[24]（接在 cnn[23] 後）</td><td>0.9297</td><td>0.0824</td><td>−41.4389</td><td>1011.2743</td></tr>
+</tbody>
+</table></div>
+<p>兩個 γ 都是正的，所以這個一次函數是<strong>遞增</strong>的：Conv 的輸出越大，BN 的輸出也越大，總和之間只差一個正的倍數和一個常數。因此最大化 Conv 輸出的總和，等同於最大化 BN 輸出的總和。但<strong>不等同</strong>於最大化 ReLU 之後的總和：ReLU 把負的值截成 0，那些位置不管再怎麼負，對總和的貢獻都是 0。這一段是由公式推得的；本書事後把 hook 改掛在 cnn[7]（BN）和 cnn[8]（ReLU）實測過，結果和這個推論一致，放在 <a href="#bn-relu">4.9 節最後</a>。</p>
+<p>（順帶驗算表中一個數：cnn[6] 最小值 −53.050 經過 cnn[7]，(−53.050 + 2.2347) ÷ √93.1679 × 1.2184 − 0.5347 ≈ −6.949，正好是 BN 那一列的最小值。BN 的分母還有一個極小的 ε 防止除以 0，這裡可以忽略。手算。）</p>
+
+<h3 id="rf">一格 activation 看得到多大一塊：receptive field</h3>
+<p>第二列的每一格（一個 activation 值）是由原圖的哪些像素算出來的？一個 3×3 卷積的輸出只看輸入的 3×3 一小塊；但 cnn[6] 前面已經有 cnn[0]、cnn[3] 兩個卷積，每疊一層，看得到的範圍就向外擴一圈。一個 activation 在原圖上「看得到」的範圍，叫做它的 <strong>receptive field</strong>（感受野）。</p>
+<p>本書直接量：對 filter 0 正中間那一格的 activation 取輸入的梯度，梯度不是 0 的像素，就是它看得到的像素（第 3 章 <a href="ch03.html#idea">3.2 節</a>：梯度不是 0，代表那個像素一動，這個值就跟著變）。</p>
+<ul>
+  <li><strong>cnn[6]</strong> 的 (64, 64) 只依賴原圖 rows 61..67、cols 61..67，也就是 <strong>7×7</strong> 個像素。</li>
+  <li><strong>cnn[23]</strong> 的 (16, 16) 依賴 rows 47..84、cols 47..84，<strong>38×38</strong>。</li>
+</ul>
+<p>這兩個數也可以手算。先定義「步距」：這一層相鄰兩格 activation，在原圖上相隔幾個像素。卷積（stride 1）不改變步距；MaxPool 把 2×2 格併成 1 格，步距乘 2。3×3 卷積讓每格多看左右各 1 格，換算成原圖就是兩邊各加 1 個步距；MaxPool 的 2×2 格多看 1 格，加 1 個步距。所以：每經過一個 3×3 卷積，範圍加「2 × 目前的步距」；每經過一個 MaxPool，範圍加「1 × 目前的步距」，步距再乘 2。cnn[6] 前有 3 個卷積（含它自己），步距 1：1 + 2 + 2 + 2 = 7。cnn[23] 則是 7，經過 MaxPool 加 1 變 8、步距變 2；stage 2 三個卷積各加 4 變 20；MaxPool 加 2 變 22、步距變 4；stage 3 的 cnn[20]、cnn[23] 各加 8，得 38，和實測一致。</p>
+<p>這解釋了兩張圖第二列的差別：cnn[6] 的每一格只看 7×7 的小範圍，所以畫出來的是細細的邊緣；cnn[23] 的每一格看 38×38，大約是原圖邊長的 30%，所以反應的是比較大塊的形狀，而且它只有 32×32 格，畫成和原圖一樣大時就變成方格。</p>
+
+<h2 id="hook">4.3　forward hook：不改 forward，拿到中間層</h2>
+<p>模型的 <code>forward</code>（model.py:42–45）只回傳最後的 logits，中間 38 層的輸出算完就丟了。想看 cnn[6] 的輸出，一種做法是改寫 <code>forward</code>；第 161 行的 docstring 說的是另一種：<strong>forward hook</strong>。</p>
+<p>hook（掛勾）是「事先登記、事件發生時被呼叫」的函式。PyTorch 的每一個層（<code>nn.Module</code>）都可以用 <code>register_forward_hook(hook)</code> 登記一個 forward hook：之後每次這一層做完 forward，PyTorch 就會呼叫 <code>hook(module, input, output)</code>，三個參數依序是這一層本身、這一層收到的輸入（一個 tuple）、這一層算出的輸出。hook 如果回傳一個值，那個值會取代這一層的輸出；不回傳（回傳 <code>None</code>）就什麼都不改，模型照常往下算。<code>register_forward_hook</code> 回傳一個 <strong>handle</strong>（把手），呼叫 <code>handle.remove()</code> 就把這個 hook 拿掉。</p>
+<p>程式的寫法：</p>
+<figure class="listing"><figcaption>explain_cnn.py:164–183 — 登記 hook、forward 一次、取出 filter 0 的 activation</figcaption>
+<pre class="py" data-hot="164,171,172,173,175,180,183"><code>layer_activations = None
+def filter_explanation(x, model, cnnid, filterid, iteration=100, lr=1):
+    # x: input image
+    # cnnid: cnn layer id
+    # filterid: which filter
+    model.eval()
+
+    def hook(model, input, output):
+        global layer_activations
+        layer_activations = output
+
+    hook_handle = model.cnn[cnnid].register_forward_hook(hook)
+    # When the model forwards through the layer[cnnid], it calls the hook,
+    # which saves the output of the layer[cnnid]
+
+    # Filter activation: x passing the filter will generate the activation map
+    model(x.cuda())  # forward
+
+    # Pick up the activation map of the filter given by filterid
+    filter_activations = layer_activations[:, filterid, :, :].detach().cpu()</code></pre></figure>
+<ul>
+  <li><strong>第 164 行</strong>在函式<strong>外面</strong>建立一個模組層級的變數 <code>layer_activations</code>，先設成 <code>None</code>。它是 hook 和函式本體之間傳遞資料的管道。</li>
+  <li><strong>第 171–173 行</strong>是 hook 本身：把這一層的輸出存進 <code>layer_activations</code>，沒有 <code>return</code>，所以不改輸出。第一個參數名叫 <code>model</code>，但 PyTorch 傳進來的是 hook 掛的那一層（<code>model.cnn[cnnid]</code>），不是整個模型；hook 也沒有用到它。</li>
+  <li><strong>第 172 行</strong> <code>global layer_activations</code>：Python 的規則是，在函式裡對一個名字<strong>賦值</strong>，預設會建立一個只屬於這個函式的<strong>區域變數</strong>，函式結束就消失。<code>global</code> 宣告「這個名字指的是模組層級那一個」，第 173 行的賦值才會寫到第 164 行建立的變數裡。少了這一行，hook 存的東西在 hook 結束時就丟了，第 183 行讀到的仍是 <code>None</code>。本書實測拿掉第 172 行再跑 <code>filter_explain(model, images, cnnid=6)</code>，錯誤訊息的最後一行是 <code>TypeError: 'NoneType' object is not subscriptable</code>，出錯的位置就是取 activation 的那一行（拿掉一行之後，它從第 183 行變成第 182 行）。「not subscriptable」的意思是「不能用 <code>[ ]</code> 取值」：<code>None</code> 沒有 <code>[:, 0, :, :]</code> 這種操作。</li>
+  <li><strong>第 175 行</strong>把 hook 登記在 <code>model.cnn[cnnid]</code> 上，也就是 cnn[6] 或 cnn[23] 這個 Conv 層。</li>
+  <li><strong>第 169 行</strong> <code>model.eval()</code>：和每個解釋方法一樣先切到推論模式（第 1 章 <a href="ch01.html#mode">1.7 節</a>）。這一章它特別重要，4.7 節會用到「BN 用固定的長期平均」這件事。</li>
+  <li><strong>第 180 行</strong>做一次完整的 forward。回傳的 logits 沒有人接；這行的目的只是讓 hook 被呼叫一次。forward 經過 cnn[6] 時，hook 把 <code>(10, 128, 128, 128)</code> 的輸出存進 <code>layer_activations</code>，然後模型照常算完剩下的 31 層和 fc。</li>
+  <li><strong>第 183 行</strong> <code>[:, filterid, :, :]</code> 取出第 1 維（通道）的第 <code>filterid</code> 個，也就是第 0 個 filter 的 activation，形狀 <code>(10, 128, 128)</code>（cnn[23] 是 <code>(10, 32, 32)</code>）。<code>.detach().cpu()</code> 把它從計算記錄中切開、搬回 CPU（第 3 章用過同樣的寫法）。「計算記錄」指 autograd（PyTorch 自動算梯度的機制，第 3 章 <a href="ch03.html#idea">3.2 節</a>）在 forward 時為需要梯度的張量記下的每一步運算，backward 就是沿著它往回算；它連同中間結果一起留在記憶體裡，直到沒有張量再連著它。這就是圖 4.1 第二列畫的東西。</li>
+</ul>
+<p>整個機制畫成圖：</p>
+<figure class="fig">
+<svg viewBox="0 0 900 420" role="img" aria-label="forward hook 的位置：輸入 x 依序經過 cnn[0] 到 cnn[5]、cnn[6] Conv、cnn[7] BN、cnn[8] ReLU、後面的層與 fc，得到沒人用的 logits。hook 掛在 cnn[6] 的輸出上，在 BN 與 ReLU 之前，把輸出存進全域變數 layer_activations；取第 0 個通道加總、加負號成為 objective；backward 的梯度一路回到輸入 x，Adam 只更新 x，權重不動">
+  <defs>
+    <marker id="ar41f" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#3fb950"/>
+    </marker>
+    <marker id="ar41b" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#e3b341"/>
+    </marker>
+    <marker id="ar41p" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#a371f7"/>
+    </marker>
+  </defs>
+  <text class="s-sm" x="20" y="28">forward（綠）：model(x) 整條走完；hook 在 cnn[6] 算完、交給 cnn[7] 之前被呼叫</text>
+
+  <rect x="20" y="50" width="110" height="80" rx="10" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-lbl" x="75" y="78" text-anchor="middle" font-weight="700">輸入 x</text>
+  <text class="s-mono" x="75" y="100" text-anchor="middle">(10,3,128,128)</text>
+  <text class="s-sm" x="75" y="120" text-anchor="middle">唯一會被改的</text>
+
+  <rect x="150" y="50" width="110" height="80" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="205" y="78" text-anchor="middle">cnn[0]–[5]</text>
+  <text class="s-sm" x="205" y="100" text-anchor="middle">Conv·BN·ReLU</text>
+  <text class="s-sm" x="205" y="118" text-anchor="middle">× 2 組</text>
+
+  <rect x="280" y="50" width="120" height="80" rx="10" class="s-box" style="stroke:#a371f7;stroke-width:3"/>
+  <text class="s-lbl" x="340" y="78" text-anchor="middle" font-weight="700">cnn[6] Conv</text>
+  <text class="s-sm" x="340" y="100" text-anchor="middle">Conv2d(128,128)</text>
+  <text class="s-sm" x="340" y="118" text-anchor="middle">hook 掛在這裡</text>
+
+  <rect x="420" y="50" width="90" height="80" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="465" y="78" text-anchor="middle">cnn[7]</text>
+  <text class="s-sm" x="465" y="100" text-anchor="middle">BN</text>
+
+  <rect x="530" y="50" width="90" height="80" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="575" y="78" text-anchor="middle">cnn[8]</text>
+  <text class="s-sm" x="575" y="100" text-anchor="middle">ReLU</text>
+
+  <rect x="640" y="50" width="130" height="80" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="705" y="78" text-anchor="middle">cnn[9]–[37]</text>
+  <text class="s-sm" x="705" y="100" text-anchor="middle">再加 fc</text>
+
+  <rect x="790" y="50" width="95" height="80" rx="10" fill="none" stroke="#93a1af" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text class="s-lbl" x="837" y="78" text-anchor="middle">logits</text>
+  <text class="s-mono" x="837" y="100" text-anchor="middle">(10, 11)</text>
+  <text class="s-sm" x="837" y="118" text-anchor="middle">沒有人用</text>
+
+  <line x1="132" y1="90" x2="146" y2="90" stroke="#3fb950" stroke-width="2" marker-end="url(#ar41f)"/>
+  <line x1="262" y1="90" x2="276" y2="90" stroke="#3fb950" stroke-width="2" marker-end="url(#ar41f)"/>
+  <line x1="402" y1="90" x2="416" y2="90" stroke="#3fb950" stroke-width="2" marker-end="url(#ar41f)"/>
+  <line x1="512" y1="90" x2="526" y2="90" stroke="#3fb950" stroke-width="2" marker-end="url(#ar41f)"/>
+  <line x1="622" y1="90" x2="636" y2="90" stroke="#3fb950" stroke-width="2" marker-end="url(#ar41f)"/>
+  <line x1="772" y1="90" x2="786" y2="90" stroke="#3fb950" stroke-width="2" marker-end="url(#ar41f)"/>
+
+  <circle cx="410" cy="90" r="4.5" fill="#a371f7"/>
+  <line x1="410" y1="94" x2="410" y2="168" stroke="#a371f7" stroke-width="2" marker-end="url(#ar41p)"/>
+
+  <rect x="270" y="172" width="290" height="60" rx="10" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-lbl" x="415" y="196" text-anchor="middle">hook（第 171–173 行）</text>
+  <text class="s-mono" x="415" y="218" text-anchor="middle">layer_activations = output</text>
+  <line x1="415" y1="234" x2="415" y2="254" stroke="#a371f7" stroke-width="2" marker-end="url(#ar41p)"/>
+
+  <rect x="270" y="258" width="290" height="60" rx="10" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-lbl" x="415" y="282" text-anchor="middle">layer_activations</text>
+  <text class="s-sm" x="415" y="304" text-anchor="middle">全域變數（第 164 行）(10,128,128,128)</text>
+  <line x1="562" y1="288" x2="594" y2="288" stroke="#a371f7" stroke-width="2" marker-end="url(#ar41p)"/>
+
+  <rect x="600" y="258" width="285" height="60" rx="10" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-lbl" x="742" y="282" text-anchor="middle">objective（第 196 行）</text>
+  <text class="s-mono" x="742" y="304" text-anchor="middle">−[:, 0, :, :].sum()</text>
+
+  <polyline points="742,320 742,352 75,352 75,136" fill="none" stroke="#e3b341" stroke-width="2" marker-end="url(#ar41b)"/>
+  <text class="s-sm" x="95" y="344">backward（黃）：objective.backward() 的梯度穿過 cnn[6]…cnn[0] 回到 x</text>
+  <text class="s-sm" x="95" y="376">optimizer.step()：Adam([x]) 只拿到 x，所以只有 x 被改；模型權重一個也不動</text>
+  <text class="s-sm" x="20" y="404">cnnid=23 時同一件事發生在 cnn[23]（輸出 (10, 256, 32, 32)），後面接 cnn[24] BN、cnn[25] ReLU</text>
+</svg>
+<figcaption>圖 4.3 — hook 掛在 cnn[6] 這個 Conv 的<strong>輸出</strong>上，位置在 BN 與 ReLU 之前，抓到的值存進全域變數 <code>layer_activations</code>。forward 照樣走到 logits，但後面那一段和 logits 都沒有人用；優化的對象是輸入 x，不是權重。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#58a6ff"></i>輸入資料</span>
+  <span><i style="background:#3fb950"></i>模型的 forward</span>
+  <span><i style="background:#e3b341"></i>梯度（backward 算出來的偏微分）</span>
+  <span><i style="background:#a371f7"></i>解釋方法自己的步驟</span>
+</div>
+<p>有一件事要留意：<strong>hook 一旦登記，會一直留在那一層上</strong>，直到被 remove。第 203 行（下一節）就是做這件事，函式最後的註解也寫了「The hook stays registered until removed」。本書實測：<code>filter_explanation</code> 結束後，cnn[6] 上的 forward hook 數量是 0；如果不 remove、連續登記兩次，數量是 2，每次 forward 兩個都會被呼叫；remove 之後才回到 0。</p>
+<p>另一件事：hook 被拿掉了，<strong>全域變數卻還在</strong>。本書在 <code>filter_explanation</code>（cnnid=6）結束後檢查，<code>layer_activations</code> 仍然是最後一次 forward 的輸出：形狀 <code>(10, 128, 128, 128)</code>、在 GPU 上、<code>requires_grad=True</code>（它連著計算記錄）。10 × 128 × 128 × 128 個 float32 大約 84 MB（每個 4 bytes，手算），連同它的計算記錄一起佔著 GPU 記憶體，直到下一次被覆蓋。這是用全域變數傳資料的代價，本章最後的「現在的做法」框有替代寫法。</p>
+
+<h2 id="code">4.4　用優化器修改「圖片」：filter_explanation 的後半</h2>
+<p>第 183 行拿到了第二列要畫的東西。函式的後半做 Filter visualization：</p>
+<figure class="listing"><figcaption>explain_cnn.py:185–205 — 固定權重，對圖片做 100 步優化</figcaption>
+<pre class="py" data-hot="186,187,189,192,193,196,198,199,200,203"><code>    # Filter visualization: find the image that can activate the filter the most
+    x = x.cuda()
+    x.requires_grad_()
+    # input image gradient
+    optimizer = Adam([x], lr=lr)
+    # Use optimizer to modify the input image to amplify filter activation
+    for iter in range(iteration):
+        optimizer.zero_grad()
+        model(x)
+
+        # We want to maximize the filter activation's summation, so we add a negative sign
+        objective = -layer_activations[:, filterid, :, :].sum()
+
+        objective.backward()
+        optimizer.step()
+    filter_visualizations = x.detach().cpu().squeeze()
+
+    # The hook stays registered until removed
+    hook_handle.remove()
+
+    return filter_activations, filter_visualizations</code></pre></figure>
+
+<h3 id="optimizer">優化器與 Adam</h3>
+<p>先定義兩個名詞。<strong>優化器</strong>（optimizer）是 PyTorch 裡負責「根據梯度更新張量」的物件：建立時給它一串要更新的張量；每次呼叫 <code>step()</code>，它讀這些張量的 <code>.grad</code>，往讓 loss 變小的方向改一步；<code>zero_grad()</code> 把這些張量的 <code>.grad</code> 清掉（第 3 章 <a href="ch03.html#code">3.3 節</a>：<code>.grad</code> 是累加的，不清會疊上去）。訓練模型時通常寫 <code>Adam(model.parameters(), lr=...)</code>，交給它的是全部的權重。</p>
+<p><strong>Adam</strong> 是最常用的優化器之一（第 7 行 <code>from torch.optim import Adam</code>）。它和「直接減掉 lr × 梯度」不同的地方，是替每一個數字各自記兩個移動平均：梯度的移動平均（一階動量），和梯度平方的移動平均（二階動量），更新量大約是「lr × 一階動量 ÷ 二階動量的平方根」。第 1 章 <a href="ch01.html#checkpoint">1.2 節</a>在 <code>checkpoint.pth</code> 裡看過這兩份東西（<code>exp_avg</code>、<code>exp_avg_sq</code>），每個權重都多存了兩份一樣大的張量。本章只需要 Adam 的一個性質，4.6 節用實測說明：它的步伐大小主要由 <code>lr</code>（learning rate，學習率）決定，和梯度本身有多大關係不大。</p>
+
+<h3 id="ascent">逐行讀</h3>
+<ul>
+  <li><strong>第 186 行</strong> <code>x = x.cuda()</code>：和第 3 章 <a href="ch03.html#code">3.3 節</a>一樣，<code>x</code> 原本是主程式那份在 CPU 上的 <code>images</code>，<code>.cuda()</code> 複製一份到 GPU，函式裡的 <code>x</code> 從此指向新的複本。本書實測：對 CPU 上的張量呼叫 <code>.cuda()</code>，每次都回傳新的張量；對已經在 GPU 上的張量呼叫，回傳的是<strong>同一個物件</strong>。主程式的 <code>images</code> 在 CPU 上，所以接下來 100 步改的是複本，<code>images</code> 不受影響，第二次呼叫（cnnid=23）拿到的仍是原圖。（第 180 行的 <code>x.cuda()</code> 是另一份複本，用完就丟。）</li>
+  <li><strong>第 187 行</strong> <code>x.requires_grad_()</code>：讓 PyTorch 記錄 x 參與的運算，backward 時才算得出 x 的梯度（第 3 章 <a href="ch03.html#idea">3.2 節</a>）。</li>
+  <li><strong>第 189 行</strong> <code>Adam([x], lr=lr)</code>：這是本章最關鍵的一行。交給優化器的不是 <code>model.parameters()</code>，而是只有 <code>[x]</code> 一個張量。所以 <code>step()</code> 只會改 x，模型的權重一個也不會動。<code>lr</code> 是呼叫端傳進來的 0.1（第 209 行），不是函式簽名裡的預設值 1。</li>
+  <li><strong>第 192 行</strong> <code>optimizer.zero_grad()</code> 清的是 x 的 <code>.grad</code>。模型權重的 <code>.grad</code> 不在這個優化器裡，不會被清掉；backward 時 cnn[0] 到 cnn[6] 的權重也會算出梯度、一直累加（由 autograd 的規則推得，和第 3 章的觀察相同，本章沒有另外量）。它們不影響結果，只是佔記憶體。</li>
+  <li><strong>第 193 行</strong> <code>model(x)</code>：做一次 forward，目的只是讓 hook 把這一次的 cnn[6] 輸出存進 <code>layer_activations</code>。和第 180 行不同，這次的 x 需要梯度，所以存下來的輸出連著一條通往 x 的計算記錄。</li>
+  <li><strong>第 196 行</strong>：取出第 0 個 filter 的 activation，把 10 張圖、所有位置的值<strong>全部加起來</strong>，再加一個負號。</li>
+  <li><strong>第 198–199 行</strong>：backward 算出 objective 對 x 的梯度，<code>step()</code> 用它更新 x。</li>
+</ul>
+<p>第 196 行的負號，就是投影片說的 <strong>gradient ascent</strong>（梯度上升）。PyTorch 的優化器只會做一件事：沿著梯度的反方向走，讓目標<strong>變小</strong>（這叫 gradient descent，梯度下降，訓練時就是這樣讓 loss 變小）。這裡想要的是讓 activation 總和<strong>變大</strong>，所以把目標取負號：讓「負的總和」變小，就是讓總和變大。程式的註解（第 195 行）講的正是這件事。</p>
+<p>這個目標要求的是「10 張圖、filter 0 在每一個位置的值，加起來越大越好」。它沒有限制 x 的範圍，也沒有要求 x 看起來像一張圖片；4.6 節會看到，這兩點決定了第三列長什麼樣子。</p>
+<p>迴圈結束後：</p>
+<ul>
+  <li><strong>第 200 行</strong> <code>x.detach().cpu()</code> 把優化完的圖切開、搬回 CPU，形狀 <code>(10, 3, 128, 128)</code>。<code>.squeeze()</code> 的作用是去掉長度為 1 的維度，這裡沒有這種維度，所以什麼都不做（只傳一張圖時，它會把批次那一維拿掉；由 PyTorch 的規則推得）。</li>
+  <li><strong>第 203 行</strong>把 hook 拿掉（4.3 節）。</li>
+</ul>
+<p>注意迴圈的順序：每一步是「forward → 算 objective → backward → 更新 x」，所以第 k 步算出的 objective 是第 k − 1 次更新<strong>之後</strong>、第 k 次更新<strong>之前</strong>的值。第 100 次更新後的 x 就是最後的結果，程式沒有再 forward 一次去量它的 activation。本書 4.6 節的表格照這個定義記錄「第 k 步」。</p>
+<p>耗時：Filter explanation 這一段在第 0 章 <a href="ch00.html#run-cnn">0.5 節</a>的逐段計時裡，cnn[6] 是 2.3 秒、cnn[23] 是 2.9 秒，比 SmoothGrad 的 24.1 秒快得多：只有 101 次 forward、100 次 backward，而且 10 張圖一次算。</p>
+
+<h2 id="plot">4.5　filter_explain：三列怎麼畫</h2>
+<figure class="listing"><figcaption>explain_cnn.py:208–220 — filter_explain：上原圖、中 activation、下優化結果</figcaption>
+<pre class="py" data-hot="209,213,216,219"><code>def filter_explain(model, images, cnnid):
+    filter_activations, filter_visualizations = filter_explanation(images, model, cnnid=cnnid, filterid=0, iteration=100, lr=0.1)
+
+    fig, axs = plt.subplots(3, len(images), figsize=(15, 8))
+    for i, img in enumerate(images):
+        axs[0][i].imshow(img.permute(1, 2, 0))
+    # Plot filter activations
+    for i, img in enumerate(filter_activations):
+        axs[1][i].imshow(normalize(img))
+    # Plot filter visualization
+    for i, img in enumerate(filter_visualizations):
+        axs[2][i].imshow(normalize(img.permute(1, 2, 0)))
+    save_fig(fig, f'filter_cnn{cnnid}.png')</code></pre></figure>
+<ul>
+  <li><strong>第 209 行</strong>：<code>filterid=0</code> 寫死，兩層都只看第 0 個 filter（cnn[6] 有 128 個、cnn[23] 有 256 個，其餘都沒看）。<code>iteration=100</code>、<code>lr=0.1</code> 也在這裡指定。</li>
+  <li><strong>第 213 行</strong>：第一列原圖，和第 1 章畫 <code>images.png</code> 一樣先 <code>permute(1, 2, 0)</code> 把通道換到最後（第 1 章 <a href="ch01.html#images-png">1.5 節〈第一張輸出〉</a>）。這裡直接把 PyTorch 張量交給 <code>imshow</code>，沒有先轉成 NumPy，也畫得出來。</li>
+  <li><strong>第 216 行</strong>：第二列。<code>filter_activations</code> 是第 183 行在<strong>優化之前</strong>、用原圖算出的 activation，所以第二列和優化無關，回答的是 docstring 的 Filter activation：「原圖哪些地方讓 filter 0 有反應」。每張 <code>(128, 128)</code>（cnn[23] 是 <code>(32, 32)</code>）各自 <code>normalize</code> 到 0–1。</li>
+  <li><strong>第 219 行</strong>：第三列，優化後的 x，換維度成 <code>(128, 128, 3)</code> 後 <code>normalize</code>。<code>normalize</code> 對傳進去的整個陣列取最大最小值（第 1 章 <a href="ch01.html#helpers">1.5 節</a>），所以是<strong>每張圖的三個通道一起</strong>拉到 0–1。這一步對第三列的外觀影響很大，4.8 節細講。</li>
+</ul>
+
+<h3 id="viridis">第二列為什麼是藍綠黃：viridis</h3>
+<p>第 216 行的 <code>imshow</code> 收到的是二維陣列，所以會套用色表（colormap，第 3 章 <a href="ch03.html#code">3.3 節</a>）。但這一行<strong>沒有</strong>指定 <code>cmap</code>，不像第 3 章 saliency 的第 109 行寫了 <code>cmap=plt.cm.hot</code>。沒有指定時，matplotlib 用預設色表 <strong>viridis</strong>：0 是深紫色，往上經過藍、藍綠、綠，1 是黃色。這就是圖 4.1、4.2 第二列不是黑紅黃的原因。</p>
+<p>附帶一提，<code>imshow</code> 對二維陣列套色表時，預設會把這張圖自己的最小值對到色表的 0、最大值對到 1（matplotlib 的預設規則），不會截斷；所以第 216 行的 <code>normalize</code> 對畫面其實沒有影響，加了也無妨。</p>
+<p>用這個色表讀第二列：黃色是這張圖裡 activation 最大（最正）的位置，深紫、深藍是最小（最負）的位置，藍綠色是中間。cnn[6] 第二列大面積是藍綠色，邊緣一側黃綠、一側深藍，看起來像浮雕。本書<strong>推測</strong>（沒有驗證）filter 0 對某一個方向的亮度變化有反應，有點像邊緣偵測器：亮度往某個方向變化的邊緣得到正值，往反方向變化的得到負值，平坦的區域接近中間值。</p>
+<p>因為第 216 行是每張圖各自 normalize，第二列和第 3 章的熱圖一樣，<strong>不同圖之間的顏色不能比較</strong>：圖 1 的黃和圖 5 的黃，代表的原始數值不同（cnn[6] 每張的最大值從 22.90 到 48.33）。</p>
+
+<h2 id="trajectory">4.6　100 步裡發生了什麼</h2>
+<p>程式只畫出最後的結果。本書把同一個優化迴圈複製出來（同樣的 Adam、lr 0.1、100 步、同樣的目標），在每一步記下 filter 0 的總和與 x 的值域：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>第 k 步</th><th>cnn[6] 總和</th><th>cnn[6] x 值域</th><th>cnn[23] 總和</th><th>cnn[23] x 值域</th></tr></thead>
+<tbody>
+<tr><td>1（原圖）</td><td>−355,931</td><td>0.00..1.00</td><td>−314,252</td><td>0.00..1.00</td></tr>
+<tr><td>2</td><td>−364,330</td><td>−0.10..1.10</td><td><b>−532,294</b></td><td>−0.10..1.10</td></tr>
+<tr><td>3</td><td>−170,234</td><td>−0.20..1.20</td><td>−222,235</td><td>−0.20..1.20</td></tr>
+<tr><td>6</td><td>244,823</td><td>−0.50..1.50</td><td>−76,504</td><td>−0.50..1.50</td></tr>
+<tr><td>10</td><td>598,093</td><td>−0.90..1.90</td><td>−5,259</td><td>−0.90..1.87</td></tr>
+<tr><td>20</td><td>1,331,296</td><td>−1.94..2.91</td><td>88,859</td><td>−1.87..2.73</td></tr>
+<tr><td>50</td><td>3,828,020</td><td>−5.37..6.15</td><td>239,616</td><td>−4.18..5.93</td></tr>
+<tr><td>100</td><td><b>9,102,480</b></td><td>−11.77..12.17</td><td>371,812</td><td>−6.71..7.58</td></tr>
+</tbody>
+</table></div>
+<p>（「第 k 步」是第 k 次迴圈 forward 時的值，也就是第 k 次更新之前，4.4 節。總和是 10 張圖合計；第 1 步就是 4.2 節原圖的總和。）本章另外量的數字都來自 repo 裡的 <code>docs/tools/hw09_ch04_filter.py</code>：在 <code>HW09/</code> 裡執行 <code>../.venv/bin/python ../docs/tools/hw09_ch04_filter.py</code>（需要 GPU、<code>checkpoint.pth</code> 與 <code>food/</code>，和第 0 章 <a href="ch00.html#run-cnn">0.5 節</a>相同），它把本章各表的數字印到 stdout，並重新產生本章的 <code>ch04_*.png</code> 圖。輸出的尾數每次不同（4.7 節），所以本書不附逐字輸出。</p>
+<figure class="fig">
+<img src="img/ch04_trajectory.png" alt="左右兩張折線圖，橫軸 step 1 到 100。左圖 cnn[6] filter 0 的總和，前兩步略降，之後一路上升到約 9 百萬，曲線往上彎；右圖 cnn[23]，第 2 步跌到約負 53 萬，之後快速回升、約第 10 步過 0，然後越升越慢到約 37 萬">
+<figcaption>圖 4.4 — filter 0 activation 總和（10 張合計）隨步數的變化。左 cnn[6]（縱軸單位 1e6，即百萬），右 cnn[23]；灰線是 0。兩條都還沒有停下來。</figcaption>
+</figure>
+<p>看圖：</p>
+<ul>
+  <li><strong>cnn[6]</strong>（左）：前 2 步略降，之後一路上升，到第 100 步還在<strong>加速</strong>（曲線往上彎），完全沒有收斂的跡象。</li>
+  <li><strong>cnn[23]</strong>（右）：第 2 步跌到最低，約 −53 萬，比原圖還低；之後快速回升，約第 10–11 步過 0，然後越升越慢，到 100 步大約是 37 萬。</li>
+</ul>
+<p>第 2 步不升反降，是 gradient ascent 的第一步反而讓目標變差。本書<strong>推測</strong>原因在 Adam 的第一步太大：下一小節會看到，第 1 次更新讓<strong>每一個像素</strong>都整整移動 0.1，而梯度只描述「x 附近」的變化方向，一次走這麼遠，就不保證目標會變好。</p>
+<p>x 的值域畫成圖：</p>
+<figure class="fig">
+<img src="img/ch04_xrange.png" alt="折線圖，橫軸 step，縱軸像素值。cnn[6] 的最大值與最小值從 1 和 0 開始直線往外走，到 100 步約 +12 與 −12；cnn[23] 前 40 步和 cnn[6] 重疊，之後變慢、一度往回，最後約 +7.6 與 −6.7。0 到 1 之間有一條灰色帶">
+<figcaption>圖 4.5 — x 的最大值（實線）與最小值（虛線）。灰色帶是原圖所在的 [0, 1]。前 20 步兩層的線都以每步約 0.1 直線往外走。</figcaption>
+</figure>
+<p>前大約 20 步，最大值與最小值都以<strong>每步約 0.1</strong> 的速度直線往外走（表中第 2、3、6、10 步的值域剛好是 −0.1..1.1、 −0.2..1.2、 −0.5..1.5、 −0.9..1.9）。cnn[6] 一直直線走到 ±12；cnn[23] 在 40 步之後變慢，甚至一度往回。到第 100 步，cnn[6] 的值域是 −11.77..12.17，原圖只佔 [0, 1] 那一條細細的灰帶。</p>
+
+<h3 id="adam-step1">Adam 的第 1 步：每個像素都剛好移動 0.1</h3>
+<p>為什麼值域每步剛好擴張 0.1？本書把第 1 步拆開量（cnn[6]）：</p>
+<ul>
+  <li>第 1 步每個像素梯度的絕對值，最小 9.06 × 10<sup>−6</sup>、中位數 11.33、最大 171.1，相差 7 個數量級。</li>
+  <li>但第 1 次更新後，每個像素移動的量 |Δx| 最小 0.0999、中位數 0.1000、最大 0.1000，<strong>100% 的像素</strong>都在 0.1 ± 0.001 之內。</li>
+</ul>
+<p>梯度差了 7 個數量級，移動量卻全部一樣。這是 Adam 的設計：第 1 步時，一階動量就是梯度 g 本身，二階動量就是 g<sup>2</sup>，所以更新量是</p>
+<div class="eq">Δx ＝ lr × g ÷ (√(g<sup>2</sup>) + ε) ＝ lr × g ÷ (|g| + ε) ≈ lr × (g 的正負號)　　（ε 是 Adam 防止除以 0 的極小數，預設 10<sup>−8</sup>）</div>
+<p>也就是每個像素都往「讓總和變大」的方向，走<strong>整整一個 lr</strong>，不管梯度本身多大多小。（式子是由 Adam 的定義推得，數字是實測。梯度最小的像素 9.06 × 10<sup>−6</sup> 仍遠大於 ε，所以 |Δx| 最小也有 0.0999，手算 9.06 × 10<sup>−6</sup> ÷ (9.06 × 10<sup>−6</sup> + 10<sup>−8</sup>) × 0.1 ≈ 0.0999。）原圖的值在 0 到 1 之間，原本是 0 的像素只要梯度要它變小，一步就到 −0.1；原本是 1 的，一步就到 1.1。只要同一個像素的梯度方向一直不變，之後每一步也大約走 lr，值域就每步擴張 0.1。</p>
+<p>到了後段，cnn[6] 的速度其實略超過 0.1：第 50 步到第 100 步，最大值從 6.15 走到 12.17，平均每步約 0.12（手算）。Adam 的步伐只是「大約」lr，不是上限。</p>
+<p>這也說明了為什麼 x 會跑出 [0, 1]：目標裡沒有任何東西要求 x 留在 [0, 1]，而 Adam 每步都讓幾乎每個像素整整移動 lr。100 次更新後，cnn[6] 的 x 有 90.3% 的值在 [0, 1] 之外，和原圖的平均絕對差是 3.175；cnn[23] 是 57.5% 在外、平均差 0.576。</p>
+
+<h3 id="runs">兩次量到的數字不一樣</h3>
+<p>上面的表是本章為了記錄每一步而另外跑的一次（<code>hw09_ch04_filter.py</code>，以下稱第二次）。教學大綱和本書最初的記錄來自另一次執行：本書用 repo 裡的另一支工具 <code>docs/tools/hw09_facts.py</code> 一次量完全書的數字，它複製了同一個優化迴圈、記下第 1、2、10、50、100 步的總和，也就是產生圖 4.1、4.2 的那一次（2026-10-03；本書附的圖檔放在 <code>docs/HW09/img/</code>，是那一次執行的輸出，第 0 章 <a href="ch00.html#outputs">0.6 節</a>）。兩次的數字在第 4–5 位不同：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>第一次（產生圖 4.1、4.2）</th><th>第二次（本章逐步記錄）</th></tr></thead>
+<tbody>
+<tr><td>cnn[6] 第 10 步總和</td><td>598,087</td><td>598,093</td></tr>
+<tr><td>cnn[6] 第 50 步總和</td><td>3,828,560</td><td>3,828,020</td></tr>
+<tr><td>cnn[6] 第 100 步總和</td><td>9,108,426</td><td>9,102,480</td></tr>
+<tr><td>cnn[6] 100 次更新後的 x 值域</td><td>−11.87..12.32</td><td>−11.90..12.31</td></tr>
+<tr><td>cnn[23] 第 100 步總和</td><td>371,643</td><td>371,812</td></tr>
+<tr><td>cnn[23] 100 次更新後的 x 值域</td><td>−6.44..7.49</td><td>−6.75..7.64</td></tr>
+</tbody>
+</table></div>
+<p>每一欄是同一次執行裡的數字，兩欄不要混著讀。注意「第 100 步」和「100 次更新後」是兩個時間點：第 100 步的值域 −11.77..12.17（上一張表）是第 99 次更新後的 x，再更新一次才是 −11.90..12.31。第二次執行另外在 100 次更新後多做了一次 forward（程式沒有做），量到的 cnn[6] 總和是 9,216,263（每張 874,798–976,690），cnn[23] 是 373,688。</p>
+<p>數字為什麼每次不同，下一節說明。重點是：<strong>你自己跑出來的數字也會和這兩欄都不完全一樣</strong>，但量級、趨勢（cnn[6] 一路加速上升、cnn[23] 先跌後升）、值域大約 ±12 與 ±7，都應該一致。</p>
+
+<h3 id="pred">優化後的圖，模型認成什麼</h3>
+<p>把 100 次更新後的 x 直接送進模型（第二次執行）：cnn[6] 的 10 張，3 張（圖 0、4、5）被判成 Vegetable/Fruit，另外 7 張被判成 Dessert；cnn[23] 的 10 張全部被判成 Dessert。原圖是 10 張全對的（第 1 章 <a href="ch01.html#predict">1.6 節</a>）。優化只在乎 filter 0 的總和，不在乎模型的最後答案，所以答案被改掉並不奇怪；這也再次提醒，第三列是「讓一個 filter 興奮的圖」，不是「模型眼中的麵包」。</p>
+
+<h2 id="nondet">4.7　每次跑都不一樣，單張和批次也不一樣</h2>
+<p>第 0 章 <a href="ch00.html#outputs">0.6 節</a>說過：同一台機器重跑，<code>filter_cnn6.png</code>、<code>filter_cnn23.png</code> 只有極細微的差異，肉眼看不出來（GPU 上的運算順序不保證每次相同，累加出來的浮點數尾數會變；<code>explain_cnn.py</code> 沒有打開 PyTorch 要求確定性運算的設定）。但如果不看 PNG、直接看 x 的數值，差異其實不小。本書在同一個程式裡從原圖連跑兩次同樣的 100 步，比較圖 0 的結果：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>x 差異最大</th><th>x 差異平均</th><th>normalize 後差異最大</th><th>normalize 後差異平均</th></tr></thead>
+<tbody>
+<tr><td>cnn[6]</td><td>5.24</td><td>0.199</td><td>0.228</td><td>0.0086</td></tr>
+<tr><td>cnn[23]</td><td>2.06</td><td>0.045</td><td>0.199</td><td>0.0107</td></tr>
+</tbody>
+</table></div>
+<p>cnn[6] 有 56% 的值兩次差超過 0.1，最大差了 5.24。但 normalize 之後（第三列實際畫的是這個），平均差異不到 0.01，和第 0 章「肉眼看不出差異」的觀察一致：兩者比的是不同的東西。</p>
+<p>差異從哪裡來？浮點數尾數的差異本來極小，但本書<strong>推測</strong>（沒有驗證）Adam 把它放大了：上一節看到，Adam 的步伐幾乎和梯度大小無關，只看正負號。梯度接近 0 的像素，只要尾數的差異讓正負號翻過來，這一步就整整往反方向走 lr；100 步累積下來，差異就變大了。</p>
+
+<h3 id="batch">10 張一起優化，和一張一張優化</h3>
+<p>程式把 10 張圖放在同一個 x 裡一起優化，目標是 10 張的總和。這會不會讓 10 張圖互相影響？用數學回答：<strong>不會</strong>。</p>
+<ul>
+  <li>推論模式下（第 169 行的 <code>model.eval()</code>），BN 用的是固定的長期平均，不是「這一批」的統計量，所以每張圖的 forward 只和自己有關（第 1 章 <a href="ch01.html#mode">1.7 節</a>：train 模式的 BN 才會用這一批的統計量）。</li>
+  <li>目標是 10 張各自總和的相加，對第 i 張圖的像素取偏微分，只有第 i 張自己的那一項有貢獻。</li>
+  <li>Adam 對每一個數字各自計算，不會把不同像素混在一起。</li>
+</ul>
+<p>所以單獨優化圖 0，和在 10 張的批次裡優化圖 0，數學上應該得到完全相同的結果。實測卻不同：cnn[6] 最大差 17.85、平均 1.446，94% 的值差超過 0.1；cnn[23] 最大 4.83、平均 0.296。本書<strong>推測</strong>（沒有驗證）原因和上面相同：GPU 會依批次大小選用不同的卷積計算方法，梯度因此有極小的差異，再被 Adam 放大。第 1 章<a href="ch01.html#batch-effect">〈同一張圖，logit 的小數第 3 位會變〉</a>看過同一種現象的小規模版本。</p>
+<p>結論要分清楚：「10 張一起優化會互相影響」是<strong>錯</strong>的；「10 張一起優化和一張一張優化，結果數值不同」是<strong>對</strong>的，但原因是數值計算，不是方法本身。</p>
+
+<h2 id="range">4.8　像素跑出 [0, 1] 之後怎麼畫</h2>
+<p>4.6 節的 x 跑到大約 ±12，而 <code>imshow</code> 畫彩色圖時，浮點數要在 0–1 之間，超出的會被截斷（第 1 章 <a href="ch01.html#helpers">1.5 節</a>）。第 219 行的解法是 <code>normalize</code>：把每張圖（三個通道一起）線性拉回 0–1。這樣畫得出來，代價是原圖的部分被壓扁了。以 cnn[6] 的圖 0 為例，它優化後的值域是 −11.07..12.05（這是圖 0 單張的範圍，和 4.6 節 10 張合起來的值域不同）：</p>
+<figure class="fig">
+<svg viewBox="0 0 900 230" role="img" aria-label="兩條數線。上面是優化後圖 0 的像素值，從負 11.07 到 12.05，原圖所在的 0 到 1 只是中間很窄的一段；下面是 normalize 之後的 0 到 1，原本的 0 對到 0.479，原本的 1 對到 0.522">
+  <text class="s-sm" x="40" y="28">優化後圖 0 的 x（cnn[6]，三個通道一起）</text>
+  <line x1="60" y1="70" x2="840" y2="70" stroke="#93a1af" stroke-width="2"/>
+  <rect x="433" y="60" width="34" height="20" fill="#58a6ff"/>
+  <line x1="60" y1="62" x2="60" y2="78" stroke="#93a1af" stroke-width="2"/>
+  <line x1="840" y1="62" x2="840" y2="78" stroke="#93a1af" stroke-width="2"/>
+  <text class="s-mono" x="60" y="54" text-anchor="middle">−11.07</text>
+  <text class="s-mono" x="840" y="54" text-anchor="middle">12.05</text>
+  <text class="s-mono" x="426" y="54" text-anchor="end">0</text>
+  <text class="s-mono" x="474" y="54">1</text>
+
+  <line x1="60" y1="80" x2="60" y2="140" stroke="#a371f7" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="433" y1="80" x2="433" y2="140" stroke="#a371f7" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="467" y1="80" x2="467" y2="140" stroke="#a371f7" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="840" y1="80" x2="840" y2="140" stroke="#a371f7" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <text class="s-sm" x="640" y="114" text-anchor="middle">normalize：(x − 最小值) ÷ (最大值 − 最小值)</text>
+
+  <line x1="60" y1="150" x2="840" y2="150" stroke="#93a1af" stroke-width="2"/>
+  <rect x="433" y="140" width="34" height="20" fill="#58a6ff"/>
+  <line x1="60" y1="142" x2="60" y2="158" stroke="#93a1af" stroke-width="2"/>
+  <line x1="840" y1="142" x2="840" y2="158" stroke="#93a1af" stroke-width="2"/>
+  <text class="s-mono" x="60" y="178" text-anchor="middle">0</text>
+  <text class="s-mono" x="840" y="178" text-anchor="middle">1</text>
+  <text class="s-mono" x="426" y="178" text-anchor="end">0.479</text>
+  <text class="s-mono" x="474" y="178">0.522</text>
+  <text class="s-sm" x="40" y="212">畫出來的圖：原圖原本的整個亮度範圍 [0, 1]，只分到 0.479–0.522 這 4%；只有 10.2% 的值還在 [0, 1] 裡</text>
+</svg>
+<figcaption>圖 4.6 — normalize 把優化後的值域整段拉回 0–1。原圖所在的 [0, 1]（藍色那一小段）被壓進中間 4% 的範圍，所以原圖的明暗在第三列只剩一點點，整張偏向中間的灰色調，上面疊著新長出來的紋理。</figcaption>
+</figure>
+<p>具體的數字（第二次執行）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>優化後的值域</th><th>原本的 0 → </th><th>原本的 1 → </th><th>還在 [0, 1] 裡的比例</th></tr></thead>
+<tbody>
+<tr><td>cnn[6] 圖 0</td><td>−11.07..12.05</td><td>0.479</td><td>0.522</td><td>10.2%</td></tr>
+<tr><td>cnn[6] 圖 5</td><td>−11.48..11.03</td><td>0.510</td><td>0.554</td><td>10.1%</td></tr>
+<tr><td>cnn[23] 圖 0</td><td>−4.10..6.80</td><td>0.376</td><td>0.468</td><td>52.6%</td></tr>
+<tr><td>cnn[23] 圖 5</td><td>−6.75..6.87</td><td>0.496</td><td>0.569</td><td>44.6%</td></tr>
+</tbody>
+</table></div>
+<p>cnn[6] 的圖 0，原圖從最暗到最亮的變化，在畫出來的圖上只佔 0.479 到 0.522；而 x 裡還留在 [0, 1] 的值只剩約 10%。這就是圖 4.1 第三列的原圖輪廓只剩隱約可見、顏色也不鮮豔的原因：原圖的資訊其實還在 x 裡（它是起點），但被新增的大數值擠到幾乎看不出來。cnn[23] 的值域小一些，原圖分到的範圍是 cnn[6] 的兩倍左右（0.376–0.468），還在 [0, 1] 的值也有一半左右，所以圖 4.2 第三列的原圖輪廓比圖 4.1 清楚。</p>
+<p>另一個畫法是在優化過程中就不讓 x 跑出 [0, 1]：每一步 <code>step()</code> 之後，把小於 0 的值設成 0、大於 1 的值設成 1。這個操作叫 <strong>clamp</strong>（夾住），PyTorch 寫成 <code>x.clamp_(0, 1)</code>（結尾底線＝就地修改）。程式沒有這樣做；下一節把它和「從白雜訊出發」一起實測。</p>
+
+<h2 id="noise">4.9　從原圖還是從白雜訊出發</h2>
+<p>投影片第 10 頁寫「start from white noise」（從白雜訊開始），程式卻從原圖開始：第 209 行把 <code>images</code> 傳進去，第 186 行的 x 就是原圖的複本。原版 notebook 也是這樣寫的。這是<a href="outline.html#findings">教學大綱〈讀 code 不盡信文件〉</a>的第 5 項：從原圖而不是白雜訊出發，而且沒有把 x 限制在 [0, 1]。</p>
+<p><strong>白雜訊</strong>在這裡指每個像素各自獨立、隨機取一個 0 到 1 之間的值（均勻分佈）的圖，看起來像電視沒訊號時的雪花。本書用 <code>torch.manual_seed(0)</code> 之後 <code>torch.rand(10, 3, 128, 128)</code> 產生 10 張（<code>torch.rand</code> 產生 0–1 均勻分佈的亂數；<code>torch.manual_seed</code> 固定 PyTorch 的亂數種子，見第 3 章 <a href="ch03.html#noise">3.9 節</a>）。白雜訊本身在 cnn[6] filter 0 的總和是 −1,210,640（10 張合計，優化前），也是負的。</p>
+<p>本書把「起點」和「要不要 clamp」兩件事各換一次，其他完全照程式（lr 0.1、100 步、同樣的目標），共四種：</p>
+<figure class="fig">
+<img src="img/ch04_variants_cnn6.png" alt="六列各 10 格，左側標籤依序是 image、repo: from image、from image, clamp [0,1]、white noise (start)、from noise、from noise, clamp [0,1]。第二列洋紅色細紋，隱約看得到原圖輪廓；第三列同樣的紋理更鮮豔，輪廓更清楚；第四列是彩色雪花；第五列紋理鋪滿、看不出原圖，10 張幾乎一樣；第六列同樣紋理、鮮豔的粉紅">
+<figcaption>圖 4.7 — cnn[6] 的四種做法。由上而下：原圖（image）；程式的做法，從原圖、不限制（repo: from image，和圖 4.1 第三列是同一種做法）；從原圖、每步 clamp 到 [0, 1]（from image, clamp [0,1]）；白雜訊起點（white noise (start)）；從白雜訊、不限制（from noise）；從白雜訊、clamp（from noise, clamp [0,1]）。每格都各自 normalize 後畫出。</figcaption>
+</figure>
+<figure class="fig">
+<img src="img/ch04_variants_cnn23.png" alt="六列各 10 格，標籤同上一張。第二列偏灰，有細小彩色點狀紋理，原圖輪廓隱約可見；第三列是密密麻麻的小圓圈圖案，白藍紅黑，食物輪廓很清楚；第五列一片灰，有很淡的點狀紋理，10 張相近；第六列滿版的小圓圈圖案">
+<figcaption>圖 4.8 — cnn[23] 的四種做法，六列的排法與圖 4.7 相同。</figcaption>
+</figure>
+<p>100 次更新後再做一次 forward，filter 0 的總和（10 張合計）與 x 的值域：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>層</th><th>程式（從原圖）</th><th>從原圖＋clamp</th><th>從白雜訊</th><th>從白雜訊＋clamp</th></tr></thead>
+<tbody>
+<tr><td>cnn[6]</td><td>9,216,263<br>（−11.90..12.31）</td><td>926,080<br>（0..1）</td><td>10,611,874<br>（−12.21..12.99）</td><td>956,999<br>（0..1）</td></tr>
+<tr><td>cnn[23]</td><td>373,688<br>（−6.75..7.64）</td><td>354,622<br>（0..1）</td><td>402,245<br>（−6.37..7.57）</td><td>367,707<br>（0..1）</td></tr>
+<tr><td>和起點的平均絕對差（cnn[6]／cnn[23]）</td><td>3.175／0.576</td><td>0.352／0.287</td><td>3.561／0.703</td><td>0.371／0.353</td></tr>
+</tbody>
+</table></div>
+<p>（「程式」那一欄是 4.6 節第二次執行的同一組數字。）</p>
+<p><strong>看圖 4.7（cnn[6]）。</strong></p>
+<ul>
+  <li><strong>程式的做法</strong>（第二列）：洋紅、綠色的細短橫線與直線交錯，像迷宮一樣鋪滿整張，底下隱約看得到原圖輪廓（披薩三角、鬆餅格子、荷包蛋圓）。最右邊一行有一條橘紅色的直條。</li>
+  <li><strong>從原圖＋clamp</strong>（第三列）：同樣的迷宮紋理，但鮮豔得多（亮粉紅），原圖輪廓更清楚，有些圖的角落有深紫色塊。clamp 之後 x 留在 0–1，normalize 不必再壓縮，所以顏色不會被擠成灰色。</li>
+  <li><strong>從白雜訊</strong>（第五列）：同樣的迷宮紋理，<strong>完全看不出原圖</strong>，10 張彼此看起來幾乎一樣。</li>
+  <li><strong>從白雜訊＋clamp</strong>（第六列）：同樣的紋理，鮮豔的粉紅。</li>
+</ul>
+<p><strong>看圖 4.8（cnn[23]）。</strong>程式的做法偏灰、有細小的彩色點狀紋理，原圖輪廓隱約可見；從原圖＋clamp 變成密密麻麻的小圓圈（像一顆顆眼睛，白、藍、紅、黑），食物的輪廓（披薩、鬆餅、荷包蛋、湯碗）很清楚；從白雜訊是一片灰，紋理很淡，10 張相近；從白雜訊＋clamp 是滿版的小圓圈。</p>
+<p>從這兩張圖和表可以讀出幾件事：</p>
+<ul>
+  <li><strong>紋理是 filter 的，輪廓是起點的。</strong>不論從哪裡出發，同一層長出的紋理是同一種（cnn[6] 是迷宮般的短線，cnn[23] 是小圓圈）。從白雜訊出發時沒有原圖可以殘留，10 張就幾乎一樣；從原圖出發時，紋理疊在原圖的輪廓上。所以圖 4.1 的第三列其實混了兩件事：filter 0 喜歡的圖案，加上起點留下的原圖。投影片要的「讓 filter 最興奮的圖」，比較接近從白雜訊出發的那一列。</li>
+  <li><strong>從白雜訊出發的 10 張「看起來」幾乎一樣，數值上卻差很多。</strong>10 張結果兩兩之間的平均絕對差，cnn[6] 是 3.931、cnn[23] 是 0.924，比起點雜訊彼此之間的 0.333 還大；這是因為 x 被放大到 ±12 左右，數值上的差也跟著放大，normalize 之後才看起來相近。</li>
+  <li><strong>clamp 對 cnn[6] 的總和影響很大，對 cnn[23] 很小。</strong>cnn[6] 限制在 [0, 1] 時，總和只有不限制的大約 1/10（926,080 對 9,216,263）；cnn[23] 差不多（354,622 對 373,688）。本書<strong>推論</strong>：不限制時，把像素值整體放大就能讓 cnn[6] 的 activation 跟著變大，所以 4.6 節的總和一路加速上升、沒有收斂；clamp 拿走了這條「放大數值」的捷徑，總和就只能靠「排出對的圖案」來提高。cnn[23] 的總和在不限制時也只多一點點，表示對它來說，放大數值的效果有限（和圖 4.4 右邊越升越慢一致）。</li>
+  <li><strong>從白雜訊出發的總和比從原圖還高</strong>（cnn[6] 10,611,874 對 9,216,263；cnn[23] 402,245 對 373,688），雖然白雜訊的起點（−1,210,640）比原圖（−355,931）低得多。原圖的結構對「讓 filter 0 興奮」來說不是助力。</li>
+</ul>
+<p>放大來看紋理：</p>
+<figure class="fig">
+<img src="img/ch04_crop.png" alt="四格放大圖，都是圖 0 中間 64×64 的區域。第一格原圖是披薩與叉子；第二格 cnn[6] 程式結果是洋紅與綠色的短線段橫直交錯，左側隱約有叉子的斜線；第三格 cnn[23] 程式結果是灰底上細碎的彩色點；第四格 cnn[6] 從白雜訊出發，紋理和第二格同一種">
+<figcaption>圖 4.9 — 圖 0 中間 64×64 的放大（像素 32 到 96，crop 32:96）。由左而右：原圖（image 0）；cnn[6] 程式的結果（cnn[6] repo）；cnn[23] 程式的結果（cnn[23] repo）；cnn[6] 從白雜訊出發（cnn[6] from noise）。</figcaption>
+</figure>
+<p>cnn[6] 的紋理是幾個像素寬的洋紅、綠色短線段，橫、直交錯；從白雜訊出發的 cnn[6] 和從原圖出發的，紋理是同一種。cnn[23] 是灰底上更細碎的彩色點。cnn[6] 的線段只有幾個像素寬，和 4.2 節 cnn[6] 的 receptive field 只有 7×7 相符：每一格 activation 只看得到這麼小的範圍，能「最大化」的也只有這種尺度的圖案（這是本書把兩個觀察放在一起的讀法，沒有另外驗證）。</p>
+
+<h3 id="lr1">lr 用函式的預設值 1 會怎樣</h3>
+<p><code>filter_explanation</code> 的簽名寫 <code>lr=1</code>，但第 209 行傳的是 0.1。本書也試了 lr = 1（從原圖、不限制、100 步；和上表一樣是第二次執行、100 次更新後再 forward 量的）：cnn[6] 的總和變成 103,450,840，x 的值域 −119.74..120.75；cnn[23] 是 323,961，x −35.40..68.60。cnn[6] 的值域大約是 lr 0.1 時的 10 倍，正好對應 Adam「每步大約走 lr」的性質；cnn[23] 的總和反而比 lr 0.1 時（373,688）還低，步子太大不一定比較好。</p>
+
+<h3 id="bn-relu">hook 掛在 BN 或 ReLU 之後會怎樣</h3>
+<p>4.2 節推論：BN 的 γ &gt; 0，所以把 hook 從 cnn[6]（Conv）移到 cnn[7]（BN）應該得到同樣的結果；移到 cnn[8]（ReLU）則不是同一個目標。本書把同一個優化迴圈（從原圖、lr 0.1、100 步、filter 0 總和）的 hook 分別掛在這三層，另外記下每一次 cnn[6] Conv 輸出的總和：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>hook 掛在</th><th>自己那一層 filter 0 的總和</th><th>同時 cnn[6] Conv 的總和</th><th>x 值域</th></tr></thead>
+<tbody>
+<tr><td>cnn[6] Conv（程式）</td><td>9,216,958</td><td>9,216,958</td><td>−11.95..12.30</td></tr>
+<tr><td>cnn[7] BN</td><td>1,122,571</td><td>9,221,400</td><td>−11.79..12.46</td></tr>
+<tr><td>cnn[8] ReLU</td><td>7,199,765</td><td><strong>−26,682,812</strong></td><td>−12.38..13.43</td></tr>
+</tbody>
+</table></div>
+<p>（100 次更新後再 forward 量的；這是另一次執行，cnn[6] 那一列和 4.9 節的 9,216,263 在第 4 位不同，原因見 4.7 節。）</p>
+<figure class="fig">
+<img src="img/ch04_hook_bn_relu.png" alt="四列各 10 格。第一列原圖；第二列 hook 掛在 cnn[6] Conv，洋紅色迷宮紋理；第三列掛在 cnn[7] BN，和第二列幾乎一樣；第四列掛在 cnn[8] ReLU，換成黃綠色的串珠狀斜紋，原圖輪廓也看得到">
+<figcaption>圖 4.10 — hook 掛在三個位置的 filter visualization（各自 normalize）。由上而下：原圖（image）；cnn[6] Conv，也就是程式的做法（hook cnn[6] Conv (repo)）；cnn[7] BN（hook cnn[7] BN）；cnn[8] ReLU（hook cnn[8] ReLU）。</figcaption>
+</figure>
+<ul>
+  <li><strong>BN 和 Conv 幾乎一樣。</strong>第二、三列肉眼看不出差別；normalize 後平均差 0.0315（同一種做法跑兩次的差異是 0.0086，4.7 節）。cnn[6] 的總和也幾乎相同（9,221,400 對 9,216,958）。BN 的總和小很多，只是因為 BN 把數值除以了 √93.17 ≈ 9.65 再乘 γ，不是優化的方向不同。這驗證了 4.2 節的推論。</li>
+  <li><strong>ReLU 完全不同。</strong>第四列換成了黃綠色、像一串串珠子的斜紋，原圖輪廓也看得到。最明顯的是數字：ReLU 之後的總和是 720 萬，但同一時刻 cnn[6] Conv 的總和卻是 <strong>−2,668 萬</strong>，比原圖的 −35 萬還負得多；ReLU 的輸出有 56.9% 是 0。也就是說，優化只把一部分位置推成很大的正值，其他位置被 ReLU 截成 0 之後就不再有梯度，Conv 在那裡變得多負都沒有人管。</li>
+</ul>
+<p>所以「讓 filter 最興奮」的定義取決於 hook 掛在哪：程式選的是 Conv 本身，等同 BN 之後，但和「ReLU 之後的 activation 最大」是兩回事。</p>
+
+<div class="note"><h4>現在的做法</h4>
+<ul>
+  <li><strong>不用全域變數傳 hook 的結果</strong>：在函式裡建一個字典，hook 裡寫 <code>store['out'] = output</code>（對字典的內容賦值，不需要 <code>global</code>）。本書量 4.2 節的數字時就是這樣寫的。資料的生命週期跟著函式走，不會在函式結束後還佔著 84 MB 的 GPU 記憶體。</li>
+  <li><strong>確保 hook 一定被拿掉</strong>：把登記之後的程式包在 <code>try: … finally: handle.remove()</code> 裡，中途出錯也不會把 hook 留在模型上。</li>
+  <li><strong>只看 activation 的那次 forward 包 <code>torch.no_grad()</code></strong>：第 180 行不需要梯度，包起來就不會建出用不到的計算記錄。</li>
+  <li><strong>先凍結權重</strong>：<code>model.requires_grad_(False)</code> 之後 backward 只算 x 的梯度，權重的 <code>.grad</code> 不會累加。</li>
+  <li><strong>只要中間層時，不必整個模型跑完</strong>：torchvision 有 <code>create_feature_extractor</code>，可以指定要哪幾層的輸出（本書沒有用它跑過這份作業）。</li>
+  <li><strong>產生「好看」的 filter visualization</strong>：實務上通常從雜訊出發、限制像素範圍，並在優化中加上正則化或隨機的小位移、縮放，讓結果不被高頻的細紋主導（延伸閱讀的 Distill 文章有完整討論；本書沒有實測這些做法）。</li>
+  <li><strong>要可重現</strong>：PyTorch 提供 <code>torch.use_deterministic_<wbr>algorithms(True)</code> 要求確定性的運算（本書沒有實測它對 4.7 節的差異有沒有效）。</li>
+</ul>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>程式的段落標題叫 Filter Explanation，分兩步：Filter activation（原圖哪裡讓 filter 有反應，圖的第二列）與 Filter visualization（什麼圖最讓 filter 有反應，第三列，也就是投影片第 10 頁的名稱）。兩層都只看第 0 個 filter。</li>
+  <li>cnn[6] 是 stage 1 的第 3 個 Conv、cnn[23] 是 stage 3 的第 2 個 Conv，hook 掛在 Conv 本身，BN、ReLU 之前，所以 activation 有正有負，原圖的總和是負的（−355,931、−314,252）。BN 的 γ 都 &gt; 0，最大化 Conv 輸出等同最大化 BN 輸出，但不等同 ReLU 之後（公式推得，4.9 節實測確認：hook 改掛 ReLU 時，Conv 的總和反而變成 −2,668 萬）。receptive field 分別是 7×7 與 38×38。</li>
+  <li><code>register_forward_hook</code> 讓一層在 forward 後呼叫 hook(module, input, output)；hook 用 <code>global</code> 把輸出存進模組層的 <code>layer_activations</code>；<code>hook_handle.remove()</code> 拿掉 hook，但全域變數仍留著最後一次的輸出（約 84 MB）。</li>
+  <li><code>Adam([x], lr=0.1)</code> 只更新圖片 x，權重不動；目標取負號，讓「只會往下走」的優化器做 gradient ascent。</li>
+  <li>第二列是優化<strong>之前</strong>的 activation，沒有指定 cmap，用 matplotlib 預設的 viridis（深紫 → 藍綠 → 黃）。</li>
+  <li>Adam 第 1 步讓每個像素都剛好移動 lr（0.1），前 20 步值域每步擴張 0.1。100 步後 cnn[6] 的 x 大約在 ±12（兩次執行分別是 −11.87..12.32 與 −11.90..12.31），總和還在加速上升；GPU 運算的細微差異會被放大，每次跑的數字都不同，單張和批次也不同（數學上應相同）。</li>
+  <li>第 219 行的 normalize 把 ±12 拉回 0–1，原圖的 [0, 1] 只剩 4% 的範圍（cnn[6] 圖 0），第三列因此偏灰、原圖淡淡的。每步 clamp 到 [0, 1] 會讓顏色鮮豔、cnn[6] 的總和只剩約 1/10。</li>
+  <li>投影片寫從白雜訊出發，程式從原圖出發。從白雜訊出發的 10 張看起來幾乎一樣、看不出原圖，紋理和從原圖出發的是同一種：第三列混了「filter 喜歡的圖案」和「起點留下的原圖」。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 圖 4.1 第二列的顏色為什麼是藍綠黃，而不是第 3 章 saliency map 那種黑紅黃？第二列畫的是優化前還是優化後的東西？</summary>
+<p>第 216 行的 <code>imshow(normalize(img))</code> 收到二維陣列，會套色表，但沒有指定 <code>cmap</code>，所以用 matplotlib 的預設 viridis（深紫 → 藍綠 → 黃）；第 3 章的第 109 行明確指定了 <code>plt.cm.hot</code>。第二列畫的是 <code>filter_activations</code>，在第 183 行用原圖算出，是<strong>優化之前</strong>的 activation，和後面 100 步的優化無關。</p></details>
+<details class="quiz"><summary>2. 第 189 行如果寫成 <code>Adam(model.parameters(), lr=lr)</code>，會發生什麼事？</summary>
+<p>優化器拿到的變成模型的權重，<code>step()</code> 會改權重而不是圖片，變成「訓練模型讓 filter 0 對這 10 張圖的輸出變大」，而且會把從 <code>checkpoint.pth</code> 載入的權重改掉，後面的 Integrated Gradients 會用到被改過的模型。x 雖然有 <code>requires_grad_()</code>、也會算出 <code>.grad</code>，但沒有優化器去更新它，第三列畫出來的就是原圖本身（各自 normalize 過，原圖本來就接近 0–1，看起來和第一列幾乎相同）。本書事後實測：cnn[6] 那次呼叫之後，第三列的 x 和原圖<strong>逐位元相同</strong>；權重則被改得面目全非，cnn[0] 的權重平均改變了 11.2，而它原本的平均絕對值只有 0.18（Adam 每步約走 lr 0.1，100 步就是約 10）。被改的只有 hook 之前、會影響 cnn[6] 輸出的層（cnn[0]、[1]、[3]、[4]、[6] 的 weight 和 bias），BN 的 running 統計不變（推論模式不更新）。cnn[23] 那次呼叫再改掉 stage 1–3 更多層。兩次呼叫之後，模型把 10 張圖全部判成類別 2（Dessert），Integrated Gradients 的最大值從 1–3 變成 10<sup>15</sup> 的量級，和原模型的 IG 圖相關係數在 ±0.01 之間，也就是完全無關。</p></details>
+<details class="quiz"><summary>3. 為什麼優化後的 x，前 20 步的值域剛好每步往外擴張 0.1？</summary>
+<p>Adam 的更新量大約是 lr × 一階動量 ÷ √二階動量。第 1 步這兩者就是 g 與 g²，更新量是 lr × g ÷ (|g| + ε) ≈ lr × (g 的正負號)：每個像素都往讓總和變大的方向走整整 0.1，不管梯度多大。實測第 1 步梯度從 9.06 × 10<sup>−6</sup> 到 171.1，移動量卻全部在 0.1 ± 0.001 之內。之後只要梯度方向不變，每步仍約走 0.1，所以原本是 0 的像素一步到 −0.1、原本是 1 的到 1.1，值域每步擴張 0.1。</p></details>
+<details class="quiz"><summary>4. 同學說：「程式把 10 張圖放在同一批一起優化，它們會互相影響，所以應該一張一張跑。」這句話對嗎？</summary>
+<p>不對。推論模式下 BN 用固定的長期平均，每張圖的 forward 只和自己有關；目標是 10 張各自總和的相加，第 i 張圖的梯度只來自第 i 張自己；Adam 也是逐個數字計算。所以數學上，一起優化和一張一張優化的結果應該相同。實測兩者的數值確實不同（cnn[6] 圖 0 平均差 1.446），但本書推測那是 GPU 依批次大小選不同計算方法、浮點數尾數不同，再被 Adam 放大，不是圖片之間互相影響。同一批跑兩次也會不同（平均差 0.199）。</p></details>
+<details class="quiz"><summary>5. 想要得到投影片說的「讓 filter 最興奮的圖」，只把第 209 行的 <code>images</code> 換成白雜訊，夠嗎？第三列會長什麼樣子？</summary>
+<p>換起點就會得到看不出原圖、10 張幾乎一樣的迷宮紋理（圖 4.7、4.8 的 from noise 列），這比較接近投影片要的東西。但 x 仍會跑到約 ±12（cnn[6] −12.21..12.99），normalize 之後整張偏灰。若同時每步 <code>clamp_(0, 1)</code>，顏色會鮮豔得多（from noise, clamp 列），cnn[6] 的總和也從 10,611,874 降到 956,999，因為不能再靠放大數值來提高總和。另外要注意第 209 行傳進去的東西也決定了第二列：換成白雜訊後，第二列畫的是白雜訊的 activation，不再是原圖的；第一列不受影響，因為第 212–213 行畫的是 <code>filter_explain</code> 自己的參數 <code>images</code>（由程式推得）。</p></details>
+<details class="quiz"><summary>6. 如果刪掉第 203 行 <code>hook_handle.remove()</code>，第二次呼叫（cnnid=23）的 <code>filter_cnn23.png</code> 會變嗎？</summary>
+<p>本書的推論是：幾乎不會變。第二次呼叫時 cnn[6] 和 cnn[23] 上各有一個 hook，兩個都會把輸出寫進同一個 <code>layer_activations</code>；forward 依序先經過 cnn[6] 再經過 cnn[23]，所以最後留下的是 cnn[23] 的輸出，第 183、196 行取到的仍是 cnn[23]，結果只會有 4.7 節那種每次執行都有的細微差異。但 cnn[6] 的 hook 會一直留在模型上，每次 forward 都多做一次賦值（後面的 Integrated Gradients 也一樣）。本書事後實測確認：刪掉第 203 行後連續呼叫 cnn[6]、cnn[23]，結束時 cnn[6] 和 cnn[23] 上各留著 1 個 hook，全域變數存的是 cnn[23] 的輸出 (10, 256, 32, 32)。第二列和正常版逐位元相同；第三列和正常版的差異（normalize 後平均 0.0109）與正常版自己跑兩次的差異（0.0116）相當，所以 <code>filter_cnn23.png</code> 看不出差別。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.register_forward_hook">PyTorch — nn.Module.register_forward_hook</a>：hook 的參數、回傳值取代輸出的規則，以及回傳的 handle。</li>
+  <li><a href="https://pytorch.org/docs/stable/generated/torch.optim.Adam.html">PyTorch — torch.optim.Adam</a>：Adam 的完整演算法（一階、二階動量、偏差修正、<code>eps</code> 預設值）。</li>
+  <li><a href="https://arxiv.org/abs/1412.6980">Kingma, Ba, 2014, Adam: A Method for Stochastic Optimization</a>：Adam 的原始論文。</li>
+  <li><a href="https://distill.pub/2017/feature-visualization/">Olah, Mordvintsev, Schubert, 2017, Feature Visualization（Distill）</a>：用優化產生「讓某個 neuron 或 filter 最興奮的圖」的系統性介紹，包括為什麼直接優化會得到高頻細紋，以及常用的正則化方法。</li>
+  <li><a href="https://matplotlib.org/stable/users/explain/colors/colormaps.html">Matplotlib — Choosing Colormaps</a>：viridis、hot 等色表的比較，以及為什麼預設改成 viridis。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW09 讀碼教材 · 對應 commit b2dbe4c · 程式碼引用取自本 repo 的 HW09/；實測輸出取自 2026-10-03／04 本機執行</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>

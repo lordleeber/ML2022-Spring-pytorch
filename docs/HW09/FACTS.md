@@ -391,6 +391,15 @@
   - 原本的 5 個 TODO 已在「ch03 審稿補測」量好並填入；本機另加 3.12 節「雜訊小到模型認得出來時」與圖 3.9（img/ch03_smoothgrad_small.png）。仍屬推測、沒有查證的：PyTorch 內部 log-softmax 的算法；模型為什麼對 G 通道比較敏感（ch03 寫「本書沒有答案」）。
   - 回指（不重講）：ch00 的 logits／softmax、0.5 節逐段計時（Saliency 0.4 s、SmoothGrad 24.1 s）、0.6 節 smoothgrad.png 每次重跑不同；ch01 的 1 − p 表、batch vs 單張 logit、model.eval()、normalize／save_fig、torch.no_grad()；ch02 的偽亂數與種子。
 
+- ch04（第 4 章，2026-10-04 雲端）：
+  - 圖號：圖 4.1（img/filter_cnn6.png）、圖 4.2（img/filter_cnn23.png）、圖 4.3（forward hook 位置 SVG：輸入 x（藍）→ cnn[0]–[5] → cnn[6] Conv（紫粗框，hook）→ cnn[7] BN → cnn[8] ReLU → cnn[9]–[37] 再加 fc → logits（灰虛線「沒有人用」）；hook → layer_activations（全域，第 164 行）→ objective −[:, 0, :, :].sum()（紫）；黃色 backward 回到 x；Adam([x]) 只改 x）、圖 4.4（img/ch04_trajectory.png）、圖 4.5（img/ch04_xrange.png）、圖 4.6（normalize 數線 SVG：cnn[6] 圖 0 −11.07..12.05 → 0..1，[0,1] → 0.479–0.522）、圖 4.7（img/ch04_variants_cnn6.png）、圖 4.8（img/ch04_variants_cnn23.png）、圖 4.9（img/ch04_crop.png）。
+  - 本章正式定義的名詞：Filter activation／Filter visualization（docstring 158–159 的兩步；本書的 Filter explanation 取自第 157 行標題）、receptive field（感受野；7×7／38×38 與「步距」手算規則）、hook／forward hook、`register_forward_hook`、hook(module, input, output) 與「回傳值取代輸出」、handle 與 `hook_handle.remove()`、Python `global`（區域變數 vs 模組層變數）、「計算記錄」（autograd 在 forward 記下的運算）、優化器（optimizer：`step()`、`zero_grad()`）、Adam（一階／二階動量、第 1 步 ≈ lr × g 的正負號、ε 預設 1e-8）、lr（learning rate）、gradient ascent／gradient descent、viridis（matplotlib 預設色表；二維陣列預設依自身最小最大值對應色表）、BN 推論時是遞增一次函數（γ>0；除以 √running_var）、白雜訊（0–1 均勻分佈）、`torch.rand`、clamp（`x.clamp_(0, 1)`）、`.squeeze()`、`create_feature_extractor`／`torch.use_deterministic_algorithms`（現在的做法框，一句，未實測）。
+  - 本章用語：「第 k 步」＝第 k 次迴圈的 forward（第 k 次更新前）；「k 次更新後」另做一次 forward；「第一次執行」＝hw09_facts.py、產生 img/ 圖、outline 引用的 −11.87..12.32／9,108,426；「第二次執行」＝hw09_ch04_filter.py 的 −11.90..12.31／9,102,480。兩組並列、不混用。
+  - 本章手算（由本 FACTS 推得）：BN 驗算 −53.050 → −6.949；receptive field 7、38；38/128 ≈ 30%；10×128×128×128×4 bytes ≈ 84 MB；|Δx| 最小 0.0999 = 0.1 × 9.06e-6/(9.06e-6+1e-8)；第 50→100 步每步約 0.12；cnn[6] 每張 filter 0 最大值 22.90–48.33。
+  - 標明為推測的：filter 0 像邊緣偵測器；第 2 步變差是 Adam 第一步太大；重跑與 batch vs 單張的差異被 Adam 放大；cnn[6] 紋理尺度和 receptive field 相符；clamp 拿走「放大數值」的捷徑。
+  - 原本的 4 個 TODO 已在「ch04 審稿補測」量好並填入；本機另加 4.9 節最後的「hook 掛在 BN 或 ReLU 之後會怎樣」與圖 4.10（img/ch04_hook_bn_relu.png）。
+  - 回指（不重講）：ch00 的 Conv／filter／activation／BN／ReLU／MaxPool、(N,C,H,W)、stage、0.2 逐層表、0.5 逐段計時（2.3／2.9 s）、0.6 重跑差異；ch01 的 normalize／save_fig、permute、model.eval()、Adam 的 exp_avg／exp_avg_sq、batch vs 單張 logit；ch03 的 backward、autograd、requires_grad_()、.grad 累加、x.cuda() 複本、colormap／hot、torch.manual_seed。
+
 ## index／outline 審稿補測（2026-10-03，本機）
 - 舊版套件能不能裝（用 `uv pip install --target <scratch>` 試，不動 .venv）：
   - `lime==0.1.1.37`：**裝得起來**，在 Python 3.12 上也能跑。它另外依賴 `progressbar`（2.5），pip 會一起裝。舊版的進度條是 `progressbar` 的 `|####|` 樣式，不是 tqdm。用它對圖 0 跑同一段 LIME（seed 16、start_label=1、logits）：前 5 名 (21, 5.5216)、(25, 3.5899)、(38, 3.1247)、(27, 3.0233)、(40, 2.9437)，R² 0.8423，**和 0.2.0.1 完全相同**。所以換版本不影響 Q1–4 的結果。
@@ -1000,7 +1009,7 @@ Ref: https://reurl.cc/mGZNbA
 - lr=1（函式的預設值，呼叫端傳的是 0.1）：cnn[6] 總和 103,450,840、x −119.74..120.75；cnn[23] 323,961、x −35.40..68.60。
 
 ### normalize 對 filter visualization 的影響
-- 第 219 行 `normalize(img.permute(1, 2, 0))` 對一張圖的三個通道一起做 min-max。cnn[6] 圖 0 的 x 是 −11.07..12.05：原本的 0 對應到 0.479、原本的 1 對應到 0.522，原圖所有的亮度變化被壓進 0.48–0.52 這 4% 的範圍；只有 10.2% 的值還在 [0,1] 裡。圖 5：0 → 0.510、1 → 0.554、10.1%。cnn[23] 圖 0（−4.10..6.80）：0 → 0.376、1 → 0.468，52.6%；圖 5（−6.75..6.87）：0 → 0.496、1 → 0.569，44.6%。這就是第三列「偏灰、原圖淡淡的」的原因。
+- 第 219 行 `normalize(img.permute(1, 2, 0))` 對一張圖的三個通道一起做 min-max。cnn[6] 圖 0 的 x 是 −11.07..12.05：原本的 0 對應到 0.479、原本的 1 對應到 0.522，原圖所有的亮度變化被壓進 0.48–0.52 這 4% 的範圍；只有 10.2% 的值還在 [0,1] 裡。圖 5（−11.48..11.03）：0 → 0.510、1 → 0.554、10.1%。cnn[23] 圖 0（−4.10..6.80）：0 → 0.376、1 → 0.468，52.6%；圖 5（−6.75..6.87）：0 → 0.496、1 → 0.569，44.6%。這就是第三列「偏灰、原圖淡淡的」的原因。
 - 註：上面 cnn[6] 圖 0 的值域（−11.07..12.05）和 10 張的整體值域（−11.90..12.31）是不同範圍。
 
 ### 其他程式細節
@@ -1009,3 +1018,26 @@ Ref: https://reurl.cc/mGZNbA
 - 第 213 行 `imshow(img.permute(1, 2, 0))` 直接給 torch 張量（沒有 `.numpy()`），可以畫。
 - 第 192 行 `optimizer.zero_grad()` 清的是 x 的梯度；模型參數的 `.grad` 一樣會累加（同 ch03 的觀察，這裡沒有另外量）。
 - 計時引用 ch00 0.5 節：cnn[6] 2.3 s、cnn[23] 2.9 s。
+
+## ch04 審稿補測（2026-10-04，本機；PR #14）
+工具：`docs/tools/hw09_ch04_review.py`（在 HW09/ 裡跑；產生 `docs/HW09/img/ch04_hook_bn_relu.png`）。對 explain_cnn.py 的修改是把原始碼文字改掉後 exec 到新的命名空間，檔案本身沒動。填掉 ch04 的 4 個 TODO。
+
+- **hook 掛在 cnn[6] Conv／cnn[7] BN／cnn[8] ReLU**（同樣從原圖、Adam lr 0.1、100 步、目標 −filter 0 總和；100 次更新後再 forward 量）：
+  | hook | 自己那層 filter 0 總和 | 同時 cnn[6] Conv 總和 | 掛的那層輸出 =0 的比例 | x 值域 |
+  |---|---|---|---|---|
+  | cnn[6] Conv（repo） | 9,216,958 | 9,216,958 | 0 | −11.95..12.30 |
+  | cnn[7] BN | 1,122,571 | 9,221,400 | 0 | −11.79..12.46 |
+  | cnn[8] ReLU | 7,199,764.5 | **−26,682,812** | 0.569 | −12.38..13.43 |
+  - 優化結果兩兩比較（原始值平均絕對差／normalize 後平均絕對差）：Conv vs BN 0.704／0.0315；Conv vs ReLU 6.619／0.2681；BN vs ReLU 6.618／0.2677。（對照：同一做法跑兩次，normalize 後 0.0086，ch04 實測。）
+  - 看得到的（ch04_hook_bn_relu.png，四列：image、hook cnn[6] Conv (repo)、hook cnn[7] BN、hook cnn[8] ReLU）：Conv 與 BN 兩列肉眼看不出差別（洋紅迷宮紋理）；ReLU 列換成黃綠色、串珠狀的斜紋，比較亮，原圖輪廓（披薩、奶油塊、鬆餅、荷包蛋）看得到。
+  - 結論：證實 ch04 由公式推得的「Conv ≡ BN、≠ ReLU」。BN 總和小是因為除以 √93.17 ≈ 9.65 再乘 γ 1.2184（手算）。
+- **拿掉第 172 行 `global layer_activations`**，跑 `filter_explain(model, images, cnnid=6)`：`TypeError: 'NoneType' object is not subscriptable`，發生在 `filter_activations = layer_activations[:, filterid, :, :].detach().cpu()`（拿掉一行後是第 182 行，原本第 183 行）。
+- **第 189 行改成 `Adam(model.parameters(), lr=lr)`**：
+  - cnn[6] 那次：`filter_visualizations` 和 `images` **逐位元相同**（`torch.equal` True）。
+  - 被改的 state_dict 項目只有 cnn.0／1／3／4／6 的 weight 和 bias（hook 之前、影響 cnn[6] 的層；cnn.7 以後沒有梯度，Adam 跳過；BN 的 running_mean／var 不變）。改變量：cnn.0.weight 平均 11.16、最大 15.57（原本平均 |w| 0.179）；cnn.3.weight 平均 5.99；cnn.6.weight 平均 0.064、最大 15.56；cnn.6.bias 最大剛好 10.0000（= 0.1 × 100）。
+  - 接著 cnn[23] 那次：再改到 cnn.7、10、11、13、14、16、17、20、21、23 的 weight／bias。
+  - 兩次之後，模型對 10 張原圖的預測**全部是類別 2（Dessert）**；p(標籤) 只有圖 3、4（本來就是 Dessert）是 1.0，其他是 0.0。
+  - Integrated Gradients（用改過的模型 vs 原模型，每張 10 步）：最大值從 0.90–3.03 變成 2.9e15–9.3e15；兩者 normalize 後的相關係數 −0.006..0.010（完全無關）。
+- **刪掉第 203 行 `hook_handle.remove()`**，依序呼叫 cnn[6]、cnn[23]：第一次後 cnn[6] 有 1 個 hook；第二次後 cnn[6]、cnn[23] 各 1 個；全域 `layer_activations` 是 (10, 256, 32, 32)（cnn[23] 的）。cnn[23] 的第二列（activation）和正常版逐位元相同；第三列和正常版差：原始值平均 0.052、normalize 後 0.0109；正常版自己跑兩次：0.054／0.0116。→ filter_cnn23.png 看不出差別，證實 ch04 的推論。
+- **cnn[6] 圖 5 的值域**：ch04 實測那次是 −11.48..11.03（工具有印、FACTS 漏記）。這次（審稿）repo 設定再跑：圖 0 −11.01..12.04（0 → 0.478、1 → 0.521）、圖 5 −11.45..11.04（0 → 0.509、1 → 0.554）。ch04 表格用前者（同一次執行）。
+- 圖：`img/ch04_hook_bn_relu.png`，ch04 用作圖 4.10（4.9 節最後的「hook 掛在 BN 或 ReLU 之後會怎樣」）。
