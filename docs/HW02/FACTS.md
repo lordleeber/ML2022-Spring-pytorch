@@ -304,7 +304,8 @@
   - 每個 epoch：1: train 0.445800 / val 0.526987 / val loss 1.582749；2: train 0.532554 / val 0.566183 / val loss 1.432736；3: train 0.564682 / val 0.587024 / val loss 1.360181；4: train 0.582548 / val 0.597895 / val loss 1.320513；5: train 0.593562 / val 0.609449 / val loss 1.285928
   - 最佳第 5 epoch **0.609449**；同一 epoch 的原版（11 格都算 loss）是 0.627588，每個 epoch 都落後 0.018–0.049 → 在這個模型上，11 格一起算 loss 對中間格有幫助（多了 10 倍的監督訊號）。5 個 epoch 時 val loss 仍在下降（1.2859）。
   - 各位置準確率：`[0.3313, 0.4147, 0.4777, 0.5351, 0.5829, 0.6094, 0.6157, 0.611, 0.6011, 0.5904, 0.5817]`。只訓練中間格（第 5 格），但第 6–10 格的輸出也有 0.58–0.62（各自對各自那一格的標籤比，這些位置沒被訓練過；為什麼還有這個水準沒有量，寫章時不要解釋成因）；第 0–4 格低很多。
-- <!-- 無干擾的 train.py 1 epoch 計時：2026-10-05 執行中 -->
+- **無干擾的 train.py 1 epoch 計時（2026-10-05 00:01–00:09）**：scratch 複本把 config `num_epoch = 1`，`/usr/bin/time -v`，開跑前 `nvidia-smi --query-compute-apps` 為空（GPU 上沒有其他程式）。wall clock **7:08.80**、峰值 RSS 6,030,268 KB。tqdm：讀檔 `3857it [00:02]`、`429it [00:00]`；訓練 `37182/37182 [06:51, 90.35it/s]`；驗證 `4134/4134 [00:11, 357.14it/s]`。印出 `[001/001] Train Acc: 0.495127 Loss: 1.802524 | Val Acc: 0.576195 loss: 1.500938`（與 20 epoch 版第 1 epoch 相同）。20 epoch 估計約 2 小時 20 分（手算 20 × 7 分，未實跑）。
+  - 前一次（23:54–00:01，wall 7:47.08）中間約 1 分鐘和本機另一個 GPU 檢查重疊，不採用。
 
 ## repo 問題清單（教材附錄素材；本 repo 照原樣保留，未修）
 1. config.py:17 `hidden_layers = 1` 沒作用，model.py:11 寫死 10 層；`input_dim` 也沒作用（model.py:9 寫死 39）。
@@ -320,6 +321,7 @@
 ## 已在前面章節定義過的名詞
 （寫章的 session 每章追加；後續章節不必重講，可簡短回指。）
 - ch00：音素、音框、MFCC、logits、LSTM（概念層次）、gate（只說 4 組，細節在 ch04）、`h_n`/`h_c`、過擬合、wall clock、stdout/stderr 與 tqdm、多數類別基準（ch00 成績表先出現，ch01 定義）。
+- ch04 前置（實測見「ch04 實測」）。
 - ch03：Dataset 約定（__len__/__getitem__）、一筆＝一格、collate、drop_last、shuffle 在迭代時才抽亂數、view 與 -1、batch_first、TensorDataset。
 - ch02：shift、concat_feat 的三步（repeat → view+permute → shift ×10 → permute+view）、contiguous、view 與 storage、標籤拼接（中間第 5 欄＝原標籤）、預先配置 max_len、虛擬位址 vs RSS、overcommit。
 - ch01：utterance（句）、句子 id 格式「說話者-章節-句號」、CMVN（逐句做）、segment（連續相同標籤的一段）、frame shift（只說「投影片沒給」）、以句為單位切分與洩漏、多數類別基準 0.177261。
@@ -342,3 +344,9 @@
 - c3a.py（驗證集）：`264570 torch.Size([429]) torch.float32 torch.Size([11]) torch.int64`；`val_set[0]` 的標籤 11 個 0；`len(loader)` 4134；第一批 (64,429)/(64,11)；最後一批 (58,429)/(58,11)；`view(-1,11,39)` → (58,11,39)。
 - c3b.py：`2007-149877-0023` 拼接後第 50 列 `view(11,39)` 的第 j 段 == 第 45+j 格（11 段全 True）；`view(39,11)`：`b[0] == f[45,:11]` True、`b[:,0] == f[45]` False。
 - c3q.py（model.ckpt，驗證集，batch 64）：shuffle=False → acc 0.6419548701666856、loss（batch 平均再平均）1.299442；shuffle=True（manual_seed 0）→ acc 相同、loss 1.299462。`torch.manual_seed(0); torch.rand(1)` = 0.49625658988952637；seed 0 後先迭代一次 shuffle=True 的 DataLoader 再 rand = 0.30742281675338745（shuffle 消耗全域亂數）。
+
+## ch04 實測（2026-10-05，本機；在 HW02/ 裡、PYTHONPATH=.）
+- c4a.py（model.ckpt、eval、GPU；`2007-149877-0023` 拼接後 500 筆 view 成 (500,11,39)，`torch.manual_seed(0)` 產生亂數）：輸出 `torch.Size([500, 11, 41])`；把第 6–10 格換成亂數 → 中間格輸出 `torch.equal` **True**、最後一格有變 True；把第 0–4 格換成亂數 → 中間格輸出改變（False），中間格的預測有 **405 / 500** 個改變。GPU 上 `lstm_out.is_contiguous()` False。
+- c4b.py（CPU）：`Classifier(429, hidden_layers=1/6, 512)` 的 `lstm.num_layers` 都是 10、參數都是 20064809；`lstm_out.is_contiguous()` False；`lstm_out[:,-1] == h_n[-1]` True、`== h_n[0]` False。
+- `lstm_out.stride()` = `(512, 32768, 1)`（CPU，batch 64）：內部以 (時間, batch, hidden) 排列，batch_first 回傳的是轉置後的 view。`m.out(lo)` 與 `m.out(lo.contiguous())`：`torch.equal` False、`torch.allclose` True（浮點捨入差異）。
+- 把 `m.lstm` 換成 `bidirectional=True` 而不改 Linear：`RuntimeError: mat1 and mat2 shapes cannot be multiplied (704x1024 and 512x41)`。

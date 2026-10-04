@@ -956,7 +956,7 @@ saving model with acc 0.642
   <li><span class="mk">2</span>最後一個 epoch。Train Acc 一路爬到 0.690659，Val Acc 從第 11 個 epoch 起就停在 0.639–0.642 之間，val loss 則從第 11 個 epoch 的 1.291020 慢慢往上升：模型開始記住訓練資料的細節，而這些細節對驗證集沒有幫助。這個現象叫過擬合（overfitting），第 5 章會再回來看這條曲線。</li>
 </ol>
 <p>stderr 上另外有 tqdm 進度條（tqdm 是在終端機畫進度條的套件）：先是讀檔時的兩條（<code>3857it [00:08, …]</code>、<code>429it [00:00, …]</code>，讀完 4,286 個檔案不到 10 秒），然後每個 epoch 兩條，訓練一條數到 <code>37182/37182</code>、驗證一條數到 <code>4134/4134</code>，那是一個 epoch 的 batch 數（第 3 章）。除了進度條，stderr 沒有任何警告。</p>
-<p><strong>跑多久：</strong>本書在 <code>/usr/bin/time -v</code> 底下跑完整個 <code>train.py</code>，wall clock（牆上時鐘實際經過的時間）是 <strong>3 小時 4 分 48 秒</strong>。但那一次 GPU 前半段同時還有其他訓練在跑，所以 3 小時只能當作上限；後半段 GPU 只剩它自己的時候，每個 epoch 的訓練約 8 分 20 秒、驗證約 15 秒。<!-- TODO(本機實測): 無干擾時 train.py 跑 1 個 epoch 的 wall clock（今晚量） --> 也就是說，<strong>改一個設定、重跑一次完整訓練，要以小時計</strong>。這也是第 7 章的對照實驗改用 5 個 epoch 的原因。</p>
+<p><strong>跑多久：</strong>本書在 <code>/usr/bin/time -v</code> 底下跑完整個 <code>train.py</code>，wall clock（牆上時鐘實際經過的時間）是 <strong>3 小時 4 分 48 秒</strong>。但那一次 GPU 前半段同時還有其他訓練在跑，所以 3 小時只能當作上限；為了得到乾淨的數字，本書另外在 GPU 上沒有任何其他程式時，把 <code>num_epoch</code> 改成 1 跑一次：wall clock <strong>7 分 8.80 秒</strong>，其中讀檔 2 秒、訓練 37,182 步 6 分 51 秒（約 90 it/s）、驗證 4,134 步 11 秒，印出的四個數字和上面第 1 個 epoch 完全相同。照這個速度，20 個 epoch 大約要 2 小時 20 分（手算估計，沒有實際無干擾地跑滿 20 個 epoch）。也就是說，<strong>改一個設定、重跑一次完整訓練，要以小時計</strong>。這也是第 7 章的對照實驗改用 5 個 epoch 的原因。</p>
 <div class="note"><h4>同樣的程式，同樣的結果</h4>
 <p>這份 repo 裡被忽略的 <code>model.ckpt</code> 是 2026-10-03 跑出來的；本書 2026-10-04 再跑一次，得到的 <code>model.ckpt</code> 和它<strong>逐位元組相同</strong>。原因是 <code>same_seeds</code> 固定了所有亂數，並要求 cuDNN 使用確定性（deterministic）的演算法（第 5 章）。所以只要環境相同，你跑出來的每一行數字都會和上面一樣；換了顯示卡或套件版本，小數點後幾位才可能不同。</p>
 </div>
@@ -1018,7 +1018,7 @@ torch.Size([646268, 429])  «2»</code></pre>
   <li>參數 20,064,809 個（手算與 PyTorch 一致）：第 0 層 1,132,544，第 1–9 層各 2,101,248，Linear 21,033。</li>
   <li><code>config.py</code> 的 <code>hidden_layers = 1</code> 沒有作用，層數寫死在 <code>model.py</code>（第 4 章）。</li>
   <li>兩支腳本都要在 <code>HW02/</code> 裡用 <code>../.venv/bin/python</code> 執行，需要 NVIDIA GPU。資料與 checkpoint 被 <code>.gitignore</code> 擋在 repo 外，<code>prediction.csv</code> 例外地被追蹤。</li>
-  <li>完整訓練要以小時計（實測 3 小時 4 分 48 秒，有其他工作干擾）；最佳是第 15 個 epoch，驗證準確率 0.641955，結果可以逐位元組重現。</li>
+  <li>完整訓練要以小時計：無干擾時 1 個 epoch 實測 7 分 8.80 秒，20 個 epoch 約 2 小時 20 分（有其他工作干擾時實測 3 小時 4 分 48 秒）；最佳是第 15 個 epoch，驗證準確率 0.641955，結果可以逐位元組重現。</li>
 </ul>
 </div>
 
