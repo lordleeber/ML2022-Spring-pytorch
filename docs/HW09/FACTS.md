@@ -432,6 +432,16 @@
   - 前面頁面改動：outline 對照表 ch07 的「字型 20–24」改成 22–24。
   - 回指（不重講）：ch00 0.1 題目不在 repo、0.3 環境、0.5 主程式 85–94／117–120、stdout、6.7 s、LOAD REPORT、0.6 重跑逐位元相同；ch01 1.6 torch.no_grad()；ch04 4.5 viridis；ch06 6.3 tokenizer／WordPiece／[CLS]／[SEP]／[UNK]／token_type_ids／`model(**…)`、6.6 hidden_states 13 個元素與 layer 0、6.9 cosine 直覺；index〈先說在前面〉第二層。
 
+- ch08（第 8 章，2026-10-04 雲端）：
+  - 圖號：圖 8.1（img/ch08_side_by_side_a.png）、圖 8.2（img/ch08_side_by_side_b.png）、圖 8.3（四格 SVG：橫軸用不用梯度、縱軸用不用標籤；LIME（紫）／Saliency、SmoothGrad、IG（黃）／Filter activation（綠）／Filter visualization（黃））、圖 8.4（img/ch08_agreement.png）、圖 8.5（img/ch08_random_model.png）。
+  - 本章正式定義的名詞：Spearman 等級相關（名次的 Pearson；同值給平均名次，SciPy `spearmanr`）、前 10% 像素的 IoU（Intersection over Union；隨機基準 0.01 ÷ 0.19 ≈ 0.053；取 ≥ 第 90 百分位數，同值整塊算入）、集中程度（最亮 1%／10% 佔總和）、中央 64×64 比例（均勻 = 25%）、Sobel（3×3 邊緣濾波器，一句）、sanity check／model randomization test（Adebayo et al. 2018）、隨機權重模型、「第 2 名類別」、IG repo／IG×x 的簡寫、每種方法「回答的問題、用不用標籤、用不用梯度」對照表。
+  - 本章用語：入門／進階／挑戰三級題庫（8.6–8.8），每題答案指回 ch01–ch07 的節。
+  - 本章手算（由本 FACTS 推得）：IoU 隨機基準 0.053；逐張四對的平均 0.484／0.677／0.494／0.376（= 矩陣的 0.48／0.68／0.49／0.38）；隨機模型 Spearman 平均 0.19／0.14。
+  - 標明為本書的解讀或推論的：Saliency 與 IG 最像的原因（IG 後幾個 α 接近原圖）；SmoothGrad 分散、LIME 集中的原因；偏中央 = 看的是食物；圖 1、6 cosine 例外「原因未完全確定」（float32 1 − softmax 為 0 可能有關，但圖 8 也是 0 卻 −0.943）。
+  - TODO：量測工具 stdout 節錄（可選）；LIME 與 SmoothGrad 的隨機權重 sanity check（可選，本書只做了 Saliency 與 IG）。
+  - **雲端發現的 FACTS 小疑點**：(1)「集中程度」說「LIME 最集中」——最亮 1% 時 LIME 和 Saliency 同為 0.090，只有 10% 時 LIME 0.500 最高；ch08 以 10% 為準寫。(2)「中央比例」說「有類別資訊的方法都偏中央」——SmoothGrad 只有 0.324（高於均勻 0.25，但明顯低於 LIME／Saliency／IG 的 0.39–0.44）；ch08 把 SmoothGrad 分開寫。
+  - 回指（不重講）：ch00 0.3／0.4／0.5 計時／0.6 SmoothGrad 每次不同；ch01 1.7 model.train()；ch02 2.7〈10 張圖的權重〉、2.8 softmax、2.9 start_label；ch03 3.4 CE 梯度、3.6 Pearson 與 logit 版、3.10 變體、3.11 取樣次數；ch04 4.9 白雜訊／clamp／lr=1；ch05 5.4、5.8、5.9；ch07 7.9、7.10。
+
 ## index／outline 審稿補測（2026-10-03，本機）
 - 舊版套件能不能裝（用 `uv pip install --target <scratch>` 試，不動 .venv）：
   - `lime==0.1.1.37`：**裝得起來**，在 Python 3.12 上也能跑。它另外依賴 `progressbar`（2.5），pip 會一起裝。舊版的進度條是 `progressbar` 的 `|####|` 樣式，不是 tqdm。用它對圖 0 跑同一段 LIME（seed 16、start_label=1、logits）：前 5 名 (21, 5.5216)、(25, 3.5899)、(38, 3.1247)、(27, 3.0233)、(40, 2.9437)，R² 0.8423，**和 0.2.0.1 完全相同**。所以換版本不影響 Q1–4 的結果。
@@ -1508,8 +1518,8 @@ Answering
 - 前 10% IoU 平均：IG repo–IG×x 0.597、Saliency–IG repo 0.340、Saliency–IG×x 0.278、LIME–IG repo 0.181、LIME–Saliency 0.153、Saliency–SmoothGrad 0.143、SmoothGrad–IG repo 0.138；filter 的組合 0.06–0.13；Saliency–cnn6 0.062（≈ 隨機）。
 - 逐張（Saliency–SmoothGrad／Saliency–IG repo／SmoothGrad–IG repo／LIME–IG×x）：圖 0 0.251/0.568/0.294/0.348；1 0.372/0.560/0.534/0.424；2 0.351/0.585/0.265/0.229；3 0.507/0.687/0.432/0.397；4 0.648/0.779/0.613/0.391；5 0.613/0.741/0.574/0.338；6 0.514/0.679/0.653/0.467；7 0.522/0.665/0.571/0.319；8 0.509/0.757/0.511/0.507；9 0.553/0.751/0.494/0.340。圖 0 的 Saliency 與 SmoothGrad 最不一致。
 - 讀法（本書的解讀）：三種梯度方法（Saliency、SmoothGrad、IG）彼此中度一致，Saliency 和 IG 最像（推論：IG 平均的 10 個點 α = 0, 0.1, …, 0.9 裡，後幾個離原圖很近，梯度和 Saliency 在原圖上取的相近；但 Saliency 對 CE、IG 對 logit，不完全相同）；LIME 和梯度方法弱到中度一致；filter activation 和其他四種幾乎無關——它回答的是「這個 filter 在哪裡被激發」，不是「哪裡讓模型判成這一類」。
-- **集中程度**（最亮的 1%／10% 像素佔整張圖總和的比例，10 張平均）：LIME 0.090／0.500、Saliency 0.090／0.419、SmoothGrad 0.029／0.198、cnn6 0.053／0.325、cnn23 0.039／0.261、IG repo 0.086／0.408、IG×x 0.085／0.404。→ SmoothGrad 最分散（加雜訊平均把值抹開），LIME 最集中（只有少數塊權重大，而且一塊內的像素同值）。
-- **中央 64×64（[32:96, 32:96]，面積 25%）佔總和的比例**：LIME 0.437、Saliency 0.392、IG repo 0.403、IG×x 0.397、SmoothGrad 0.324、cnn23 0.287、cnn6 0.260（≈ 均勻）。食物多在中央，有類別資訊的方法都偏中央；filter activation 幾乎均勻。
+- **集中程度**（最亮的 1%／10% 像素佔整張圖總和的比例，10 張平均）：LIME 0.090／0.500、Saliency 0.090／0.419、SmoothGrad 0.029／0.198、cnn6 0.053／0.325、cnn23 0.039／0.261、IG repo 0.086／0.408、IG×x 0.085／0.404。→ SmoothGrad 最分散（加雜訊平均把值抹開），以最亮 10% 看 LIME 最集中（0.500；最亮 1% 時 LIME 與 Saliency 同為 0.090；ch08 審稿更正，原本只寫「LIME 最集中」）（括號內的原因是推論）。
+- **中央 64×64（[32:96, 32:96]，面積 25%）佔總和的比例**：LIME 0.437、Saliency 0.392、IG repo 0.403、IG×x 0.397、SmoothGrad 0.324、cnn23 0.287、cnn6 0.260（≈ 均勻）。食物多在中央，有類別資訊的方法都高於均勻的 0.25：LIME／Saliency／IG 0.39–0.44，SmoothGrad 低一些（0.324）；filter activation 接近均勻（ch08 審稿更正，原本寫「都偏中央」沒把 SmoothGrad 分開）。
 - **和「純邊緣」的相關**（灰階圖的 Sobel 梯度大小 vs 各張圖，Spearman 10 張平均）：LIME 0.275、Saliency 0.227、SmoothGrad 0.228、cnn6 0.284、cnn23 0.287、IG repo 0.313、IG×x 0.258；隨機權重模型的 saliency 0.054。→ 每種方法都有一部分是在描邊，但都不只是邊緣偵測。
 - LIME 的 repo mask（num_features=11、min_weight=0.05）在每張圖上色的比例（綠／紅，佔整張圖）：圖 0 0.188/0、1 0.051/0.075、2 0.015/0.087、3 0.102/0.041、4 0.429/0.010、5 0.116/0.021、6 0.269/0、7 0.235/0、8 0.180/0、9 0.129/0.047。塊數（綠/紅）：0 11/0、1 4/7、2 2/9、3 7/4、4 10/1、5 10/1、6 11/0、7 11/0、8 11/0、9 8/3。圖 1、2 紅塊比綠塊多。
 - superpixel 實際塊數（start_label=1 的 slic 輸出，n_segments=200 只是目標）：圖 0–9 = 107、141、151、101、66、120、108、94、128、109。
@@ -1546,3 +1556,18 @@ Answering
 - Filter 從白雜訊出發、限制 [0,1]、lr=1：「ch04 實測 → 變體」。
 - Baseline 換灰／模糊／雜訊：「ch05 實測 → Flexible baseline」。
 - model.train() 的影響：「ch01 實測 → 模型對 10 張圖的預測」末段（logit 最多差 18.9，BN buffer 被改寫）。
+
+## ch08 審稿補測（2026-10-04，本機；PR #18）
+工具：`docs/tools/hw09_ch08_review.py`（在 HW09/ 裡跑，約 1 分鐘）。隨機模型同 hw09_ch08_compare.py：`torch.manual_seed(0)` 後 `Classifier().cuda().eval()`。
+- **其他方法的隨機權重 sanity check**（和訓練好的模型的 Spearman，10 張；各方法照 ch08 實測「一張 128×128 的圖」的定義）：
+  - LIME |w|：0.357、0.443、0.391、0.293、0.587、0.448、0.682、0.350、0.393、0.394，平均 **0.434**。每塊一個值（不按像素）：平均 0.339（0.181–0.576）。
+  - SmoothGrad（兩邊都在迴圈前 `torch.manual_seed(0)`）：0.347、0.504、0.217、0.468、0.469、0.439、0.701、0.564、0.526、0.491，平均 **0.473**。
+  - cnn[6] filter 0 activation：平均 0.003（−0.167..+0.244）；cnn[23]：平均 0.295（−0.121..+0.582）。
+  - Saliency、IG repo 重算：平均 0.189、0.143（= ch08 實測）。
+- **切掉外圍 8 像素**（只比 [8:120, 8:120]，外框佔面積 23.4%）：Saliency 0.189 → 0.054、IG repo 0.143 → 0.019、SmoothGrad 0.473 → 0.293、LIME 0.434 → 0.410。外框佔總和的比例（訓練好／隨機）：Saliency 0.095／0.157、IG 0.087／0.176、SmoothGrad 0.161／0.149、LIME 0.073／0.149。→ Saliency／IG 剩下的相關幾乎都來自邊框。
+- **LIME 的塊大小**：|權重| 和該 superpixel 面積的 Spearman，訓練好的模型平均 0.358（0.269–0.443）、隨機模型 0.398（0.182–0.528）。「大塊被遮住輸出變比較多，與模型無關」是推論。
+- **隨機模型的 LIME 權重**：每張最大 |w| 1.82e-07–5.37e-07，|w| ≥ 0.05 的塊數 0（程式的圖不會上色）；R² 0.577–0.780。
+- **隨機模型讓 repo 的 LIME 出錯**：`explain_instance` 預設 `top_labels=5`（lime_image.py 第 131 行），只對模型分數前 5 類算 `local_exp`。隨機模型 10 張的前 5 類都是 [6, 10, 3, 1, 9]，圖 0、3、4、6、8 的標籤不在其中 → `get_image_and_mask(label=…)` 丟 `KeyError: 'Label not in explanation'`（lime_image.py 第 56 行；本機第一次跑直接取 `local_exp[0]` 也是 KeyError）。改用 `labels=(標籤,), top_labels=None`：取樣相同，訓練好的模型的結果和原程式相同（圖 0 前 5 名 21、25、38、27、40；圖 3 依序跑的前 5 名 40、57、86、52、48；|w| ≥ 0.05 圖 0 83 塊）。
+- 雜訊樣本（程式的 std，一張一個樣本，`torch.manual_seed(0)`）：訓練好的模型 10 張全判 10（Vegetable/Fruit，和 ch03 審稿補測一致）；隨機模型全判 6、最大機率 0.094。
+- **量測工具 stdout 節錄**：ch08「本章的數字從哪來」框補了 hw09_ch08_compare.py 的 Spearman 段 4 行（逐字，`…` 為省略）。
+- 雲端在 ch08 指出的兩個 FACTS 疑點（「LIME 最集中」只在最亮 10% 成立；「有類別資訊的方法都偏中央」沒把 SmoothGrad 0.324 分開）都核對屬實，已更正。
