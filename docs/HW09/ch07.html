@@ -22,7 +22,7 @@
 <figcaption>圖 7.1 — <code>bert_embedding.png</code>：10 個句子的「蘋」在第 12 層的向量，兩兩之間的歐氏距離。顏色越暗越近，對角線是 0。</figcaption>
 </figure>
 <p>這張圖要讀懂，得先知道四件事：10 個句子是什麼（7.2 節）、「蘋」的向量怎麼取出來（7.3、7.4 節）、距離怎麼算（7.5 節）、矩陣怎麼畫（7.6 節）。7.7 節再回來逐格讀它。</p>
-<p>投影片第 16 頁的全部文字（用 PDF 文字擷取工具抽出，逐字照錄）：</p>
+<p>作業投影片（<code>HW09/HW09.pdf</code>）第 16 頁的全部文字（用 PDF 文字擷取工具抽出，逐字照錄）：</p>
 <pre class="shell"><code>Embedding Analysis
 Question 28 to 30
 ● Compare output embedding of
@@ -129,7 +129,7 @@ select_word_index = [4, 2, 0, 8, 2, 0, 0, 4, 0, 0]
   <li><strong>第 76 行 <code>LAYER = 12</code></strong>：看第幾層，0 到 12。0 是 embedding 層（還沒經過任何 attention），12 是最後一層。這也是 TODO 區裡可以改的地方（7.8、7.9 節）。</li>
   <li><strong>第 78 行</strong>取出那一層的 hidden state，<code>[0]</code> 去掉批次維度，形狀 <code>(token 數, 768)</code>。</li>
   <li><strong>第 80 行</strong>把「第幾個字」換成「第幾個 token」，下面細說。</li>
-  <li><strong>第 82 行</strong>取出那個 token 的 768 維向量，轉成 NumPy。這裡可以直接 <code>.numpy()</code>，是因為主程式第 100 行的 forward 包在 <code>torch.no_grad()</code> 裡（第 1 章 <a href="ch01.html#predict">1.6 節</a>），張量不帶梯度。</li>
+  <li><strong>第 82 行</strong>取出那個 token 的 768 維向量，轉成 NumPy。這裡可以直接 <code>.numpy()</code>，是因為主程式第 100 行（7.6 節的程式）的 forward 包在 <code>torch.no_grad()</code> 裡（第 1 章 <a href="ch01.html#predict">1.6 節</a>），張量不帶梯度。</li>
 </ul>
 
 <h3 id="word">word、字元、token：三種「第幾個」</h3>
@@ -521,12 +521,18 @@ METRIC = euclidean_distance</code></pre></figure>
 <p>「果」的趨勢和「蘋」大致相同：layer 0 組間 5.944 小於水果組內 6.602，分不開；layer 8 組內 12.646／12.342、組間 17.445；layer 12 組內 12.375／11.570、組間 17.130，cosine 0.854／0.874／0.726。</p>
 
 <h2 id="font">7.11　中文字型：font fallback</h2>
-<p>最後是目錄頁〈第二層〉與第 0 章答應要細說的字型。圖 7.1 的 y 軸是中文句子，matplotlib 預設的字型 DejaVu Sans 沒有中文字。原版 notebook 的做法是在 Colab 上用 <code>gdown</code> 下載「台北思源黑體」<code>taipei_sans_tc_beta.ttf</code>，建立 <code>FontProperties(fname=…)</code>，只在 <code>plt.yticks(…, fontproperties=myfont)</code> 那一行指定它（只有 y 軸的句子用中文字型）。本 repo 改用系統內建的字型：</p>
+<p>最後是目錄頁<a href="index.html#now">〈先說在前面〉</a>的「第二層：外部資源」那一段，以及第 0 章答應要細說的字型。圖 7.1 的 y 軸是中文句子，matplotlib 預設的字型 DejaVu Sans 沒有中文字。原版 notebook 的做法是在 Colab 上用 <code>gdown</code>（從 Google Drive 下載檔案的命令列工具）下載「台北思源黑體」<code>taipei_sans_tc_beta.ttf</code>，建立 <code>FontProperties(fname=…)</code>，只在 <code>plt.yticks(…, fontproperties=myfont)</code> 那一行指定它（只有 y 軸的句子用中文字型）。本 repo 改用系統內建的字型：</p>
 <figure class="listing"><figcaption>bert_embedding.py:22–24 — 字型檔的路徑</figcaption>
 <pre class="py" data-hot="24"><code># The Colab notebook downloads taipei_sans_tc_beta.ttf to draw Traditional Chinese.
 # Locally any CJK font works; set FONT_PATH to the one you have.
 FONT_PATH = '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf'</code></pre></figure>
-<p>CJK 是中日韓文字的統稱。主程式第 88–91 行（第 0 章引用過）在這個檔案存在時，先用 <code>font_manager.fontManager.addfont</code> 把它登記給 matplotlib，再把 <code>plt.rcParams['font.family']</code> 設成一個<strong>清單</strong>：<code>['DejaVu Sans', 'Droid Sans Fallback']</code>（第二個名字是從字型檔讀出來的）。</p>
+<p>CJK 是中日韓文字的統稱。主程式在這個檔案存在時設定字型（第 0 章 <a href="ch00.html#run-embed">0.5 節</a>引用過整段主程式開頭，這裡只看這 4 行）：</p>
+<figure class="listing"><figcaption>bert_embedding.py:88–91 — 有字型檔才設定，拉丁字型在前、中文字型在後</figcaption>
+<pre class="py" data-hot="90,91"><code>    if os.path.exists(FONT_PATH):
+        # Latin glyphs come from DejaVu Sans, the missing CJK glyphs fall back to FONT_PATH
+        font_manager.fontManager.addfont(FONT_PATH)
+        plt.rcParams['font.family'] = ['DejaVu Sans', font_manager.FontProperties(fname=FONT_PATH).get_name()]</code></pre></figure>
+<p>第 90 行用 <code>font_manager.fontManager.addfont</code> 把字型檔登記給 matplotlib；第 91 行改 <code>plt.rcParams</code>（matplotlib 的全域設定，之後畫的每一張圖都會套用）裡的 <code>font.family</code>，設成一個<strong>清單</strong>：<code>['DejaVu Sans', 'Droid Sans Fallback']</code>（第二個名字是從字型檔讀出來的）。</p>
 <p>清單的意思是 <strong>font fallback</strong>（字型備援）：每一個字，先用清單的第一個字型畫；第一個沒有這個字，就改用第二個。matplotlib 3.6 起支援這種逐字備援。所以英文、數字由 DejaVu Sans 畫，中文由 Droid Sans Fallback 補上。本書實測這個設定：沒有任何缺字警告。</p>
 <p>為什麼不直接只設 Droid Sans Fallback？本書把第 91 行的 <code>'DejaVu Sans'</code> 拿掉跑一次：</p>
 <figure class="fig">
