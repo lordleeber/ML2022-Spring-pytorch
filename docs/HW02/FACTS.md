@@ -312,6 +312,7 @@
 ## 已在前面章節定義過的名詞
 （寫章的 session 每章追加；後續章節不必重講，可簡短回指。）
 - ch00：音素、音框、MFCC、logits、LSTM（概念層次）、gate（只說 4 組，細節在 ch04）、`h_n`/`h_c`、過擬合、wall clock、stdout/stderr 與 tqdm、多數類別基準（ch00 成績表先出現，ch01 定義）。
+- ch03：Dataset 約定（__len__/__getitem__）、一筆＝一格、collate、drop_last、shuffle 在迭代時才抽亂數、view 與 -1、batch_first、TensorDataset。
 - ch02：shift、concat_feat 的三步（repeat → view+permute → shift ×10 → permute+view）、contiguous、view 與 storage、標籤拼接（中間第 5 欄＝原標籤）、預先配置 max_len、虛擬位址 vs RSS、overcommit。
 - ch01：utterance（句）、句子 id 格式「說話者-章節-句號」、CMVN（逐句做）、segment（連續相同標籤的一段）、frame shift（只說「投影片沒給」）、以句為單位切分與洩漏、多數類別基準 0.177261。
 
@@ -328,3 +329,8 @@
 - c2c.py：`concat_feat(torch.LongTensor([0,0,0,29,29,39,39,39]).view(-1,1), 5)` → 8×5，中間欄（第 2 欄）＝輸入。
 - c2d.py：`torch.empty(3000000,429)` storage 5148000000；切成 `[:264570]` 後 storage 仍 5148000000；需要 454002120。
 - c2e.py（/proc/self/status VmRSS）：import 後 514624 kB；`torch.empty(3000000,429)` 後 515200 kB（+576 kB）；寫入前 264,570 列後 959680 kB（+444,480 kB ≈ 455 MB）。
+
+## ch03 實測（2026-10-04，本機；在 HW02/ 裡、PYTHONPATH=.，輸出已逐字放進 ch03）
+- c3a.py（驗證集）：`264570 torch.Size([429]) torch.float32 torch.Size([11]) torch.int64`；`val_set[0]` 的標籤 11 個 0；`len(loader)` 4134；第一批 (64,429)/(64,11)；最後一批 (58,429)/(58,11)；`view(-1,11,39)` → (58,11,39)。
+- c3b.py：`2007-149877-0023` 拼接後第 50 列 `view(11,39)` 的第 j 段 == 第 45+j 格（11 段全 True）；`view(39,11)`：`b[0] == f[45,:11]` True、`b[:,0] == f[45]` False。
+- c3q.py（model.ckpt，驗證集，batch 64）：shuffle=False → acc 0.6419548701666856、loss（batch 平均再平均）1.299442；shuffle=True（manual_seed 0）→ acc 相同、loss 1.299462。`torch.manual_seed(0); torch.rand(1)` = 0.49625658988952637；seed 0 後先迭代一次 shuffle=True 的 DataLoader 再 rand = 0.30742281675338745（shuffle 消耗全域亂數）。
