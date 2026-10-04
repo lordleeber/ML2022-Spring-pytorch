@@ -442,6 +442,8 @@
   - **雲端發現的 FACTS 小疑點**：(1)「集中程度」說「LIME 最集中」——最亮 1% 時 LIME 和 Saliency 同為 0.090，只有 10% 時 LIME 0.500 最高；ch08 以 10% 為準寫。(2)「中央比例」說「有類別資訊的方法都偏中央」——SmoothGrad 只有 0.324（高於均勻 0.25，但明顯低於 LIME／Saliency／IG 的 0.39–0.44）；ch08 把 SmoothGrad 分開寫。
   - 回指（不重講）：ch00 0.3／0.4／0.5 計時／0.6 SmoothGrad 每次不同；ch01 1.7 model.train()；ch02 2.7〈10 張圖的權重〉、2.8 softmax、2.9 start_label；ch03 3.4 CE 梯度、3.6 Pearson 與 logit 版、3.10 變體、3.11 取樣次數；ch04 4.9 白雜訊／clamp／lr=1；ch05 5.4、5.8、5.9；ch07 7.9、7.10。
 
+- appendix（附錄，2026-10-04 雲端）：沒有新定義的名詞、沒有新實測。A.1 Q1–30 對照表（程式行號用「def 到存檔」的範圍，和 outline 一致）、A.2 名詞對照（80 個，指回各章首次定義的節）、A.3 指令速查（時間照「執行實測」與「ch00 審稿補測」；量測工具只有 hw09_ch07_embedding.py 5.89 s、hw09_ch08_review.py 約 1 分鐘有記錄，其他標 TODO）、A.4 關鍵數字（ch08 sanity check 用審稿補測後的「切外框後 0.054／0.019」）、A.5 repo 問題清單 8 項、A.6 套件版本。
+
 ## index／outline 審稿補測（2026-10-03，本機）
 - 舊版套件能不能裝（用 `uv pip install --target <scratch>` 試，不動 .venv）：
   - `lime==0.1.1.37`：**裝得起來**，在 Python 3.12 上也能跑。它另外依賴 `progressbar`（2.5），pip 會一起裝。舊版的進度條是 `progressbar` 的 `|####|` 樣式，不是 tqdm。用它對圖 0 跑同一段 LIME（seed 16、start_label=1、logits）：前 5 名 (21, 5.5216)、(25, 3.5899)、(38, 3.1247)、(27, 3.0233)、(40, 2.9437)，R² 0.8423，**和 0.2.0.1 完全相同**。所以換版本不影響 Q1–4 的結果。
@@ -1571,3 +1573,9 @@ Answering
 - 雜訊樣本（程式的 std，一張一個樣本，`torch.manual_seed(0)`）：訓練好的模型 10 張全判 10（Vegetable/Fruit，和 ch03 審稿補測一致）；隨機模型全判 6、最大機率 0.094。
 - **量測工具 stdout 節錄**：ch08「本章的數字從哪來」框補了 hw09_ch08_compare.py 的 Spearman 段 4 行（逐字，`…` 為省略）。
 - 雲端在 ch08 指出的兩個 FACTS 疑點（「LIME 最集中」只在最亮 10% 成立；「有類別資訊的方法都偏中央」沒把 SmoothGrad 0.324 分開）都核對屬實，已更正。
+
+## appendix 審稿（2026-10-04，本機；PR #19）
+- 依使用者指示，附錄不另外做本機實測。A.3「本書的量測工具」表中沒有記錄執行時間的工具維持「未記錄」，拿掉 7 個 TODO(本機實測) 標記（剩下的「TODO 區」是指 bert_embedding.py 原始碼的 TODO 段落，不是標記）（只有 hw09_ch07_embedding.py 5.89 s 與 hw09_ch08_review.py 約 1 分鐘有實測）。
+- 附錄的數字逐項核對 FACTS（checkpoint 170 MB／epoch 208／81 entry、logit 梯度 1.25–4.90、雜訊約論文式 40%、x −11.87..12.32、IG 10 步圖 2 少 42%、BERT QA 參數 107,721,218、PCA 0.12–0.49、safetensors 大小、transformers 4.5.0 的 tokenizers 編譯失敗、hw9_bert.zip HTTP 404）皆相符。
+- 雲端在 PR 說明列的三點（行號範圍兩種邊界、Q25–27 寫 75-122、check_links 對 ../HW01/ 的誤報）都不是錯誤，照附錄的處理即可。
+
