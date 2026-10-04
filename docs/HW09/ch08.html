@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 8 章　五種方法並排看，與三級題庫 — HW09 Explainable AI</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a><a href="appendix.html">附錄 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW09 讀碼教材</p>
+  <h1>第 8 章　五種方法並排看，與三級題庫</h1>
+  <p class="chap-lead">第 2–5 章各自讀完了 Part 1 的五種方法：LIME、Saliency map、SmoothGrad、Filter explanation、Integrated Gradients。這一章把它們放在同一張圖上：同一張食物照片，五種方法各畫出什麼、各自回答的是哪一個問題、用到了什麼（標籤？梯度？），以及彼此到底一不一致。本章用兩個新的量（Spearman 等級相關與前 10% 像素的 IoU）把「像不像」變成數字，再用一個簡單的 sanity check 確認這些圖真的依賴模型學到的東西。最後是入門、進階、挑戰三級題庫，每一題都有本書實測過的答案，並指回對應的章節。</p>
+</header>
+<main>
+
+<h2 id="start">8.1　起點：同一張圖，五種畫法</h2>
+<p>前面各章的圖都是一種方法一張：<code>lime.png</code>（第 2 章）、<code>saliency.png</code> 與 <code>smoothgrad.png</code>（第 3 章）、<code>filter_cnn6.png</code> 與 <code>filter_cnn23.png</code>（第 4 章）、<code>integrated_gradients.png</code>（第 5 章）。本書另外寫了一支量測程式，對同樣 10 張圖把五種方法各算一次，排成一列：</p>
+<figure class="fig">
+<img src="img/ch08_side_by_side_a.png" alt="5 列 8 欄。列是圖 0 到 4（Bread、Dairy product、Dairy product、Dessert、Dessert）；欄是原圖、LIME、Saliency、SmoothGrad、cnn[6] filter 0、cnn[23] filter 0、IG (repo)、IG x input。LIME 是原圖上幾塊綠或紅的疊色；Saliency 黑底紅黃亮點；SmoothGrad 暗、偏灰綠的半透明影像；cnn[6] 像浮雕；cnn[23] 是粗格子；兩欄 IG 都是灰底彩色細紋">
+<figcaption>圖 8.1 — 圖 0–4 在五種方法下的結果（每欄照 <code>explain_cnn.py</code> 的畫法；最後一欄 IG x input 是本書加的論文版 IG）。</figcaption>
+</figure>
+<figure class="fig">
+<img src="img/ch08_side_by_side_b.png" alt="同樣 8 欄，列是圖 5 到 9（Egg、Meat、Noodles/Pasta、Seafood、Soup）">
+<figcaption>圖 8.2 — 圖 5–9，同樣 8 欄。</figcaption>
+</figure>
+<p>八欄的來源與畫法：</p>
+<ul>
+  <li><strong>LIME</strong>：照原程式（<code>np.random.seed(16)</code> 在迴圈外設一次、10 張依序跑、logits、<code>start_label=1</code>、同樣的 <code>get_image_and_mask</code> 參數）。本書核對過圖 0 的前 3 名和第 2 章相同，所以這一欄就是 <code>lime.png</code> 的內容。</li>
+  <li><strong>Saliency</strong>：直接呼叫 <code>compute_saliency_maps</code>（10 張一批），就是 <code>saliency.png</code>；二維、<code>plt.cm.hot</code>。</li>
+  <li><strong>SmoothGrad</strong>：呼叫 <code>smooth_grad(…, 500, 0.4)</code>，迴圈前設 <code>torch.manual_seed(0)</code> 一次。<code>explain_cnn.py</code> 本身沒有固定 PyTorch 的種子（第 0 章 <a href="ch00.html#outputs">0.6 節</a>），所以這一欄和 <code>smoothgrad.png</code> 用的不是同一批雜訊，數值不能逐位對照；三通道當 RGB 畫。</li>
+  <li><strong>cnn[6]、cnn[23] filter 0</strong>：只做第 4 章的第一步 <strong>filter activation</strong>（hook 抓第 0 個 filter 的輸出，一次 forward），用預設的 viridis 畫。不做第二步 filter visualization，因為優化出來的圖回答的是「什麼樣的圖讓這個 filter 興奮」，不是「這張圖的哪裡」，不能和其他四種比。</li>
+  <li><strong>IG (repo)</strong>：呼叫 <code>IntegratedGradients(model).generate_integrated_gradients(…, 10)</code>，就是第 5 章的「路徑平均梯度」；<strong>IG x input</strong> 再乘上 x，是論文的 IG（第 5 章 <a href="ch05.html#missing">5.4 節</a>）。兩欄都三通道 normalize 後當 RGB 畫。</li>
+</ul>
+<p>看得到的（逐欄）：</p>
+<ul>
+  <li><strong>LIME</strong>：只有幾塊 superpixel 上了綠（正）或紅（負），其餘是原圖。綠色大多落在食物上：圖 0 披薩上半部、圖 4 鬆餅大半、圖 6 肉與上方配菜、圖 7 麵與左側青菜、圖 8 鮭魚片中段；圖 1 只有奶油塊右下角兩小塊；圖 2 綠色只在草莓一小塊，壺底有一塊橘紅；圖 3 巧克力片附近有紅；圖 9 碗的上緣有紅、海帶有綠。</li>
+  <li><strong>Saliency</strong>：黑底，紅黃亮點沿著物體輪廓與紋理：圖 1 奶油塊方框、圖 2 牛奶壺弧線與草莓、圖 5 荷包蛋圓圈；圖 4、6、9 的亮點散在整片食物上。</li>
+  <li><strong>SmoothGrad</strong>：暗、偏灰綠的半透明影像，食物輪廓與紋理可辨（鬆餅格子、荷包蛋圓、湯碗圓）；圖 2 幾乎全黑，只有草莓較亮。</li>
+  <li><strong>cnn[6] filter 0</strong>：像整張圖的浮雕或邊緣圖，<strong>背景也有</strong>：圖 0 的刀叉與盤緣、圖 1 的外框、圖 8 的筷子都一樣清楚，和類別無關。</li>
+  <li><strong>cnn[23] filter 0</strong>：32×32 的粗格子，看得出物體的大形狀（圖 2 草莓是一塊深色、圖 5 蛋黃的圓圈），細節沒了。</li>
+  <li><strong>IG (repo) 與 IG x input</strong>：灰底、沿輪廓的彩色細紋，兩欄幾乎分不出來（× input 的底色略暗）。</li>
+</ul>
+<p>只用眼睛看，很難說哪兩種「比較像」：畫法不同（疊色、熱圖、RGB、viridis），值的意義也不同。8.3 節用數字來比。</p>
+
+<h2 id="questions">8.2　每種方法回答的是哪一個問題</h2>
+<p>五種方法看起來都在回答「模型看哪裡」，但嚴格說，各自問的問題不一樣，用到的東西也不一樣：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>方法（章）</th><th>回答的問題</th><th>輸出的單位</th><th>用標籤？</th><th>用梯度？</th><th>程式</th></tr></thead>
+<tbody>
+<tr><td>LIME（<a href="ch02.html">第 2 章</a>）</td><td>遮住<strong>哪一塊</strong>，這一類的分數變最多</td><td>每塊 superpixel 一個權重</td><td>要（取 logits 的哪一欄）</td><td>不用：把模型當黑盒，呼叫 1000 次</td><td><code>explain_cnn.py:39–74</code></td></tr>
+<tr><td>Saliency（<a href="ch03.html">第 3 章</a>）</td><td><strong>哪個像素</strong>動一點，loss 變最多</td><td>每個像素（RGB 取 max）</td><td>要（CE 的 target）</td><td>要，1 次</td><td><code>explain_cnn.py:79–113</code></td></tr>
+<tr><td>SmoothGrad（第 3 章）</td><td>同上，但在原圖附近加雜訊平均</td><td>每個像素（保留三通道）</td><td>要</td><td>要，500 次</td><td><code>explain_cnn.py:120–157</code></td></tr>
+<tr><td>Filter activation（<a href="ch04.html">第 4 章</a>）</td><td>這個 filter 在這張圖的<strong>哪裡</strong>被激發</td><td>activation map（128² 或 32²）</td><td><strong>不用</strong></td><td>不用：只 forward</td><td><code>explain_cnn.py:164–221</code></td></tr>
+<tr><td>Filter visualization（第 4 章）</td><td><strong>哪種圖案</strong>最讓這個 filter 興奮</td><td>一張優化出來的圖</td><td><strong>不用</strong></td><td>要（對輸入做 gradient ascent）</td><td>同上</td></tr>
+<tr><td>Integrated Gradients（<a href="ch05.html">第 5 章</a>）</td><td><strong>相對於 baseline</strong>（全黑圖），每個像素貢獻了多少分數</td><td>每個像素（三通道）</td><td>要（one-hot 只取該類 logit）</td><td>要，10 次</td><td><code>explain_cnn.py:225–281</code></td></tr>
+</tbody>
+</table></div>
+<p>（表中「用到什麼」是本書讀碼整理的。）兩個維度畫成圖：</p>
+<figure class="fig">
+<svg viewBox="0 0 900 330" role="img" aria-label="兩個維度的四格：橫軸是用不用梯度，縱軸是用不用標籤。用標籤、不用梯度的格子是 LIME；用標籤、用梯度的格子是 Saliency、SmoothGrad、Integrated Gradients；不用標籤、不用梯度的格子是 Filter activation；不用標籤、用梯度的格子是 Filter visualization">
+  <text class="s-sm" x="330" y="24" text-anchor="middle">不用梯度（只呼叫 forward）</text>
+  <text class="s-sm" x="660" y="24" text-anchor="middle">要梯度（對輸入 backward）</text>
+  <text class="s-sm" x="62" y="110" text-anchor="middle" transform="rotate(-90 62 110)">要標籤</text>
+  <text class="s-sm" x="62" y="250" text-anchor="middle" transform="rotate(-90 62 250)">不用標籤</text>
+  <rect x="170" y="40" width="320" height="140" rx="10" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-lbl" x="330" y="90" text-anchor="middle" font-weight="700">LIME</text>
+  <text class="s-sm" x="330" y="114" text-anchor="middle">哪一塊；模型當黑盒，呼叫 1000 次</text>
+  <text class="s-sm" x="330" y="136" text-anchor="middle">對 logit（第 45–46 行不做 softmax）</text>
+  <rect x="500" y="40" width="320" height="140" rx="10" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-lbl" x="660" y="78" text-anchor="middle" font-weight="700">Saliency、SmoothGrad</text>
+  <text class="s-sm" x="660" y="100" text-anchor="middle">哪個像素；對 CE loss 取梯度</text>
+  <text class="s-lbl" x="660" y="136" text-anchor="middle" font-weight="700">Integrated Gradients</text>
+  <text class="s-sm" x="660" y="158" text-anchor="middle">哪個像素、相對全黑圖；對 logit 取梯度</text>
+  <rect x="170" y="190" width="320" height="120" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="330" y="238" text-anchor="middle" font-weight="700">Filter activation</text>
+  <text class="s-sm" x="330" y="262" text-anchor="middle">某個 filter 在哪裡被激發；一次 forward</text>
+  <rect x="500" y="190" width="320" height="120" rx="10" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-lbl" x="660" y="238" text-anchor="middle" font-weight="700">Filter visualization</text>
+  <text class="s-sm" x="660" y="262" text-anchor="middle">哪種圖案；對輸入做 gradient ascent</text>
+</svg>
+<figcaption>圖 8.3 — 五種方法（Filter explanation 拆成兩步）依「用不用標籤」「用不用梯度」分成四格。不用標籤的兩格回答的是 filter 的問題，不是「模型為什麼判成這一類」。框的顏色沿用全書配色：紫＝解釋方法自己的步驟、黃＝梯度、綠＝只做 forward。</figcaption>
+</figure>
+<p>這張表先說明了一件事：<strong>filter activation 不用標籤</strong>，它和類別無關，所以圖 8.1 裡 cnn[6] 連刀叉、盤緣、筷子都一樣清楚。拿它和其他四種比「一致性」，本來就不該期待高；8.3 節的數字會證實這一點。</p>
+
+<h2 id="agreement">8.3　方法之間一致嗎</h2>
+<h3 id="measures">把每種方法變成一張 128×128 的圖</h3>
+<p>要用數字比較，先把每種方法的輸出統一成「一張 128×128、值越大越重要」的圖：</p>
+<ul>
+  <li>LIME：每個像素填它所屬 superpixel 的 |權重|。</li>
+  <li>Saliency：程式的輸出（RGB 取 max、normalize）。</li>
+  <li>SmoothGrad：程式的輸出，RGB 取 max。</li>
+  <li>filter：|activation|；cnn[23] 的 32×32 用最近鄰放大到 128×128。</li>
+  <li>IG：|IG| 的 RGB 取 max（repo 版、× x 版各一張）。</li>
+</ul>
+<p>兩張圖之間算兩個量，每個量 10 張圖各算一次再平均：</p>
+<ul>
+  <li><strong>Spearman 等級相關</strong>（Spearman rank correlation）：先把每張圖的 16,384 個像素各自依數值排名（最小的第 1 名、最大的最後一名），再對兩組<strong>名次</strong>算第 3 章 <a href="ch03.html#logit">3.6 節</a>的 Pearson 相關係數。它只看「誰大誰小的順序」，不管實際數值差多少，所以適合比較單位完全不同的圖（權重、梯度、activation）。1 是順序完全相同，0 是無關。</li>
+  <li><strong>前 10% 像素的 IoU</strong>（Intersection over Union，交集比聯集）：兩張圖各取最亮的 10% 像素（各 1,638 個左右），算「兩邊都選到的像素數 ÷ 至少一邊選到的像素數」。1 是完全重疊，0 是完全不重疊。兩張隨機的圖各選 10%，預期重疊 1%，IoU 約 0.01 ÷ 0.19 ≈ 0.053（手算），這是「純屬巧合」的水準。</li>
+</ul>
+
+<h3 id="spearman">Spearman：哪兩種最像</h3>
+<figure class="fig">
+<img src="img/ch08_agreement.png" alt="7×7 的相關矩陣，viridis 色表，對角線都是 1.00。IG (repo) 對 IG x x 是 0.91 最亮；Saliency 對 IG (repo) 0.68、對 IG x x 0.59；cnn6 act 那一列與那一行大多 0.08 到 0.17，最暗">
+<figcaption>圖 8.4 — 七張圖兩兩之間的 Spearman 等級相關（10 張的平均）。</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>LIME</th><th>Saliency</th><th>SmoothGrad</th><th>cnn6</th><th>cnn23</th><th>IG repo</th><th>IG×x</th></tr></thead>
+<tbody>
+<tr><td>LIME</td><td>1</td><td>0.41</td><td>0.34</td><td>0.15</td><td>0.29</td><td>0.46</td><td>0.38</td></tr>
+<tr><td>Saliency</td><td></td><td>1</td><td>0.48</td><td>0.08</td><td>0.20</td><td><b>0.68</b></td><td>0.59</td></tr>
+<tr><td>SmoothGrad</td><td></td><td></td><td>1</td><td>0.09</td><td>0.29</td><td>0.49</td><td>0.40</td></tr>
+<tr><td>cnn6</td><td></td><td></td><td></td><td>1</td><td>0.17</td><td>0.12</td><td>0.08</td></tr>
+<tr><td>cnn23</td><td></td><td></td><td></td><td></td><td>1</td><td>0.26</td><td>0.06</td></tr>
+<tr><td>IG repo</td><td></td><td></td><td></td><td></td><td></td><td>1</td><td><b>0.91</b></td></tr>
+</tbody>
+</table></div>
+<p>逐張看幾對（10 張的範圍）：IG repo 對 IG×x 是 0.817–0.995（同一個方法的兩個版本，第 5 章 5.8 節說過乘上 x 對圖的樣子影響很小）；<strong>Saliency 對 IG repo 是 0.560–0.779，10 張都大於 0.5</strong>，除了 IG 自己的兩版之外，是五種方法裡最一致的一對；Saliency 對 SmoothGrad 0.251–0.648；LIME 對 Saliency 0.274–0.557；Saliency 對 cnn6 −0.088 到 +0.241。</p>
+<p>逐張的四對（Saliency–SmoothGrad／Saliency–IG repo／SmoothGrad–IG repo／LIME–IG×x）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th></tr></thead>
+<tbody>
+<tr><td>Saliency–SmoothGrad</td><td><b>0.251</b></td><td>0.372</td><td>0.351</td><td>0.507</td><td>0.648</td><td>0.613</td><td>0.514</td><td>0.522</td><td>0.509</td><td>0.553</td></tr>
+<tr><td>Saliency–IG repo</td><td>0.568</td><td>0.560</td><td>0.585</td><td>0.687</td><td>0.779</td><td>0.741</td><td>0.679</td><td>0.665</td><td>0.757</td><td>0.751</td></tr>
+<tr><td>SmoothGrad–IG repo</td><td>0.294</td><td>0.534</td><td>0.265</td><td>0.432</td><td>0.613</td><td>0.574</td><td>0.653</td><td>0.571</td><td>0.511</td><td>0.494</td></tr>
+<tr><td>LIME–IG×x</td><td>0.348</td><td>0.424</td><td>0.229</td><td>0.397</td><td>0.391</td><td>0.338</td><td>0.467</td><td>0.319</td><td>0.507</td><td>0.340</td></tr>
+</tbody>
+</table></div>
+<p>圖 0 的 Saliency 與 SmoothGrad 最不一致（0.251）。</p>
+
+<h3 id="iou">前 10% 的 IoU：最重要的那些像素有沒有重疊</h3>
+<p>Spearman 看全部像素的順序；IoU 只看最亮的 10%。10 張的平均：IG repo–IG×x 0.597、Saliency–IG repo 0.340、Saliency–IG×x 0.278、LIME–IG repo 0.181、LIME–Saliency 0.153、Saliency–SmoothGrad 0.143、SmoothGrad–IG repo 0.138；有 filter 的組合 0.06–0.13；Saliency–cnn6 0.062，和隨機的 0.053 差不多。</p>
+<p>即使是最像的 Saliency 與 IG repo，前 10% 也只重疊三分之一（0.340）：兩種方法大致同意「哪一區比較重要」，但最重要的那一小撮像素並不相同。</p>
+
+<h3 id="reading">怎麼讀這些數字</h3>
+<p>以下是本書的解讀：</p>
+<ul>
+  <li><strong>三種梯度方法彼此中度一致，Saliency 和 IG 最像。</strong>一個可能的原因（推論）：IG 平均的 10 個點 α = 0, 0.1, …, 0.9 裡，後面幾個離原圖很近，梯度和 Saliency 在原圖上取的相近。但兩者不完全相同：Saliency 對 CE loss 取梯度，IG 對 logit 取梯度（第 3 章 <a href="ch03.html#logit">3.6 節</a>），而且 IG 的前幾個點是很暗的圖。</li>
+  <li><strong>LIME 和梯度方法弱到中度一致</strong>（0.34–0.46）。LIME 的單位是一整塊 superpixel，一塊裡的像素同值，本來就比較粗。</li>
+  <li><strong>filter activation 和其他四種幾乎無關</strong>（Spearman 0.06–0.29、IoU 接近隨機）。它回答的是「這個 filter 在哪裡被激發」，不用標籤，不是「哪裡讓模型判成這一類」（8.2 節）。</li>
+</ul>
+
+<h3 id="shape">三個描述圖形狀的量</h3>
+<p>本書另外量了三個描述「這張圖長什麼樣」的量（都是 10 張平均）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>LIME</th><th>Saliency</th><th>SmoothGrad</th><th>cnn6</th><th>cnn23</th><th>IG repo</th><th>IG×x</th></tr></thead>
+<tbody>
+<tr><td>最亮 1% 佔總和</td><td>0.090</td><td>0.090</td><td>0.029</td><td>0.053</td><td>0.039</td><td>0.086</td><td>0.085</td></tr>
+<tr><td>最亮 10% 佔總和</td><td><b>0.500</b></td><td>0.419</td><td><b>0.198</b></td><td>0.325</td><td>0.261</td><td>0.408</td><td>0.404</td></tr>
+<tr><td>中央 64×64 佔總和</td><td>0.437</td><td>0.392</td><td>0.324</td><td>0.260</td><td>0.287</td><td>0.403</td><td>0.397</td></tr>
+<tr><td>和 Sobel 邊緣的 Spearman</td><td>0.275</td><td>0.227</td><td>0.228</td><td>0.284</td><td>0.287</td><td>0.313</td><td>0.258</td></tr>
+</tbody>
+</table></div>
+<ul>
+  <li><strong>集中程度</strong>（最亮的 1%／10% 像素佔整張圖總和的比例）：如果每個像素一樣大，最亮的 10% 就佔 10%。SmoothGrad 最分散（10% 只佔 0.198；加雜訊平均把值抹開了），LIME 最集中（0.500；只有少數幾塊權重大，而且一塊裡的像素同值）。括號裡的原因是本書的解讀。</li>
+  <li><strong>中央 64×64</strong>（第 32–95 列、第 32–95 行，面積是整張的 25%）佔總和的比例：25% 代表完全均勻。有類別資訊的方法都高於 25%：LIME 0.437、IG 0.40 左右、Saliency 0.392，SmoothGrad 低一些（0.324）；filter activation 接近均勻（cnn6 0.260、cnn23 0.287）。這 10 張的食物多在中央，所以這個結果和「它們看的是食物」相符（推論）。</li>
+  <li><strong>和純邊緣的相關</strong>：<strong>Sobel</strong> 是一個經典的 3×3 卷積濾波器，量每個像素附近的亮度變化有多大，結果就是一張「邊緣有多強」的圖。把原圖轉成灰階算 Sobel，再和各方法的圖算 Spearman：七種都在 0.23–0.31。每種方法都有一部分是在描邊，但沒有一種只是邊緣偵測。作為對照，隨機權重模型的 saliency 和 Sobel 只有 0.054（8.5 節）。</li>
+</ul>
+<p>LIME 那一欄還有兩個細節值得對照第 2 章：superpixel 的實際塊數是 107、141、151、101、66、120、108、94、128、109（圖 0–9；<code>n_segments=200</code> 只是目標）；程式的 mask（<code>num_features=11</code>、<code>min_weight=0.05</code>）上色的塊數（綠／紅）是 11/0、4/7、2/9、7/4、10/1、10/1、11/0、11/0、11/0、8/3，<strong>圖 1、2 紅塊比綠塊多</strong>，和第 2 章 <a href="ch02.html#lime-table">2.7 節〈10 張圖的權重〉</a>的觀察一致。上色面積佔整張圖的比例（綠／紅）：圖 0 0.188/0、1 0.051/0.075、2 0.015/0.087、3 0.102/0.041、4 0.429/0.010、5 0.116/0.021、6 0.269/0、7 0.235/0、8 0.180/0、9 0.129/0.047。</p>
+
+<h2 id="target">8.4　換一個類別：Saliency 幾乎不變</h2>
+<p>這些方法都「要標籤」（8.2 節）。那麼把目標換成別的類別，圖會變多少？本書把每張圖的目標從標籤換成 logits 排第 2 名的類別：圖 0 Fried food、1 Dessert、2 Dessert、3 Seafood、4 Noodles/Pasta、5 Meat、6 Fried food、7 Meat、8 Vegetable/Fruit、9 Dessert。再算「對標籤的圖」與「對第 2 名的圖」之間的 Spearman：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th></tr></thead>
+<tbody>
+<tr><td>Saliency</td><td>0.908</td><td>0.857</td><td>0.805</td><td>0.987</td><td>0.988</td><td><b>1.000</b></td><td>0.928</td><td>0.906</td><td>0.917</td><td>0.994</td></tr>
+<tr><td>IG repo</td><td>0.577</td><td>0.765</td><td>0.703</td><td>0.793</td><td>0.811</td><td>0.660</td><td>0.681</td><td>0.634</td><td>0.682</td><td>0.780</td></tr>
+</tbody>
+</table></div>
+<p><strong>Saliency 換了類別幾乎不變</strong>（0.805–1.000，圖 5 是 1.000）；IG 比較有區別（0.577–0.811），但仍然相當像。這兩種現象的解釋與例外，放在 8.8 節的挑戰題。</p>
+
+<h2 id="sanity">8.5　sanity check：模型隨機的話，圖還一樣嗎</h2>
+<p>前面幾節比的是「方法之間」。另一個問題是：這些圖真的反映了模型學到的東西嗎？還是只反映輸入圖本身（例如邊緣）？一個簡單的檢查是 <strong>sanity check</strong>（健全性檢查，確認一個方法至少沒有犯最基本的錯）：把模型換成<strong>沒有訓練過的隨機權重</strong>，如果解釋圖幾乎不變，那它就沒有在解釋模型。這叫 model randomization test，出自 Adebayo 等人 2018 年的論文（延伸閱讀）；本書只做最簡單的版本：整個模型隨機。</p>
+<p>做法：<code>torch.manual_seed(0)</code> 後建一個 <code>Classifier().cuda().eval()</code>，不載入 checkpoint，對同樣 10 張圖算 Saliency 與 IG。這個隨機模型把 10 張全部判成類別 6（Noodles/Pasta），最大機率都是 0.094，接近 11 類均分的 1/11 ≈ 0.091。</p>
+<figure class="fig">
+<img src="img/ch08_random_model.png" alt="五格：圖 0 原圖；saliency 訓練好的模型，黑底，披薩上緣的餅皮有亮點；saliency 隨機權重，整片均勻的紅黃雜點；IG repo 訓練好的模型，黑底，披薩上緣有亮點；IG repo 隨機權重，整片均勻的紅黃雜點">
+<figcaption>圖 8.5 — 圖 0：訓練好的模型 vs 隨機權重的模型（都 normalize、hot 色表）。</figcaption>
+</figure>
+<p>看得到的：訓練好的兩格黑底、披薩上緣的餅皮有亮點；隨機權重的兩格整片均勻的紅黃雜點，看不出披薩、刀叉。和訓練好的模型相比的 Spearman：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>平均</th></tr></thead>
+<tbody>
+<tr><td>Saliency</td><td>0.108</td><td>0.077</td><td>0.118</td><td>0.220</td><td>0.255</td><td>0.279</td><td>0.184</td><td>0.192</td><td>0.194</td><td>0.260</td><td>0.19</td></tr>
+<tr><td>IG repo</td><td>0.161</td><td>0.020</td><td>0.110</td><td>0.143</td><td>0.208</td><td>0.165</td><td>0.182</td><td>0.175</td><td>0.151</td><td>0.114</td><td>0.14</td></tr>
+</tbody>
+</table></div>
+<p>相關很低（平均 0.19 與 0.14），隨機模型的 saliency 和 Sobel 邊緣的相關也只有 0.054。所以這兩種方法的圖<strong>確實依賴模型學到的東西</strong>，不是只把輸入圖的邊緣描出來。這個檢查只說明「沒有犯最基本的錯」，不代表圖就是對的。</p>
+
+<div class="note"><h4>本章的數字從哪來</h4>
+<p>本章 8.1–8.5 節的圖與數字，都來自本書另外寫的量測程式 <code>docs/tools/hw09_ch08_compare.py</code>。它 import <code>explain_cnn.py</code> 直接呼叫裡面的函式，不修改它；重跑兩次數字逐位相同。需要 GPU、<code>checkpoint.pth</code> 與 <code>food/</code>（第 0 章 <a href="ch00.html#data">0.4 節</a>），在 <code>HW09/</code> 裡執行：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python ../docs/tools/hw09_ch08_compare.py</code></pre>
+<p>它把數字印在 stdout，並把 4 張 <code>ch08_*.png</code> 寫進 <code>docs/HW09/img/</code>（會覆蓋書裡的圖）。本書沒有逐字列出它的輸出。<!-- TODO(本機實測): 若要讓讀者逐字對照，補一段 stdout 節錄（例如 Spearman 矩陣那幾行） -->它在同一個 process 裡量到的時間（LIME 14.1 秒、Saliency 0.12 秒、SmoothGrad 22.2 秒、兩層 filter activation 0.02 秒、IG 0.41 秒）只供參考；各方法的正式計時以第 0 章 <a href="ch00.html#run-cnn">0.5 節</a>的逐段計時為準（LIME 14.7 秒、Saliency 0.4 秒、SmoothGrad 24.1 秒、Filter explanation 2.3／2.9 秒、IG 0.7 秒；後者的 filter 包含 100 步優化）。題庫各題的答案則來自各章自己的實測，題目旁會註明。</p>
+</div>
+
+<h2 id="bank">8.6　題庫（一）入門</h2>
+<p>以下三級題庫的每一題，本書都實際跑過（或已在前面章節跑過），答案引用實測數字，並指回對應章節。入門題只改一個參數或讀一張表；進階題要改一兩行程式並解讀結果；挑戰題要自己推理原因。點開題目看答案。</p>
+<details class="quiz"><summary>入門 1. 把 LIME 的 <code>slic(…, start_label=1)</code> 改成 <code>start_label=0</code>，圖 0 的結果會變成怎樣？</summary>
+<p>前 5 名是同一組 superpixel，只是編號各減 1：原本 logits 版是 21、25、38、27、40，改後是 (20, 5.2675)、(24, 3.4096)、(37, 3.3193)、(39, 3.157)、(26, 3.1135)，排序略有不同；R² 變成 0.8617。綠色區域和原本幾乎一樣（披薩上半部到右上的餅皮）。差一錯誤修正之後，最後一塊 superpixel 也會被解釋，特徵 0 不再是假特徵（第 2 章 <a href="ch02.html#offbyone">2.9 節</a>、<code>img/ch02_img0_compare.png</code>）。</p></details>
+<details class="quiz"><summary>入門 2. SmoothGrad 的取樣次數從 500 改成 1、10、50，圖會差多少？</summary>
+<p>以圖 0 為例，和 500 次的平均絕對差：1 次 0.1563、10 次 0.0585、50 次 0.0257。看得到的：1 次是一片彩色雜點，看不出形狀；10 次開始看到披薩三角形與刀叉的輪廓；50 次和 500 次差不多（第 3 章 <a href="ch03.html#samples">3.11 節</a>、<code>img/ch03_smoothgrad_n.png</code>）。</p></details>
+<details class="quiz"><summary>入門 3. 照 <code>smooth_grad</code> 第 140 行的註解，改成只取平均、不 normalize，圖會變成怎樣？</summary>
+<p>幾乎全黑，只有隱約的輪廓（圖 2 的草莓比較亮）。不 normalize 時每張的最大值只有 0.1–0.5（例如圖 0 2.94e-03..0.259、圖 2 1.25e-03..0.496），全部小於 1，沒有被截斷，只是很暗。和 saliency 不同的是，10 張的亮度差不多，因為加了雜訊後梯度都在同一個數量級（第 3 章 <a href="ch03.html#variants">3.10 節</a>）。</p></details>
+<details class="quiz"><summary>入門 4. 在 <code>bert_embedding.py</code> 把 <code>LAYER</code> 改成 8，「蘋」的最近鄰檢查（10 句裡最像的另一句同組）對幾句？layer 12 呢？</summary>
+<p>layer 8 是 10 句全對，layer 12 只對 8 句（句 2 蘋果茶、句 7 蘋果手機錯組）。layer 8 時句 2 對水果句 11.11–13.24、對公司句 14.73–17.21，回到水果那邊（第 7 章 <a href="ch07.html#layers">7.9 節</a>、<a href="ch07.html#layer8">LAYER = 8 的矩陣</a>）。</p></details>
+<details class="quiz"><summary>入門 5. 五種方法裡，哪一個完全不需要知道圖的標籤？</summary>
+<p>Filter explanation 的兩步都不用：filter activation 只做一次 forward，filter visualization 對輸入做 gradient ascent，目標都是某個 filter 的輸出，和類別無關。所以 cnn[6] 的 activation 連刀叉、盤緣、筷子都一樣清楚（8.1、8.2 節）。</p></details>
+<details class="quiz"><summary>入門 6. <code>filter_explanation</code> 的 <code>lr</code> 預設值是 1，但呼叫端傳的是 0.1。如果用預設值 1，100 步後 cnn[6] 的 x 會跑到多大？</summary>
+<p>x 的範圍是 −119.74..120.75，filter 0 的總和是 103,450,840；cnn[23] 是 −35.40..68.60、總和 323,961。對照 repo 設定（lr 0.1）的 cnn[6] 約 ±12（第 4 章 <a href="ch04.html#lr1">lr=1 那一段</a>）。</p></details>
+
+<h2 id="bank2">8.7　題庫（二）進階</h2>
+<details class="quiz"><summary>進階 1. 把 LIME 的 <code>predict</code> 改成回傳 softmax 機率，10 張圖的結果會怎樣？為什麼？</summary>
+<p>10 張裡有 5 張（圖 1、2、3、5、7）<strong>完全不上色</strong>：每一塊的 |權重| 都小於 <code>min_weight=0.05</code>。圖 1、2、3、5 的機率在樣本上幾乎不動（95–100% 的樣本 p ≥ 0.99），圖 7 則幾乎都是 0（96.2% 的樣本 p ≤ 0.01），沒有東西可以解釋。圖 0 的 R² 從 logits 版的 0.842 掉到 0.5409，|w| ≥ 0.05 只剩 13 塊（第 2 章 <a href="ch02.html#softmax">2.8 節</a>、<code>img/ch02_lime_softmax.png</code>）。</p></details>
+<details class="quiz"><summary>進階 2. 把 IG 第 265 行改成乘上原圖 x，總和會怎樣？圖呢？</summary>
+<p>總和對上 completeness：圖 0 從程式的 0.273 變成 19.119，目標 f(x) − f(0) 是 17.911；10 張都落在目標附近，但 10 步的誤差可以很大（圖 2 6.439 對 11.135）。本機照字面改過第 265 行跑一次，印出的 10 個總和和第 5 章的表四捨五入後相同。圖的樣子幾乎不變：normalize 後和原本的相關 0.84–0.98（第 5 章 <a href="ch05.html#missing">5.4 節</a>、<a href="ch05.html#times-x">5.8 節</a>），本章的 Spearman 是 0.817–0.995（8.3 節）。</p></details>
+<details class="quiz"><summary>進階 3. Filter visualization 改成從白雜訊出發、每步把 x 限制在 [0, 1]，cnn[6] 的總和與畫面會怎樣？</summary>
+<p>總和從 repo 的 9,216,263 降到 956,999（約 1/10），x 被限制在 0..1；只從白雜訊出發、不限制則是 10,611,874（−12.21..12.99）。畫面：從雜訊出發的 10 張看起來幾乎一樣、完全看不出原圖；加上限制後紋理一樣，顏色變成鮮豔的粉紅。cnn[23] 受限制的影響小得多（repo 373,688、從原圖＋限制 354,622、從雜訊＋限制 367,707）（第 4 章 <a href="ch04.html#noise">4.9 節</a>）。</p></details>
+<details class="quiz"><summary>進階 4. IG 的 baseline 從全黑換成模糊過的原圖，圖 2（牛奶壺）的歸因總和會是多少？</summary>
+<p>約 3.627，目標 f(x) − f(blur) 是 3.616；全黑 baseline 時是 10.932（目標 11.135）。模糊過的牛奶壺，模型已經給 Dairy product 4.192 分，原圖 7.808 只比它多 3.616。四種 baseline 都滿足 completeness（差 &lt; 3%），但差值與歸因圖都隨 baseline 改變（第 5 章 <a href="ch05.html#baselines">5.9 節</a>）。</p></details>
+<details class="quiz"><summary>進階 5. 把 Saliency 的目標從標籤換成第 2 名的類別，圖會變多少？IG 呢？</summary>
+<p>Saliency 幾乎不變：Spearman 0.805–1.000（圖 5 是 1.000）。IG 比較有區別：0.577–0.811（8.4 節）。原因見挑戰 1。</p></details>
+<details class="quiz"><summary>進階 6. 如果在做任何解釋之前，先呼叫了 <code>model.train()</code> 再 forward，會有什麼影響？</summary>
+<p>預測仍然 10 張全對，但 logit 和 eval 模式相比最多差 18.9（Dropout 隨機丟掉數值，BN 改用這 10 張圖的統計量）；而且 BN 的 running_mean、running_var 被這 10 張圖改寫，之後切回 eval 也回不到原本的結果，要重新 <code>load_state_dict</code>。這就是每個解釋函式開頭都呼叫 <code>model.eval()</code> 的原因（第 1 章 <a href="ch01.html#mode">1.7 節</a>）。</p></details>
+
+<h2 id="bank3">8.8　題庫（三）挑戰</h2>
+<details class="quiz"><summary>挑戰 1. 為什麼 Saliency 換了類別幾乎不變？有沒有例外？</summary>
+<p>從 CE loss 的梯度推導（第 3 章 <a href="ch03.html#tiny">3.4 節</a>：對 logit z<sub>j</sub> 的梯度是 p<sub>j</sub> − 1[j = 目標]）：</p>
+<ul>
+  <li>目標是標籤 y、模型很有把握（p<sub>y</sub> ≈ 1）時，對輸入的梯度是 Σ<sub>j≠y</sub> p<sub>j</sub> ∇z<sub>j</sub> − (1 − p<sub>y</sub>) ∇z<sub>y</sub>。如果其他類的機率主要集中在第 2 名，它大約是 p<sub>第2名</sub> · (∇z<sub>第2名</sub> − ∇z<sub>y</sub>)。</li>
+  <li>目標換成第 2 名時，梯度大約是 ∇z<sub>y</sub> − ∇z<sub>第2名</sub>。</li>
+</ul>
+<p>兩者方向相反、大小差很多，但 Saliency 會取絕對值再各自 normalize，方向和大小都被消掉，所以圖幾乎一樣。實測兩個原始梯度（不取絕對值，CE 用 <code>reduction='sum'</code>）的 cosine：圖 0 −0.942、2 −0.848、3 −0.992、4 −0.989、5 <b>−1.000</b>、7 −0.934、8 −0.943、9 −0.997，確實接近 −1（方向相反）。「第 2 名佔其他類機率的比例」：圖 0–9 依序 0.49、0.999、0.51、0.86、0.90、0.99、0.996、0.44、0.57、1.000；圖 5、9 最接近 1，cosine 也最接近 −1，和推導相符。</p>
+<p><strong>例外是圖 1 與圖 6</strong>：cosine 只有 −0.020 與 −0.000，雖然它們的比例是 0.999 與 0.996。這兩張圖最有把握：logit 差（標籤 − 第 2 名）是 24.31 與 37.93，1 − p(標籤) 只有 2.76e-11 與 3.38e-17，原始梯度最大值只有 3.22e-11 與 1.52e-16（第 3 章那個 10<sup>−17</sup> 級的梯度就是這個）。float32 算 <code>1 − softmax</code> 時，圖 1、6、8 都是 0（表示不了這麼接近 1 的差），可能和這個捨入有關；但圖 8 也是 0，cosine 卻是 −0.943，所以不只這個原因。<strong>原因未完全確定</strong>，本書沒有逐層驗證。</p>
+<p>IG 對 logit 取梯度（不經過 softmax），沒有這種「正負相反、大小被消掉」的機制，所以換類別時比 Saliency 有區別（8.4 節）。</p></details>
+<details class="quiz"><summary>挑戰 2. 怎麼證明 Saliency 與 IG 的圖不是只把輸入圖的邊緣描出來？</summary>
+<p>做 sanity check（8.5 節）：把模型換成沒有訓練過的隨機權重，同樣的程式算出的圖和訓練好的模型相比，Spearman 平均只有 0.19（Saliency）與 0.14（IG）；隨機模型的 saliency 和 Sobel 邊緣的相關只有 0.054。如果這些方法只是在描邊，換了模型圖也應該差不多。另外，訓練好的模型下，七種圖和 Sobel 的相關都只有 0.23–0.31（8.3 節）：有描邊的成分，但不只是描邊。</p></details>
+<details class="quiz"><summary>挑戰 3. 為什麼 filter activation 和其他四種方法幾乎無關？這代表它是錯的嗎？</summary>
+<p>不代表錯，是問題不同。filter activation 不用標籤，回答的是「cnn[6] 或 cnn[23] 的第 0 個 filter 在這張圖的哪裡被激發」，和「模型為什麼判成這一類」無關（8.2 節）。數字也一致：它和其他方法的 Spearman 只有 0.06–0.29，Saliency–cnn6 的前 10% IoU 是 0.062，和隨機的 0.053 差不多；中央 64×64 的比例 cnn6 是 0.260，接近完全均勻的 0.25，而有類別資訊的方法都比較偏中央（SmoothGrad 0.324，其他 0.39–0.44）。圖 8.1 裡 cnn[6] 連背景的刀叉、盤緣、筷子都描出來，就是同一件事。</p></details>
+<details class="quiz"><summary>挑戰 4. Saliency 與 IG repo 的 Spearman 是 0.68，五種方法裡最一致。可以說它們「找到了同一批重要像素」嗎？</summary>
+<p>只能說一半。Spearman 看的是全部 16,384 個像素的排名順序，0.68 表示大致同意哪一區比較重要；但前 10% 的 IoU 只有 0.340，最重要的那一小撮像素只重疊約三分之一（8.3 節）。兩者為什麼比較像，本書的推論是 IG 平均的 10 個點裡後幾個離原圖很近；但它們的目標不同（CE loss vs logit），換類別時的表現也完全不同（Saliency 幾乎不變、IG 0.577–0.811）。</p></details>
+<details class="quiz"><summary>挑戰 5. <code>bert_embedding.py</code> 預設看 layer 12。要說「BERT 在第幾層最能分開兩種蘋果」，應該看什麼？答案是哪幾層？</summary>
+<p>不能直接比歐氏距離的大小（每層的尺度不同，layer 12 的組內距離也一起變大）。要看「組間 ÷ 組內」的比值、cosine 的組內與組間差距，或最近鄰檢查。用「蘋」：比值在 layer 8–11 都是 1.36–1.45（layer 9 略高），layer 12 對公司組退回 1.18；最近鄰在 layer 8–11 全對、layer 12 只對 8 句。換成「果」則 layer 7–12 全對。所以答案隨選的字而變；「蘋」是 layer 8–11，不是程式預設的 12（第 7 章 <a href="ch07.html#layers">7.9 節</a>、<a href="ch07.html#guo">7.10 節</a>）。</p></details>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>五種方法回答不同的問題：LIME 問哪一塊、Saliency／SmoothGrad 問哪個像素、Filter explanation 問某個 filter 在哪裡被激發與喜歡哪種圖案、IG 問相對於 baseline 每個像素貢獻多少。Filter explanation 不用標籤；LIME 不用梯度。</li>
+  <li>比較的方法：每種方法統一成一張 128×128 的圖，算 Spearman 等級相關（只看排名）與前 10% 像素的 IoU（隨機約 0.053）。</li>
+  <li>三種梯度方法中度一致，Saliency–IG repo 最像（0.68，10 張都 &gt; 0.5），但前 10% 只重疊 0.340；LIME 和它們 0.34–0.46；filter activation 和其他方法幾乎無關（0.06–0.29、IoU ≈ 隨機），因為它不看類別。</li>
+  <li>SmoothGrad 最分散（最亮 10% 佔 0.198）、LIME 最集中（0.500）；有類別資訊的方法都偏中央；每種方法都有一部分在描邊（和 Sobel 0.23–0.31），但都不只是邊緣偵測。</li>
+  <li>換成第 2 名類別：Saliency 幾乎不變（0.805–1.000，因為 CE 梯度只差正負與大小），IG 比較有區別（0.577–0.811）；圖 1、6 是例外，原因未完全確定。</li>
+  <li>sanity check：隨機權重的模型算出的 Saliency、IG 和原本只有 0.19、0.14 的相關，所以這些圖確實依賴模型學到的東西。</li>
+  <li>三級題庫的答案都來自實測，並指回第 1–7 章。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 為什麼本章比較方法時用 Spearman 等級相關，而不是第 3 章的 Pearson 相關係數？</summary>
+<p>五種方法的值單位完全不同（superpixel 權重、梯度、activation），大小差好幾個數量級，分佈也不同（LIME 一塊同值、SmoothGrad 很分散）。Spearman 先換成名次再算 Pearson，只看「誰大誰小的順序」，不受單位與尺度影響（8.3 節）。</p></details>
+<details class="quiz"><summary>2. 兩張圖的前 10% IoU 是 0.062，代表什麼？</summary>
+<p>兩張隨機的圖各選 10% 像素，IoU 約 0.053（0.01 ÷ 0.19），所以 0.062 幾乎就是巧合的水準：兩種方法認為最重要的像素基本上沒有重疊。本章的例子是 Saliency 對 cnn6（8.3 節）。</p></details>
+<details class="quiz"><summary>3. 本章的 SmoothGrad 欄和 <code>smoothgrad.png</code> 為什麼不能逐位對照？其他欄呢？</summary>
+<p><code>explain_cnn.py</code> 沒有固定 PyTorch 的種子，SmoothGrad 的雜訊每次跑都不同；本章的量測程式另外設了 <code>torch.manual_seed(0)</code>，用的是另一批雜訊。LIME 欄照原程式的 NumPy 種子跑，和 <code>lime.png</code> 相同；Saliency 欄就是 <code>saliency.png</code>（8.1 節）。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://arxiv.org/abs/1810.03292">Adebayo et al., 2018, Sanity Checks for Saliency Maps</a>：model randomization test 的出處，也比較了多種 saliency 類方法。</li>
+  <li><a href="https://arxiv.org/abs/1602.04938">Ribeiro, Singh, Guestrin, 2016, “Why Should I Trust You?”</a>：LIME 的原始論文。</li>
+  <li><a href="https://arxiv.org/abs/1706.03825">Smilkov et al., 2017, SmoothGrad</a>：SmoothGrad 的原始論文。</li>
+  <li><a href="https://arxiv.org/abs/1703.01365">Sundararajan, Taly, Yan, 2017, Axiomatic Attribution for Deep Networks</a>：Integrated Gradients 的原始論文。</li>
+  <li><a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.spearmanr.html">SciPy — scipy.stats.spearmanr</a>：Spearman 等級相關的計算。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a><a href="appendix.html">附錄 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW09 讀碼教材 · 對應 commit b2dbe4c · 程式碼引用取自本 repo 的 HW09/；實測輸出取自 2026-10-03／04 本機執行</footer>
+</body>
+</html>
