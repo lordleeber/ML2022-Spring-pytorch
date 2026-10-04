@@ -64,7 +64,7 @@ Ref: https://arxiv.org/pdf/1703.01365.pdf</code></pre>
 <div class="eq">Σ<sub>i</sub> IG<sub>i</sub>(x) ＝ f(x) − f(x′)</div>
 <p>所有像素分到的功勞加起來，剛好等於「原圖的分數減掉 baseline 的分數」，一點不多、一點不少。為什麼？把路徑上的分數看成 α 的函數 g(α) = f(x′ + α(x − x′))。用第 3 章 <a href="ch03.html#idea">3.2 節</a>的鏈鎖律，g 對 α 的導數是每個像素「f 對它的偏微分 × 它隨 α 變化的速度」的總和，而直線路徑上第 i 個值隨 α 變化的速度就是 x<sub>i</sub> − x′<sub>i</sub>：</p>
 <div class="eq">dg/dα ＝ Σ<sub>i</sub> ∂f/∂x<sub>i</sub> · (x<sub>i</sub> − x′<sub>i</sub>)</div>
-<p>兩邊從 α = 0 積到 1：左邊是 g(1) − g(0) = f(x) − f(x′)，右邊把 Σ 和 ∫ 交換，就是 Σ<sub>i</sub> IG<sub>i</sub>。所以 completeness 不是近似，而是定義直接推得的等式。（嚴格說，模型裡的 ReLU 與 MaxPool 有少數不可微的點，本書不展開；5.5 節的實測和這個等式一致到 3% 以內。）</p>
+<p>兩邊從 α = 0 積到 1。左邊：把「變化率」沿著 α 從 0 累積到 1，得到的就是總變化量，終點值減起點值（微積分基本定理；直覺上，每一小段 dα 上 g 變了 dg/dα × dα，全部加起來就是 g 從頭到尾變了多少），也就是 g(1) − g(0) = f(x) − f(x′)。右邊：有限項的和可以先積分再相加，而 x<sub>i</sub> − x′<sub>i</sub> 不隨 α 變、可以搬到積分外面，每一項就正好是上面 IG<sub>i</sub> 的定義，加起來是 Σ<sub>i</sub> IG<sub>i</sub>。所以 completeness 不是近似，而是定義直接推得的等式。（嚴格說，ReLU 在 0、MaxPool 在兩個值相等時，斜率會突然改變，那些點上偏微分沒有定義；本書不展開；5.5 節的實測和這個等式一致到 3% 以內。）</p>
 <p>反過來看，saliency map 沒有這個性質：只看 α = 1 那一點的梯度，乘上 x 加起來，和 f(x) − f(x′) 可以差很遠（圖 0 只有 −0.523，對 17.911，5.6 節）。</p>
 
 <h3 id="riemann">積分怎麼算：黎曼和</h3>
@@ -218,7 +218,7 @@ class IntegratedGradients():
         return gradients_as_arr</code></pre></figure>
 <p>逐行看：</p>
 <ul>
-  <li><strong>第 239 行</strong>把 xbar 標記成需要梯度。第 3 章用的是 <code>requires_grad_()</code> 方法（<a href="ch03.html#code">3.3 節</a>），這裡直接設屬性，效果相同。直接設屬性只能用在<strong>葉節點</strong>（不是由其他需要梯度的張量算出來的張量）上，否則 PyTorch 會報錯。xbar 是 <code>images.cuda()</code> 乘上一個數得到的，而 <code>images</code> 本身不需要梯度，所以 xbar 沒有計算記錄，是葉節點，可以設。</li>
+  <li><strong>第 239 行</strong>把 xbar 標記成需要梯度。第 3 章用的是 <code>requires_grad_()</code> 方法（<a href="ch03.html#code">3.3 節</a>），這裡直接設屬性，效果相同。直接設屬性只能用在<strong>葉節點</strong>（不是由其他需要梯度的張量算出來的張量）上，否則 PyTorch 會報錯。xbar 是 <code>images.cuda()</code> 乘上一個數得到的，而 <code>images</code> 本身不需要梯度，所以 xbar 沒有計算記錄（autograd 在 forward 時記下的運算，第 4 章 <a href="ch04.html#hook">4.3 節</a>），是葉節點，可以設。</li>
   <li><strong>第 241 行</strong> forward，<code>model_output</code> 的形狀是 <code>(1, 11)</code>：一張圖、11 個 logit。</li>
   <li><strong>第 243 行 <code>self.model.zero_grad()</code></strong> 清掉<strong>模型參數</strong>的 <code>.grad</code>。第 3 章 <a href="ch03.html#code">3.3 節</a>說過 <code>.grad</code> 會累加；第 3、4 章的 backward 也會寫進參數的 <code>.grad</code>，這一行把它們一併清掉。但本章要讀的是<strong>輸入</strong>的 <code>.grad</code>，它不受這一行影響，也不需要清：每個 xbar 都是第 234 行新產生的張量，<code>.grad</code> 一開始就是空的，不會和上一個 xbar 的累加在一起。</li>
   <li><strong>第 245–246 行</strong>做一個 one-hot 向量：形狀 <code>(1, 11)</code>，全部是 0，只有目標類別那一格是 1。<code>target_class</code> 是主程式傳進來的 <code>labels[i]</code>，一個 0 維的張量，可以直接當索引用。目標類別是<strong>標籤</strong>，不是模型的預測；這 10 張圖模型全部答對（第 1 章 <a href="ch01.html#predict">1.6 節</a>），所以兩者相同。</li>
@@ -290,7 +290,7 @@ class IntegratedGradients():
 <tr><td>9</td><td>9 Soup</td><td>14.110</td><td>−0.412</td><td><b>14.522</b></td><td>14.499</td><td><b>16.327</b></td><td>3.025</td><td>0.498</td></tr>
 </tbody>
 </table></div>
-<p>「Σ 程式輸出」是程式回傳的 <code>(3, 128, 128)</code> 陣列全部加起來；「Σ 程式輸出 × x」是先逐元素乘上原圖再加起來，也就是論文的 IG 的總和（10 步左端點）。負值比例是程式輸出裡小於 0 的元素占多少。</p>
+<p>「Σ 程式輸出」是程式回傳的 <code>(3, 128, 128)</code> 陣列全部加起來；「Σ 程式輸出 × x」是先逐元素乘上原圖再加起來，也就是論文的 IG 的總和（10 步左端點）。圖 0 的 19.119 和圖 5.3 的 19.126 差在小數第 2 位，是兩支程式分別在 GPU 上算的結果，5.5 節說明。負值比例是程式輸出裡小於 0 的元素占多少。</p>
 <p>關於 f(x) 這一欄：它是<strong>一張一張單獨算</strong>的 logit，因為 IG 本來就是一張一張算的。第 1 章 <a href="ch01.html#predict">1.6 節</a>的預測表是 10 張一起算的，兩邊在小數第 2–3 位對不上，例如圖 3：第 1 章 9.011，這裡 9.024。第 1 章 <a href="ch01.html#batch-effect">1.6 節〈小數第 3 位會變〉</a>說明過原因（GPU 依批次大小選用不同的計算方法），兩邊都是對的。</p>
 <figure class="fig">
 <svg viewBox="0 0 900 380" role="img" aria-label="10 張圖的三個量畫在同一條數線上：白線是目標 f(x) − f(0)，11.1 到 26.3；黃圈是程式輸出的總和，從 −7.8 散到 20.8，和白線無關；紫點是程式輸出乘上 x 的總和，每一張都落在白線附近，離最遠的是圖 2（6.4 對 11.1）">
@@ -403,7 +403,7 @@ class IntegratedGradients():
   <li><strong>10 步時，中點不一定比左端點好。</strong>圖 0、4、7、9 的中點 10 步反而比左端點 10 步差，例如圖 4：左端點 17.966（差 2.1），中點 11.824（差 4.0）。50 步以上時兩者都接近目標。</li>
 </ul>
 <div class="note"><h4>同一個數字，兩次執行</h4>
-<p>教學大綱引用過圖 0 的中點法收斂：「10 步 15.704、50 步 18.141、200 步 17.851」，那是本書<strong>第一次執行</strong>（產生 <code>img/</code> 裡全部圖的那一次）量到的。上表是<strong>本章另外的一次執行</strong>，中點 10 步是 15.750、50 步 18.146、200 步 17.851。10 步和 50 步在不同次執行間有差，原因同樣是 GPU 的浮點運算（第 0 章 <a href="ch00.html#outputs">0.6 節</a>提過 <code>integrated_gradients.png</code> 每次重跑都有極細微的差異）；200 步兩次相同。本章其他數字都取自後面這一次，兩組不混用。</p>
+<p>教學大綱引用過圖 0 的中點法收斂：「10 步 15.704、50 步 18.141、200 步 17.851」，那是本書<strong>第一次執行</strong>（產生本書配圖的那一次；配圖放在 <code>docs/HW09/img/</code>，第 0 章 <a href="ch00.html#outputs">0.6 節</a>）量到的。上表是<strong>本章另外的一次執行</strong>，中點 10 步是 15.750、50 步 18.146、200 步 17.851。10 步和 50 步在不同次執行間有差，原因同樣是 GPU 的浮點運算（第 0 章 <a href="ch00.html#outputs">0.6 節</a>提過 <code>integrated_gradients.png</code> 每次重跑都有極細微的差異）；200 步兩次相同。本章其他數字都取自後面這一次，兩組不混用。</p>
 </div>
 
 <h2 id="path">5.6　圖 0 的路徑：飽和，以及 10 步為什麼不夠</h2>
@@ -436,7 +436,7 @@ class IntegratedGradients():
   <li><strong>只看原圖那一點，會錯過整件事。</strong>α = 1.0 的「梯度 × x」總和是 −0.523，負的；如果只用原圖的梯度（就是第 3 章 3.6 節 logit 版 saliency map 用的那個梯度）來分功勞，總和離 17.911 差得很遠。IG 把 α 0.2–0.4 那段「分數真正在變」的梯度也算進來，這就是論文說它能處理飽和的方式。以上是本書從這張表推論的，不是另外的實驗。</li>
   <li><strong>右圖的曲線很尖，而且是鋸齒狀的。</strong>峰在 α ≈ 0.2 到 0.35 之間，最高約 97；α 0.15 附近還有一段跌到約 −25。程式的 10 個紅點裡，落在峰上的只有 α = 0.2 和 0.3 兩個。左端點黎曼和假設「每一段寬 0.1 的高度都等於左端點的高度」，曲線在一段之內變化這麼大時，這個假設就不準。本書推論這是 10 步誤差大的原因：誤差取決於那幾個點剛好落在峰的哪裡，所以有時偏高、有時偏低，換成中點也不一定比較好（5.5 節）。</li>
 </ul>
-<p>（「α 0.2–0.4 那段貢獻最多」可以從表直接讀：0.2、0.3 兩根長條就占了 10 根總和 191.262 的 64%，手算。但這只是 10 個點的讀法，101 點的曲線才是比較完整的樣子。）</p>
+<p>（「α 0.2–0.4 那段貢獻最多」可以從表直接讀：10 根長條的<strong>高度</strong>加起來是 191.262（乘上寬度 0.1 才是圖 5.3 的面積 19.126），其中 0.2、0.3 兩根就占了 64%，手算。但這只是 10 個點的讀法，101 點的曲線才是比較完整的樣子。）</p>
 <h3 id="paths10">其他 9 張圖的路徑</h3>
 <p>每張圖「升起來」的位置不同。p(標籤) 第一次 ≥ 0.5 的 α：圖 0 0.31、圖 1 0.13、圖 2 0.17、圖 3 0.14、圖 4 0.09、圖 5 0.42、圖 6 0.12、圖 7 0.41、圖 8 0.25、圖 9 0.02。圖 9 特別早，因為全黑圖本身就被判成 Soup（α = 0 時 p(Soup) 已經是 0.4147；其他 9 張在 α = 0 時 p(標籤) 只有 0.0003 到 0.0917）。路徑也不一定單調：圖 2 在 α = 0.17 已經過 0.5，到 α = 0.5 時 p 卻掉回 0.0036；圖 4 在 α = 0.09 過 0.5，α = 0.5 時 p 是 0.0000。兩張在 α = 0.9 時都回到 0.9997 以上。路徑上起伏越多，只取 10 個點就越容易漏掉，這和圖 2 在 5.5 節的大誤差相符（推論）。</p>
 
@@ -542,7 +542,7 @@ class IntegratedGradients():
 <h2 id="further">延伸閱讀</h2>
 <ul>
   <li><a href="https://arxiv.org/abs/1703.01365">Sundararajan, Taly, Yan, 2017, Axiomatic Attribution for Deep Networks</a>：Integrated Gradients 的原始論文，投影片第 11 頁的參考資料。completeness、飽和的討論，以及 baseline 的選擇都在這篇。</li>
-  <li><a href="https://distill.pub/2020/attribution-baselines/">Sturmfels, Lundberg, Lee, 2020, Visualizing the Impact of Feature Attribution Baselines（Distill）</a>：專門討論 baseline 怎麼選，比較了全黑、模糊、雜訊等 baseline，可以和 5.9 節對照。</li>
+  <li><a href="https://distill.pub/2020/attribution-baselines/">Sturmfels, Lundberg, Lee, 2020, Visualizing the Impact of Feature Attribution Baselines（Distill）</a>：Distill 是以互動圖解為主的線上機器學習期刊。這篇專門討論 baseline 怎麼選，比較了全黑、模糊、雜訊等 baseline，可以和 5.9 節對照。</li>
   <li><a href="https://captum.ai/api/integrated_gradients.html">Captum — Integrated Gradients</a>：現成的實作，<code>baselines</code>、<code>n_steps</code>、<code>return_convergence_delta</code> 等參數的說明。</li>
   <li><a href="https://pytorch.org/docs/stable/generated/torch.Tensor.backward.html">PyTorch — Tensor.backward</a>：<code>gradient</code> 參數的說明（對非純量輸出 backward 時要傳）。</li>
   <li><a href="https://numpy.org/doc/stable/user/basics.broadcasting.html">NumPy — Broadcasting</a>：第 263 行用到的廣播規則。</li>
