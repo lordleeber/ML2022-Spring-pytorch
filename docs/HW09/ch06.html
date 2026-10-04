@@ -1018,12 +1018,12 @@ answers += ['cats']</code></pre></figure>
   <li>每個點在這兩個方向上的投影值，就是它在圖上的 (x, y)。</li>
 </ol>
 <p>兩個方向能保留多少資訊，用 <strong>explained variance ratio</strong>（解釋的變異比例）衡量：投影到這兩個方向上的變異，占原本 768 維全部變異（768 個座標軸各自的變異加起來）的比例。比例是 1，代表點本來就排在一個平面上，圖完全忠實；比例越低，代表有越多的差異在投影時被壓掉了：圖上靠在一起的兩個點，在 768 維空間裡可能離得很遠。</p>
-<p>第 95 行對每一層做這件事：<code>PCA(n_components=2, random_state=0).fit_transform(embeddings[0])</code>。<code>embeddings[0]</code> 去掉批次維度，是 <code>(序列長度, 768)</code>；<code>fit</code> 用這一層的全部 token 找出兩個主成分，<code>transform</code> 把每個 token 投影上去，回傳 <code>(序列長度, 2)</code>。直接傳進去的是 PyTorch 張量，sklearn 會自己轉成 NumPy。PCA 的定義本身沒有亂數，但 sklearn 依資料大小，可能改用一種帶亂數的近似算法來找主成分；<code>random_state=0</code> 固定這個亂數，這支腳本重跑結果逐位元相同（第 0 章 0.6 節）。</p>
+<p>第 95 行對每一層做這件事：<code>PCA(n_components=2, random_state=0).fit_transform(embeddings[0])</code>。<code>embeddings[0]</code> 去掉批次維度，是 <code>(序列長度, 768)</code>；<code>fit</code> 用這一層的全部 token 找出兩個主成分，<code>transform</code> 把每個 token 投影上去，回傳 <code>(序列長度, 2)</code>。直接傳進去的是 PyTorch 張量，sklearn 會自己轉成 NumPy。PCA 的定義本身沒有亂數，但 sklearn 依資料大小，會改用一種帶亂數的近似算法（randomized SVD）來找主成分。本書核對過，三組問答的 (序列長度, 768) 都落在這種情況，sklearn 實際用的就是 randomized；把 <code>random_state</code> 從 0 換成 1，座標最多差 8.3 × 10<sup>−5</sup>，肉眼看不出來。<code>random_state=0</code> 固定這個亂數，這支腳本重跑結果逐位元相同（第 0 章 0.6 節）。</p>
 <div class="warn"><h4>讀這 12 張圖之前要知道的三件事</h4>
 <ul>
   <li><strong>每一層各自 fit 一次 PCA。</strong>第 1 層的兩個主成分和第 12 層的兩個主成分是不同的方向，所以<strong>不同層的圖，座標軸不能互相比較</strong>：某個 token 在第 4 層的 x 是 5、第 8 層的 x 是 −3，不代表它「往左移了」。能比較的只有同一張圖裡，點與點之間的相對位置。</li>
   <li><strong>主成分的正負號是任意的。</strong>一個方向和它的反方向，散布一樣大，PCA 選哪一個都對。所以整張圖左右或上下翻過來，意義完全相同；「答案在左邊」本身沒有意義，「答案離其他點很遠」才有。</li>
-  <li><strong>PCA 是用全部 token（含 [CLS] 與兩個 [SEP]）fit 的，但圖上不畫它們</strong>（第 109–110 行）。你看不到的點也影響了主成分的方向。例如第 2 組第 12 層，全部 token 的 y 座標範圍是 −24.6 到 4.6，畫出來的點最低卻只到 −9.6（第一個 <code>detention</code>），所以 y 最低的那個點一定是不畫的 [CLS] 或 [SEP] 之一（由這兩個數推得；是哪一個本書沒有查）。<!-- TODO(本機實測): 第 2 組第 12 層 y = −24.6 的是 [CLS] 還是哪個 [SEP]；三組各層的特殊 token 座標 --></li>
+  <li><strong>PCA 是用全部 token（含 [CLS] 與兩個 [SEP]）fit 的，但圖上不畫它們</strong>（第 109–110 行）。你看不到的點也影響了主成分的方向。例如第 2 組第 12 層，全部 token 的 y 座標範圍是 −24.6 到 4.6，畫出來的點最低卻只到 −9.6（第一個 <code>detention</code>），所以 y 最低的那個點一定是不畫的特殊 token。本書事後查了：是位置 0 的 [CLS]，座標 (−21.2, −24.6)，x 和 y 都是整張圖的最小值；兩個 [SEP] 疊在同一點 (5.4, −2.1)，落在右側那一大團裡。也就是說，第 2 組第 12 層 PCA 的第 1、2 主成分，有一部分就是被這個看不到的 [CLS] 撐開的。對照 6.5 節，第 2 組的模型正是把答案指向 [CLS]（無答案）。在 layer 1、4、8，[CLS] 都還混在其他點之間（例如 layer 8 是 (6.8, −2.7)），只有 layer 12 跑到這麼遠。</li>
 </ul>
 </div>
 
@@ -1146,7 +1146,17 @@ answers += ['cats']</code></pre></figure>
 <div class="note"><h4>本章「另外量的」數字從哪來</h4>
 <p><code>bert_hidden_states.py</code> 只畫圖、只印存檔路徑。本章的模型規格、token 清單、模型自己的答案（6.5 節）、hidden states 的核對與向量長度（6.6 節）、變異比例與座標（6.7、6.8 節）、cosine（6.9 節），都來自本書另外寫的量測程式 <code>docs/tools/hw09_ch06_bert.py</code>。它載入同一個模型、import <code>bert_hidden_states.py</code> 取三組問答，所有數字都自己重算，不需要先跑 <code>bert_hidden_states.py</code>；圖 6.3 是它新畫的，圖 6.4–6.6 則是讀 <code>docs/HW09/img/</code> 裡現成的 <code>bert_q{N}_layer{1,4,8,12}.png</code>（書裡的複本），拼成 2×2。在 <code>HW09/</code> 裡、裝好本 repo 的環境（第 0 章 <a href="ch00.html#env">0.3 節</a>）後執行；用 CPU 就夠，模型不在快取時會自動下載：</p>
 <pre class="shell cmd"><code>$ ../.venv/bin/python ../docs/tools/hw09_ch06_bert.py</code></pre>
-<p>它會把上面這些數字印在 stdout，並把 4 張 <code>ch06_*.png</code> 寫進 <code>docs/HW09/img/</code>（會覆蓋書裡的圖）。本書沒有在本章逐字列出它的輸出；要核對，就拿 stdout 裡的數字和本章各節的表比對，例如 6.7 節的變異比例、6.5 節的分數。它印的是全部 13 層，本章有些表只摘幾層。<!-- TODO(本機實測): 若要讓讀者逐字對照，補一段工具 stdout 的節錄（例如變異比例那幾行） --></p>
+<p>它會把上面這些數字印在 stdout，並把 4 張 <code>ch06_*.png</code> 寫進 <code>docs/HW09/img/</code>（會覆蓋書裡的圖）。本書沒有在本章逐字列出它的輸出；要核對，就拿 stdout 裡的數字和本章各節的表比對，例如 6.7 節的變異比例、6.5 節的分數。它印的是全部 13 層，本章有些表只摘幾層。下面是 stdout 的節錄（只取三組的標題、模型答案與變異比例這 9 行，其他行省略）：</p>
+<pre class="shell">===== Q1: &#x27;In what year was Nikola Tesla born?&#x27; answer &#x27;1856&#x27;
+argmax start 32 (1856) end 32 (1856) | null score [CLS] -0.114 | best non-null span 32..32 &#x27;1856&#x27; score 7.576
+PCA 2-comp explained variance, layer 0..12: [0.144, 0.145, 0.154, 0.136, 0.139, 0.142, 0.148, 0.15, 0.169, 0.188, 0.223, 0.243, 0.376]
+===== Q2: &#x27;What is a common punishment in the UK and Ireland?&#x27; answer &#x27;detention&#x27;
+argmax start 0 ([CLS]) end 0 ([CLS]) | null score [CLS] 11.720 | best non-null span 14..14 &#x27;detention&#x27; score -0.487
+PCA 2-comp explained variance, layer 0..12: [0.139, 0.139, 0.127, 0.122, 0.119, 0.123, 0.129, 0.13, 0.151, 0.168, 0.187, 0.221, 0.485]
+===== Q3: &#x27;What is Emily afraid of?&#x27; answer &#x27;cats&#x27;
+argmax start 0 ([CLS]) end 0 ([CLS]) | null score [CLS] 4.580 | best non-null span 26..26 &#x27;sheep&#x27; score -1.322
+PCA 2-comp explained variance, layer 0..12: [0.24, 0.261, 0.26, 0.239, 0.23, 0.235, 0.228, 0.223, 0.222, 0.225, 0.227, 0.264, 0.491]</pre>
+<p>（工具的輸出用 Q1／Q2／Q3 指三組問答，就是本書說的第 1／2／3 組。）</p>
 </div>
 
 <h2 id="now">6.11　現在的做法</h2>
@@ -1184,7 +1194,7 @@ answers += ['cats']</code></pre></figure>
 <details class="quiz"><summary>5. 第 3 組 layer 12 的圖保留了 49% 的變異，layer 4 只有 23%。可以說 layer 12 的圖「比較可信」嗎？</summary>
 <p>就「2 維的圖保留了多少 768 維的差異」而言可以：layer 12 的圖丟掉的比較少，圖上的遠近比較接近真實的遠近。但它仍丟掉了一半以上的變異；而且 layer 12 所有 token 的方向都變得很像（6.9 節，q-q 0.893、c-c 0.689），變異集中在少數方向，部分原因就是大家擠在一起。可信度高，不代表那張圖就回答了「這一層在做什麼」。</p></details>
 <details class="quiz"><summary>6. 如果把第 103 行改成 <code>if word.lower() in answers[QUESTION-1].split():</code>，36 張圖會有什麼不同？</summary>
-<p>由程式推得（本書沒有實際跑過）：只有第 3 組會變。位置 43 的 <code>Cats</code> 轉成小寫後等於 <code>cats</code>，會從綠點變成藍色菱形，第 3 組就有兩個藍點。第 1 組的 <code>1856</code> 沒有大小寫；第 2 組文章裡的 <code>detention</code> 本來就都是小寫，三個藍點不變。點的位置不會變，因為 PCA 和顏色無關。<!-- TODO(本機實測): 照字面改第 103 行跑一次，確認只有第 3 組多一個藍點 --></p></details>
+<p>只有第 3 組會變。位置 43 的 <code>Cats</code> 轉成小寫後等於 <code>cats</code>，會從綠點變成藍色菱形，第 3 組就有兩個藍點。第 1 組的 <code>1856</code> 沒有大小寫；第 2 組文章裡的 <code>detention</code> 本來就都是小寫，三個藍點不變。點的位置不會變，因為 PCA 和顏色無關。本書照字面改了第 103 行實際跑過：每張圖的藍點數，第 1 組 1 個、第 2 組 3 個、第 3 組 2 個；第 1、2 組的 24 張圖和原本的圖逐位元相同，第 3 組的 12 張則全部不同（多了一個藍色菱形）。</p></details>
 
 <h2 id="further">延伸閱讀</h2>
 <ul>
