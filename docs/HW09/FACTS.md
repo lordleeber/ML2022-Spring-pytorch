@@ -1575,7 +1575,7 @@ Answering
 - 雲端在 ch08 指出的兩個 FACTS 疑點（「LIME 最集中」只在最亮 10% 成立；「有類別資訊的方法都偏中央」沒把 SmoothGrad 0.324 分開）都核對屬實，已更正。
 
 ## appendix 審稿（2026-10-04，本機；PR #19）
-- 依使用者指示，附錄不另外做本機實測。A.3「本書的量測工具」表中沒有記錄執行時間的工具維持「未記錄」，拿掉 8 個 TODO(本機實測) 標記（只有 hw09_ch07_embedding.py 5.89 s 與 hw09_ch08_review.py 約 1 分鐘有實測）。
+- 依使用者指示，附錄不另外做本機實測。A.3「本書的量測工具」表中沒有記錄執行時間的工具維持「未記錄」，拿掉 7 個 TODO(本機實測) 標記（剩下的「TODO 區」是指 bert_embedding.py 原始碼的 TODO 段落，不是標記）（只有 hw09_ch07_embedding.py 5.89 s 與 hw09_ch08_review.py 約 1 分鐘有實測）。
 - 附錄的數字逐項核對 FACTS（checkpoint 170 MB／epoch 208／81 entry、logit 梯度 1.25–4.90、雜訊約論文式 40%、x −11.87..12.32、IG 10 步圖 2 少 42%、BERT QA 參數 107,721,218、PCA 0.12–0.49、safetensors 大小、transformers 4.5.0 的 tokenizers 編譯失敗、hw9_bert.zip HTTP 404）皆相符。
 - 雲端在 PR 說明列的三點（行號範圍兩種邊界、Q25–27 寫 75-122、check_links 對 ../HW01/ 的誤報）都不是錯誤，照附錄的處理即可。
 
