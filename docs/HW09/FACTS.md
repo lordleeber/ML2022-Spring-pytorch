@@ -158,7 +158,7 @@
 
 ### Saliency map（Q5–9，explain_cnn.py:79–113）
 - 10 張圖一起算 `CrossEntropyLoss`（mean），loss = **0.0001**（因為模型幾乎 100% 確定）。
-- `x.grad` 形狀 (10, 3, 128, 128)；`torch.max(..., dim=1)` 對 RGB 取最大 → saliency (10, 128, 128)。各圖取到最大值的通道比例大約 R 35%、G 41%、B 22%。
+- `x.grad` 形狀 (10, 3, 128, 128)；`torch.max(..., dim=1)` 對 RGB 取最大 → saliency (10, 128, 128)。各圖取到最大值的通道比例：R 36.0%、G 41.7%、B 22.4%，沒有平手（ch03 審稿補測量的精確值）。
 - 正規化前每張圖 |梯度| 的最大值（差了很多個數量級）：
   | 圖 | 最大值 | 平均 |
   |---|---|---|
@@ -382,6 +382,14 @@
   - 本章手算（由本 FACTS 推得）：0/1 向量與全 1 向量的 cosine = √(k/n)；圖 0 平均保留 53.4 塊 → d ≈ 0.29、樣本權重 ≈ 0.50；最像原圖的樣本權重約為最不像的 3 倍（0.760／0.231）；−21.383 + 33.926 = 12.543 = local_pred；num_features=200 的 46 綠 = 47 正 − 特徵 0。
   - 推論（未實測，ch02 標了 TODO）：紅色疊在亮處（R 已接近最大值）看不出來，用來解釋圖 1、2 在 lime.png 上幾乎看不到紅色；`LimeImageExplainer(random_state=16)` 可讓每張圖的結果不依賴順序。
   - 回指（不重講）：ch00 的 logits／softmax、tqdm、逐段計時 14.7 s、0.6 節重跑逐位元相同；ch01 的預測表、批次 vs 單張 logit、model.eval()、HWC／permute、save_fig；index 的 lime 0.1.1.37 vs 0.2.0.1。
+
+- ch03（第 3 章，2026-10-04 雲端）：
+  - 圖號：圖 3.1（img/saliency.png）、圖 3.2（forward + backward 路徑 SVG：x → model(x) → logits → CE loss（綠）；loss.backward() → ∂L/∂z =(softmax − one-hot)÷10 → x.grad（黃）；W.grad 虛線框「也被寫入，但沒有人讀」；紫框＝取絕對值、RGB 取最大、各自 normalize）、圖 3.3（10 張圖梯度最大值的對數刻度長條圖，左欄是 1 − p）、圖 3.4（img/ch03_saliency_global.png）、圖 3.5（img/ch03_saliency_logit.png）、圖 3.6（img/smoothgrad.png）、圖 3.7（img/ch03_smoothgrad_variants.png）、圖 3.8（img/ch03_smoothgrad_n.png）。
+  - 本章正式定義的名詞：backward、鏈鎖律、偏微分、梯度（gradient）、對輸入取梯度 vs 對權重取梯度、autograd、`requires_grad`／`requires_grad_()`（結尾底線＝就地修改）、`.grad`（會累加）、`model.zero_grad()`（兩個函式都沒呼叫）、saliency map（顯著圖）、CE loss（cross-entropy，內含 softmax、−log p_y、批次預設取平均 `reduction='mean'`）、one-hot、∂L/∂z_j = p_j − 1[j=y]、`torch.max(..., dim=1)` 回傳 (值, 位置)、colormap（色表）與 `plt.cm.hot`、二維陣列套色表 vs (H,W,3) 當 RGB、相關係數（Pearson）、SmoothGrad、常態（高斯）分佈、標準差、變異數、`Tensor.normal_(mean, std)`、`x.new_empty`、`unsqueeze(0)`、`torch.manual_seed`、`torch.randn`、`torch.bincount`、`amax(dim=...)`、`torch.autograd.grad`（現在的做法框）、Captum `Saliency`／`NoiseTunnel`（一句）。
+  - 本章用語：「對 loss 取梯度」（程式）vs「對標籤 logit 取梯度」（投影片的 output category，第 5 章 IG 也是後者）；「各自正規化」vs「一起正規化」；「程式的標準差」(0.4/範圍)² vs「論文式」0.4×範圍。
+  - 本章手算（由本 FACTS 推得，非另外量）：3.75e-04 ÷ 1.52e-17 ≈ 2.5e13；圖 6 ÷ 圖 2 ≈ 4e-14；0.256 ÷ 8.48e-07 ≈ 30 萬倍、÷ 8.565e-06 ≈ 3 萬倍；雜訊比例圖 6 40%、圖 0 ≈ 40%、圖 1 ≈ 47%；0–255 範圍時論文式 102、程式式 ≈ 2.5e-06；loss 29.6 → p ≈ e^−29.6 ≈ 10^−13；圖 7 一起正規化 ≈ 1.51e-06 ÷ 3.75e-04 ≈ 4.0e-03。
+  - 原本的 5 個 TODO 已在「ch03 審稿補測」量好並填入；本機另加 3.12 節「雜訊小到模型認得出來時」與圖 3.9（img/ch03_smoothgrad_small.png）。仍屬推測、沒有查證的：PyTorch 內部 log-softmax 的算法；模型為什麼對 G 通道比較敏感（ch03 寫「本書沒有答案」）。
+  - 回指（不重講）：ch00 的 logits／softmax、0.5 節逐段計時（Saliency 0.4 s、SmoothGrad 24.1 s）、0.6 節 smoothgrad.png 每次重跑不同；ch01 的 1 − p 表、batch vs 單張 logit、model.eval()、normalize／save_fig、torch.no_grad()；ch02 的偽亂數與種子。
 
 ## index／outline 審稿補測（2026-10-03，本機）
 - 舊版套件能不能裝（用 `uv pip install --target <scratch>` 試，不動 .venv）：
@@ -888,3 +896,16 @@ for i in range(10):
 ### 其他程式細節（實測）
 - `compute_saliency_maps` 和 `smooth_grad` 都沒有呼叫 `model.zero_grad()`，所以**模型參數的 .grad 會一直累加**：連續呼叫兩次 compute_saliency_maps，`fc[3].weight.grad` 的絕對值總和從 2.150e-02 變成 4.299e-02（剛好 2 倍）。這不影響熱圖（熱圖用的是輸入 x 的 .grad，每次都是新的 tensor），只是多佔記憶體。
 - 執行時間：本次 hw09_ch03_grad.py 裡每個 SmoothGrad 變體 10 張約 52–58 秒，比 explain_cnn.py 內量到的 24.1 秒慢（同一個 process 裡先跑了其他計算，GPU 狀態不同）。教材的耗時請引用 ch00 的逐段計時（24.1 秒），不要引用這裡的數字。
+
+## ch03 審稿補測（2026-10-04，本機；PR #13）
+工具：`docs/tools/hw09_ch03_review.py`（在 HW09/ 裡跑；產生 `docs/HW09/img/ch03_smoothgrad_small.png`）。填掉 ch03 的 5 個 TODO。
+
+- **saliency 的最大值落在哪個通道**（10 張一起 backward，和 compute_saliency_maps 相同）：10 張共 163,840 個像素，R 36.0%、G 41.7%、B 22.4%，**沒有平手的像素**，也沒有梯度為 0 的像素。逐張都是 G 最多、B 最少（G 0.384–0.459、B 0.179–0.285）。「CNN 實測 → Saliency」原本寫的「大約 R 35%、G 41%、B 22%」加起來不到 100%，以這裡為準。
+- **圖 1、6、8 的 p(標籤) 存成 1，其他 p_j 不是 0**（批次 logits 的 softmax，float32）：p(標籤) == 1.0 為 True；其他 10 類加總：圖 1 2.759e-11、圖 6 3.381e-17、圖 8 4.913e-09；最大的單一 p_j：圖 1 2.757e-11、圖 6 3.367e-17、圖 8 2.782e-09。排序和梯度最大值（圖 1 3.2e-12、圖 6 1.5e-17、圖 8 1.1e-09）相同。支持 ch03 的推測；PyTorch 內部算法沒有讀原始碼查證。
+- **雜訊樣本上 Vegetable/Fruit 拿走幾乎全部機率**（程式的 std、每張 500 個樣本、每張前 `torch.manual_seed(0)`、`torch.randn(500, …) * std`）：p(Vegetable/Fruit) 平均：圖 0、3–9 都是 1.0000，圖 1 0.9996、圖 2 0.9990；最低的單一樣本：圖 2 0.9693、圖 1 0.9974，其他 ≥ 0.9998。標籤的平均機率：圖 0 1.09e-11、1 2.11e-06、2 3.06e-07、3 2.06e-06、4 2.10e-06、5 1.10e-08、6 3.91e-10、7 9.18e-12、8 9.91e-09、9 3.15e-09。
+- **SmoothGrad 正規化後的通道平均**（程式原樣、`torch.manual_seed(0)`、500 次；和 smoothgrad.png 不是同一批雜訊，smoothgrad.png 的數值沒存）：10 張合計 R 0.243、G 0.259、B 0.190；逐張都是 G ≥ R > B（圖 1 R 0.338 ≈ G 0.336 例外，R 略大）。整張最大值落在 G 的有 7 張、R 3 張（圖 0、2、8）。→ 三通道接近（灰）、G 略多 B 略少（偏綠），平均只有 0.1–0.34（暗）。
+  - 更正：圖 1 是 R 0.338、G 0.336，所以「每一張都是 G 最高」不完全對；ch03 已照此寫成「除了圖 1（R、G 幾乎相同）」。
+- **雜訊 std 0.01 的 SmoothGrad**（500 次，`torch.manual_seed(0)`，其餘同程式）：通道平均 10 張合計 R 0.044、G 0.050、B 0.030，比程式原樣暗很多。看得到的（ch03_smoothgrad_small.png 第四列）：很暗、帶紅綠藍細碎雜點；圖 1 奶油塊方形輪廓偏綠較亮、圖 2 牛奶壺弧線、圖 5 荷包蛋圓圈可辨，形狀接近第二列 saliency。
+  - 和 saliency map（repo）的像素相關係數（SmoothGrad 先對 RGB 取 max、各自 normalize）：std 0.01：0.937、0.446、0.932、0.736、0.959、0.925、0.953、0.939、0.857、0.909（圖 0–9）；程式原樣：0.176、0.363、0.377、0.357、0.502、0.485、0.379、0.300、0.429、0.298。
+- 圖 0 單一樣本（接續 hw09_ch03_grad.py 的同樣抽法）：std 0 → p 0.999997、loss 2.503e-06、梯度 max 8.565e-06；std 0.01 → p 0.999996、loss **3.576e-06**、梯度 max 1.095e-05（補上 ch03 表裡原本缺的 loss）。
+- 圖：`img/ch03_smoothgrad_small.png`，四列：image、saliency (repo)、repo: std (0.4/range)^2、std 0.01。ch03 用作圖 3.9（新增 3.12 節）。

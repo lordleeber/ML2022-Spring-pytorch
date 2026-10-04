@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 3 章　Saliency map 與 SmoothGrad — HW09 Explainable AI</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch02.html">← 第 2 章</a><a href="ch04.html">第 4 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW09 讀碼教材</p>
+  <h1>第 3 章　Saliency map 與 SmoothGrad</h1>
+  <p class="chap-lead">第 2 章的 LIME 只做 forward；從這一章開始，解釋方法要打開模型、做 backward。Saliency map 問的是「哪個像素動一下，loss 變最多」：對輸入圖片取梯度，畫成熱圖。SmoothGrad 在圖上加雜訊、重複 500 次再平均。本章逐行讀 <code>explain_cnn.py</code> 的這兩段（Q5–13），再用實測數字回答三個問題：為什麼梯度小到 10<sup>−17</sup>、為什麼每張圖要各自正規化，以及加了雜訊之後梯度為什麼突然變大好幾個數量級。</p>
+</header>
+<main>
+
+<h2 id="start">3.1　起點：saliency.png</h2>
+<p>第 0 章 <a href="ch00.html#run-cnn">0.5 節</a>執行 <code>explain_cnn.py</code> 後，stdout 的第 5、6 行是 <code>saved ./output/saliency.png</code> 與 <code>saved ./output/smoothgrad.png</code>。這兩張圖是本章的主角。先看第一張：</p>
+<figure class="fig">
+<img src="img/saliency.png" alt="上下兩列各 10 格。上列是 10 張原圖；下列是黑底上的紅黃色熱點，圖 1 可以看到奶油塊的方形輪廓，圖 2 是牛奶壺左側與底部的弧線，圖 5 是一圈圓形">
+<figcaption>圖 3.1 — <code>saliency.png</code>：上列是原圖，下列是每張圖的 saliency map（熱圖，越亮代表那個像素的梯度越大）。圖 1 的奶油塊、圖 2 的牛奶壺、圖 5 的荷包蛋，輪廓都看得出來。</figcaption>
+</figure>
+<p>先只用眼睛看下列：底是黑的，亮的地方從暗紅、紅、黃到接近白（這種配色叫 <code>hot</code>，3.3 節會看到它在程式哪裡設定）。有幾張的形狀很清楚：圖 1 是奶油塊的方形輪廓，圖 2 是牛奶壺左側和底部的弧線，圖 5 是荷包蛋的一圈圓。其他圖的熱點比較散，例如圖 4 整個鬆餅都是細碎的亮點。</p>
+<p>這張圖背後有幾個不容易從圖上看出來的事實，本章會一一用數字說明：</p>
+<ul>
+  <li>10 張熱圖的「亮度」看起來差不多，但畫圖之前，各張圖的梯度最大值從 3.75 × 10<sup>−4</sup> 到 1.52 × 10<sup>−17</sup>，差了 13 個數量級。看起來差不多，是因為程式把每張圖<strong>各自</strong>拉到 0–1 再畫。</li>
+  <li>投影片第 8 頁說這個方法是「對 output category（輸出類別）取梯度」，程式實際上是對 loss 取梯度。兩者畫出來的形狀相近，數值大小卻完全不同。</li>
+</ul>
+<p>關於作業題目：投影片第 8 頁（Saliency Map，Question 5 to 9）只有一句說明「Compute the gradient of output category with respect to input image.」、一張小狗照片配上它的熱圖，以及一個參考連結；第 9 頁（Smooth Grad，Question 10 to 13）說明「在輸入圖片上隨機加雜訊、得到熱圖，就像 saliency 方法一樣」，附上論文網址和一張論文裡的圖（三張動物照片，橫向是 0%、5%、10%、20%、30%、50% 幾種雜訊程度的灰階熱圖）。Q5–13 的題目本身在 Gradescope 上，不在 repo 裡（第 0 章 <a href="ch00.html#questions">0.1 節〈30 題在問什麼〉</a>），本書不逐題作答，而是把回答這類問題需要的觀念與觀察講清楚。</p>
+
+<h2 id="idea">3.2　對「輸入」取梯度</h2>
+<p>先回想訓練一個模型時發生的事：圖片送進模型（forward）得到 logits，和標籤一起算出 loss；接著 <strong>backward</strong>，PyTorch 從 loss 往回，一層一層用微積分的<strong>鏈鎖律</strong>（chain rule：複合函數的導數等於各段導數相乘）算出 loss 對每個權重的<strong>偏微分</strong>，也就是「這個權重增加一點點，loss 會跟著變多少」。所有權重的偏微分排在一起，就是<strong>梯度</strong>（gradient）。偏微分的符號寫成 ∂L/∂w，讀作「L 對 w 的偏微分」：分子是被影響的量，分母是被稍微改動的那個量。優化器再沿著梯度的反方向調整權重，讓 loss 變小。</p>
+<p>Saliency map 把同一套機制用在另一個對象上：<strong>權重固定不動，改問 loss 對「輸入圖片的每個像素」的偏微分</strong>。圖片是 <code>(3, 128, 128)</code> 的張量，一共 49,152 個數字，每個數字都得到一個偏微分，形狀和圖片一模一樣。某個像素的偏微分絕對值很大，代表「這個像素稍微改一點，loss 就變很多」，也就是模型的判斷對這個像素很敏感。把這 49,152 個數字畫成和原圖同樣大小的熱圖，就是 saliency map（「顯著圖」）。</p>
+<p>PyTorch 計算梯度的機制叫 <strong>autograd</strong>：只要某個張量被標記成「需要梯度」（<code>requires_grad</code>），PyTorch 在 forward 時就會記下它參與過的每一步運算；之後對某個純量呼叫 <code>.backward()</code>，PyTorch 沿著記錄往回算，把結果存進那個張量的 <code>.grad</code> 屬性。模型的權重預設就是「需要梯度」的，所以訓練時不必特別設定；輸入圖片預設不是，要自己打開。第 1 章 <a href="ch01.html#predict">1.6 節</a>的 <code>torch.no_grad()</code> 做的是相反的事：叫 PyTorch 這一段不要記錄。</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 380" role="img" aria-label="Saliency map 的計算路徑：輸入圖 x 經過模型得到 logits，和標籤算出 CE loss；backward 從 loss 往回，經過模型的每一層，最後停在輸入 x 的 .grad，取絕對值、對 RGB 取最大值、每張圖各自正規化，就是 saliency map；權重的 .grad 也會被寫入，但沒有人讀">
+  <defs>
+    <marker id="ar31f" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#3fb950"/>
+    </marker>
+    <marker id="ar31b" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#e3b341"/>
+    </marker>
+    <marker id="ar31g" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#93a1af"/>
+    </marker>
+  </defs>
+  <text class="s-sm" x="20" y="28">forward（綠）：和推論時一樣，只是 x 被標記成需要梯度</text>
+  <rect x="20" y="42" width="190" height="86" rx="10" class="s-box" style="stroke:#58a6ff"/>
+  <text class="s-lbl" x="115" y="68" text-anchor="middle" font-weight="700">輸入圖 x</text>
+  <text class="s-mono" x="115" y="90" text-anchor="middle">(10, 3, 128, 128)</text>
+  <text class="s-sm" x="115" y="112" text-anchor="middle">x.requires_grad_()</text>
+  <rect x="245" y="42" width="190" height="86" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="340" y="68" text-anchor="middle" font-weight="700">model(x)</text>
+  <text class="s-sm" x="340" y="90" text-anchor="middle">38 層 cnn + fc（第 0 章）</text>
+  <text class="s-sm" x="340" y="112" text-anchor="middle">權重 W 固定，不更新</text>
+  <rect x="470" y="42" width="180" height="86" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="560" y="68" text-anchor="middle" font-weight="700">logits z</text>
+  <text class="s-mono" x="560" y="90" text-anchor="middle">(10, 11)</text>
+  <text class="s-sm" x="560" y="112" text-anchor="middle">模型不做 softmax</text>
+  <rect x="685" y="42" width="195" height="86" rx="10" class="s-box" style="stroke:#3fb950"/>
+  <text class="s-lbl" x="782" y="68" text-anchor="middle" font-weight="700">CE loss L</text>
+  <text class="s-sm" x="782" y="90" text-anchor="middle">z 和標籤 y → 一個純量</text>
+  <text class="s-mono" x="782" y="112" text-anchor="middle">0.000139</text>
+  <line x1="212" y1="85" x2="241" y2="85" stroke="#3fb950" stroke-width="2" marker-end="url(#ar31f)"/>
+  <line x1="437" y1="85" x2="466" y2="85" stroke="#3fb950" stroke-width="2" marker-end="url(#ar31f)"/>
+  <line x1="652" y1="85" x2="681" y2="85" stroke="#3fb950" stroke-width="2" marker-end="url(#ar31f)"/>
+
+  <text class="s-sm" x="20" y="166">backward（黃）：loss.backward() 從 L 往回算，終點是 x</text>
+  <line x1="782" y1="130" x2="782" y2="176" stroke="#e3b341" stroke-width="2" marker-end="url(#ar31b)"/>
+  <rect x="685" y="180" width="195" height="70" rx="10" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-lbl" x="782" y="206" text-anchor="middle" font-weight="700">∂L/∂z</text>
+  <text class="s-sm" x="782" y="228" text-anchor="middle">(softmax − one-hot) ÷ 10</text>
+  <line x1="683" y1="215" x2="214" y2="215" stroke="#e3b341" stroke-width="2" marker-end="url(#ar31b)"/>
+  <text class="s-sm" x="450" y="205" text-anchor="middle">鏈鎖律：逐層往回穿過 fc 與 cnn</text>
+  <rect x="20" y="180" width="190" height="70" rx="10" class="s-box" style="stroke:#e3b341"/>
+  <text class="s-lbl" x="115" y="206" text-anchor="middle" font-weight="700">x.grad</text>
+  <text class="s-mono" x="115" y="228" text-anchor="middle">(10, 3, 128, 128)</text>
+  <line x1="340" y1="217" x2="340" y2="268" stroke="#93a1af" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ar31g)"/>
+  <rect x="245" y="272" width="190" height="62" rx="10" fill="none" stroke="#93a1af" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text class="s-lbl" x="340" y="296" text-anchor="middle">W.grad</text>
+  <text class="s-sm" x="340" y="318" text-anchor="middle">也被寫入，但沒有人讀</text>
+  <line x1="115" y1="252" x2="115" y2="268" stroke="#a371f7" stroke-width="2"/>
+  <rect x="20" y="272" width="190" height="62" rx="10" class="s-box" style="stroke:#a371f7"/>
+  <text class="s-sm" x="115" y="296" text-anchor="middle">取絕對值 → RGB 取最大</text>
+  <text class="s-sm" x="115" y="318" text-anchor="middle">→ 每張各自 normalize</text>
+  <text class="s-sm" x="20" y="362">訓練時，優化器讀的是 W.grad；saliency map 讀的是 x.grad。同一次 backward，兩邊都會算到。</text>
+</svg>
+<figcaption>圖 3.2 — Saliency map 和訓練用的是同一次 forward + backward，差別只在<strong>讀哪一個 .grad</strong>：訓練讀權重的梯度去更新權重；saliency map 讀輸入圖片的梯度，畫成熱圖，權重完全不動。</figcaption>
+</figure>
+<div class="legend">
+  <span><i style="background:#58a6ff"></i>輸入資料</span>
+  <span><i style="background:#3fb950"></i>模型的 forward</span>
+  <span><i style="background:#e3b341"></i>梯度（backward 算出來的偏微分）</span>
+  <span><i style="background:#a371f7"></i>解釋方法自己的步驟</span>
+</div>
+<p>圖上的 <strong>CE loss</strong> 是 cross-entropy loss（交叉熵損失），分類模型最常用的 loss。它吃 logits 和標籤：先在內部對 logits 做 softmax 變成機率，再取「標籤那一類的機率 p<sub>y</sub>」的負對數 −log p<sub>y</sub>（log 是以 e 為底的自然對數）。模型越有把握（p<sub>y</sub> 越接近 1），loss 越接近 0。一批圖片時，PyTorch 的 <code>CrossEntropyLoss()</code> 預設把每張圖的 loss <strong>取平均</strong>，得到一個純量。第 0 章 <a href="ch00.html#shapes">0.2 節</a>說過模型本身不做 softmax，現在看得出這件事的意義：softmax 藏在 loss 裡面，所以對 loss 取梯度時，梯度會穿過 softmax；3.4 節會看到，正是 softmax 讓梯度幾乎消失。圖中 ∂L/∂z 那一格的式子（one-hot 是什麼、÷ 10 從哪來）也在 3.4 節推導。</p>
+
+<h2 id="code">3.3　compute_saliency_maps 與 saliency 的程式</h2>
+<p>Saliency 段落從一段 docstring 開始，和第 2 章的 LIME 段落一樣，是原版 notebook 的 Markdown 儲存格搬過來的：</p>
+<figure class="listing"><figcaption>explain_cnn.py:75–77 — Saliency 段落的標題</figcaption>
+<pre class="py" data-hot="76"><code>"""## Saliency Map (Q5~9)
+The partial derivative of the loss with respect to the input image shows how much each pixel matters.
+"""</code></pre></figure>
+<p>第 76 行寫得很清楚：「loss 對輸入圖片的偏微分」。這和投影片第 8 頁的「output category 的梯度」用詞不同，3.6 節再比較兩者。接著是計算的函式：</p>
+<figure class="listing"><figcaption>explain_cnn.py:79–96 — compute_saliency_maps：一次算 10 張圖的梯度</figcaption>
+<pre class="py" data-hot="84,88,89,92,95"><code>def compute_saliency_maps(x, y, model):
+    model.eval()
+    x = x.cuda()
+
+    # we want the gradient of the input x
+    x.requires_grad_()
+
+    y_pred = model(x)
+    loss_func = torch.nn.CrossEntropyLoss()
+    loss = loss_func(y_pred, y.cuda())
+    loss.backward()
+
+    # saliencies = x.grad.abs().detach().cpu()
+    saliencies, _ = torch.max(x.grad.abs().detach().cpu(), dim=1)
+
+    # We need to normalize each image, because their gradients might vary in scale
+    saliencies = torch.stack([normalize(item) for item in saliencies])
+    return saliencies</code></pre></figure>
+<p>逐段讀：</p>
+<ul>
+  <li><strong>第 80 行</strong> <code>model.eval()</code>：每個解釋方法開頭的保險（第 1 章 <a href="ch01.html#mode">1.7 節</a>）。</li>
+  <li><strong>第 81、84 行</strong>：<code>x</code> 是第 1 章 <code>getbatch</code> 讀進來的 <code>(10, 3, 128, 128)</code> 張量，放在 CPU 上。<code>x.cuda()</code> 複製一份到 GPU，函式裡的 <code>x</code> 從此指向這份新的張量；第 84 行再把它標記成需要梯度。結尾的底線是 PyTorch 的命名慣例，表示「就地修改這個張量」，不回傳新的。主程式裡原本那份 <code>images</code> 不受影響，後面的 SmoothGrad 拿到的仍是乾淨的原圖。</li>
+  <li><strong>第 86–89 行</strong>：forward 得到 <code>(10, 11)</code> 的 logits，和標籤算 CE loss（10 張的平均），然後 <code>loss.backward()</code>。這一行之後，<code>x.grad</code> 就是 loss 對 49,152 × 10 個像素的偏微分，形狀 <code>(10, 3, 128, 128)</code>。</li>
+  <li><strong>第 92 行</strong>：三件事。<code>.abs()</code> 取絕對值，因為這裡只關心「影響多大」，不管方向（偏微分是正是負只代表像素變亮會讓 loss 變大還是變小）。<code>.detach().cpu()</code> 把結果從計算記錄中切開、搬回 CPU。<code>torch.max(..., dim=1)</code> 沿著第 1 維（R、G、B 三個通道）取最大值，三個通道併成一個，形狀變成 <code>(10, 128, 128)</code>；<code>torch.max</code> 指定維度時會同時回傳最大值和它的位置（第幾個通道），程式只要前者，所以用 <code>saliencies, _</code> 接。本書另外數了 10 張圖、163,840 個像素的最大值各落在哪個通道：R 36.0%、G 41.7%、B 22.4%，沒有任何像素是兩個通道平手。每一張圖都是 G 最多、B 最少，但三個通道都有份。</li>
+  <li><strong>第 91 行</strong>是被註解掉的另一種寫法：不取最大值，保留三個通道。SmoothGrad 走的就是這條路（3.10 節）。</li>
+  <li><strong>第 95 行</strong>：對 10 張圖<strong>一張一張</strong>呼叫 <code>normalize</code>，再用 <code>torch.stack</code> 疊回 <code>(10, 128, 128)</code>。第 1 章 <a href="ch01.html#helpers">1.5 節</a>說過，<code>normalize</code> 是對傳進去的整個陣列取最大最小值，所以「誰跟誰一起正規化」由呼叫的人決定。這裡的決定是每張圖自己一組，第 94 行的註解說明了理由：「各張圖的梯度大小可能差很多」。3.5 節實測這個選擇有多重要。</li>
+</ul>
+<p>注意這個函式從頭到尾沒有呼叫 <code>model.zero_grad()</code>。backward 時，模型權重的 <code>.grad</code> 也會被算出來（圖 3.2 的虛線框），而且 PyTorch 的 <code>.grad</code> 是<strong>累加</strong>的：不清掉的話，下一次 backward 會加在上面。本書實測連續呼叫兩次 <code>compute_saliency_maps</code>，最後一層 Linear（<code>fc[3]</code>）權重梯度的絕對值總和從 2.150 × 10<sup>−2</sup> 變成 4.299 × 10<sup>−2</sup>，剛好兩倍。這不影響熱圖，因為熱圖讀的是 <code>x.grad</code>，而 <code>x</code> 每次都是新複製的張量；權重的梯度只是白白佔著記憶體，沒有人讀。</p>
+<p>畫圖的函式：</p>
+<figure class="listing"><figcaption>explain_cnn.py:99–110 — saliency：上列原圖、下列熱圖</figcaption>
+<pre class="py" data-hot="100,109"><code>def saliency(model, images, labels):
+    saliencies = compute_saliency_maps(images, labels, model)
+
+    fig, axs = plt.subplots(2, len(images), figsize=(15, 8))
+    for row, target in enumerate([images, saliencies]):
+        for column, img in enumerate(target):
+            if row == 0:
+                # pytorch image is (channels, height, width); matplotlib wants (height, width, channels)
+                axs[row][column].imshow(img.permute(1, 2, 0).numpy())
+            else:
+                axs[row][column].imshow(img.numpy(), cmap=plt.cm.hot)
+    save_fig(fig, 'saliency.png')</code></pre></figure>
+<p>2 列 10 欄的畫布。第 0 列畫原圖，和第 1 章畫 <code>images.png</code> 一樣要先 <code>permute(1, 2, 0)</code> 把通道換到最後。第 1 列畫熱圖：每張熱圖只有一個通道（<code>(128, 128)</code>），<code>imshow</code> 收到二維陣列時會用 <strong>colormap</strong>（色表：把一個數值對應到一種顏色的規則）上色；第 109 行指定 <code>plt.cm.hot</code>，0 是黑，往上依序是紅、黃，1 接近白。熱圖已經被 <code>normalize</code> 拉到 0–1，所以每張圖最亮的那個像素都是接近白色的。本書另外計時，Saliency 整段只要 0.4 秒（第 0 章 <a href="ch00.html#run-cnn">0.5 節</a>的逐段計時）：只有一次 forward 和一次 backward。</p>
+
+<h2 id="tiny">3.4　梯度為什麼小到 10<sup>−17</sup></h2>
+<p>畫圖之前的梯度到底有多大？下面這段指令重做 <code>compute_saliency_maps</code> 的前半段（同樣 10 張一起算 CE loss、同樣 backward），印出 loss，以及每張圖 <code>|x.grad|</code> 的最大值。和第 2 章一樣在 <code>HW09/</code> 裡跑（<code>../.venv</code> 是第 0 章 <a href="ch00.html#env">0.3 節</a>建立的環境）；它要載入模型，<strong>需要 GPU</strong>、<code>checkpoint.pth</code> 與 <code>food/</code>：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+import torch
+from model import Classifier
+from dataset import FoodDataset, get_paths_labels
+model = Classifier().cuda()
+model.load_state_dict(torch.load('checkpoint.pth')['model_state_dict'])
+model.eval()
+paths, labels = get_paths_labels('./food/')
+images, labels = FoodDataset(paths, labels, mode='eval').getbatch(range(10))
+x = images.cuda().requires_grad_()
+loss = torch.nn.CrossEntropyLoss()(model(x), labels.cuda())
+loss.backward()
+print('loss %.6f' % loss.item())
+for i, s in enumerate(x.grad.abs().amax(dim=(1, 2, 3))):
+    print(i, '%.3e' % s.item())
+"</code></pre>
+<p>實測輸出：</p>
+<pre class="shell"><code>loss 0.000139  «1»
+0 8.480e-07
+1 3.217e-12
+2 3.745e-04  «2»
+3 1.370e-07
+4 4.239e-08
+5 1.271e-07
+6 1.518e-17  «3»
+7 1.505e-06
+8 1.076e-09
+9 8.522e-08</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>10 張圖的平均 CE loss 只有 0.000139（四捨五入到 4 位是 0.0001）。模型幾乎完全確定，loss 幾乎是 0。</li>
+  <li><span class="mk">2</span>梯度最大的是圖 2，3.745 × 10<sup>−4</sup>。它是 10 張裡唯一 p(標籤) 不到 1.0000 的（0.9986，第 1 章 <a href="ch01.html#confidence">1.6 節</a>）。</li>
+  <li><span class="mk">3</span>最小的是圖 6，1.518 × 10<sup>−17</sup>。圖 2 是它的 2.5 × 10<sup>13</sup> 倍。<code>amax(dim=(1, 2, 3))</code> 一次對通道、高、寬三個維度取最大值，所以印出的就是每張圖整張的最大值（和程式「先對 RGB 取最大、再看整張」得到的數字相同）。</li>
+</ol>
+<p>把這一欄和第 1 章的 1 − p(標籤)（模型分給其他 10 類的機率總和）並排，再加上本書另外量的每張圖平均梯度：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>1 − p(標籤)（第 1 章）</th><th>|梯度| 最大值</th><th>|梯度| 平均</th></tr></thead>
+<tbody>
+<tr><td>2 Dairy product</td><td><b>1.38e-03</b></td><td><b>3.75e-04</b></td><td>1.29e-05</td></tr>
+<tr><td>7 Noodles/Pasta</td><td>6.08e-06</td><td>1.51e-06</td><td>8.50e-08</td></tr>
+<tr><td>0 Bread</td><td>2.50e-06</td><td>8.48e-07</td><td>3.75e-08</td></tr>
+<tr><td>5 Egg</td><td>3.58e-07</td><td>1.27e-07</td><td>8.38e-09</td></tr>
+<tr><td>3 Dessert</td><td>2.38e-07</td><td>1.37e-07</td><td>5.48e-09</td></tr>
+<tr><td>9 Soup</td><td>1.19e-07</td><td>8.52e-08</td><td>3.33e-09</td></tr>
+<tr><td>4 Dessert</td><td>1.19e-07</td><td>4.24e-08</td><td>2.76e-09</td></tr>
+<tr><td>8 Seafood</td><td>0</td><td>1.08e-09</td><td>5.84e-11</td></tr>
+<tr><td>1 Dairy product</td><td>0</td><td>3.22e-12</td><td>9.47e-14</td></tr>
+<tr><td>6 Meat</td><td>0</td><td><b>1.52e-17</b></td><td>9.08e-19</td></tr>
+</tbody>
+</table></div>
+<p>表依 1 − p 由大到小排列。趨勢很清楚：<strong>模型越沒把握，梯度越大</strong>。最沒把握的圖 2 梯度最大，圖 7、圖 0 次之；1 − p 存成 0 的三張（圖 1、6、8），梯度也落在最底下。排序不是逐張完全一致（圖 3 的 1 − p 比圖 5 小，梯度卻略大），但大方向是跟著 1 − p 走的。</p>
+<figure class="fig">
+<svg viewBox="0 0 900 384" role="img" aria-label="10 張圖的梯度最大值畫在對數刻度上：圖 2 最長，約 10 的負 3.4 次方；圖 6 最短，約 10 的負 17 次方；1 − p 為 0 的圖 1、6、8 落在最短的三條">
+  <text class="s-sm" x="20" y="26">|梯度| 最大值（對數刻度，格線間隔 1000 倍）；左邊是第 1 章的 1 − p(標籤)</text>
+  <line x1="200" y1="40" x2="200" y2="312" stroke="#2b3540" stroke-width="1"/>
+  <line x1="320" y1="40" x2="320" y2="312" stroke="#2b3540" stroke-width="1"/>
+  <line x1="440" y1="40" x2="440" y2="312" stroke="#2b3540" stroke-width="1"/>
+  <line x1="560" y1="40" x2="560" y2="312" stroke="#2b3540" stroke-width="1"/>
+  <line x1="680" y1="40" x2="680" y2="312" stroke="#2b3540" stroke-width="1"/>
+  <line x1="800" y1="40" x2="800" y2="312" stroke="#2b3540" stroke-width="1"/>
+
+  <text class="s-lbl" x="20" y="61">圖 2</text><text class="s-mono" x="190" y="61" text-anchor="end">1.38e-03</text>
+  <rect x="200" y="47" width="583" height="18" rx="3" fill="#e3b341"/>
+  <text class="s-mono" x="789" y="61">3.75e-04</text>
+  <text class="s-lbl" x="20" y="87">圖 7</text><text class="s-mono" x="190" y="87" text-anchor="end">6.08e-06</text>
+  <rect x="200" y="73" width="487" height="18" rx="3" fill="#e3b341" fill-opacity="0.6"/>
+  <text class="s-mono" x="693" y="87">1.51e-06</text>
+  <text class="s-lbl" x="20" y="113">圖 0</text><text class="s-mono" x="190" y="113" text-anchor="end">2.50e-06</text>
+  <rect x="200" y="99" width="477" height="18" rx="3" fill="#e3b341" fill-opacity="0.6"/>
+  <text class="s-mono" x="683" y="113">8.48e-07</text>
+  <text class="s-lbl" x="20" y="139">圖 5</text><text class="s-mono" x="190" y="139" text-anchor="end">3.58e-07</text>
+  <rect x="200" y="125" width="444" height="18" rx="3" fill="#e3b341" fill-opacity="0.6"/>
+  <text class="s-mono" x="650" y="139">1.27e-07</text>
+  <text class="s-lbl" x="20" y="165">圖 3</text><text class="s-mono" x="190" y="165" text-anchor="end">2.38e-07</text>
+  <rect x="200" y="151" width="445" height="18" rx="3" fill="#e3b341" fill-opacity="0.6"/>
+  <text class="s-mono" x="651" y="165">1.37e-07</text>
+  <text class="s-lbl" x="20" y="191">圖 9</text><text class="s-mono" x="190" y="191" text-anchor="end">1.19e-07</text>
+  <rect x="200" y="177" width="437" height="18" rx="3" fill="#e3b341" fill-opacity="0.6"/>
+  <text class="s-mono" x="643" y="191">8.52e-08</text>
+  <text class="s-lbl" x="20" y="217">圖 4</text><text class="s-mono" x="190" y="217" text-anchor="end">1.19e-07</text>
+  <rect x="200" y="203" width="425" height="18" rx="3" fill="#e3b341" fill-opacity="0.6"/>
+  <text class="s-mono" x="631" y="217">4.24e-08</text>
+  <text class="s-lbl" x="20" y="243">圖 8</text><text class="s-mono" x="190" y="243" text-anchor="end">0</text>
+  <rect x="200" y="229" width="361" height="18" rx="3" fill="#e3b341" fill-opacity="0.35"/>
+  <text class="s-mono" x="567" y="243">1.08e-09</text>
+  <text class="s-lbl" x="20" y="269">圖 1</text><text class="s-mono" x="190" y="269" text-anchor="end">0</text>
+  <rect x="200" y="255" width="260" height="18" rx="3" fill="#e3b341" fill-opacity="0.35"/>
+  <text class="s-mono" x="466" y="269">3.22e-12</text>
+  <text class="s-lbl" x="20" y="295">圖 6</text><text class="s-mono" x="190" y="295" text-anchor="end">0</text>
+  <rect x="200" y="281" width="47" height="18" rx="3" fill="#e3b341" fill-opacity="0.35"/>
+  <text class="s-mono" x="253" y="295">1.52e-17</text>
+
+  <text class="s-mono" x="200" y="332" text-anchor="middle">1e-18</text>
+  <text class="s-mono" x="320" y="332" text-anchor="middle">1e-15</text>
+  <text class="s-mono" x="440" y="332" text-anchor="middle">1e-12</text>
+  <text class="s-mono" x="560" y="332" text-anchor="middle">1e-9</text>
+  <text class="s-mono" x="680" y="332" text-anchor="middle">1e-6</text>
+  <text class="s-mono" x="800" y="332" text-anchor="middle">1e-3</text>
+  <text class="s-sm" x="20" y="362">長條的長度是 log₁₀(最大值) 從 −18 起算；顏色最深的是圖 2，最淺的三條是 1 − p 存成 0 的圖。</text>
+</svg>
+<figcaption>圖 3.3 — 10 張圖的梯度最大值橫跨超過 13 個數量級。把長條畫在對數刻度上才看得到全部；在一般刻度上，除了圖 2 之外的 9 條都會短到看不見，這正是 3.5 節「一起正規化」會發生的事。</figcaption>
+</figure>
+
+<h3 id="why-tiny">原因：CE loss 對 logits 的梯度是「機率減掉 one-hot」</h3>
+<p>第 1 章 <a href="ch01.html#ahead">1.8 節</a>預告過原因，這裡把它寫成式子。設一張圖的 logits 是 z<sub>0</sub>, …, z<sub>10</sub>，softmax 後的機率是 p<sub>0</sub>, …, p<sub>10</sub>，標籤是 y。這張圖的 CE loss 是 −log p<sub>y</sub>，它對每個 logit 的偏微分有一個很整齊的形式。推導只需要一行：把 softmax 代進去，−log p<sub>y</sub> ＝ −z<sub>y</sub> + log(e<sup>z<sub>0</sub></sup> + … + e<sup>z<sub>10</sub></sup>)；對 z<sub>j</sub> 微分，第一項只在 j = y 時貢獻 −1，第二項的導數是 e<sup>z<sub>j</sub></sup> ÷ (e<sup>z<sub>0</sub></sup> + … + e<sup>z<sub>10</sub></sup>)，正好就是 p<sub>j</sub>。合起來：</p>
+<div class="eq">∂(−log p<sub>y</sub>) / ∂z<sub>j</sub> ＝ p<sub>j</sub> − 1[j = y]　　（1[j = y] 在 j 是標籤時為 1，否則為 0；這個「只有標籤那格是 1」的向量叫 one-hot）</div>
+<p>再用鏈鎖律往回接到輸入。像素 x 影響 loss 的路徑有 11 條：x 改變每一個 z<sub>j</sub>，每個 z<sub>j</sub> 再改變 L。鏈鎖律說每條路徑的效果是兩段導數相乘，總效果是各路徑相加，所以 loss 對輸入的梯度就是 11 個 logit 各自的梯度，以上面那 11 個數為權重加總：</p>
+<div class="eq">∂L/∂x ＝ Σ<sub>j</sub> (p<sub>j</sub> − 1[j = y]) · ∂z<sub>j</sub>/∂x</div>
+<p>模型有把握時，p<sub>y</sub> 接近 1、其他 p<sub>j</sub> 接近 0，於是<strong>每一個權重都接近 0</strong>：標籤那一項是 p<sub>y</sub> − 1 ≈ −(1 − p<sub>y</sub>)，其他項是很小的 p<sub>j</sub>。不管 ∂z<sub>j</sub>/∂x 本身多大，乘上一個接近 0 的權重，梯度就接近 0。而這些權重的大小，正是由 1 − p<sub>y</sub> 決定的，這就是上表兩欄一起變小的原因。順帶一提，p 接近 1 時 −log p ≈ 1 − p，（p = 1 − ε、ε 很小時，−log(1 − ε) ≈ ε），所以每張圖的 CE loss 也幾乎就等於 1 − p（例如圖 2 是 1.38 × 10<sup>−3</sup>、圖 0 是 2.50 × 10<sup>−6</sup>）。</p>
+<p>還有兩個細節：</p>
+<ul>
+  <li><strong>批次平均讓每張圖的梯度再縮小 10 倍。</strong><code>CrossEntropyLoss()</code> 預設取 10 張的平均，平均就是每張的 loss 乘上 1/10，所以每張圖拿到的梯度是「單獨算」時的十分之一。本書實測圖 0 單獨算時梯度最大值是 8.565 × 10<sup>−6</sup>，在 10 張的批次裡是 8.480 × 10<sup>−7</sup>。這個係數對 10 張圖都一樣，各自正規化之後就消失了，不影響熱圖。（兩個數字不是剛好 10 倍，因為單張和批次算出的 logit 在小數第 3 位就有差異，第 1 章<a href="ch01.html#batch-effect">〈同一張圖，logit 的小數第 3 位會變〉</a>。）</li>
+  <li><strong>1 − p 是 0，梯度卻不是 0。</strong>圖 1、6、8 的 p(標籤) 在 float32 裡存成剛好 1（第 1 章 <a href="ch01.html#confidence">1.6 節</a>），照上面的式子，標籤那一項的權重 p<sub>y</sub> − 1 應該是 0，但實測的梯度仍有 10<sup>−9</sup> 到 10<sup>−17</sup>。本書<strong>推測</strong>（沒有另外查證）是因為 <code>CrossEntropyLoss</code> 在內部直接從 logits 算 log-softmax（用上面那一行式子 −z<sub>y</sub> + log Σ e<sup>z<sub>k</sub></sup> 算出 log p<sub>y</sub>，而不是先把 p<sub>y</sub> 算成 float32 再取 log），其他類別的 p<sub>j</sub> 雖然小到不影響 p<sub>y</sub> 的顯示，本身仍是非零的極小值，加總起來就是那一點點梯度。本書事後把這三張圖批次計算時的 softmax 機率印出來：p(標籤) 在 float32 裡確實剛好是 1.0，但其他 10 類的機率都不是 0，加總分別是圖 1 2.8 × 10<sup>−11</sup>、圖 6 3.4 × 10<sup>−17</sup>、圖 8 4.9 × 10<sup>−9</sup>。這三個數的排序和梯度最大值的排序（圖 1 3.2 × 10<sup>−12</sup>、圖 6 1.5 × 10<sup>−17</sup>、圖 8 1.1 × 10<sup>−9</sup>）相同，梯度最小的圖 6，其他類別的機率也最小。這支持上面的推測：梯度來自那些被 float32 的 1.0 吃掉、但本身不是 0 的 p<sub>j</sub>。（PyTorch 內部怎麼算 log-softmax 本書沒有去讀原始碼。）</li>
+</ul>
+
+<h2 id="normalize">3.5　為什麼每張圖要各自正規化</h2>
+<p>圖 3.3 已經暗示了答案。如果第 95 行不是一張一張呼叫 <code>normalize</code>，而是把 10 張熱圖當成一個陣列<strong>一起</strong>做一次 min-max，整批最大的值（圖 2 的 3.75 × 10<sup>−4</sup>）會變成 1，其他圖的值都要跟它比。本書把兩種做法畫在一起：</p>
+<figure class="fig">
+<img src="img/ch03_saliency_global.png" alt="三列各 10 格。第一列原圖；第二列是逐張正規化的熱圖，10 張都有紅黃色熱點；第三列是 10 張一起正規化，只有圖 2 看得到牛奶壺左側的紅黃色輪廓，其他 9 張全黑">
+<figcaption>圖 3.4 — 第一列原圖（左側標籤 image）；第二列是 repo 的做法，每張各自 min-max（per-image (repo)，和圖 3.1 的下列相同）；第三列改成 10 張一起做一次 min-max（one global min-max）。一起正規化時，只剩圖 2 看得見。</figcaption>
+</figure>
+<p>第三列只有圖 2 看得到紅黃色的熱點（牛奶壺左側的輪廓），其他 9 張是全黑的。一起正規化時，各張圖的最大值會是：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>2</th><th>7</th><th>0</th><th>3</th><th>5</th><th>9</th><th>4</th><th>8</th><th>1</th><th>6</th></tr></thead>
+<tbody>
+<tr><td>一起正規化後的最大值</td><td><b>1.00</b></td><td>4.02e-03</td><td>2.26e-03</td><td>3.66e-04</td><td>3.39e-04</td><td>2.28e-04</td><td>1.13e-04</td><td>2.87e-06</td><td>8.59e-09</td><td>4.05e-14</td></tr>
+</tbody>
+</table></div>
+<p>圖 2 是整批的最大值，定義上就是 1。第二亮的圖 7，最亮的像素也只有 0.004，在 <code>hot</code> 色表上跟 0 一樣是黑的。（這些數字大約就是 3.4 節的最大值除以圖 2 的 3.75 × 10<sup>−4</sup>，例如圖 7：1.51 × 10<sup>−6</sup> ÷ 3.75 × 10<sup>−4</sup> ≈ 4.0 × 10<sup>−3</sup>，手算；整批的最小值幾乎是 0，所以減掉它幾乎沒有影響。）</p>
+<p>這就是第 1 章 1.8 節預告的「最沒把握的圖 2 為什麼是例外」：圖 2 的 1 − p 比其他圖大了兩個數量級以上，梯度也就大到在共同的尺度上看得見；其他 9 張的模型太有把握，梯度相對圖 2 都小到可以忽略。所以程式的選擇很合理：saliency map 要回答的是「<strong>這一張圖裡</strong>，哪些像素比較敏感」，各自正規化保留了每張圖內部的相對高低。但代價也要記住：<strong>各自正規化之後，不同圖之間的亮度不能比較</strong>。圖 3.1 裡圖 6 和圖 2 的熱點一樣亮，實際上圖 6 的梯度是圖 2 的 4 × 10<sup>−14</sup> 倍。</p>
+
+<h2 id="logit">3.6　投影片說「output category」，程式用 loss</h2>
+<p>投影片第 8 頁的說明是「Compute the gradient of <strong>output category</strong> with respect to input image」，直譯是「對輸出類別取梯度」；程式（以及第 76 行的 docstring）對的是 <strong>loss</strong>。這兩個不是同一個量。用 3.4 節的式子看：</p>
+<ul>
+  <li><strong>對 loss 取梯度</strong>（程式）：∂L/∂x ＝ Σ<sub>j</sub> (p<sub>j</sub> − 1[j = y]) · ∂z<sub>j</sub>/∂x，11 個 logit 梯度的加權和，權重在模型有把握時全部接近 0。</li>
+  <li><strong>對標籤那一類的 logit 取梯度</strong>：∂z<sub>y</sub>/∂x，只看一個分數，不經過 softmax。這是「output category 的梯度」最直接的讀法，第 5 章的 Integrated Gradients 用的也是這個量。</li>
+</ul>
+<p>本書把第 88–89 行換成「取出 10 張圖各自標籤那一格的 logit，加總後 backward」（示意：<code>idx = labels.cuda().unsqueeze(1)</code>，再 <code>model(x).gather(1, idx)</code>、<code>.sum().backward()</code>；<code>gather</code> 要求索引和 logits 同樣是二維，所以標籤要先從 <code>(10,)</code> 變成 <code>(10, 1)</code>），其他步驟（取絕對值、對 RGB 取最大、各自正規化）不變。結果每張圖的梯度最大值變成：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th></tr></thead>
+<tbody>
+<tr><td>對 loss（程式）</td><td>8.48e-07</td><td>3.22e-12</td><td>3.75e-04</td><td>1.37e-07</td><td>4.24e-08</td><td>1.27e-07</td><td>1.52e-17</td><td>1.51e-06</td><td>1.08e-09</td><td>8.52e-08</td></tr>
+<tr><td>對標籤 logit</td><td>2.044</td><td>1.402</td><td>1.743</td><td>2.403</td><td>1.683</td><td>1.251</td><td>3.029</td><td>1.685</td><td>2.333</td><td>4.896</td></tr>
+<tr><td>兩張熱圖的相關係數</td><td>0.862</td><td>0.637</td><td>0.969</td><td>0.931</td><td>0.820</td><td>0.880</td><td>0.726</td><td>0.974</td><td>0.828</td><td>0.924</td></tr>
+</tbody>
+</table></div>
+<p>對 logit 取梯度時，10 張圖的最大值都在 1.25 到 4.90 之間，不再有 10<sup>−17</sup> 這種數量級的差距：沒有 softmax 夾在中間，模型再有把握，logit 對像素的敏感度也不會消失。最後一列是兩種熱圖（各自正規化之後）逐像素算的<strong>相關係數</strong>（Pearson correlation：衡量兩組數字「一起變高、一起變低」的程度，1 是完全同步，0 是毫無關係），10 張在 0.637 到 0.974 之間。</p>
+<figure class="fig">
+<img src="img/ch03_saliency_logit.png" alt="三列各 10 格。第一列原圖；第二列是對 CE loss 的梯度熱圖；第三列是對標籤 logit 的梯度熱圖，整體比第二列亮、熱點更分散，圖 5 的荷包蛋圓形輪廓更清楚">
+<figcaption>圖 3.5 — 第二列是程式的做法，對 CE loss 取梯度（grad of CE loss (repo)）；第三列改成對標籤 logit 取梯度（grad of label logit）。兩列都各自正規化，形狀大致相同。</figcaption>
+</figure>
+<p>看圖：第三列整體比第二列亮、熱點更分散，圖 5 荷包蛋的圓形輪廓在 logit 版更清楚。但兩列的大輪廓是一致的，相關係數大多在 0.8 以上，差最多的是圖 1（0.637）和圖 6（0.726）。</p>
+<p>為什麼數量級差這麼多，形狀卻相近？回到式子：loss 的梯度是 11 個 ∂z<sub>j</sub>/∂x 的加權和，權重的「大小」決定了整體的數量級（所以小到 10<sup>−17</sup>），而熱圖各自正規化之後，數量級被消掉，剩下的「形狀」主要由權重最大的那一項決定。如果那一項剛好是標籤那一項（係數 p<sub>y</sub> − 1），形狀就會接近 ∂z<sub>y</sub>/∂x；如果其他類別的項也有份量，形狀就會偏離。哪一張是哪種情況，本書沒有逐張拆解，相關係數只告訴你「偏離了多少」。</p>
+<p>兩種做法回答的是不同的問題：對 loss 取梯度問「哪些像素動一下，模型對<strong>正確答案的信心</strong>變最多」，會受 softmax <strong>飽和</strong>（p 已經頂在 1 附近、logit 再怎麼變機率都幾乎不動）的影響；對 logit 取梯度問「哪些像素動一下，<strong>這一類的分數</strong>變最多」，和其他類別無關。本書不判定哪一個「才是對的」。作業的程式用前者，寫作業時就照程式的定義回答；但讀投影片和其他資料時要知道，「saliency map」這個名字底下可能是兩種不同的量。這一條也列在<a href="outline.html#findings">教學大綱〈讀 code 不盡信文件〉</a>的第 6 項。</p>
+
+<h2 id="smoothgrad">3.7　SmoothGrad：加雜訊，算 500 次再平均</h2>
+<p>Saliency map 有一個常被提到的問題：熱圖充滿細碎的亮點（圖 3.1 的圖 4 就是一片雜點），看不太出形狀。SmoothGrad（Smilkov 等人 2017 年的論文）的想法很直接：在圖上加一點隨機雜訊，算一次梯度；換一組雜訊，再算一次；重複很多次，把這些梯度平均起來。真正重要的區域在每次都會亮，偶然出現的雜點會被平均掉。程式的 docstring 也是這樣說的：</p>
+<figure class="listing"><figcaption>explain_cnn.py:113–118 — SmoothGrad 段落的標題</figcaption>
+<pre class="py" data-hot="114,115"><code>"""## Smooth Grad (Q10~13)
+Randomly add noise to the image, compute a heatmap each time, and average them.
+The average is more robust to noisy gradients.
+
+ref: https://arxiv.org/pdf/1706.03825.pdf
+"""</code></pre></figure>
+<p>「隨機加雜訊、每次算一張熱圖、再平均；平均起來比較不受梯度雜訊影響。」第 117 行的網址就是投影片第 9 頁附的同一篇論文（arXiv 1706.03825）。計算的函式：</p>
+<figure class="listing"><figcaption>explain_cnn.py:120–141 — smooth_grad：一張圖，取樣 epoch 次</figcaption>
+<pre class="py" data-hot="124,128,129,134,138,139,140"><code>def smooth_grad(x, y, model, epoch, param_sigma_multiplier):
+    model.eval()
+
+    mean = 0
+    sigma = param_sigma_multiplier / (torch.max(x) - torch.min(x)).item()
+    smooth = np.zeros(x.cuda().unsqueeze(0).size())
+    for i in range(epoch):
+        # generate random noise (the original passes sigma**2 as the std)
+        noise = x.new_empty(x.size()).normal_(mean, sigma**2)
+        x_mod = (x + noise).unsqueeze(0).cuda()
+        x_mod.requires_grad_()
+
+        y_pred = model(x_mod)
+        loss_func = torch.nn.CrossEntropyLoss()
+        loss = loss_func(y_pred, y.cuda().unsqueeze(0))
+        loss.backward()
+
+        # like the method in saliency map
+        smooth += x_mod.grad.abs().detach().cpu().numpy()
+    smooth = normalize(smooth / epoch)  # don't forget to normalize
+    # smooth = smooth / epoch # try this line to answer the question
+    return smooth</code></pre></figure>
+<p>和 <code>compute_saliency_maps</code> 不同，<code>smooth_grad</code> 一次只處理<strong>一張圖</strong>：<code>x</code> 是 <code>(3, 128, 128)</code>，<code>y</code> 是那張圖的標籤（0 維張量）。逐段讀：</p>
+<ul>
+  <li><strong>參數名稱 <code>epoch</code></strong> 其實是「取樣次數」，和訓練時的 epoch 無關；主程式傳 500。<code>param_sigma_multiplier</code> 是雜訊大小的倍率，傳 0.4。</li>
+  <li><strong>第 124 行</strong>：<code>sigma = 0.4 ÷ (這張圖的最大值 − 最小值)</code>。第 1 章 <a href="ch01.html#getbatch-run">1.4 節</a>看過，像素值落在 0–1，所以分母接近 1，sigma 接近 0.4。這一行是 3.8 節的主題。</li>
+  <li><strong>第 125 行</strong>：準備一個全 0 的累加器，形狀 <code>(1, 3, 128, 128)</code>，型別是 NumPy 的 float64。<code>x.cuda().unsqueeze(0)</code> 只是為了拿到這個形狀（<code>unsqueeze(0)</code> 在最前面加一個長度 1 的批次維度），那份搬到 GPU 的複本隨即被丟掉。</li>
+  <li><strong>第 128 行</strong>：產生雜訊。<code>x.new_empty(x.size())</code> 建一個和 <code>x</code> 同形狀、同型別、同裝置（這裡是 CPU）的空張量，<code>.normal_(mean, std)</code> 就地填入<strong>常態分佈</strong>（高斯分佈，最常見的鐘形亂數分佈）的亂數，平均是 <code>mean</code>、<strong>標準差</strong>（亂數離平均值有多散；3.8 節細說）是第二個參數。注意程式傳的是 <code>sigma**2</code>，第 127 行的註解也特別說明：「原版把 sigma 的平方當成標準差傳進去」。</li>
+  <li><strong>第 129–130 行</strong>：原圖加雜訊，加上批次維度變成 <code>(1, 3, 128, 128)</code>，搬上 GPU，標記需要梯度。<code>x_mod</code> 每一圈都是新的張量，所以它的 <code>.grad</code> 不會跨圈累加。</li>
+  <li><strong>第 132–135 行</strong>：和 saliency 相同的 forward、CE loss、backward，只是批次大小是 1（<code>y.cuda().unsqueeze(0)</code> 把標籤也變成長度 1），沒有「除以 10」。</li>
+  <li><strong>第 138 行</strong>：取絕對值，<strong>保留三個通道</strong>，轉成 NumPy 加進累加器。這裡沒有像第 92 行那樣對 RGB 取最大值。</li>
+  <li><strong>第 139 行</strong>：除以取樣次數得到平均，再 <code>normalize</code>。傳進去的是整個 <code>(1, 3, 128, 128)</code> 陣列，所以三個通道是<strong>一起</strong>正規化的：整張圖最大的那個值（不管在哪個通道）變成 1。</li>
+  <li><strong>第 140 行</strong>是被註解掉的替代寫法：只取平均、不正規化。註解說「試試這一行來回答問題」，這是留給作業題目用的，3.10 節實測。</li>
+</ul>
+<p>和 <code>compute_saliency_maps</code> 一樣，這個函式也沒有 <code>model.zero_grad()</code>，500 次 backward 的權重梯度全部累加在模型上，但沒有人讀它。</p>
+<p>畫圖的函式：</p>
+<figure class="listing"><figcaption>explain_cnn.py:144–154 — smoothgrad：10 張圖各跑一次 smooth_grad</figcaption>
+<pre class="py" data-hot="147,153"><code>def smoothgrad(model, images, labels):
+    smooth = []
+    for i, l in zip(images, labels):
+        smooth.append(smooth_grad(i, l, model, 500, 0.4))
+    smooth = np.stack(smooth)
+
+    fig, axs = plt.subplots(2, len(images), figsize=(15, 8))
+    for row, target in enumerate([images, smooth]):
+        for column, img in enumerate(target):
+            axs[row][column].imshow(np.transpose(np.asarray(img).reshape(3, 128, 128), (1, 2, 0)))
+    save_fig(fig, 'smoothgrad.png')</code></pre></figure>
+<p>第 146–147 行用 <code>zip</code> 一張一張取出圖和標籤，每張取樣 500 次、雜訊倍率 0.4。第 148 行把 10 個 <code>(1, 3, 128, 128)</code> 疊成 <code>(10, 1, 3, 128, 128)</code>。第 153 行對兩列用同一個寫法：<code>reshape(3, 128, 128)</code> 把多出來的那個長度 1 的維度去掉（原圖本來就是這個形狀，不受影響），<code>np.transpose(..., (1, 2, 0))</code> 把通道換到最後，效果和 <code>saliency</code> 裡的 <code>permute(1, 2, 0)</code> 相同。<code>imshow</code> 收到的是 <code>(128, 128, 3)</code> 的彩色圖，所以<strong>不會套 colormap</strong>，三個通道的梯度直接當成 R、G、B 顯示。</p>
+<p>這一段是 <code>explain_cnn.py</code> 最慢的：10 張 × 500 次，一共 5,000 次單張的 forward + backward。第 0 章 <a href="ch00.html#run-cnn">0.5 節</a>的逐段計時，SmoothGrad 整段 24.1 秒，平均一張圖約 2.4 秒；Saliency 只要 0.4 秒。</p>
+<figure class="fig">
+<img src="img/smoothgrad.png" alt="上下兩列各 10 格。上列是原圖；下列是偏暗的彩色圖，帶綠灰色調，看得到披薩三角形、奶油塊、蛋糕、鬆餅格子、荷包蛋圓形、碗的圓圈等輪廓；圖 2 幾乎全黑，只有左下角一小塊亮">
+<figcaption>圖 3.6 — <code>smoothgrad.png</code>：上列原圖，下列是 SmoothGrad 的結果（彩色，因為三個通道各自保留）。食物的輪廓和紋理都看得出來；圖 2 例外，幾乎全黑。</figcaption>
+</figure>
+<p>和圖 3.1 比，下列不再是黑底紅黃的熱圖，而是偏暗、帶綠灰色調的彩色圖。形狀比 saliency map 清楚得多：披薩（圖 0，類別是 Bread）的三角形、奶油塊、蛋糕的層次、鬆餅的格子、荷包蛋的圓、生魚片的條紋、湯碗的圓圈都認得出來。圖 2 是例外：幾乎整張都是暗的，只有左下角（草莓的位置）一小塊亮。</p>
+<p>為什麼偏綠灰？圖 3.6 那一次的數值沒有存下來，本書用 3.10 節同樣的程式原樣變體（固定 <code>torch.manual_seed(0)</code>，不是同一批雜訊）量了正規化後三個通道各自的平均值：10 張合起來 R 0.243、G 0.259、B 0.190；逐張看，除了圖 1（R 0.338、G 0.336，幾乎相同）之外都是 G 最高，B 則每一張都最低，但三者差得不多。三個通道差不多亮，看起來就是灰；G 稍微多一點、B 少一點，就偏綠（偏黃綠）。整體平均只有 0.2–0.3，所以是暗的。這和 3.3 節 saliency 的「最大值落在哪個通道」G 最多、B 最少是同一個方向。至於模型為什麼對 G 通道比較敏感，本書沒有答案。</p>
+<p>要注意的是，這張圖<strong>每次重跑都不一樣</strong>：雜訊用的是 PyTorch 的亂數，<code>explain_cnn.py</code> 只固定了 NumPy 的種子（第 2 章 <a href="ch02.html#seed">2.10 節</a>的 <code>np.random.seed(16)</code>），沒有固定 PyTorch 的，第 0 章 <a href="ch00.html#outputs">0.6 節</a>已經實測過。所以你自己跑出來的圖會和圖 3.6 有細微差異，大輪廓應該相同。</p>
+<p>看起來 SmoothGrad 達到了它的目的。但這張圖其實藏著一件更重要的事，要先從雜訊有多大說起。</p>
+
+<h2 id="sigma">3.8　雜訊有多大：程式與論文差在哪</h2>
+<p>先把術語講清楚。<strong>常態分佈</strong>是最常見的「鐘形」亂數分佈；<strong>標準差</strong>（standard deviation，std）衡量亂數離平均值有多散，大約 68% 的亂數會落在平均值 ± 1 個標準差之內；<strong>變異數</strong>（variance）是標準差的平方。PyTorch 的 <code>Tensor.normal_(mean, std)</code> 第二個參數是標準差，不是變異數。</p>
+<p>論文把雜訊的大小定義成「雜訊程度 × 像素值的範圍」：</p>
+<div class="eq">論文：標準差 ＝ 0.4 × (x<sub>max</sub> − x<sub>min</sub>)　　　程式：標準差 ＝ sigma² ＝ (0.4 ÷ (x<sub>max</sub> − x<sub>min</sub>))²</div>
+<p>程式做了兩件和論文不同的事：<strong>乘變成除</strong>（第 124 行），而且<strong>再平方一次</strong>（第 128 行把 <code>sigma**2</code> 當標準差傳進去）。原版 notebook 就是這樣寫的，本 repo 照搬，只在第 127 行加了註解提醒。代進這 10 張圖的數字（範圍是每張圖自己的最大值減最小值）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>最大值 − 最小值</th><th>程式的 sigma</th><th>程式實際的標準差（sigma²）</th><th>論文式 0.4 × 範圍</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0.9961</td><td>0.4016</td><td>0.1613</td><td>0.3984</td></tr>
+<tr><td>1</td><td>0.9490</td><td>0.4215</td><td>0.1777</td><td>0.3796</td></tr>
+<tr><td>6</td><td>1.0000</td><td>0.4000</td><td>0.1600</td><td>0.4000</td></tr>
+</tbody>
+</table></div>
+<p>其他 7 張的實際標準差在 0.160–0.178 之間，論文式在 0.38–0.40 之間。手算比例：圖 6 是 0.16 ÷ 0.40 = 40%，圖 0 是 0.1613 ÷ 0.3984 ≈ 40%，圖 1 是 0.1777 ÷ 0.3796 ≈ 47%。所以<strong>實際加的雜訊大約只有論文的 40%</strong>（各張在 40% 上下）。</p>
+<p>這兩個公式在這 10 張圖上數字差不多，只是因為範圍剛好接近 1：除以 1 和乘以 1 一樣，平方則讓 0.4 變成 0.16。如果像素值的範圍不是 0–1，兩者會差得非常遠。例如範圍是 0–255 的圖，論文式的標準差是 0.4 × 255 = 102，程式的是 (0.4 ÷ 255)² ≈ 2.5 × 10<sup>−6</sup>（手算），而且<strong>範圍越大，程式加的雜訊反而越小</strong>，方向和論文相反。這是<a href="outline.html#findings">教學大綱〈讀 code 不盡信文件〉</a>的第 3 項。</p>
+
+<h2 id="noise">3.9　加了雜訊，模型全部認錯</h2>
+<p>目錄頁說：「加了雜訊之後梯度卻大了好幾個數量級」。數字是這樣的：圖 0 在 saliency 裡的梯度最大值是 8.48 × 10<sup>−7</sup>（單獨算是 8.565 × 10<sup>−6</sup>，3.4 節），SmoothGrad 取樣 500 次、正規化之前的平均梯度最大值是 0.256，是批次值的約 30 萬倍、單獨算的約 3 萬倍（手算）。直覺的解釋是「雜訊讓模型沒那麼有把握，CE 的梯度就不再接近 0」。這個方向對，但程度遠超過「沒那麼有把握」。先看標準差 0.16 的雜訊下，模型把圖 0 認成什麼。下面的指令對圖 0 產生 500 張加雜訊的圖（標準差用程式的公式），統計模型預測成哪一類；同樣在 <code>HW09/</code> 裡跑，<strong>需要 GPU</strong>：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+import torch
+from model import Classifier
+from dataset import FoodDataset, get_paths_labels
+model = Classifier().cuda()
+model.load_state_dict(torch.load('checkpoint.pth')['model_state_dict'])
+model.eval()
+paths, labels = get_paths_labels('./food/')
+images, labels = FoodDataset(paths, labels, mode='eval').getbatch(range(10))
+torch.manual_seed(0)
+x = images[0]
+std = (0.4 / (x.max() - x.min()).item()) ** 2
+noisy = x + torch.randn(500, 3, 128, 128) * std
+with torch.no_grad():
+    pred = model(noisy.cuda()).argmax(dim=1).cpu()
+print('std %.4f' % std)
+print(torch.bincount(pred, minlength=11).tolist())
+"</code></pre>
+<p>這段和 <code>smooth_grad</code> 有兩個差別：<code>torch.manual_seed(0)</code> 固定了 PyTorch 的亂數種子（第 2 章 <a href="ch02.html#seed">2.10 節</a>講過種子的意思，這裡是 PyTorch 自己的那一條數列），讓結果可以重現；<code>torch.randn(500, 3, 128, 128) * std</code> 一次產生 500 份標準差為 <code>std</code> 的雜訊（<code>randn</code> 是平均 0、標準差 1 的常態亂數，乘上 <code>std</code> 就把標準差變成 <code>std</code>），而不是像 <code>smooth_grad</code> 那樣每圈 <code>normal_</code> 一次。兩者的雜訊不是同一批，但分佈相同。<code>torch.bincount(pred, minlength=11)</code> 數 0–10 每一類各被預測了幾次。實測輸出：</p>
+<pre class="shell"><code>std 0.1613  «1»
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 500]  «2»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>標準差 0.1613，和 3.8 節表上圖 0 的「程式實際的標準差」相同。</li>
+  <li><span class="mk">2</span>11 個位置依序是類別 0（Bread）到 10（Vegetable/Fruit）。<strong>500 張全部被判成類別 10，Vegetable/Fruit</strong>；正確答案 Bread 是 0 次。</li>
+</ol>
+<p>不只圖 0。本書對 10 張圖各產生 500 個樣本，不論用程式的標準差還是論文式的標準差，<strong>每一張的 500 個樣本都被判成 Vegetable/Fruit</strong>。這 10 張圖裡沒有任何一張是 Vegetable/Fruit（第 1 章 <a href="ch01.html#labels">1.3 節</a>：類別 4、7、10 沒有圖）。用程式的標準差時，標籤那一類的平均 logit 全部是負的：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th></tr></thead>
+<tbody>
+<tr><td>原圖的標籤 logit（第 1 章）</td><td>10.333</td><td>19.785</td><td>7.808</td><td>9.011</td><td>12.215</td><td>12.385</td><td>22.956</td><td>11.447</td><td>13.015</td><td>14.118</td></tr>
+<tr><td>加雜訊後，500 個樣本的平均標籤 logit</td><td>−16.60</td><td>−7.92</td><td>−10.50</td><td>−4.81</td><td>−3.65</td><td>−9.91</td><td>−11.32</td><td>−16.83</td><td>−8.84</td><td>−10.95</td></tr>
+</tbody>
+</table></div>
+
+<h3 id="tolerance">這個模型對雜訊有多敏感</h3>
+<p>標準差 0.16 聽起來不大（像素值範圍是 0–1），為什麼模型完全認不出來？本書用更小的雜訊測了模型的耐受度：每張圖 100 個樣本，10 張的平均正確率：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>雜訊標準差</th><th>0.005</th><th>0.01</th><th>0.02</th><th>0.03</th><th>0.05</th><th>0.08</th><th>0.1</th><th>0.1600–0.1777（程式）</th><th>0.38–0.40（論文式）</th></tr></thead>
+<tbody>
+<tr><td>正確率</td><td>1.00</td><td>1.00</td><td>0.87</td><td>0.54</td><td>0.43</td><td>0.11</td><td>0.01</td><td><b>0</b></td><td><b>0</b></td></tr>
+</tbody>
+</table></div>
+<p>標準差 0.02 時就開始認錯，0.1 時幾乎全錯。這個模型只在乾淨的圖上訓練過，對逐像素獨立（每個像素各抽各的亂數）的高斯雜訊非常敏感。程式用的 0.16，已經遠在它能承受的範圍之外。（最後兩欄是上面「500 個樣本全部判成 Vegetable/Fruit」的結果。）</p>
+<p>再看單一樣本的細節（圖 0，固定 <code>torch.manual_seed(0)</code>，每一列是一個加了雜訊的樣本）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>雜訊標準差</th><th>p(Bread)</th><th>CE loss</th><th>|梯度| 最大值</th></tr></thead>
+<tbody>
+<tr><td>0（原圖，單獨算）</td><td>1.0000</td><td>2.5e-06</td><td>8.6e-06</td></tr>
+<tr><td>0.01</td><td>1.0000</td><td>3.6e-06</td><td>1.1e-05</td></tr>
+<tr><td>0.05</td><td>0.6467</td><td>0.436</td><td>1.16</td></tr>
+<tr><td><b>0.1613（程式）</b></td><td>0.0000</td><td><b>29.6</b></td><td>1.03</td></tr>
+<tr><td>0.3984（論文式）</td><td>0.0000</td><td>27.7</td><td>0.38</td></tr>
+</tbody>
+</table></div>
+<p>讀這張表：</p>
+<ul>
+  <li>標準差 0.01 時，模型仍然 100% 確定，梯度也還是 10<sup>−5</sup> 的量級，和原圖差不多。</li>
+  <li>標準差 0.05 時，p(Bread) 掉到 0.6467，梯度最大值一下子跳到 1.16，比原圖大了五個數量級。<strong>只要模型不再飽和在 p ≈ 1，CE loss 的梯度就不再接近 0</strong>：3.4 節式子裡的權重 p<sub>j</sub> − 1[j = y] 不再是接近 0 的數。</li>
+  <li>標準差 0.1613（程式用的）時，p(Bread) 是 0.0000，CE loss 是 29.6。loss 是 −log p，29.6 代表 p(Bread) 大約是 e<sup>−29.6</sup>，也就是 10<sup>−13</sup> 的量級（手算）。模型不只是「不太確定」，而是完全確定這<strong>不是</strong>麵包。</li>
+</ul>
+<p>所以「加了雜訊之後梯度大了好幾個數量級」的真正原因是：<strong>SmoothGrad 的 500 個樣本，在這個模型眼裡全部是 Vegetable/Fruit</strong>。程式平均的，是 500 張「被認錯的圖」上、CE loss 約 30 的梯度。</p>
+
+<h3 id="meaning">那 SmoothGrad 的圖還代表什麼</h3>
+<p>這直接影響圖 3.6 該怎麼讀。SmoothGrad 原本的構想是「在原圖附近取樣，模型對這些樣本的判斷和原圖差不多，把梯度裡的雜點平均掉」。在這個模型上，前提不成立：樣本並不在模型認為「這是麵包」的範圍裡。用 3.4 節的式子推論（本書沒有逐項量測）：p<sub>y</sub> ≈ 0 時，標籤那一項的權重 p<sub>y</sub> − 1 ≈ −1；Vegetable/Fruit 那一項的權重是它自己的機率 p<sub>VF</sub>。本書事後量了這個前提（程式的標準差、每張圖 500 個樣本、<code>torch.manual_seed(0)</code>）：p(Vegetable/Fruit) 的平均值，10 張裡 8 張是 1.0000，圖 1 是 0.9996、圖 2 是 0.9990，最低的單一樣本也有 0.9693（圖 2）；標籤的平均機率在 10<sup>−6</sup> 到 10<sup>−12</sup> 之間。Vegetable/Fruit 幾乎拿走了全部的機率，所以梯度大約就是 ∂z<sub>VF</sub>/∂x − ∂z<sub>y</sub>/∂x，混合了「什麼讓標籤分數上升」和「什麼讓 Vegetable/Fruit 分數下降」兩件事。</p>
+<p>因此，<strong>圖 3.6 不能解讀成「模型判斷這是 Bread 的依據」</strong>：產生它的 500 個樣本裡，模型沒有一次判斷成 Bread。它顯示的是：在這些被認錯的雜訊圖上，哪些位置的像素對「正確答案的 loss」最敏感。圖上看得到食物的輪廓和紋理，代表梯度確實集中在那些區域，但這和 3.6 節的 saliency map 回答的不是同一個問題。至於這張圖「正確」該怎麼讀，本書沒有答案；能確定的只有它是怎麼算出來的，以及它的前提在這個模型上不成立。換成雜訊小到模型仍然認得出來的標準差（上表大約 0.01 以下），結果會是什麼樣子，3.12 節實測。</p>
+
+<h2 id="variants">3.10　彩色、不 normalize、論文式：三種變體並排</h2>
+<p>本書把 <code>smooth_grad</code> 的兩個地方各改一次，和程式原樣並排。改法：</p>
+<ul>
+  <li><strong>不 normalize</strong>：照第 140 行註解要你試的，把第 139 行換成 <code>smooth = smooth / epoch</code>，只平均、不正規化。</li>
+  <li><strong>論文式標準差</strong>：雜訊的標準差改成 0.4 × 範圍，其餘不變。</li>
+</ul>
+<p>⚠ 三種變體都先 <code>torch.manual_seed(0)</code> 再產生雜訊，所以<strong>和圖 3.6（<code>explain_cnn.py</code> 沒有固定 PyTorch 種子的那一次）不是同一批雜訊</strong>。下圖第二列「程式原樣」和圖 3.6 的下列會有細微差異，比較時要拿同一張圖裡的各列互相比，不要拿第二列去和圖 3.6 逐點比。</p>
+<figure class="fig">
+<img src="img/ch03_smoothgrad_variants.png" alt="四列各 10 格。第一列原圖；第二列是程式原樣的 SmoothGrad，偏暗的彩色輪廓；第三列不 normalize，幾乎全黑只剩隱約輪廓；第四列論文式標準差，比第二列亮、輪廓更模糊">
+<figcaption>圖 3.7 — 第一列原圖；第二列程式原樣（repo: std (0.4/range)^2）；第三列不正規化（no normalize）；第四列論文式標準差（paper: std 0.4*range）。三種變體都用 <code>torch.manual_seed(0)</code>，和圖 3.6 不是同一批雜訊。</figcaption>
+</figure>
+<p><strong>第三列，不 normalize。</strong>幾乎全黑，只剩隱約的輪廓；圖 2 的草莓比較亮。每張圖 500 次平均後的值域：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th></tr></thead>
+<tbody>
+<tr><td>最小值</td><td>2.94e-03</td><td>8.36e-04</td><td>1.25e-03</td><td>1.48e-03</td><td>1.40e-03</td><td>1.91e-03</td><td>1.30e-03</td><td>2.75e-03</td><td>1.38e-03</td><td>1.85e-03</td></tr>
+<tr><td>最大值</td><td>0.259</td><td>0.098</td><td>0.496</td><td>0.162</td><td>0.138</td><td>0.167</td><td>0.176</td><td>0.354</td><td>0.129</td><td>0.208</td></tr>
+</tbody>
+</table></div>
+<p>全部小於 1，所以 <code>imshow</code> 不會截斷任何值（第 1 章 <a href="ch01.html#helpers">1.5 節</a>：彩色圖的浮點數超出 0–1 才會被截斷），只是最大值只有約 0.1–0.5，整張就很暗。值得注意的是，10 張的亮度在同一個數量級：加了雜訊之後，每張的梯度都落在 0.1–1 的量級，不再有 saliency 那種 10<sup>−17</sup> 的差距。這又是 3.9 節的結果：10 張圖在雜訊下都被認錯，loss 都很大，梯度就都不小。</p>
+<p><strong>第四列，論文式標準差。</strong>整體比第二列亮、輪廓更模糊，雜訊大了一倍多，平均出來的圖也更「糊」。圖 2 在兩種標準差下都只有草莓那一小塊是亮的。3.9 節說過，這兩種標準差下模型都 100% 認錯，所以論文式並沒有讓 SmoothGrad 的前提成立。</p>
+<p><strong>第二列為什麼是彩色的。</strong>回到第 138–139 行：SmoothGrad 對三個通道各自累加梯度、一起正規化，沒有像 saliency 那樣對 RGB 取最大值，所以結果是 <code>(3, 128, 128)</code> 的彩色圖，<code>imshow</code> 直接當成 RGB 顯示。某個位置偏紅，代表那裡 R 通道的平均梯度相對比較大；偏綠就是 G 通道。這是本 repo（和原版 notebook）的選擇；投影片第 9 頁附的論文圖則是灰階的。</p>
+
+<h2 id="samples">3.11　取樣次數：1、10、50、500</h2>
+<p>SmoothGrad 的「平均」要平均多少次才夠？本書對圖 0 分別取樣 1、10、50、500 次（同樣是程式的標準差、同樣先 <code>torch.manual_seed(0)</code>）：</p>
+<figure class="fig">
+<img src="img/ch03_smoothgrad_n.png" alt="五格：圖 0 原圖；1 次取樣是一片彩色雜點；10 次開始看得到披薩三角形的輪廓；50 次和 500 次的披薩、刀叉輪廓清楚，500 次最平滑">
+<figcaption>圖 3.8 — 圖 0 取樣 1、10、50、500 次的 SmoothGrad（各自正規化）。1 次看不出形狀，10 次開始浮現輪廓，50 次已經和 500 次相近。</figcaption>
+</figure>
+<p>1 次取樣（等於「加一次雜訊的 saliency」）是一片彩色雜點，看不出形狀；10 次開始看得到披薩三角形與刀叉的輪廓；50 次和 500 次差不多，500 次最平滑。和 500 次的結果逐像素比，平均絕對差是：1 次 0.1563、10 次 0.0585、50 次 0.0257，越多次越接近。</p>
+<p>正規化之前的數值也有同樣的趨勢。本書在另一次量測（和圖 3.8 不是同一批雜訊）裡記錄了圖 0 平均梯度的最大值：1 次 0.902、10 次 0.311、50 次 0.271、500 次 0.256。取樣越多，個別樣本的極端值被平均掉，最大值就往下收斂。這也是 3.9 節開頭「0.256」的出處。</p>
+
+<h2 id="small-noise">3.12　雜訊小到模型認得出來時</h2>
+<p>3.9 節留下一個問題：如果雜訊小到模型仍然判斷正確，SmoothGrad 會畫出什麼？耐受度表上，標準差 0.01 時 10 張圖的正確率是 1.00，單一樣本的 p(Bread) 也還是 1.0000（3.9 節的表）。本書把 <code>smooth_grad</code> 的雜訊標準差直接設成 0.01，其他不變（500 次、CE loss、三通道一起正規化），和程式原樣並排：</p>
+<figure class="fig">
+<img src="img/ch03_smoothgrad_small.png" alt="四列各 10 格。第一列原圖；第二列 saliency.png 的熱圖；第三列程式原樣的 SmoothGrad，偏暗的綠灰色輪廓；第四列標準差 0.01 的 SmoothGrad，很暗、帶彩色雜點，形狀和第二列相近">
+<figcaption>圖 3.9 — 第一列原圖；第二列 saliency map（saliency (repo)，和圖 3.1 下列相同）；第三列程式原樣的 SmoothGrad（repo: std (0.4/range)^2）；第四列雜訊標準差 0.01（std 0.01）。後兩列都先 <code>torch.manual_seed(0)</code>，和圖 3.6 不是同一批雜訊。</figcaption>
+</figure>
+<p>看得到的：第四列很暗，帶著紅綠藍的細碎雜點，不像第三列那樣有清楚、平滑的食物輪廓。它的形狀反而接近第二列的 saliency map：圖 1 奶油塊的方形輪廓（偏綠、比較亮）、圖 2 牛奶壺的弧線、圖 5 荷包蛋的圓。</p>
+<p>用數字確認：把兩種 SmoothGrad 都對 RGB 取最大值、各自正規化，再和 saliency map 逐像素算相關係數（3.6 節用過的 Pearson）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th></tr></thead>
+<tbody>
+<tr><td>標準差 0.01 vs saliency</td><td>0.937</td><td>0.446</td><td>0.932</td><td>0.736</td><td>0.959</td><td>0.925</td><td>0.953</td><td>0.939</td><td>0.857</td><td>0.909</td></tr>
+<tr><td>程式原樣 vs saliency</td><td>0.176</td><td>0.363</td><td>0.377</td><td>0.357</td><td>0.502</td><td>0.485</td><td>0.379</td><td>0.300</td><td>0.429</td><td>0.298</td></tr>
+</tbody>
+</table></div>
+<p>標準差 0.01 時，10 張裡有 8 張和 saliency map 的相關係數在 0.85 以上；程式原樣的 SmoothGrad 和 saliency map 只有 0.18–0.50。也就是說：雜訊小到模型還認得出來時，SmoothGrad 畫出來的大致就是 saliency map 本身（再平滑一點）；程式用的雜訊畫出的那張「好看」的圖，和 saliency map 是很不一樣的東西，這和 3.9 節「樣本全被認錯」的結論一致。</p>
+<p>這不代表標準差 0.01 才是「正確」的設定：雜訊這麼小，平均掉雜點的效果也有限（第四列仍然很碎）。論文的建議範圍是對別的模型量出來的；這個只看過乾淨圖片的模型，承受不了能讓熱圖變平滑的雜訊量。本書只呈現這個取捨，不判定該選哪一個。</p>
+
+<div class="note"><h4>現在的做法</h4>
+<ul>
+  <li><strong>只對輸入取梯度</strong>：用 <code>torch.autograd.grad(loss, x)</code> 直接拿到輸入的梯度，不會寫進權重的 <code>.grad</code>；或者先把模型參數的 <code>requires_grad</code> 關掉。這樣就不必擔心本章看到的權重梯度累加。</li>
+  <li><strong>固定 PyTorch 的種子</strong>：SmoothGrad 用 PyTorch 產生雜訊，要可重現就在呼叫前 <code>torch.manual_seed(...)</code>，光設 <code>np.random.seed</code> 管不到它。</li>
+  <li><strong>雜訊大小用標準差直接指定</strong>，並先確認模型在這個雜訊下還認得出原圖（本章的耐受度表就是一個簡單的檢查）。</li>
+  <li><strong>一次送一批樣本</strong>：500 個雜訊樣本可以疊成幾個批次一起 forward/backward，不必一張一張跑；CE loss 用 <code>reduction='sum'</code> 就不會被批次平均縮小。</li>
+  <li><strong>用現成的工具</strong>：目錄頁<a href="index.html#now">〈先說在前面〉</a>提到的 Captum 有 <code>Saliency</code>（對指定類別 <code>target</code> 的輸出取梯度，也就是 3.6 節的 logit 版）與 <code>NoiseTunnel</code>（包在任何解釋方法外面，Captum 把這類方法稱為 attribution，歸因；<code>nt_type='smoothgrad'</code>，雜訊大小由 <code>stdevs</code> 直接給標準差）。</li>
+</ul>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>Saliency map 用和訓練相同的 forward + backward，但讀的是<strong>輸入圖片</strong>的 <code>.grad</code>，不是權重的。程式取絕對值、對 RGB 取最大值、每張圖各自 normalize，用 <code>hot</code> 色表畫。</li>
+  <li>程式對 CE loss 取梯度：∂L/∂x ＝ Σ<sub>j</sub> (p<sub>j</sub> − 1[j = y]) ∂z<sub>j</sub>/∂x。模型幾乎 100% 確定，權重全部接近 0：10 張的平均 loss 0.000139，梯度最大值從 3.75 × 10<sup>−4</sup>（圖 2）到 1.52 × 10<sup>−17</sup>（圖 6），大致跟著 1 − p 走。</li>
+  <li>10 張一起正規化的話只有圖 2 看得見，其他 9 張全黑；各自正規化保留每張圖內部的相對高低，但不同圖之間的亮度不能比。</li>
+  <li>投影片說「output category 的梯度」。改成對標籤 logit 取梯度，最大值變成 1.25–4.90，熱圖形狀和 loss 版相近（相關係數 0.637–0.974）。兩者是不同的量，回答不同的問題。</li>
+  <li>SmoothGrad 每張圖取樣 500 次、一次一張，整段 24.1 秒。雜訊標準差是 (0.4 ÷ 範圍)²（<code>normal_</code> 的第二個參數是標準差），論文是 0.4 × 範圍；這 10 張圖上約為論文的 40%。</li>
+  <li>不論哪一種標準差，10 張圖的 500 個雜訊樣本全部被判成 Vegetable/Fruit（模型在標準差 0.1 時正確率就只剩 0.01）。「加雜訊後梯度大了好幾個數量級」是因為樣本全被認錯、CE loss 約 30，所以 SmoothGrad 的圖不能讀成「模型判斷標籤的依據」。</li>
+  <li>SmoothGrad 保留三個通道、一起正規化，所以結果是彩色的；不 normalize 時最大值只有約 0.1–0.5，整張很暗但沒有被截斷。取樣 50 次已經和 500 次相近。</li>
+  <li>雜訊標準差改成 0.01（模型仍 100% 判對）時，SmoothGrad 和 saliency map 的相關係數 10 張裡有 8 張在 0.85 以上；程式原樣只有 0.18–0.50。程式用的雜訊畫出的圖，和 saliency map 是不同的東西。</li>
+  <li>兩個函式都沒有 <code>model.zero_grad()</code>，權重梯度會累加（不影響熱圖）；<code>smoothgrad.png</code> 每次重跑都不同，因為沒有固定 PyTorch 的種子。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 把第 95 行改成 <code>saliencies = normalize(saliencies)</code>（10 張一起正規化），<code>saliency.png</code> 的下列會變成什麼樣子？為什麼？</summary>
+<p>只有圖 2 看得到熱點（牛奶壺左側的輪廓），其他 9 張全黑（圖 3.4 第三列）。一起正規化時，整批最大的值是圖 2 的梯度，變成 1；其他圖的梯度至少小兩個數量級，正規化後最亮的也只有 0.004（圖 7），在 <code>hot</code> 色表上是黑的。圖 2 是唯一 p(標籤) 不到 1.0000 的圖（0.9986），CE loss 的梯度由 1 − p 決定，所以它的梯度遠大於其他圖。</p></details>
+<details class="quiz"><summary>2. 圖 6 的 p(標籤) 在 float32 裡剛好是 1，照「p<sub>y</sub> − 1」算，梯度應該是 0。為什麼實測仍有 1.52 × 10<sup>−17</sup>？</summary>
+<p>梯度不只來自標籤那一項，而是 11 項 (p<sub>j</sub> − 1[j = y]) ∂z<sub>j</sub>/∂x 的加總。p<sub>y</sub> 顯示成 1，不代表其他類別的 p<sub>j</sub> 剛好是 0；它們可以是非零的極小值，小到加進 p<sub>y</sub> 時被 float32 的精度吃掉，但在梯度的加總裡仍留下一點點。本書事後印出圖 6 其他 10 類的 p<sub>j</sub>：加總 3.4 × 10<sup>−17</sup>，不是 0，量級和梯度最大值 1.5 × 10<sup>−17</sup> 相近（3.4 節）。</p></details>
+<details class="quiz"><summary>3. 同學說：「SmoothGrad 的雜訊太小了，改成論文的 0.4 × 範圍，模型就會在原圖附近取樣，熱圖才有意義。」這句話哪裡不對？</summary>
+<p>方向反了。程式的標準差（約 0.16）已經讓 10 張圖的 500 個樣本全部被判成 Vegetable/Fruit；論文式（約 0.4）更大，實測同樣 100% 被判成 Vegetable/Fruit。這個模型在標準差 0.1 時正確率就只剩 0.01。要讓樣本留在「模型仍然認得出原圖」的範圍，雜訊要更小（耐受度表上大約 0.01 以下），而不是更大。論文式的雜訊在其他模型上可能合適，但在這個只看過乾淨圖片的模型上不合適。</p></details>
+<details class="quiz"><summary>4. 照第 140 行的註解，把第 139 行換成 <code>smooth = smooth / epoch</code>（不 normalize），<code>smoothgrad.png</code> 會整張變白（被截斷）還是變暗？</summary>
+<p>變暗。500 次平均後每張圖的值域大約是 10<sup>−3</sup> 到 0.1–0.5（圖 2 最大 0.496），全部小於 1，<code>imshow</code> 不會截斷任何值；但最大值離 1 很遠，整張就很暗，只剩隱約的輪廓（圖 3.7 第三列）。而且 10 張的亮度差不多，因為加了雜訊之後每張的梯度都在同一個數量級。</p></details>
+<details class="quiz"><summary>5. 為什麼 <code>saliency.png</code> 的熱圖是黑紅黃的，<code>smoothgrad.png</code> 卻是彩色的？</summary>
+<p><code>compute_saliency_maps</code> 第 92 行用 <code>torch.max(..., dim=1)</code> 對 R、G、B 取最大值，每張熱圖只剩一個通道 <code>(128, 128)</code>，<code>imshow</code> 收到二維陣列就套用第 109 行指定的 <code>plt.cm.hot</code> 色表。<code>smooth_grad</code> 第 138 行保留了三個通道，第 139 行三個通道一起正規化，第 153 行轉成 <code>(128, 128, 3)</code> 給 <code>imshow</code>，三維陣列被當成 RGB 彩色圖，不套色表。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://arxiv.org/abs/1312.6034">Simonyan, Vedaldi, Zisserman, 2013, Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps</a>：saliency map 的經典論文，對類別分數（而不是 loss）取輸入的梯度，對 RGB 取最大絕對值。</li>
+  <li><a href="https://arxiv.org/abs/1706.03825">Smilkov, Thorat, Kim, Viégas, Wattenberg, 2017, SmoothGrad: removing noise by adding noise</a>：SmoothGrad 的原始論文（<code>explain_cnn.py</code> 第 117 行與投影片第 9 頁附的網址），雜訊程度的定義與不同雜訊程度的比較圖都在裡面。</li>
+  <li><a href="https://pytorch.org/docs/stable/autograd.html">PyTorch — torch.autograd</a>：<code>requires_grad</code>、<code>backward</code>、<code>.grad</code> 的累加規則，以及 <code>torch.autograd.grad</code>。</li>
+  <li><a href="https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html">PyTorch — CrossEntropyLoss</a>：輸入是 logits、內部含 log-softmax、<code>reduction</code> 預設 <code>'mean'</code>。</li>
+  <li><a href="https://pytorch.org/docs/stable/generated/torch.Tensor.normal_.html">PyTorch — Tensor.normal_</a>：參數是 <code>mean</code> 與 <code>std</code>（標準差）。</li>
+  <li><a href="https://captum.ai/api/noise_tunnel.html">Captum — NoiseTunnel</a>：現成的 SmoothGrad 實作，<code>stdevs</code> 參數直接指定雜訊的標準差。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch02.html">← 第 2 章</a><a href="ch04.html">第 4 章 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW09 讀碼教材 · 對應 commit b2dbe4c · 程式碼引用取自本 repo 的 HW09/；實測輸出取自 2026-10-03／04 本機執行</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>
