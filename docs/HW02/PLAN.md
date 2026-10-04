@@ -2,14 +2,12 @@
 
 HW02（phoneme classification，LibriSpeech 音框分類）的 HTML 教材還沒開始寫。流程照 [docs/TEXTBOOK_WORKFLOW.md](../TEXTBOOK_WORKFLOW.md)，這份檔案只記 HW02 特有的事。開始寫之後，量到的數字放在同一個目錄的 `FACTS.md`。
 
-## 狀態（2026-10-04）
+## 狀態（2026-10-05）
 
-- Phase 0 完成：大綱 `outline.html`（ch00–ch07 + appendix）使用者已核可；驗證指標沒有偏差（印出 0.642 = 整個驗證集一次算完 0.641955，見 FACTS「驗證指標檢查」）。
-- 使用者的決定：用新版共用樣式；事實一次量完；ch07 用同一套縮小規格（batch 64 × 5 epoch）並排比，另附一次原規格 20 epoch 的完整紀錄。
-- Phase 1：style/enhance、FACTS.md、`docs/tools/hw02_exp.py`（已驗證與 train.py 逐位一致）、`hw02_facts.py`、`hw02_run_grid.sh` + `hw02_ch07_runs.txt` 已建立。
-- 進行中：原規格 baseline（20 epoch，約 4–5 小時）與 ch07 實驗清單在本機背景執行；跑完補進 FACTS 的「執行實測」「ch07 實測」，以及峰值 RSS、predict.py 的時間與輸出。
-- 已量完（2026-10-04）：原規格 baseline、predict.py、ch07 的 9 組 DNN 與雙向 LSTM。還沒跑（等使用者放行）：lstm_3layers、lstm_lossmid、無干擾的 1 epoch 計時。
-- **使用者 2026-10-04 決定：HW02 不再寫雲端 prompt**（不走 TEXTBOOK_WORKFLOW 的雲端分工）。章節怎麼寫等使用者指示。
+- **全書完成**：index、outline、ch00–ch07、appendix，由本機 session 依序撰寫（使用者 2026-10-04 決定 HW02 不走雲端；這個 session 暫停冷讀，所以各章**沒有冷讀**，日後要補可以逐章跑 cold-read skill）。
+- 驗收（2026-10-05）：11 頁 verify_book.py 全過、站內錨點全部存在、check_links 只報跨書連結（../HW01、../HW09，檔案實際存在）與 ch00 回指 outline（同 HW09 的寫法）、每頁一組內嵌 style/js、無 TODO。
+- 實測全部在 FACTS.md；實驗原始資料 `docs/tools/hw02_ch07_runs.jsonl`。圖表用 dataviz 驗證過的配色，SVG 用 PyMuPDF 渲染目視檢查過。
+- 使用者的決定：新版共用樣式；事實一次量完；ch07 縮小規格（batch 64 × 5 epoch）；不寫雲端 prompt。
 
 ## Phase 0 要做的事
 

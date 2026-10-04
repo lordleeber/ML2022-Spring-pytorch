@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>附錄　名詞對照與速查 — HW02 音素分類</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW02 讀碼教材</p>
+  <h1>附錄　名詞對照與速查</h1>
+  <p class="chap-lead">讀完全書之後查東西用的一頁：名詞、超參數、函式、指令、每一步的形狀、關鍵數字，以及讀程式時整理出的 repo 問題。每一項都附上它第一次被詳細說明的章節。</p>
+</header>
+<main>
+
+<h2 id="glossary">A.1　名詞對照</h2>
+
+<h3>任務與評估</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>中文</th><th>英文</th><th>一句話</th><th>章</th></tr></thead>
+<tbody>
+<tr><td>音素</td><td>phoneme</td><td>能區分意思的最小聲音單位；本作業有 41 類，以 0–40 表示，沒有名稱對照</td><td><a href="ch00.html#task">0</a></td></tr>
+<tr><td>音框</td><td>frame</td><td>切成一小段的聲音；每格 25 ms、39 個數字</td><td><a href="ch00.html#task">0</a></td></tr>
+<tr><td>逐音框分類</td><td>framewise classification</td><td>每一格各自猜一個音素</td><td><a href="ch00.html#task">0</a></td></tr>
+<tr><td>準確率</td><td>accuracy</td><td>答對的格數 ÷ 總格數；本作業的評估指標</td><td><a href="ch00.html#task">0</a></td></tr>
+<tr><td>多數類別基準</td><td>majority-class baseline</td><td>永遠猜最多的那一類；驗證集上是 0.177261</td><td><a href="ch01.html#classes">1</a></td></tr>
+<tr><td>基準線</td><td>baseline（Kaggle public）</td><td>投影片上的四條分數線：simple／medium／strong／boss</td><td><a href="ch00.html#baselines">0</a></td></tr>
+<tr><td>驗證集</td><td>validation set</td><td>從訓練資料切出來、不參與訓練、用來挑 epoch 的那一份</td><td><a href="ch01.html#split">1</a></td></tr>
+<tr><td>過擬合</td><td>overfitting</td><td>訓練集越來越好、驗證集停住或變差</td><td><a href="ch05.html#curve">5</a></td></tr>
+<tr><td>欠擬合</td><td>underfitting</td><td>還沒學夠；驗證 loss 仍在下降</td><td><a href="ch07.html#q2">7</a></td></tr>
+<tr><td>提前停止</td><td>early stopping</td><td>驗證指標連續幾個 epoch 沒進步就停；本 repo 沒有</td><td><a href="ch05.html#curve">5</a></td></tr>
+<tr><td>混淆</td><td>confusion</td><td>「真的是 A 類，被猜成 B 類」的統計</td><td><a href="ch06.html#csv">6</a></td></tr>
+</tbody>
+</table></div>
+
+<h3>資料與前處理</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>中文</th><th>英文</th><th>一句話</th><th>章</th></tr></thead>
+<tbody>
+<tr><td>梅爾倒頻譜係數</td><td>MFCC</td><td>從一格聲音算出的特徵，這份資料每格 39 維</td><td><a href="ch00.html#task">0</a></td></tr>
+<tr><td>倒頻譜平均與變異正規化</td><td>CMVN</td><td>每一維減平均、除以標準差；這份資料逐句做過</td><td><a href="ch01.html#pt">1</a></td></tr>
+<tr><td>句</td><td>utterance</td><td>一段錄音，一個 <code>.pt</code> 檔；id 格式「說話者-章節-句號」</td><td><a href="ch01.html#files">1</a></td></tr>
+<tr><td>段</td><td>segment</td><td>標籤裡連續相同的一段；中位數 7 格</td><td><a href="ch01.html#segments">1</a></td></tr>
+<tr><td>音框位移</td><td>frame shift</td><td>相鄰兩格的時間間隔；投影片沒有給，所以無法把格數換算成秒</td><td><a href="ch01.html#segments">1</a></td></tr>
+<tr><td>拼接</td><td>concatenation（<code>concat_feat</code>）</td><td>把每一格和前後各 5 格接成一列 429 個數字</td><td><a href="ch02.html#concat">2</a></td></tr>
+<tr><td>位移</td><td><code>shift</code></td><td>整句挪 n 格，空出來的位置用邊界那一格補</td><td><a href="ch02.html#shift">2</a></td></tr>
+<tr><td>資料洩漏</td><td>leakage</td><td>驗證資料的資訊混進訓練；按格隨機切會發生，所以以句為單位切</td><td><a href="ch01.html#split">1</a></td></tr>
+</tbody>
+</table></div>
+
+<h3>PyTorch 的 tensor 與資料</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>名詞</th><th>一句話</th><th>章</th></tr></thead>
+<tbody>
+<tr><td><code>view</code></td><td>不搬資料，換一種方式解讀同一串數字；只能用在連續排列的 tensor 上</td><td><a href="ch03.html#view">3</a></td></tr>
+<tr><td><code>permute</code></td><td>對調維度的順序；不搬資料，結果通常不是 contiguous</td><td><a href="ch02.html#step1">2</a></td></tr>
+<tr><td>contiguous</td><td>在記憶體裡是一般的由左到右連續排列</td><td><a href="ch02.html#step1">2</a></td></tr>
+<tr><td>storage</td><td>tensor 底下真正存資料的那塊記憶體；切片共用同一塊</td><td><a href="ch02.html#memory">2</a></td></tr>
+<tr><td><code>repeat</code></td><td>沿著各維複製；<code>concat_feat</code> 的第一步</td><td><a href="ch02.html#step1">2</a></td></tr>
+<tr><td><code>Dataset</code></td><td>提供 <code>__len__</code> 與 <code>__getitem__</code> 的物件；本 repo 的一筆是一格</td><td><a href="ch03.html#dataset">3</a></td></tr>
+<tr><td><code>DataLoader</code></td><td>決定順序、每次取 batch_size 筆、疊成一個 batch</td><td><a href="ch03.html#loader">3</a></td></tr>
+<tr><td>collate</td><td>把 64 個 (429,) 疊成 (64, 429) 的那一步</td><td><a href="ch03.html#loader">3</a></td></tr>
+<tr><td><code>drop_last</code></td><td>要不要丟掉不滿一批的最後一批；預設不丟</td><td><a href="ch03.html#dataset">3</a></td></tr>
+<tr><td><code>TensorDataset</code></td><td>PyTorch 內建、等同有標籤時的 <code>LibriDataset</code></td><td><a href="ch03.html#dataset">3</a></td></tr>
+</tbody>
+</table></div>
+
+<h3>模型</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>中文</th><th>英文</th><th>一句話</th><th>章</th></tr></thead>
+<tbody>
+<tr><td>循環神經網路</td><td>RNN</td><td>一步一步讀序列，同一套權重重複使用</td><td><a href="ch04.html#lstm">4</a></td></tr>
+<tr><td>長短期記憶</td><td>LSTM</td><td>每步帶著 <em>h</em> 與 <em>c</em> 的 RNN，用四組閘控制記憶</td><td><a href="ch04.html#lstm">4</a></td></tr>
+<tr><td>隱藏狀態</td><td>hidden state <em>h</em></td><td>每一步的輸出；<code>lstm_out</code> 存的就是它</td><td><a href="ch04.html#lstm">4</a></td></tr>
+<tr><td>記憶單元</td><td>cell state <em>c</em></td><td>比較長期的記憶，只被部分遺忘、部分寫入</td><td><a href="ch04.html#lstm">4</a></td></tr>
+<tr><td>閘</td><td>gate（i, f, g, o）</td><td>輸入閘、遺忘閘、候選內容、輸出閘；權重疊起來存，所以是 4 × 512 = 2048 列</td><td><a href="ch04.html#lstm">4</a></td></tr>
+<tr><td>單向／因果</td><td>unidirectional／causal</td><td>輸出只依賴現在與過去；中間格看不到後 5 格</td><td><a href="ch04.html#causal">4</a></td></tr>
+<tr><td>雙向</td><td>bidirectional</td><td>多一組從右往左讀的 LSTM，輸出變成 2 × 512 維</td><td><a href="ch04.html#positions">4</a></td></tr>
+<tr><td><code>batch_first</code></td><td>—</td><td>讓 LSTM 把輸入的第 1 維當成時間步</td><td><a href="ch03.html#lstm-input">3</a></td></tr>
+<tr><td>全連接層</td><td>Linear</td><td>只作用在最後一維；本 repo 對 11 步各套用一次</td><td><a href="ch04.html#forward">4</a></td></tr>
+<tr><td>logits</td><td>—</td><td>還沒經過 softmax 的分數；最大的那一類是答案</td><td><a href="ch00.html#parts">0</a></td></tr>
+<tr><td>dropout</td><td>—</td><td>訓練時隨機把一部分數值設成 0；LSTM 的層間共 9 處</td><td><a href="ch04.html#stack">4</a></td></tr>
+<tr><td>批次正規化</td><td>BatchNorm</td><td>把每個維度在一個 batch 內正規化；第 7 章的 DNN 實驗用過</td><td><a href="ch07.html#step-bn">7</a></td></tr>
+<tr><td>全連接網路</td><td>DNN（<code>model_dnn.py</code>）</td><td>原版範例程式的模型，本 repo 沒有使用</td><td><a href="ch04.html#dnn">4</a></td></tr>
+</tbody>
+</table></div>
+
+<h3>訓練與環境</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>名詞</th><th>一句話</th><th>章</th></tr></thead>
+<tbody>
+<tr><td><code>CrossEntropyLoss</code></td><td>分類的標準 loss；本 repo 把 704 組（64 × 11）一起算平均</td><td><a href="ch05.html#loss">5</a></td></tr>
+<tr><td>AdamW</td><td>Adam 加上分開處理的 weight decay（預設 0.01）</td><td><a href="ch05.html#setup">5</a></td></tr>
+<tr><td>epoch</td><td>把訓練集全部看過一遍；本 repo 一個 epoch 是 37,182 個 batch</td><td><a href="ch03.html#loader">3</a></td></tr>
+<tr><td><code>state_dict</code></td><td>「參數名稱 → tensor」的字典；<code>model.ckpt</code> 存的就是它</td><td><a href="ch05.html#val">5</a></td></tr>
+<tr><td>種子</td><td>seed</td><td>固定亂數；<code>same_seeds(0)</code> 讓訓練可以逐位元組重現</td><td><a href="ch05.html#seed">5</a></td></tr>
+<tr><td>cuDNN</td><td>NVIDIA 的深度學習函式庫；<code>deterministic=True</code> 要求確定性的演算法</td><td><a href="ch05.html#seed">5</a></td></tr>
+<tr><td>RSS</td><td>resident set size，行程實際佔用的實體記憶體</td><td><a href="ch02.html#memory">2</a></td></tr>
+<tr><td>overcommit</td><td>作業系統先答應配置、用到才真的給；預先配置 5.15 GB 卻只用 6 GB 的原因</td><td><a href="ch02.html#memory">2</a></td></tr>
+<tr><td>stdout／stderr</td><td>程式的兩條輸出管道；tqdm 進度條走 stderr</td><td><a href="ch00.html#run">0</a></td></tr>
+<tr><td>wall clock</td><td>牆上時鐘實際經過的時間</td><td><a href="ch00.html#run">0</a></td></tr>
+</tbody>
+</table></div>
+
+<h2 id="hparams">A.2　超參數速查（config.py）</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>名稱</th><th>本 repo</th><th>原版範例程式</th><th>有沒有作用</th><th>章</th></tr></thead>
+<tbody>
+<tr><td><code>concat_nframes</code></td><td>11</td><td>1</td><td>有：拼幾格（必須是奇數）</td><td><a href="ch02.html">2</a></td></tr>
+<tr><td><code>train_ratio</code></td><td>0.9</td><td>0.8</td><td>有：蓋掉 <code>preprocess_data</code> 的預設 0.8</td><td><a href="ch01.html#split">1</a></td></tr>
+<tr><td><code>seed</code></td><td>0</td><td>0</td><td>有：<code>same_seeds</code></td><td><a href="ch05.html#seed">5</a></td></tr>
+<tr><td><code>batch_size</code></td><td>64</td><td>512</td><td>有</td><td><a href="ch03.html#loader">3</a></td></tr>
+<tr><td><code>num_epoch</code></td><td>20</td><td>5</td><td>有</td><td><a href="ch05.html#curve">5</a></td></tr>
+<tr><td><code>learning_rate</code></td><td>0.0001</td><td>0.0001</td><td>有：AdamW 的 lr</td><td><a href="ch05.html#setup">5</a></td></tr>
+<tr><td><code>model_path</code></td><td><code>./model.ckpt</code></td><td>同左</td><td>有</td><td><a href="ch05.html#val">5</a></td></tr>
+<tr><td><code>input_dim</code></td><td>429（39 × 11）</td><td>39</td><td><b class="hl-bad">沒有</b>：<code>model.py</code> 寫死 39</td><td><a href="ch04.html#unused">4</a></td></tr>
+<tr><td><code>input_dim_lstm</code></td><td>39</td><td>（沒有這個名字）</td><td>有：<code>train.py</code>／<code>predict.py</code> 的 <code>view</code></td><td><a href="ch03.html#view">3</a></td></tr>
+<tr><td><code>hidden_layers</code></td><td>1</td><td>1</td><td><b class="hl-bad">沒有</b>：<code>model.py</code> 寫死 10 層</td><td><a href="ch04.html#unused">4</a></td></tr>
+<tr><td><code>hidden_dim</code></td><td>512</td><td>256</td><td>有：LSTM 的 hidden 大小</td><td><a href="ch04.html#unused">4</a></td></tr>
+</tbody>
+</table></div>
+
+<h2 id="functions">A.3　函式速查</h2>
+<h3>repo 裡的函式與類別</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>名稱</th><th>位置</th><th>做什麼</th><th>章</th></tr></thead>
+<tbody>
+<tr><td><code>load_feat(path)</code></td><td><code>utils.py:8</code></td><td><code>torch.load</code> 一個 <code>.pt</code>，回傳 (T, 39)</td><td><a href="ch01.html#pt">1</a></td></tr>
+<tr><td><code>shift(x, n)</code></td><td><code>utils.py:13</code></td><td>整句挪 n 格，邊界補值</td><td><a href="ch02.html#shift">2</a></td></tr>
+<tr><td><code>concat_feat(x, concat_n)</code></td><td><code>utils.py:27</code></td><td>(T, D) → (T, concat_n × D)，每列是前後各 k 格</td><td><a href="ch02.html#concat">2</a></td></tr>
+<tr><td><code>preprocess_data(split, …)</code></td><td><code>utils.py:42</code></td><td>讀標籤、切 train/val、逐句讀檔拼接、疊成大 tensor</td><td><a href="ch01.html#labels">1</a>、<a href="ch02.html#stack">2</a></td></tr>
+<tr><td><code>same_seeds(seed)</code></td><td><code>utils.py:107</code></td><td>固定亂數、cuDNN 確定性</td><td><a href="ch05.html#seed">5</a></td></tr>
+<tr><td><code>LibriDataset</code></td><td><code>data_loader.py:6</code></td><td>一筆 = 一格的特徵（與 11 個標籤）</td><td><a href="ch03.html#dataset">3</a></td></tr>
+<tr><td><code>Classifier</code>（LSTM）</td><td><code>model.py:4</code></td><td>10 層單向 LSTM + <code>Linear(512, 41)</code>，<code>train.py</code>／<code>predict.py</code> 用的就是它</td><td><a href="ch04.html#code">4</a></td></tr>
+<tr><td><code>BasicBlock</code>、<code>Classifier</code>（DNN）</td><td><code>model_dnn.py:4</code>、<code>:18</code></td><td>原版範例程式的全連接網路，沒有被 import</td><td><a href="ch04.html#dnn">4</a></td></tr>
+</tbody>
+</table></div>
+
+<h3>書中用到的 PyTorch／NumPy API</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>API</th><th>在哪裡用到</th><th>章</th></tr></thead>
+<tbody>
+<tr><td><code>torch.load</code>／<code>torch.save</code></td><td>讀 <code>.pt</code>、存讀 checkpoint</td><td><a href="ch01.html#pt">1</a>、<a href="ch05.html#val">5</a></td></tr>
+<tr><td><code>Tensor.repeat</code>、<code>view</code>、<code>permute</code>、<code>torch.cat</code></td><td><code>concat_feat</code>、<code>shift</code></td><td><a href="ch02.html">2</a></td></tr>
+<tr><td><code>torch.empty</code>、<code>untyped_storage().nbytes()</code></td><td>預先配置與記憶體量測</td><td><a href="ch02.html#memory">2</a></td></tr>
+<tr><td><code>nn.LSTM</code>、<code>nn.Linear</code></td><td><code>model.py</code></td><td><a href="ch04.html">4</a></td></tr>
+<tr><td><code>nn.CrossEntropyLoss</code>、<code>torch.optim.AdamW</code></td><td><code>train.py:40-41</code></td><td><a href="ch05.html#setup">5</a></td></tr>
+<tr><td><code>model.train()</code>／<code>model.eval()</code>、<code>torch.no_grad()</code></td><td>訓練／驗證／預測</td><td><a href="ch05.html#val">5</a></td></tr>
+<tr><td><code>torch.max(outputs, 1)</code></td><td>取分數最大的類別</td><td><a href="ch05.html#acc">5</a></td></tr>
+<tr><td><code>load_state_dict</code></td><td><code>predict.py:26</code></td><td><a href="ch06.html#load">6</a></td></tr>
+<tr><td><code>np.concatenate</code></td><td><code>predict.py:46</code>（逐批累加）</td><td><a href="ch06.html#predict">6</a></td></tr>
+<tr><td><code>random.seed</code>、<code>random.shuffle</code>（Python）</td><td>切 train/val</td><td><a href="ch01.html#split">1</a></td></tr>
+</tbody>
+</table></div>
+
+<h2 id="commands">A.4　指令速查</h2>
+<p>除非另外註明，都在 <code>HW02/</code> 裡執行。</p>
+<h3>訓練與預測（第 0 章）</h3>
+<pre class="shell cmd"><code>$ cd HW02
+$ ../.venv/bin/python train.py      # 20 個 epoch；無干擾時約 7 分鐘一個 epoch
+$ ../.venv/bin/python predict.py    # 約 27 秒，寫出 prediction.csv</code></pre>
+<h3>看資料（第 1 章）</h3>
+<pre class="shell cmd"><code>$ ls libriphone libriphone/feat
+$ ls libriphone/feat/train | wc -l            # 4286
+$ wc -l libriphone/*.txt                      # split 檔會少算一行
+$ head -c 200 libriphone/train_labels.txt</code></pre>
+<h3>本書的實驗工具（第 7 章）</h3>
+<pre class="shell cmd"><code>$ PYTHONPATH=. ../.venv/bin/python ../docs/tools/hw02_exp.py --name check --epochs 1          # = train.py 的第 1 個 epoch
+$ PYTHONPATH=. ../.venv/bin/python ../docs/tools/hw02_exp.py --name bilstm --arch bilstm --epochs 5
+$ cd .. &amp;&amp; docs/tools/hw02_run_grid.sh docs/tools/hw02_ch07_runs.txt /tmp/hw02_ch07/runs.jsonl 1</code></pre>
+<p><code>hw02_exp.py</code> 不寫任何檔案（除非給 <code>--save</code>），不會動到 <code>model.ckpt</code> 和 <code>prediction.csv</code>。資料與模型的實測（唯讀）：<code>PYTHONPATH=. ../.venv/bin/python ../docs/tools/hw02_facts.py [env data split concat memory shapes model ckpt]</code>。</p>
+<h3>還原被追蹤的 prediction.csv（第 6 章）</h3>
+<pre class="shell cmd"><code>$ git status HW02/prediction.csv
+$ git checkout HW02/prediction.csv</code></pre>
+<h3>反例：在 repo 根目錄執行（第 0 章）</h3>
+<pre class="shell"><code>$ .venv/bin/python HW02/train.py
+…
+FileNotFoundError: [Errno 2] No such file or directory: './libriphone/train_labels.txt'</code></pre>
+
+<h2 id="shapes">A.5　形狀速查</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>東西</th><th>形狀</th><th>型別</th><th>在哪裡</th></tr></thead>
+<tbody>
+<tr><td>一句的特徵（<code>.pt</code>）</td><td>(T, 39)，T 為 139–998</td><td>float32</td><td><code>load_feat</code></td></tr>
+<tr><td>一句拼接後</td><td>(T, 429)</td><td>float32</td><td><code>concat_feat(feat, 11)</code></td></tr>
+<tr><td>一句的標籤拼接後</td><td>(T, 11)</td><td>int64</td><td><code>utils.py:82-84</code></td></tr>
+<tr><td>訓練集 X／y</td><td>(2379588, 429)／(2379588, 11)</td><td>float32／int64</td><td><code>preprocess_data('train')</code></td></tr>
+<tr><td>驗證集 X／y</td><td>(264570, 429)／(264570, 11)</td><td>float32／int64</td><td><code>preprocess_data('val')</code></td></tr>
+<tr><td>測試集 X</td><td>(646268, 429)</td><td>float32</td><td><code>preprocess_data('test')</code></td></tr>
+<tr><td>一筆（<code>dataset[i]</code>）</td><td>(429,) 與 (11,)</td><td></td><td><code>LibriDataset</code></td></tr>
+<tr><td>一個 batch</td><td>(64, 429) 與 (64, 11)</td><td></td><td><code>DataLoader</code></td></tr>
+<tr><td>送進 LSTM</td><td>(64, 11, 39)</td><td></td><td><code>train.py:58</code></td></tr>
+<tr><td><code>lstm_out</code></td><td>(64, 11, 512)，不是 contiguous</td><td></td><td><code>model.py:22</code></td></tr>
+<tr><td><code>h_n</code>、<code>h_c</code></td><td>(10, 64, 512)</td><td></td><td><code>model.py:22</code>（沒有使用）</td></tr>
+<tr><td>模型輸出</td><td>(64, 11, 41)</td><td></td><td><code>model.py:28</code></td></tr>
+<tr><td>算 loss 時</td><td>(704, 41) 與 (704,)</td><td></td><td><code>train.py:63-64</code></td></tr>
+<tr><td>算準確率時</td><td>(64, 41) → (64,)</td><td></td><td><code>train.py:71-75</code></td></tr>
+<tr><td>雙向 LSTM 每步輸出</td><td>(64, 11, 1024)</td><td></td><td>第 4、7 章的實驗</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="numbers">A.6　關鍵數字一覽</h2>
+<h3>資料（第 1 章）</h3>
+<ul>
+  <li>訓練＋驗證 4,286 句、2,644,158 格；測試 1,078 句、646,268 格。投影片寫 4268 句，是筆誤。</li>
+  <li>訓練集 3,857 句、2,379,588 格；驗證集 429 句、264,570 格（種子 1337、比例 0.9）。說話者：訓練 250、驗證 184、測試 231，驗證與測試的說話者全部出現在訓練資料裡。</li>
+  <li>41 類：第 0 類 17.42%（驗證集 17.7261%），最少的第 20 類 0.05%。一段音素中位數 7 格，73.12% 的段短於 11 格。</li>
+</ul>
+<h3>模型與記憶體（第 0、2、4 章）</h3>
+<ul>
+  <li>參數 20,064,809：第 0 層 1,132,544、第 1–9 層各 2,101,248、Linear 21,033。<code>model.ckpt</code> 80,264,975 bytes。</li>
+  <li>原版 DNN 86,569；<code>model_dnn.py</code> 套本 repo 設定 503,849；雙向 LSTM 59,003,945；3 層 LSTM 5,356,073。</li>
+  <li>預先配置 3,000,000 × 429 float32 = 5,148,000,000 bytes；<code>train.py</code> 峰值 RSS 約 6.0 GB，<code>predict.py</code> 約 2.1 GB。</li>
+</ul>
+<h3>訓練與預測（第 0、5、6 章）</h3>
+<ul>
+  <li>每個 epoch 37,182 批（最後一批 4 筆）；驗證 4,134 批（58 筆）；測試 10,098 批（60 筆）。</li>
+  <li>無干擾的 1 個 epoch：7 分 8.80 秒（訓練 6 分 51 秒、驗證 11 秒）；20 個 epoch 有干擾時實測 3 小時 4 分 48 秒。<code>predict.py</code> 27.05 秒。</li>
+  <li>最佳第 15 個 epoch，Val Acc 0.641955（整個驗證集重算 169,842 / 264,570，一致）；共存檔 11 次；val loss 最低是第 11 個 epoch 的 1.291020。</li>
+  <li>印出的 val loss 1.299442 vs 按筆數加權 1.299457；只算中間格的 val loss 1.197084。</li>
+  <li>11 個位置的準確率：單向 0.4555 → 0.6827；雙向以中間為峰 0.7452。</li>
+  <li>驗證集上第 0 類準確率 0.964、第 1 類 0.000；模型猜第 0 類 19.59%（真實 17.73%）。</li>
+  <li>重跑 <code>train.py</code> 得到的 <code>model.ckpt</code>、重跑 <code>predict.py</code> 得到的 <code>prediction.csv</code>，都和 repo 裡的逐位元組相同。</li>
+</ul>
+<h3>第 7 章（batch 64、5 個 epoch、單一種子，驗證集）</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>實驗</th><th>最佳驗證準確率</th></tr></thead>
+<tbody>
+<tr><td>原版範例程式（ratio 0.8／0.9）</td><td>0.457758／0.458215</td></tr>
+<tr><td>拼 11 格 + DNN 1 × 512</td><td>0.671459</td></tr>
+<tr><td>DNN 6 × 1024（窄深）／2 × 1700（寬淺）</td><td>0.687270／0.687470</td></tr>
+<tr><td>6 × 1024 + dropout 0.25／0.5／0.75</td><td>0.690010／0.650421／0.512235</td></tr>
+<tr><td>6 × 1024 + BatchNorm + dropout 0.25</td><td>0.690154</td></tr>
+<tr><td>10 層單向 LSTM（本 repo）／3 層／loss 只算中間格</td><td>0.627588／0.646574／0.609449</td></tr>
+<tr><td>10 層雙向 LSTM</td><td><b class="hl-ok">0.745209</b></td></tr>
+</tbody>
+</table></div>
+<h3>Kaggle public 基準線（投影片第 15 頁）</h3>
+<p>Simple 0.45797、Medium 0.69747、Strong 0.75028、Boss 0.82324。本 repo 沒有 Kaggle 上傳紀錄，以上驗證集的數字都不能說成「通過了哪條基準線」。</p>
+
+<h2 id="issues">A.7　repo 問題清單</h2>
+<p>讀程式時整理出來的問題。本 repo 照原樣保留，沒有修改。</p>
+<h3>一、會影響結果的</h3>
+<ol>
+  <li><strong>單向 LSTM 看不到未來</strong>（<code>model.py:8-14</code>）：被評分的中間格只用到前 5 格；實測後 5 格換成亂數，中間格的輸出一個位元都不變。改成雙向（兩行）在 5 個 epoch 內從 0.628 升到 0.745。→ <a href="ch04.html#causal">第 4 章</a>、<a href="ch07.html#step-lstm">第 7 章</a></li>
+  <li><strong><code>hidden_layers</code>、<code>input_dim</code> 沒有作用</strong>（<code>config.py:15</code>、<code>config.py:17</code>；<code>model.py:9</code>、<code>model.py:11</code> 寫死 39 與 10）：改設定不會改變模型，做報告題 1 時尤其容易誤會。→ <a href="ch04.html#unused">第 4 章</a></li>
+</ol>
+<h3>二、潛在錯誤（目前碰巧沒出事）</h3>
+<ol start="3">
+  <li><strong>預先配置寫死 3,000,000 列</strong>（<code>utils.py:69-70</code>）：每次配置 5.15 GB 的位址空間，切片後不釋放；在不允許 overcommit 的環境可能直接失敗，資料超過 300 萬格也會出錯。→ <a href="ch02.html#memory">第 2 章</a></li>
+  <li><strong><code>prediction.csv</code> 被 git 追蹤</strong>：它比 <code>.gitignore</code> 早進 repo，重新訓練後再預測就會改到它。→ <a href="ch06.html#git">第 6 章</a></li>
+  <li><strong><code>random.seed(1337)</code> 改的是全域狀態</strong>（<code>utils.py:57</code>）：本 repo 沒有其他地方用 Python 的 <code>random</code>，所以沒出事；借用這個函式時要注意。→ <a href="ch01.html#split">第 1 章</a></li>
+</ol>
+<h3>三、註解、文件與遺留寫法（不影響執行）</h3>
+<ol start="6">
+  <li><strong><code>model.py</code> 的註解從 MNIST 範例抄來</strong>：「圖片每行的資料像素點」「選取最後一個時間點」等多處與程式不符。→ <a href="ch04.html#comments">第 4 章</a></li>
+  <li><strong><code>model_dnn.py</code> 沒有被使用</strong>。→ <a href="ch04.html#dnn">第 4 章</a></li>
+  <li><strong><code>predict.py:29-30</code> 的 <code>test_acc</code>、<code>test_lengths</code> 宣告了沒用</strong>；<code>predict.py:46</code> 逐批 <code>np.concatenate</code>（模擬約 5 秒）。→ <a href="ch06.html#predict">第 6 章</a></li>
+  <li><strong>印出的 val loss 是 batch 平均再平均</strong>（<code>train.py:108</code>），而且是 11 格的平均，不是中間格的；不影響 Val Acc。→ <a href="ch05.html#bias">第 5 章</a></li>
+  <li><strong>投影片第 10 頁「4268」句</strong>，實際是 4,286 句。→ <a href="ch01.html#slides">第 1 章</a></li>
+  <li><strong>其他小地方</strong>：<code>config.py:3</code> 的拼字 <code>prarameters</code>；<code>open(...).readlines()</code> 不關檔（<code>utils.py:48</code>、<code>:56</code>、<code>:62</code>）；星號 import（<code>train.py:2-5</code>、<code>predict.py:6-9</code>）；<code>model.py:28</code> 多餘的 <code>.contiguous()</code>。→ <a href="ch01.html#labels">第 1 章</a>、<a href="ch05.html#setup">第 5 章</a>、<a href="ch04.html#forward">第 4 章</a></li>
+</ol>
+
+<h2 id="versions">A.8　套件版本與環境</h2>
+<p>Python 3.12.3、PyTorch 2.11.0+cu128（cuDNN 91900）、NumPy 2.5.3、tqdm 4.70.1；NVIDIA RTX PRO 4000 Blackwell（23.9 GiB）、WSL2、主機記憶體 47 GB。repo 根目錄的共用虛擬環境 <code>.venv</code>，HW02 不需要額外安裝套件。實測時間：2026-10-03 至 2026-10-05。</p>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html">PyTorch — torch.nn.LSTM</a>、<a href="https://pytorch.org/docs/stable/data.html">torch.utils.data</a>、<a href="https://pytorch.org/docs/stable/notes/randomness.html">Reproducibility</a>：全書最常回去查的三份文件。</li>
+  <li><a href="https://colah.github.io/posts/2015-08-Understanding-LSTMs/">Christopher Olah — Understanding LSTM Networks</a>。</li>
+  <li>Graves &amp; Schmidhuber, <em>Framewise phoneme classification with bidirectional LSTM and other neural network architectures</em>, Neural Networks, 2005。</li>
+  <li><a href="https://www.openslr.org/12">OpenSLR — LibriSpeech ASR corpus</a>、<a href="https://www.kaggle.com/c/ml2022spring-hw2">Kaggle — ML2022Spring-hw2</a>。</li>
+  <li><a href="../HW01/index.html">HW01 讀碼教材</a>、<a href="../HW09/index.html">HW09 讀碼教材</a>：同一個 repo 的其他作業。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a></nav>
+<footer class="chap-footer">ML2022 Spring HW02 讀碼教材 · 對應 commit 7f11c7e · 程式碼引用取自本 repo 的 HW02/；實測輸出取自 2026-10-03 至 10-05 本機執行</footer>
+
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>

@@ -307,16 +307,18 @@
 - **無干擾的 train.py 1 epoch 計時（2026-10-05 00:01–00:09）**：scratch 複本把 config `num_epoch = 1`，`/usr/bin/time -v`，開跑前 `nvidia-smi --query-compute-apps` 為空（GPU 上沒有其他程式）。wall clock **7:08.80**、峰值 RSS 6,030,268 KB。tqdm：讀檔 `3857it [00:02]`、`429it [00:00]`；訓練 `37182/37182 [06:51, 90.35it/s]`；驗證 `4134/4134 [00:11, 357.14it/s]`。印出 `[001/001] Train Acc: 0.495127 Loss: 1.802524 | Val Acc: 0.576195 loss: 1.500938`（與 20 epoch 版第 1 epoch 相同）。20 epoch 估計約 2 小時 20 分（手算 20 × 7 分，未實跑）。
   - 前一次（23:54–00:01，wall 7:47.08）中間約 1 分鐘和本機另一個 GPU 檢查重疊，不採用。
 
-## repo 問題清單（教材附錄素材；本 repo 照原樣保留，未修）
-1. config.py:17 `hidden_layers = 1` 沒作用，model.py:11 寫死 10 層；`input_dim` 也沒作用（model.py:9 寫死 39）。
-2. model.py 註解從 MNIST 範例抄來，與實際用途不符（見「模型」）。
-3. 單向 LSTM：被評分的中間格看不到未來 5 格。
-4. model_dnn.py 沒被 import（死碼）。
-5. utils.py:69-70 預先配 3,000,000 × 429 float32（5.15 GB 位址空間），切片後 storage 仍是整塊；Linux 上沒寫入的頁不佔實體記憶體（峰值 RSS 6.0 GB），但寫法本身浪費且依賴 overcommit。
-6. 投影片 p.10「4268」句，實際 4286 句。
-7. predict.py:29-30 `test_acc`、`test_lengths` 宣告了沒用。
-8. prediction.csv 被 git 追蹤（在 .gitignore 加 `*.csv` 之前就加入了），重跑 predict.py 會改到它。
-9. 印出的 val loss 是 batch 平均再平均（最後一個 batch 58 筆），只影響 loss，不影響 acc。
+## repo 問題清單（教材附錄 A.7 的來源；本 repo 照原樣保留，未修）
+1. 單向 LSTM：被評分的中間格看不到後 5 格（實測輸出不變）；改雙向 5 epoch 0.628 → 0.745。
+2. config.py:15/17 的 `input_dim`、`hidden_layers` 沒作用，model.py:9/11 寫死 39 與 10（實測 hidden_layers=6 仍 10 層、參數不變）。
+3. utils.py:69-70 預先配置 3,000,000 × 429 float32（5.15 GB 位址空間），切片不釋放；靠 overcommit，峰值 RSS 6.0 GB；資料超過 300 萬格會出錯。
+4. prediction.csv 被 git 追蹤（早於 .gitignore），重新訓練後再預測會改到它。
+5. utils.py:57 `random.seed(1337)` 改全域狀態（本 repo 其他地方沒用 Python random）。
+6. model.py 註解從 MNIST 範例抄來，多處不符。
+7. model_dnn.py 沒被 import（死碼）。
+8. predict.py:29-30 `test_acc`、`test_lengths` 沒用；predict.py:46 逐批 np.concatenate（模擬約 5 秒）。
+9. 印出的 val loss 是 batch 平均再平均，且是 11 格平均（不影響 Val Acc）。
+10. 投影片 p.10「4268」句，實際 4,286。
+11. 小地方：config.py:3 `prarameters`；`open().readlines()` 不關檔（utils.py:48/56/62）；星號 import；model.py:28 多餘的 `.contiguous()`。
 
 ## 已在前面章節定義過的名詞
 （寫章的 session 每章追加；後續章節不必重講，可簡短回指。）
