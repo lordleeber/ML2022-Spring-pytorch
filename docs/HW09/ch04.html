@@ -677,7 +677,7 @@ A forward hook grabs the output of an intermediate CNN layer without changing fo
 <tr><td>cnn[24]（接在 cnn[23] 後）</td><td>0.9297</td><td>0.0824</td><td>−41.4389</td><td>1011.2743</td></tr>
 </tbody>
 </table></div>
-<p>兩個 γ 都是正的，所以這個一次函數是<strong>遞增</strong>的：Conv 的輸出越大，BN 的輸出也越大，總和之間只差一個正的倍數和一個常數。因此最大化 Conv 輸出的總和，等同於最大化 BN 輸出的總和。但<strong>不等同</strong>於最大化 ReLU 之後的總和：ReLU 把負的值截成 0，那些位置不管再怎麼負，對總和的貢獻都是 0。這一段是由公式推得的，本書沒有另外跑「改對 BN 或 ReLU 的輸出做優化」的對照。<!-- TODO(本機實測): 把 hook 改掛在 cnn[8]（ReLU）與 cnn[7]（BN），同樣 lr 0.1、100 步，量 filter 0 總和與 x 值域，存一張和 filter_cnn6.png 同格式的圖，看第三列和 Conv 版差多少 --></p>
+<p>兩個 γ 都是正的，所以這個一次函數是<strong>遞增</strong>的：Conv 的輸出越大，BN 的輸出也越大，總和之間只差一個正的倍數和一個常數。因此最大化 Conv 輸出的總和，等同於最大化 BN 輸出的總和。但<strong>不等同</strong>於最大化 ReLU 之後的總和：ReLU 把負的值截成 0，那些位置不管再怎麼負，對總和的貢獻都是 0。這一段是由公式推得的；本書事後把 hook 改掛在 cnn[7]（BN）和 cnn[8]（ReLU）實測過，結果和這個推論一致，放在 <a href="#bn-relu">4.9 節最後</a>。</p>
 <p>（順帶驗算表中一個數：cnn[6] 最小值 −53.050 經過 cnn[7]，(−53.050 + 2.2347) ÷ √93.1679 × 1.2184 − 0.5347 ≈ −6.949，正好是 BN 那一列的最小值。BN 的分母還有一個極小的 ε 防止除以 0，這裡可以忽略。手算。）</p>
 
 <h3 id="rf">一格 activation 看得到多大一塊：receptive field</h3>
@@ -718,7 +718,7 @@ def filter_explanation(x, model, cnnid, filterid, iteration=100, lr=1):
 <ul>
   <li><strong>第 164 行</strong>在函式<strong>外面</strong>建立一個模組層級的變數 <code>layer_activations</code>，先設成 <code>None</code>。它是 hook 和函式本體之間傳遞資料的管道。</li>
   <li><strong>第 171–173 行</strong>是 hook 本身：把這一層的輸出存進 <code>layer_activations</code>，沒有 <code>return</code>，所以不改輸出。第一個參數名叫 <code>model</code>，但 PyTorch 傳進來的是 hook 掛的那一層（<code>model.cnn[cnnid]</code>），不是整個模型；hook 也沒有用到它。</li>
-  <li><strong>第 172 行</strong> <code>global layer_activations</code>：Python 的規則是，在函式裡對一個名字<strong>賦值</strong>，預設會建立一個只屬於這個函式的<strong>區域變數</strong>，函式結束就消失。<code>global</code> 宣告「這個名字指的是模組層級那一個」，第 173 行的賦值才會寫到第 164 行建立的變數裡。少了這一行，hook 存的東西在 hook 結束時就丟了，第 183 行讀到的仍是 <code>None</code>，<code>None[:, 0, :, :]</code> 會出現 <code>TypeError</code>（由 Python 規則推得，本書沒有實跑）。<!-- TODO(本機實測): 拿掉第 172 行的 global，跑 filter_explain，貼出最後一行錯誤訊息 --></li>
+  <li><strong>第 172 行</strong> <code>global layer_activations</code>：Python 的規則是，在函式裡對一個名字<strong>賦值</strong>，預設會建立一個只屬於這個函式的<strong>區域變數</strong>，函式結束就消失。<code>global</code> 宣告「這個名字指的是模組層級那一個」，第 173 行的賦值才會寫到第 164 行建立的變數裡。少了這一行，hook 存的東西在 hook 結束時就丟了，第 183 行讀到的仍是 <code>None</code>。本書實測拿掉第 172 行再跑 <code>filter_explain(model, images, cnnid=6)</code>，錯誤訊息的最後一行是 <code>TypeError: 'NoneType' object is not subscriptable</code>，出錯的位置就是取 activation 的那一行（拿掉一行之後，它從第 183 行變成第 182 行）。「not subscriptable」的意思是「不能用 <code>[ ]</code> 取值」：<code>None</code> 沒有 <code>[:, 0, :, :]</code> 這種操作。</li>
   <li><strong>第 175 行</strong>把 hook 登記在 <code>model.cnn[cnnid]</code> 上，也就是 cnn[6] 或 cnn[23] 這個 Conv 層。</li>
   <li><strong>第 169 行</strong> <code>model.eval()</code>：和每個解釋方法一樣先切到推論模式（第 1 章 <a href="ch01.html#mode">1.7 節</a>）。這一章它特別重要，4.7 節會用到「BN 用固定的長期平均」這件事。</li>
   <li><strong>第 180 行</strong>做一次完整的 forward。回傳的 logits 沒有人接；這行的目的只是讓 hook 被呼叫一次。forward 經過 cnn[6] 時，hook 把 <code>(10, 128, 128, 128)</code> 的輸出存進 <code>layer_activations</code>，然後模型照常算完剩下的 31 層和 fc。</li>
@@ -1012,7 +1012,7 @@ def filter_explanation(x, model, cnnid, filterid, iteration=100, lr=1):
 <thead><tr><th>圖</th><th>優化後的值域</th><th>原本的 0 → </th><th>原本的 1 → </th><th>還在 [0, 1] 裡的比例</th></tr></thead>
 <tbody>
 <tr><td>cnn[6] 圖 0</td><td>−11.07..12.05</td><td>0.479</td><td>0.522</td><td>10.2%</td></tr>
-<tr><td>cnn[6] 圖 5</td><td>（本書沒有記下）</td><td>0.510</td><td>0.554</td><td>10.1%</td></tr>
+<tr><td>cnn[6] 圖 5</td><td>−11.48..11.03</td><td>0.510</td><td>0.554</td><td>10.1%</td></tr>
 <tr><td>cnn[23] 圖 0</td><td>−4.10..6.80</td><td>0.376</td><td>0.468</td><td>52.6%</td></tr>
 <tr><td>cnn[23] 圖 5</td><td>−6.75..6.87</td><td>0.496</td><td>0.569</td><td>44.6%</td></tr>
 </tbody>
@@ -1067,6 +1067,27 @@ def filter_explanation(x, model, cnnid, filterid, iteration=100, lr=1):
 <h3 id="lr1">lr 用函式的預設值 1 會怎樣</h3>
 <p><code>filter_explanation</code> 的簽名寫 <code>lr=1</code>，但第 209 行傳的是 0.1。本書也試了 lr = 1（從原圖、不限制、100 步；和上表一樣是第二次執行、100 次更新後再 forward 量的）：cnn[6] 的總和變成 103,450,840，x 的值域 −119.74..120.75；cnn[23] 是 323,961，x −35.40..68.60。cnn[6] 的值域大約是 lr 0.1 時的 10 倍，正好對應 Adam「每步大約走 lr」的性質；cnn[23] 的總和反而比 lr 0.1 時（373,688）還低，步子太大不一定比較好。</p>
 
+<h3 id="bn-relu">hook 掛在 BN 或 ReLU 之後會怎樣</h3>
+<p>4.2 節推論：BN 的 γ &gt; 0，所以把 hook 從 cnn[6]（Conv）移到 cnn[7]（BN）應該得到同樣的結果；移到 cnn[8]（ReLU）則不是同一個目標。本書把同一個優化迴圈（從原圖、lr 0.1、100 步、filter 0 總和）的 hook 分別掛在這三層，另外記下每一次 cnn[6] Conv 輸出的總和：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>hook 掛在</th><th>自己那一層 filter 0 的總和</th><th>同時 cnn[6] Conv 的總和</th><th>x 值域</th></tr></thead>
+<tbody>
+<tr><td>cnn[6] Conv（程式）</td><td>9,216,958</td><td>9,216,958</td><td>−11.95..12.30</td></tr>
+<tr><td>cnn[7] BN</td><td>1,122,571</td><td>9,221,400</td><td>−11.79..12.46</td></tr>
+<tr><td>cnn[8] ReLU</td><td>7,199,765</td><td><strong>−26,682,812</strong></td><td>−12.38..13.43</td></tr>
+</tbody>
+</table></div>
+<p>（100 次更新後再 forward 量的；這是另一次執行，cnn[6] 那一列和 4.9 節的 9,216,263 在第 4 位不同，原因見 4.7 節。）</p>
+<figure class="fig">
+<img src="img/ch04_hook_bn_relu.png" alt="四列各 10 格。第一列原圖；第二列 hook 掛在 cnn[6] Conv，洋紅色迷宮紋理；第三列掛在 cnn[7] BN，和第二列幾乎一樣；第四列掛在 cnn[8] ReLU，換成黃綠色的串珠狀斜紋，原圖輪廓也看得到">
+<figcaption>圖 4.10 — hook 掛在三個位置的 filter visualization（各自 normalize）。由上而下：原圖（image）；cnn[6] Conv，也就是程式的做法（hook cnn[6] Conv (repo)）；cnn[7] BN（hook cnn[7] BN）；cnn[8] ReLU（hook cnn[8] ReLU）。</figcaption>
+</figure>
+<ul>
+  <li><strong>BN 和 Conv 幾乎一樣。</strong>第二、三列肉眼看不出差別；normalize 後平均差 0.0315（同一種做法跑兩次的差異是 0.0086，4.7 節）。cnn[6] 的總和也幾乎相同（9,221,400 對 9,216,958）。BN 的總和小很多，只是因為 BN 把數值除以了 √93.17 ≈ 9.65 再乘 γ，不是優化的方向不同。這驗證了 4.2 節的推論。</li>
+  <li><strong>ReLU 完全不同。</strong>第四列換成了黃綠色、像一串串珠子的斜紋，原圖輪廓也看得到。最明顯的是數字：ReLU 之後的總和是 720 萬，但同一時刻 cnn[6] Conv 的總和卻是 <strong>−2,668 萬</strong>，比原圖的 −35 萬還負得多；ReLU 的輸出有 56.9% 是 0。也就是說，優化只把一部分位置推成很大的正值，其他位置被 ReLU 截成 0 之後就不再有梯度，Conv 在那裡變得多負都沒有人管。</li>
+</ul>
+<p>所以「讓 filter 最興奮」的定義取決於 hook 掛在哪：程式選的是 Conv 本身，等同 BN 之後，但和「ReLU 之後的 activation 最大」是兩回事。</p>
+
 <div class="note"><h4>現在的做法</h4>
 <ul>
   <li><strong>不用全域變數傳 hook 的結果</strong>：在函式裡建一個字典，hook 裡寫 <code>store['out'] = output</code>（對字典的內容賦值，不需要 <code>global</code>）。本書量 4.2 節的數字時就是這樣寫的。資料的生命週期跟著函式走，不會在函式結束後還佔著 84 MB 的 GPU 記憶體。</li>
@@ -1082,7 +1103,7 @@ def filter_explanation(x, model, cnnid, filterid, iteration=100, lr=1):
 <div class="recap"><h4>本章重點</h4>
 <ul>
   <li>程式的段落標題叫 Filter Explanation，分兩步：Filter activation（原圖哪裡讓 filter 有反應，圖的第二列）與 Filter visualization（什麼圖最讓 filter 有反應，第三列，也就是投影片第 10 頁的名稱）。兩層都只看第 0 個 filter。</li>
-  <li>cnn[6] 是 stage 1 的第 3 個 Conv、cnn[23] 是 stage 3 的第 2 個 Conv，hook 掛在 Conv 本身，BN、ReLU 之前，所以 activation 有正有負，原圖的總和是負的（−355,931、−314,252）。BN 的 γ 都 &gt; 0，最大化 Conv 輸出等同最大化 BN 輸出，但不等同 ReLU 之後（公式推得）。receptive field 分別是 7×7 與 38×38。</li>
+  <li>cnn[6] 是 stage 1 的第 3 個 Conv、cnn[23] 是 stage 3 的第 2 個 Conv，hook 掛在 Conv 本身，BN、ReLU 之前，所以 activation 有正有負，原圖的總和是負的（−355,931、−314,252）。BN 的 γ 都 &gt; 0，最大化 Conv 輸出等同最大化 BN 輸出，但不等同 ReLU 之後（公式推得，4.9 節實測確認：hook 改掛 ReLU 時，Conv 的總和反而變成 −2,668 萬）。receptive field 分別是 7×7 與 38×38。</li>
   <li><code>register_forward_hook</code> 讓一層在 forward 後呼叫 hook(module, input, output)；hook 用 <code>global</code> 把輸出存進模組層的 <code>layer_activations</code>；<code>hook_handle.remove()</code> 拿掉 hook，但全域變數仍留著最後一次的輸出（約 84 MB）。</li>
   <li><code>Adam([x], lr=0.1)</code> 只更新圖片 x，權重不動；目標取負號，讓「只會往下走」的優化器做 gradient ascent。</li>
   <li>第二列是優化<strong>之前</strong>的 activation，沒有指定 cmap，用 matplotlib 預設的 viridis（深紫 → 藍綠 → 黃）。</li>
@@ -1096,7 +1117,7 @@ def filter_explanation(x, model, cnnid, filterid, iteration=100, lr=1):
 <details class="quiz"><summary>1. 圖 4.1 第二列的顏色為什麼是藍綠黃，而不是第 3 章 saliency map 那種黑紅黃？第二列畫的是優化前還是優化後的東西？</summary>
 <p>第 216 行的 <code>imshow(normalize(img))</code> 收到二維陣列，會套色表，但沒有指定 <code>cmap</code>，所以用 matplotlib 的預設 viridis（深紫 → 藍綠 → 黃）；第 3 章的第 109 行明確指定了 <code>plt.cm.hot</code>。第二列畫的是 <code>filter_activations</code>，在第 183 行用原圖算出，是<strong>優化之前</strong>的 activation，和後面 100 步的優化無關。</p></details>
 <details class="quiz"><summary>2. 第 189 行如果寫成 <code>Adam(model.parameters(), lr=lr)</code>，會發生什麼事？</summary>
-<p>優化器拿到的變成模型的權重，<code>step()</code> 會改權重而不是圖片，變成「訓練模型讓 filter 0 對這 10 張圖的輸出變大」，而且會把從 <code>checkpoint.pth</code> 載入的權重改掉，後面的 Integrated Gradients 會用到被改過的模型。x 雖然有 <code>requires_grad_()</code>、也會算出 <code>.grad</code>，但沒有優化器去更新它，第三列畫出來的就是原圖本身（各自 normalize 過，原圖本來就接近 0–1，看起來和第一列幾乎相同）。這是由程式邏輯推得，本書沒有實跑。<!-- TODO(本機實測): 把第 189 行改成 Adam(model.parameters(), lr=lr) 跑 filter_explain(model, images, 6)，確認第三列與原圖相同、量權重改變量與 integrated_gradients.png 是否改變 --></p></details>
+<p>優化器拿到的變成模型的權重，<code>step()</code> 會改權重而不是圖片，變成「訓練模型讓 filter 0 對這 10 張圖的輸出變大」，而且會把從 <code>checkpoint.pth</code> 載入的權重改掉，後面的 Integrated Gradients 會用到被改過的模型。x 雖然有 <code>requires_grad_()</code>、也會算出 <code>.grad</code>，但沒有優化器去更新它，第三列畫出來的就是原圖本身（各自 normalize 過，原圖本來就接近 0–1，看起來和第一列幾乎相同）。本書事後實測：cnn[6] 那次呼叫之後，第三列的 x 和原圖<strong>逐位元相同</strong>；權重則被改得面目全非，cnn[0] 的權重平均改變了 11.2，而它原本的平均絕對值只有 0.18（Adam 每步約走 lr 0.1，100 步就是約 10）。被改的只有 hook 之前、會影響 cnn[6] 輸出的層（cnn[0]、[1]、[3]、[4]、[6] 的 weight 和 bias），BN 的 running 統計不變（推論模式不更新）。cnn[23] 那次呼叫再改掉 stage 1–3 更多層。兩次呼叫之後，模型把 10 張圖全部判成類別 2（Dessert），Integrated Gradients 的最大值從 1–3 變成 10<sup>15</sup> 的量級，和原模型的 IG 圖相關係數在 ±0.01 之間，也就是完全無關。</p></details>
 <details class="quiz"><summary>3. 為什麼優化後的 x，前 20 步的值域剛好每步往外擴張 0.1？</summary>
 <p>Adam 的更新量大約是 lr × 一階動量 ÷ √二階動量。第 1 步這兩者就是 g 與 g²，更新量是 lr × g ÷ (|g| + ε) ≈ lr × (g 的正負號)：每個像素都往讓總和變大的方向走整整 0.1，不管梯度多大。實測第 1 步梯度從 9.06 × 10<sup>−6</sup> 到 171.1，移動量卻全部在 0.1 ± 0.001 之內。之後只要梯度方向不變，每步仍約走 0.1，所以原本是 0 的像素一步到 −0.1、原本是 1 的到 1.1，值域每步擴張 0.1。</p></details>
 <details class="quiz"><summary>4. 同學說：「程式把 10 張圖放在同一批一起優化，它們會互相影響，所以應該一張一張跑。」這句話對嗎？</summary>
@@ -1104,7 +1125,7 @@ def filter_explanation(x, model, cnnid, filterid, iteration=100, lr=1):
 <details class="quiz"><summary>5. 想要得到投影片說的「讓 filter 最興奮的圖」，只把第 209 行的 <code>images</code> 換成白雜訊，夠嗎？第三列會長什麼樣子？</summary>
 <p>換起點就會得到看不出原圖、10 張幾乎一樣的迷宮紋理（圖 4.7、4.8 的 from noise 列），這比較接近投影片要的東西。但 x 仍會跑到約 ±12（cnn[6] −12.21..12.99），normalize 之後整張偏灰。若同時每步 <code>clamp_(0, 1)</code>，顏色會鮮豔得多（from noise, clamp 列），cnn[6] 的總和也從 10,611,874 降到 956,999，因為不能再靠放大數值來提高總和。另外要注意第 209 行傳進去的東西也決定了第二列：換成白雜訊後，第二列畫的是白雜訊的 activation，不再是原圖的；第一列不受影響，因為第 212–213 行畫的是 <code>filter_explain</code> 自己的參數 <code>images</code>（由程式推得）。</p></details>
 <details class="quiz"><summary>6. 如果刪掉第 203 行 <code>hook_handle.remove()</code>，第二次呼叫（cnnid=23）的 <code>filter_cnn23.png</code> 會變嗎？</summary>
-<p>本書的推論是：幾乎不會變。第二次呼叫時 cnn[6] 和 cnn[23] 上各有一個 hook，兩個都會把輸出寫進同一個 <code>layer_activations</code>；forward 依序先經過 cnn[6] 再經過 cnn[23]，所以最後留下的是 cnn[23] 的輸出，第 183、196 行取到的仍是 cnn[23]，結果只會有 4.7 節那種每次執行都有的細微差異。但 cnn[6] 的 hook 會一直留在模型上，每次 forward 都多做一次賦值（後面的 Integrated Gradients 也一樣）。這一題是由程式順序推得，本書沒有實跑。<!-- TODO(本機實測): 刪掉第 203 行跑 explain_cnn.py，確認 filter_cnn23.png 與原版只有 4.7 節程度的差異，並印出 len(model.cnn[6]._forward_hooks) --></p></details>
+<p>本書的推論是：幾乎不會變。第二次呼叫時 cnn[6] 和 cnn[23] 上各有一個 hook，兩個都會把輸出寫進同一個 <code>layer_activations</code>；forward 依序先經過 cnn[6] 再經過 cnn[23]，所以最後留下的是 cnn[23] 的輸出，第 183、196 行取到的仍是 cnn[23]，結果只會有 4.7 節那種每次執行都有的細微差異。但 cnn[6] 的 hook 會一直留在模型上，每次 forward 都多做一次賦值（後面的 Integrated Gradients 也一樣）。本書事後實測確認：刪掉第 203 行後連續呼叫 cnn[6]、cnn[23]，結束時 cnn[6] 和 cnn[23] 上各留著 1 個 hook，全域變數存的是 cnn[23] 的輸出 (10, 256, 32, 32)。第二列和正常版逐位元相同；第三列和正常版的差異（normalize 後平均 0.0109）與正常版自己跑兩次的差異（0.0116）相當，所以 <code>filter_cnn23.png</code> 看不出差別。</p></details>
 
 <h2 id="further">延伸閱讀</h2>
 <ul>
