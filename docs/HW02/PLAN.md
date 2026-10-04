@@ -8,7 +8,8 @@ HW02（phoneme classification，LibriSpeech 音框分類）的 HTML 教材還沒
 - 使用者的決定：用新版共用樣式；事實一次量完；ch07 用同一套縮小規格（batch 64 × 5 epoch）並排比，另附一次原規格 20 epoch 的完整紀錄。
 - Phase 1：style/enhance、FACTS.md、`docs/tools/hw02_exp.py`（已驗證與 train.py 逐位一致）、`hw02_facts.py`、`hw02_run_grid.sh` + `hw02_ch07_runs.txt` 已建立。
 - 進行中：原規格 baseline（20 epoch，約 4–5 小時）與 ch07 實驗清單在本機背景執行；跑完補進 FACTS 的「執行實測」「ch07 實測」，以及峰值 RSS、predict.py 的時間與輸出。
-- 下一步：baseline 數字補齊後，給雲端寫 index + ch00 的 prompt。
+- 已量完（2026-10-04）：原規格 baseline、predict.py、ch07 的 9 組 DNN 與雙向 LSTM。還沒跑（等使用者放行）：lstm_3layers、lstm_lossmid、無干擾的 1 epoch 計時。
+- **使用者 2026-10-04 決定：HW02 不再寫雲端 prompt**（不走 TEXTBOOK_WORKFLOW 的雲端分工）。章節怎麼寫等使用者指示。
 
 ## Phase 0 要做的事
 
