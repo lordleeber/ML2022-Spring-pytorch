@@ -323,7 +323,7 @@
   | 11 | 10.618 | 10.910 | 14.818 |
   | 12 | 13.776 | 15.652 | 18.481 |
   - Layer 0（embedding 層，還沒看上下文）：組間 5.596 **小於**水果組內 6.142 → 完全分不開；同一個字「蘋」的向量只差在位置 embedding（公司句的「蘋」幾乎都在句首，所以公司組內只有 3.064）。
-  - 從 layer 4 起組間明顯大於兩個組內（差 +2.8 到 +4.9）；layer 8–9 分得最開（組間 − 組內 = 4.2–4.9）。layer 12 對水果組 +4.7、對公司組只剩 +2.8。
+  - 從 layer 4 起組間明顯大於兩個組內（差 +2.8 到 +4.9）；layer 8–11 一直分得最開（用比值「組間 ÷ 組內」看都在 1.36–1.45，layer 9 最高；用差值看 layer 6、8–12 都在 3.9–4.9；ch07 審稿更正，原本寫「layer 8–9 分得最開（組間 − 組內 = 4.2–4.9）」）。layer 12 對水果組 +4.7、對公司組只剩 +2.8。
   - 歐氏距離的絕對值會隨層變（layer 12 整體變大），跨層比較要看比值或用 cosine。
 - 同上，cosine similarity（蘋）：layer 0 水果 0.956／公司 0.976／組間 0.959；layer 9 0.886／0.892／0.781；layer 12 0.788／0.719／0.625。
 - 「果」（第二行 index）的趨勢相同：layer 0 組間 5.944 < 水果組內 6.602；layer 8 組內 12.646／12.342、組間 17.445；layer 12 組內 12.375／11.570、組間 17.130。cosine layer 12：0.854／0.874／0.726。
@@ -420,6 +420,17 @@
   - **雲端發現的 FACTS 疑點**：「ch06 實測 → PCA 保留的變異比例」說「三條線在 layer 0–10 大致平（0.12–0.26），layer 11 起上升」——照同一張表，第 1、2 組從 layer 8 就逐步上升（第 1 組 0.150 → 0.169 → 0.188 → 0.223），只有第 3 組到 layer 10 持平。ch06 照表寫。
   - 前面頁面改動：index〈第二層〉exBERT 那句改成 2026-10-04 的現況（Space RUNNING、頁面載得到、互動功能沒試）；outline 預計 TODO 第 6 章那條改成已完成。
   - 回指（不重講）：ch00 0.1 題目不在 repo 與「第 N 組問答」約定、0.3 環境、0.5 主程式 125–138／stdout／12.3 s、LOAD REPORT、0.6 BERT 圖重跑逐位元相同與 img/ 複本；ch01 1.6 torch.no_grad()；index 的 Hugging Face、Space、〈第二層〉hw9_bert.zip 404。
+
+- ch07（第 7 章，2026-10-04 雲端）：
+  - 圖號：圖 7.1（img/bert_embedding.png）、圖 7.2（img/ch07_unimplemented.png）、圖 7.3（距離矩陣讀法 SVG：layer 12「蘋」歐氏矩陣 10×10、格色依實測值近似 viridis；紅框水果 0–4、藍框公司 5–9；白虛線 (2,6)／(6,2) 都是 12.85；右側說明對角線、對稱、歐氏暗＝近 vs cosine 亮＝像）、圖 7.4（img/ch07_cosine.png）、圖 7.5（img/ch07_layer0.png）、圖 7.6（img/ch07_layer_sweep.png）、圖 7.7（img/ch07_layer8.png）、圖 7.8（img/ch07_guo.png）、圖 7.9（img/ch07_font_droid_only.png）、圖 7.10（img/ch07_font_none.png）。
+  - 本章正式定義的名詞：本書的分組（水果 0–4、公司 5–9；句 2 蘋果茶、句 7 蘋果手機）、bert-base-chinese 一字一 token、英文 [UNK]、`BertModel`（沒有 qa_outputs）、TODO 區的四個可改處（select_word_index、兩個函式、METRIC、LAYER）、word（tokenizer 的 word）vs 字元 vs token、`word_to_tokens`／`TokenSpan`（.start／.end）、`char_to_token`、歐氏距離（公式）、L2 norm、`np.linalg.norm`、cosine similarity（公式、內積）、距離 vs 相似度方向相反、`pairwise_distances`（metric 給字串或函式，對角線也呼叫）、`colorbar`、`np.ndenumerate`、`plt.text(x, y)` 的參數順序、token／position／token_type embedding、LayerNorm（一句）、組內／組間、組間 ÷ 組內比值、最近鄰檢查、CJK、`plt.rcParams`（全域設定）、`font_manager.fontManager.addfont`、font fallback（font.family 清單）、`gdown`（一句）、sklearn `metric='cosine'` 是 1 − cosine similarity（現在的做法框）。
+  - 本章用語：句子編號 0–9（和 list 一致）；「把第 N 行改成…」＝改 HW09/bert_embedding.py 後在 HW09/ 重跑 `../.venv/bin/python bert_embedding.py`。
+  - 本章手算（由本 FACTS 推得）：組間 ÷ 組內（水果／公司）L0 0.91／1.83、L4 1.23／1.29、L8 1.37／1.38、L9 1.39／1.45、L10 1.39／1.40、L11 1.40／1.36、L12 1.34／1.18；cosine 組內 − 組間 layer 4–11 約 0.06–0.11、L12 水果 0.163／公司 0.094；layer 4–12 歐氏組間 − 組內 ≥ 2.8；layer 12 最近的一句 8 句同組（錯句 2、7），句 5、8、9 的第 2／3 近也有句 2。
+  - 標明為推論或未驗證的：第 116 行轉置（由參數順序推得）；句 7 靠近句 0 是表層句型；句 5 離群是 [UNK] 還是「發振」沒拆開；句 2 偏公司、「蘋」與「果」不同的原因不明。
+  - TODO：量測工具 stdout 節錄與執行時間（可選）。
+  - **雲端發現的 FACTS 疑點**：(1)「BERT 實測 → Q28–30」說「layer 8–9 分得最開（組間 − 組內 = 4.2–4.9）」——用差值看 layer 6、8–12 都在 3.9–4.9；用比值看 layer 8–11 都在 1.36–1.45（layer 9 最高），ch07 改寫成「layer 8–11 維持最開、layer 9 略高」。(2)「ch07 實測 → 各層」看圖描述說 cosine「layer 4–9 差距最大」——照表 layer 8–10 的差距最大（0.09–0.11），layer 12 水果組 0.163 是全表最大；ch07 照表寫。
+  - 前面頁面改動：outline 對照表 ch07 的「字型 20–24」改成 22–24。
+  - 回指（不重講）：ch00 0.1 題目不在 repo、0.3 環境、0.5 主程式 85–94／117–120、stdout、6.7 s、LOAD REPORT、0.6 重跑逐位元相同；ch01 1.6 torch.no_grad()；ch04 4.5 viridis；ch06 6.3 tokenizer／WordPiece／[CLS]／[SEP]／[UNK]／token_type_ids／`model(**…)`、6.6 hidden_states 13 個元素與 layer 0、6.9 cosine 直覺；index〈先說在前面〉第二層。
 
 ## index／outline 審稿補測（2026-10-03，本機）
 - 舊版套件能不能裝（用 `uv pip install --target <scratch>` 試，不動 .venv）：
@@ -1425,7 +1436,7 @@ Answering
   - 蘋 cosine：L0 0.956/0.976/0.959 · L1 0.912/0.924/0.901 · L2 0.892/0.912/0.875 · L3 0.883/0.905/0.852 · L4 0.874/0.885/0.811 · L5 0.885/0.884/0.806 · L6 0.895/0.891/0.807 · L7 0.885/0.882/0.803 · L8 0.885/0.886/0.786 · L9 0.886/0.892/0.781 · L10 0.901/0.897/0.806 · L11 0.908/0.902/0.824 · L12 0.788/0.719/0.625
   - 果 歐氏：L0 6.602/3.282/5.944 · L1 10.573/8.200/10.068 · L2 11.058/8.957/10.602 · L3 11.343/9.839/11.525 · L4 13.333/11.807/14.812 · L5 12.065/11.728/15.238 · L6 11.327/11.269/15.295 · L7 12.302/12.284/16.289 · L8 12.646/12.342/17.445 · L9 12.557/11.966/17.459 · L10 11.506/10.774/16.451 · L11 11.387/10.819/16.261 · L12 12.375/11.570/17.130
   - 果 cosine：L0 0.940/0.967/0.946 · L1 0.908/0.940/0.915 · L2 0.893/0.928/0.901 · L3 0.874/0.903/0.869 · L4 0.850/0.880/0.815 · L5 0.872/0.878/0.797 · L6 0.895/0.895/0.811 · L7 0.883/0.880/0.795 · L8 0.864/0.865/0.739 · L9 0.860/0.869/0.730 · L10 0.878/0.890/0.751 · L11 0.890/0.900/0.777 · L12 0.854/0.874/0.726
-- 看得到的（ch07_layer_sweep.png，蘋，左歐氏、右 cosine）：歐氏的「組間」線從 layer 1 起都在兩條組內線上方，layer 4 起拉開；cosine 的「組間」線從 layer 1 起都在兩條組內線下方，layer 4–9 差距最大，layer 12 三條一起往下掉。
+- 看得到的（ch07_layer_sweep.png，蘋，左歐氏、右 cosine）：歐氏的「組間」線從 layer 1 起都在兩條組內線上方，layer 4 起拉開；cosine 的「組間」線從 layer 1 起都在兩條組內線下方，layer 4 起拉開（照表，layer 4–11 裡差距最大的是 layer 8–10，0.09–0.11；ch07 審稿更正，原本寫「layer 4–9 差距最大」），layer 12 三條一起往下掉。
 - **最近鄰檢查**（每句在 cosine 下最像的另一句，是否同組；10 句裡對幾句）：
   - 蘋：layer 0→12 = 3, 8, 8, 9, 10, 10, 9, 9, 10, 10, 10, 10, **8**
   - 果：layer 0→12 = 3, 6, 6, 7, 10, 9, 9, 10, 10, 10, 10, 10, **10**
@@ -1444,10 +1455,18 @@ Answering
 ### 字型（圖 `img/ch07_font_droid_only.png`、`img/ch07_font_none.png`）
 - `FONT_PATH` 的檔案存在，family 名稱 `Droid Sans Fallback`。
 - 本 repo 的設定 `['DejaVu Sans', 'Droid Sans Fallback']`：沒有任何缺字警告（這次所有變體都是 0 個 Glyph 警告）。
-- 只設 Droid Sans Fallback（第 91 行拿掉 'DejaVu Sans'）：Glyph 警告 568 次、38 種字，全部是英數與符號：a–i、m–p、r、s、B–F、I、P、R、T、W、0–9、`%`、`)`、`.`。例如 `Glyph 73 (I) missing from font(s) Droid Sans Fallback.`。看得到的：中文句子正常，但所有數字（格內的兩位小數、colorbar、x 軸刻度）、英文標題、句子裡的英數（12.3%、iPhone、Face ID）和半形 `)` 都變成方框。→ 這個字型**沒有拉丁字母和數字**，不只缺「Face ID」的 I、D（「原版 vs 本 repo」那條只舉了 I）。
-- 找不到字型（`FONT_PATH` 指到不存在的檔案，第 88 行的 if 不成立，只用預設 DejaVu Sans）：Glyph 警告 210 次，例如 `Glyph 20170 (\N{CJK UNIFIED IDEOGRAPH-4ECA}) missing from font(s) DejaVu Sans.`（U+4ECA 是「今」）。看得到的：數字、標題、英數都正常，y 軸句子的中文全變方框，只剩 `(`、`)`、`12.3%`、`iPhone`、`Face ID` 這些英數。
+- 只設 Droid Sans Fallback（第 91 行拿掉 'DejaVu Sans'）：Glyph 警告觸發 568 次（`catch_warnings` + `simplefilter('always')` 數的）、38 種字；**正常執行時 stderr 只印 38 條**（ch07 審稿補測），全部是英數與符號：a–i、m–p、r、s、B–F、I、P、R、T、W、0–9、`%`、`)`、`.`。例如 `Glyph 73 (I) missing from font(s) Droid Sans Fallback.`。看得到的：中文句子正常，但所有數字（格內的兩位小數、colorbar、x 軸刻度）、英文標題、句子裡的英數（12.3%、iPhone、Face ID）和半形 `)` 都變成方框。→ 這個字型**沒有拉丁字母和數字**，不只缺「Face ID」的 I、D（「原版 vs 本 repo」那條只舉了 I）。
+- 找不到字型（`FONT_PATH` 指到不存在的檔案，第 88 行的 if 不成立，只用預設 DejaVu Sans）：Glyph 警告觸發 210 次（正常執行時 stderr 印 71 條，ch07 審稿補測），例如 `Glyph 20170 (\N{CJK UNIFIED IDEOGRAPH-4ECA}) missing from font(s) DejaVu Sans.`（U+4ECA 是「今」）。看得到的：數字、標題、英數都正常，y 軸句子的中文全變方框，只剩 `(`、`)`、`12.3%`、`iPhone`、`Face ID` 這些英數。
 
 ### 其他
 - 執行時間引用 ch00：real time 6.7 秒。LOAD REPORT（cls.predictions／seq_relationship）ch00 已講。
 - `same_seeds(0)`：CPU、eval、沒有亂數操作；ch00 0.6 節實測 bert_embedding.png 重跑逐位元相同。
 - `pairwise_distances(embeddings, metric=函式)`：sklearn 對每一對呼叫一次函式，對角線也呼叫（所以 cosine 版對角線是 1、不是 0）；結果完全對稱。
+
+## ch07 審稿補測（2026-10-04，本機；PR #17）
+- **字型警告在 stderr 的實際條數**：把 bert_embedding.py 複製一份、只改第 91 行（或第 24 行），照一般方式執行（不攔截 warnings）。
+  - 只設 Droid Sans Fallback：stderr 有 **38 條** `UserWarning: Glyph … missing from font(s) Droid Sans Fallback.`（每種缺字一條），每條後面跟一行原始碼 `  fig.savefig(path, bbox_inches='tight')`（第 118 行：字型是存檔時才真正找的）。前兩條：`…:118: UserWarning: Glyph 41 ()) missing from font(s) Droid Sans Fallback.`、`…:118: UserWarning: Glyph 49 (1) missing from font(s) Droid Sans Fallback.`。
+  - 找不到字型（只用 DejaVu Sans）：stderr 有 **71 條**（71 種中文字各一條），第一條 `Glyph 20170 (\N{CJK UNIFIED IDEOGRAPH-4ECA}) missing from font(s) DejaVu Sans.`。
+  - 「ch07 實測」記錄的 568／210 是 matplotlib 實際觸發的次數；Python 預設的 warnings 規則對同一位置、同一訊息只印第一次。ch07 已改成「38 條（觸發 568 次）」「71 條（觸發 210 次）」。
+- **量測工具執行時間**：`hw09_ch07_embedding.py` 整支 real 5.89 s（模型已在快取；`/usr/bin/time`）。重跑一次 stdout 和前一次逐字相同。ch07 6.11 節後的說明框補了 stdout 節錄（句 1 的 7 行 index 對照與兩行最近鄰）。
+- 雲端在 ch07 指出的兩個 FACTS 疑點（「BERT 實測」的「layer 8–9 分得最開」、「ch07 實測」的「cosine layer 4–9 差距最大」）都核對屬實，已更正。

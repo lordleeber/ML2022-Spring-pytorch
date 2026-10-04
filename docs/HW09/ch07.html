@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 7 章　「蘋果」是水果還是公司 — HW09 Explainable AI</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="ch08.html">第 8 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW09 讀碼教材</p>
+  <h1>第 7 章　「蘋果」是水果還是公司</h1>
+  <p class="chap-lead">同一個「蘋」字，在「今天買了蘋果來吃」和「蘋果的股價又跌了」裡，BERT 給它的向量一樣嗎？<code>bert_embedding.py</code> 拿 10 個句子，取出每句「蘋」字在某一層的 768 維向量，兩兩算距離，畫成一張 10×10 的矩陣（Q28–30）。本章正式定義歐氏距離與 cosine similarity，逐行讀程式（包括投影片說「只需要改」的 TODO 區），逐格讀第 12 層的矩陣，再看從第 0 層到第 12 層，兩種蘋果什麼時候開始分得開。最後說明本 repo 為什麼換了中文字型、字型設錯會怎樣。</p>
+</header>
+<main>
+
+<h2 id="start">7.1　起點：bert_embedding.png</h2>
+<p>第 0 章 <a href="ch00.html#run-embed">0.5 節</a>執行過 <code>bert_embedding.py</code>：stdout 只有一行 <code>saved ./output/bert_embedding.png</code>，實測 6.7 秒；主程式開頭（第 85–94 行：字型、載入模型與 tokenizer）與結尾（第 117–120 行：存檔），以及 stderr 的 LOAD REPORT（<code>cls.predictions</code>、<code>cls.seq_relationship</code> 用不到）都講過了。第 0 章 <a href="ch00.html#outputs">0.6 節</a>也實測過：這張圖重跑一次逐位元相同。先看輸出：</p>
+<figure class="fig">
+<img src="img/bert_embedding.png" alt="10×10 的色塊矩陣，viridis 色表，每格寫著兩位小數。y 軸是 10 個中文句子，x 軸只有 0、2、4、6、8 五個刻度。對角線是深紫的 0.00；句 5 那一列與那一行在水果句的位置是最亮的黃，24 到 26；左上幾格偏藍綠，10 到 12；右下句 6、8、9 彼此偏藍，9.6 到 11.5">
+<figcaption>圖 7.1 — <code>bert_embedding.png</code>：10 個句子的「蘋」在第 12 層的向量，兩兩之間的歐氏距離。顏色越暗越近，對角線是 0。</figcaption>
+</figure>
+<p>這張圖要讀懂，得先知道四件事：10 個句子是什麼（7.2 節）、「蘋」的向量怎麼取出來（7.3、7.4 節）、距離怎麼算（7.5 節）、矩陣怎麼畫（7.6 節）。7.7 節再回來逐格讀它。</p>
+<p>作業投影片（<code>HW09/HW09.pdf</code>）第 16 頁的全部文字（用 PDF 文字擷取工具抽出，逐字照錄）：</p>
+<pre class="shell"><code>Embedding Analysis
+Question 28 to 30
+● Compare output embedding of
+BERT using:
+○ Euclidean distance
+○ Cosine similarity
+You only need to change code in
+the section “TODO” !</code></pre>
+<p>直譯：「用歐氏距離與 cosine similarity 比較 BERT 的輸出 embedding。你只需要改 TODO 區的程式！」Q28–30 的題目本身在 Gradescope 上、不在 repo 裡（第 0 章 <a href="ch00.html#questions">0.1 節〈30 題在問什麼〉</a>），本書不知道三題實際問什麼。但最後一句說了範圍：<strong>能改的只有 TODO 區</strong>。所以本章把 TODO 區裡每一個可以改的地方（選哪個字、兩個距離函式、用哪種距離、看哪一層）都講清楚，並用本書實測的變體圖示範改了會怎樣。檔頭的 docstring 也只有一句話：</p>
+<figure class="listing"><figcaption>bert_embedding.py:13–18 — 檔頭說明</figcaption>
+<pre class="py" data-hot="16"><code>"""# Homework 9 - Explainable AI (Part 2 BERT)
+
+## Embedding Analysis (Q28~30)
+Compare the embedding of 蘋 (or 果) across sentences where 蘋果 is the fruit or the company.
+The figure is saved to output/bert_embedding.png.
+"""</code></pre></figure>
+<p>「比較『蘋』（或『果』）在不同句子裡的 embedding，這些句子裡的蘋果有的是水果、有的是公司。」這裡的 embedding 和第 6 章一樣，指的是 BERT 某一層為某個 token 輸出的向量（hidden state）。</p>
+
+<h2 id="sentences">7.2　十個句子</h2>
+<figure class="listing"><figcaption>bert_embedding.py:39–50 — 10 個句子</figcaption>
+<pre class="py" data-hot="42,43,46,48"><code># Sentences for visualization
+sentences = []
+sentences += ["今天買了蘋果來吃"]
+sentences += ["進口蘋果（富士)平均每公斤下跌12.3%"]
+sentences += ["蘋果茶真難喝"]
+sentences += ["老饕都知道智利的蘋果季節即將到來"]
+sentences += ["進口蘋果因防止水分流失故添加人工果糖"]
+sentences += ["蘋果即將於下月發振新款iPhone"]
+sentences += ["蘋果獲新Face ID專利"]
+sentences += ["今天買了蘋果手機"]
+sentences += ["蘋果的股價又跌了"]
+sentences += ["蘋果押寶指紋辨識技術"]</code></pre></figure>
+<p>本書和程式的 list 一樣，從 0 開始編號：第 41 行是句 0，第 50 行是句 9。圖 7.1 的 y 軸由上到下也是句 0 到句 9。程式沒有標出哪些是水果、哪些是公司；本書為了計算「組內」與「組間」，把它們分成兩組：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>本書的分組</th><th>句</th><th>內容</th></tr></thead>
+<tbody>
+<tr><td rowspan="5">水果（句 0–4）</td><td>0</td><td>今天買了蘋果來吃</td></tr>
+<tr><td>1</td><td>進口蘋果（富士)平均每公斤下跌12.3%</td></tr>
+<tr><td>2</td><td>蘋果茶真難喝（蘋果做的茶，算水果）</td></tr>
+<tr><td>3</td><td>老饕都知道智利的蘋果季節即將到來</td></tr>
+<tr><td>4</td><td>進口蘋果因防止水分流失故添加人工果糖</td></tr>
+<tr><td rowspan="5">公司（句 5–9）</td><td>5</td><td>蘋果即將於下月發振新款iPhone</td></tr>
+<tr><td>6</td><td>蘋果獲新Face ID專利</td></tr>
+<tr><td>7</td><td>今天買了蘋果手機（蘋果公司的手機，算公司）</td></tr>
+<tr><td>8</td><td>蘋果的股價又跌了</td></tr>
+<tr><td>9</td><td>蘋果押寶指紋辨識技術</td></tr>
+</tbody>
+</table></div>
+<p>句 2 與句 7 是兩個比較刁鑽的例子：句 2 的「蘋果」是一種茶的口味，不是拿在手上吃的水果；句 7 和句 0 只差最後兩個字（「來吃」vs「手機」）。7.7 節會看到，第 12 層的「蘋」在這兩句剛好都偏到另一組去。</p>
+<div class="warn"><h4>原版就有的兩個小錯</h4>
+<p>這 10 句和原版 notebook 逐字相同，包括兩個小錯：句 1 用全形左括號「（」配半形右括號「)」；句 5「發振新款」應該是「發表新款」之類的意思，「發振」是錯字。本 repo 照原版保留（列在<a href="outline.html#findings">教學大綱〈讀 code 不盡信文件〉</a>的第 8 項）。這兩個錯不影響「蘋」字本身的位置，但會影響周圍的 token，也就影響「蘋」看到的上下文。</p>
+</div>
+
+<h2 id="tokens">7.3　bert-base-chinese：一個字一個 token</h2>
+<p>這支腳本用的模型是 <code>bert-base-chinese</code>（第 93–94 行，第 0 章引用過），用 <code>BertModel</code> 載入：只有 BERT 本體的 12 層，沒有第 6 章那種問答用的 <code>qa_outputs</code>。本書印出的規格：12 層、每個 token 768 維、詞彙表 21,128 個 token、參數 102,267,648 個。</p>
+<p>第 6 章 <a href="ch06.html#tokenizer">6.3 節</a>介紹過 tokenizer、WordPiece、[CLS]／[SEP]／[UNK]。這個中文模型的切法很單純：<strong>中文一個字就是一個 token</strong>。英文單字如果不在它的詞彙表裡，就變成 [UNK]（unknown，不認識的字）。10 句的 token（[CLS] 與 [SEP] 各佔一格）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>句</th><th>token</th><th>個數</th></tr></thead>
+<tbody>
+<tr><td>0</td><td><code>[CLS] 今 天 買 了 蘋 果 來 吃 [SEP]</code></td><td>10</td></tr>
+<tr><td>1</td><td><code>[CLS] 進 口 蘋 果 （ 富 士 ) 平 均 每 公 斤 下 跌 12 . 3 % [SEP]</code></td><td>21</td></tr>
+<tr><td>2</td><td><code>[CLS] 蘋 果 茶 真 難 喝 [SEP]</code></td><td>8</td></tr>
+<tr><td>3</td><td><code>[CLS] 老 饕 都 知 道 智 利 的 蘋 果 季 節 即 將 到 來 [SEP]</code></td><td>18</td></tr>
+<tr><td>4</td><td><code>[CLS] 進 口 蘋 果 因 防 止 水 分 流 失 故 添 加 人 工 果 糖 [SEP]</code></td><td>20</td></tr>
+<tr><td>5</td><td><code>[CLS] 蘋 果 即 將 於 下 月 發 振 新 款 [UNK] [SEP]</code></td><td>14</td></tr>
+<tr><td>6</td><td><code>[CLS] 蘋 果 獲 新 [UNK] [UNK] 專 利 [SEP]</code></td><td>10</td></tr>
+<tr><td>7</td><td><code>[CLS] 今 天 買 了 蘋 果 手 機 [SEP]</code></td><td>10</td></tr>
+<tr><td>8</td><td><code>[CLS] 蘋 果 的 股 價 又 跌 了 [SEP]</code></td><td>10</td></tr>
+<tr><td>9</td><td><code>[CLS] 蘋 果 押 寶 指 紋 辨 識 技 術 [SEP]</code></td><td>12</td></tr>
+</tbody>
+</table></div>
+<ul>
+  <li>句 5 的 <code>iPhone</code> 和句 6 的 <code>Face</code>、<code>ID</code> 都變成 [UNK]：模型看不到這幾個字是什麼，只知道「這裡有一個不認識的東西」。偏偏它們是公司句最明顯的線索。</li>
+  <li>句 1 的 <code>12</code> 兩個數字合成一個 token，<code>.</code>、<code>3</code>、<code>%</code> 各一個。</li>
+  <li>每句都只有一段文字，所以 token_type_ids（第 6 章 6.3 節）全部是 0。</li>
+  <li>中文沒有大小寫，第 6 章那種 <code>Cats</code> 與 <code>cats</code> 不同的問題這裡不會發生。</li>
+</ul>
+<p>每句跑一次模型，<code>hidden_states</code> 和第 6 章一樣有 13 個元素（第 6 章 <a href="ch06.html#hidden">6.6 節</a>：第 0 個是 embedding 層、第 1–12 個是各層輸出），每個的形狀是 <code>(1, 這句的 token 數, 768)</code>，例如句 0 是 <code>(1, 10, 768)</code>。</p>
+
+<h2 id="select">7.4　TODO 區（一）：選哪個字、看哪一層</h2>
+<p>TODO 區從第 53 行開始，到第 82 行結束。本章後面說「把第 N 行改成…」，指的都是直接改 <code>HW09/bert_embedding.py</code>，改完在 <code>HW09/</code> 裡重跑一次（第 0 章 <a href="ch00.html#run-embed">0.5 節</a>的同一個指令），再打開新的 <code>output/bert_embedding.png</code>：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python bert_embedding.py</code></pre>
+<p>stdout 仍然只有一行 <code>saved ./output/bert_embedding.png</code>。書裡的變體圖（圖 7.2、7.4–7.10）則是本書另外用量測程式產生的（7.11 節後的說明框）。先看「選哪個字」：</p>
+<figure class="listing"><figcaption>bert_embedding.py:53–60 — TODO 區開頭：每句要取第幾個字</figcaption>
+<pre class="py" data-hot="59,60"><code>"""### TODO
+This is the only part you need to modify to answer Q28~30.
+"""
+
+# Index of word selected for embedding comparison. E.g. For sentence "蘋果茶真難喝", if index is 0, "蘋 is selected"
+# The first line is the indexes for 蘋; the second line is the indexes for 果
+select_word_index = [4, 2, 0, 8, 2, 0, 0, 4, 0, 0]
+# select_word_index = [5, 3, 1, 9, 3, 1, 1, 5, 1, 1]</code></pre></figure>
+<p>第 59 行的 10 個數字，是「蘋」在每一句裡是第幾個字（從 0 數）：句 0「今天買了蘋果來吃」的「蘋」是第 4 個字，句 2「蘋果茶真難喝」的是第 0 個，依此類推。第 60 行（註解掉的）是「果」的位置，每個都比第 59 行多 1。要改看「果」，就把第 59 行註解掉、第 60 行打開（7.10 節）。句 4 有兩個「果」（「蘋果」與「果糖」），第 60 行的 3 指的是前一個。</p>
+<p>這些數字是「句子裡的位置」，要換成「token 序列裡的位置」才能從 hidden state 取向量。這件事在 <code>get_select_embedding</code> 裡做：</p>
+<figure class="listing"><figcaption>bert_embedding.py:74–82 — get_select_embedding：取出某一層、某個字的向量</figcaption>
+<pre class="py" data-hot="76,78,80,82"><code>def get_select_embedding(output, tokenized_sentence, select_word_index):
+    # The layer to visualize, choose from 0 to 12
+    LAYER = 12
+    # Get selected layer's hidden state
+    hidden_state = output.hidden_states[LAYER][0]
+    # Convert select_word_index in sentence to select_token_index in tokenized sentence
+    select_token_index = tokenized_sentence.word_to_tokens(select_word_index).start
+    # Return embedding of selected word
+    return hidden_state[select_token_index].numpy()</code></pre></figure>
+<ul>
+  <li><strong>第 76 行 <code>LAYER = 12</code></strong>：看第幾層，0 到 12。0 是 embedding 層（還沒經過任何 attention），12 是最後一層。這也是 TODO 區裡可以改的地方（7.8、7.9 節）。</li>
+  <li><strong>第 78 行</strong>取出那一層的 hidden state，<code>[0]</code> 去掉批次維度，形狀 <code>(token 數, 768)</code>。</li>
+  <li><strong>第 80 行</strong>把「第幾個字」換成「第幾個 token」，下面細說。</li>
+  <li><strong>第 82 行</strong>取出那個 token 的 768 維向量，轉成 NumPy。這裡可以直接 <code>.numpy()</code>，是因為主程式第 100 行（7.6 節的程式）的 forward 包在 <code>torch.no_grad()</code> 裡（第 1 章 <a href="ch01.html#predict">1.6 節</a>），張量不帶梯度。</li>
+</ul>
+
+<h3 id="word">word、字元、token：三種「第幾個」</h3>
+<p><code>word_to_tokens(k)</code> 是 tokenizer 編碼結果提供的方法（第 97 行把 10 句各自編碼成 list <code>tokenized_sentences</code>，其中一句的編碼結果就是這裡的參數 <code>tokenized_sentence</code>）：給它「第 k 個 <strong>word</strong>」，它回傳這個 word 對應到哪幾個 token，型別是 <code>TokenSpan</code>，有 <code>.start</code>（第一個 token 的位置）與 <code>.end</code>（最後一個的下一格）兩個欄位。第 80 行取 <code>.start</code>。</p>
+<p>這裡的 <strong>word</strong> 是 tokenizer 切 token 之前先切出的單位，不等於「字元」（字串裡的一個字）。對中文，tokenizer 把每個漢字各當成一個 word；但連在一起的英數字算一個 word，空白則不算。所以同一句話有三種「第幾個」：</p>
+<ul>
+  <li><strong>字元</strong>：字串裡的第幾個字（Python 的 <code>sentence[k]</code>）。</li>
+  <li><strong>word</strong>：tokenizer 切出的第幾個單位。</li>
+  <li><strong>token</strong>：編碼後序列裡的第幾格，[CLS] 佔第 0 格。</li>
+</ul>
+<p>大部分句子只有漢字，字元位置 = word 位置，token 位置 = word 位置 + 1（前面多了 [CLS]）。這就是<a href="outline.html#chapters">教學大綱</a>第 7 章那一列說的「+1」：「蘋」的字元位置 <code>[4, 2, 0, 8, 2, 0, 0, 4, 0, 0]</code>，換成 token 位置是 <code>[5, 3, 1, 9, 3, 1, 1, 5, 1, 1]</code>，本書核對過 10 句取到的都是「蘋」。第 60 行「果」的數字剛好也是 <code>[5, 3, 1, 9, 3, 1, 1, 5, 1, 1]</code>，那是字元位置；換成 token 再 +1，10 句也都取到「果」。</p>
+<p>有英數字的句子就不一樣了。句 1 有 20 個字元、19 個 word（<code>12</code> 是一個 word）、21 個 token；句 5 有 17 個字元、12 個 word（<code>iPhone</code> 是一個 word，變成一個 [UNK]）、14 個 token；句 6 有 13 個字元、8 個 word（<code>Face</code>、<code>ID</code> 各一個，中間的空白不算）、10 個 token。本書拿句 1 實測，傳同一個整數 k 給「字元 → token」的 <code>char_to_token(k)</code> 與「word → token」的 <code>word_to_tokens(k)</code>：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>k</th><th>第 k 個字元</th><th>char_to_token(k)</th><th>word_to_tokens(k) → token</th></tr></thead>
+<tbody>
+<tr><td>2</td><td>蘋</td><td>3</td><td>(3, 4) <code>蘋</code></td></tr>
+<tr><td>13</td><td>下</td><td>14</td><td>(14, 15) <code>下</code></td></tr>
+<tr><td>15</td><td>1</td><td>16</td><td>(16, 17) <code>12</code></td></tr>
+<tr><td>16</td><td>2</td><td>16</td><td>(17, 18) <code>.</code></td></tr>
+<tr><td>17</td><td>.</td><td>17</td><td>(18, 19) <code>3</code></td></tr>
+<tr><td>18</td><td>3</td><td>18</td><td>(19, 20) <code>%</code></td></tr>
+<tr><td>19</td><td>%</td><td>19</td><td><b>None</b></td></tr>
+</tbody>
+</table></div>
+<p>在 <code>12</code> 之前兩者一樣；從 <code>12</code> 開始就錯開了。句 1 只有 19 個 word（編號 0–18），所以 <code>word_to_tokens(19)</code> 回傳 <code>None</code>，第 80 行的 <code>.start</code> 就會出錯：<code>AttributeError: 'NoneType' object has no attribute 'start'</code>（本書寫量測工具時真的踩到過）。程式的兩行 index 都指在英數字<strong>之前</strong>，所以字元位置剛好等於 word 位置，沒有出事。如果你想改選別的字，而那個字在英數字之後，要按 <strong>word</strong> 數，不是按字元數。</p>
+
+<h2 id="metric">7.5　TODO 區（二）：歐氏距離與 cosine similarity</h2>
+<p>TODO 區的另一半是兩個函式與一個選擇：</p>
+<figure class="listing"><figcaption>bert_embedding.py:62–72 — 兩個比較函式，與要用哪一個</figcaption>
+<pre class="py" data-hot="62,65,69,72"><code># The notebook leaves these two as `return 0` for students to fill in
+def euclidean_distance(a, b):
+    # Compute euclidean distance (L2 norm) between two numpy vectors a and b
+    return np.linalg.norm(a - b)
+
+def cosine_similarity(a, b):
+    # Compute cosine similarity between two numpy vectors a and b
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+# Metric for comparison. Choose from euclidean_distance, cosine_similarity
+METRIC = euclidean_distance</code></pre></figure>
+<p>第 6 章 <a href="ch06.html#cosine">6.9 節</a>只用了 cosine 的直覺，這裡正式定義兩者。設 a、b 是兩個 768 維向量。</p>
+<h3 id="euclid">歐氏距離</h3>
+<div class="eq">‖a − b‖ ＝ √( (a<sub>1</sub> − b<sub>1</sub>)² + (a<sub>2</sub> − b<sub>2</sub>)² + … + (a<sub>768</sub> − b<sub>768</sub>)² )</div>
+<p>就是平面上「兩點之間直線距離」的公式推廣到 768 維：每一維相減、平方、加總、開根號。一個向量 v 的 <strong>L2 norm</strong>（L2 範數）‖v‖ 是 √(v<sub>1</sub>² + … + v<sub>768</sub>²)，也就是它的長度；兩個向量的歐氏距離就是它們差的 L2 norm。第 65 行的 <code>np.linalg.norm(a - b)</code> 正是這樣算（<code>np.linalg.norm</code> 對一維陣列預設算 L2 norm）。0 代表兩個向量完全相同，越大越不像，沒有上限。</p>
+<h3 id="cos">cosine similarity</h3>
+<div class="eq">cos(a, b) ＝ (a · b) ÷ (‖a‖ × ‖b‖)，其中 a · b ＝ a<sub>1</sub>b<sub>1</sub> + a<sub>2</sub>b<sub>2</sub> + … + a<sub>768</sub>b<sub>768</sub></div>
+<p>a · b 是內積。除以兩個向量的長度之後，結果就是兩個向量夾角的 cos 值：方向完全相同是 1，垂直是 0，完全相反是 −1，和向量的長度無關。第 69 行就是這個式子（<code>np.dot</code> 算內積）。</p>
+<h3 id="direction">距離與相似度：方向相反</h3>
+<p>這兩個量的「好」方向相反，讀圖時最容易搞混：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>歐氏距離</th><th>cosine similarity</th></tr></thead>
+<tbody>
+<tr><td>兩個向量相同時</td><td>0</td><td>1</td></tr>
+<tr><td>越像</td><td>越<strong>小</strong></td><td>越<strong>大</strong></td></tr>
+<tr><td>看什麼</td><td>位置差多遠（長度也算）</td><td>方向差多少（不管長度）</td></tr>
+<tr><td>layer 12、「蘋」、句 0 vs 句 7</td><td>14.29</td><td>0.79</td></tr>
+<tr><td>同上、句 2 vs 句 6</td><td>12.85</td><td>0.82</td></tr>
+<tr><td>同上、句 2 vs 句 1</td><td>18.85</td><td>0.62</td></tr>
+<tr><td>同上、句 7 vs 句 5</td><td>25.77</td><td>0.33</td></tr>
+</tbody>
+</table></div>
+<p>把表裡的四對照歐氏距離由小到大排，是 2-6（12.85）、0-7（14.29）、2-1（18.85）、7-5（25.77）；照 cosine 由大到小排（0.82、0.79、0.62、0.33），順序完全相同。兩者大致一致，但不保證完全一致：本書檢查每句「最近的 3 句」，兩種量只有句 3 的順序不同（7.7 節）。</p>
+<p>第 72 行 <code>METRIC = euclidean_distance</code> 選用哪一個。注意右邊是<strong>函式本身</strong>（沒有括號），不是呼叫函式的結果；它會在第 107 行被傳給 <code>pairwise_distances</code>（7.6 節）。改成 <code>METRIC = cosine_similarity</code> 就換成 cosine。</p>
+
+<h3 id="return0">原版是 return 0</h3>
+<p>第 62 行的註解說明：原版 notebook 裡，這兩個函式的本體都只有 <code>return 0</code>，留給學生自己寫。本 repo 已經寫好了。如果沒寫，會怎樣？本書把第 65 行換回 <code>return 0</code> 跑一次：</p>
+<figure class="fig">
+<img src="img/ch07_unimplemented.png" alt="10×10 矩陣整片是同一個顏色，viridis 中間的藍綠色，每格都寫 0.00，colorbar 的刻度從 −0.100 到 0.100">
+<figcaption>圖 7.2 — 距離函式沒有實作（<code>return 0</code>）時的輸出：100 格全部是 0，整片同色。</figcaption>
+</figure>
+<p>不會報錯，只是 100 格全部是 0，整張圖是同一個顏色（viridis 中間的藍綠），colorbar 的刻度是 −0.100 到 0.100。看到這種圖，就知道函式還沒寫。</p>
+
+<h2 id="matrix">7.6　從 10 個向量到 10×10 的矩陣</h2>
+<p>主程式中段把上面這些串起來：</p>
+<figure class="listing"><figcaption>bert_embedding.py:96–116 — 編碼、forward、取向量、兩兩比較、畫圖</figcaption>
+<pre class="py" data-hot="97,101,104,107,111,113,115,116"><code>    # Tokenize and encode sentences into model's input format
+    tokenized_sentences = [tokenizer(sentence, return_tensors='pt') for sentence in sentences]
+
+    # Input encoded sentences into model and get outputs
+    with torch.no_grad():
+        outputs = [model(**tokenized_sentence) for tokenized_sentence in tokenized_sentences]
+
+    # Get embedding of selected word(s) in sentences. "embeddings" has shape (len(sentences), 768), where 768 is the dimension of BERT's hidden state
+    embeddings = [get_select_embedding(outputs[i], tokenized_sentences[i], select_word_index[i]) for i in range(len(outputs))]
+
+    # Pairwise comparison of sentences' embeddings using the metric defined. "similarity_matrix" has shape [len(sentences), len(sentences)]
+    similarity_matrix = pairwise_distances(embeddings, metric=METRIC)
+
+    ##### Plot the similarity matrix #####
+    fig = plt.figure(figsize=(12, 10))
+    plt.imshow(similarity_matrix)  # Display an image in the plot
+    plt.colorbar()  # Add colorbar to the plot
+    plt.yticks(ticks=range(len(sentences)), labels=sentences)  # Set tick locations and labels (sentences) of y-axis
+    plt.title('Comparison of BERT Word Embeddings')  # Add title to the plot
+    for (i, j), label in np.ndenumerate(similarity_matrix):  # np.ndenumerate is 2D version of enumerate
+        plt.text(i, j, '{:.2f}'.format(label), ha='center', va='center')  # Add values in similarity_matrix to the corresponding position in the plot</code></pre></figure>
+<ul>
+  <li><strong>第 97 行</strong>：10 句各自編碼（不是一批，每句的長度不同）。<strong>第 101 行</strong>：每句各跑一次 forward，<code>model(**…)</code> 的寫法第 6 章 6.3 節說明過；第 93 行載入時給了 <code>output_hidden_states=True</code>，所以有 <code>.hidden_states</code>。</li>
+  <li><strong>第 104 行</strong>：每句取一個 768 維向量，得到 10 個向量的 list（註解說形狀是 <code>(10, 768)</code>）。</li>
+  <li><strong>第 107 行 <code>pairwise_distances(embeddings, metric=METRIC)</code></strong>：sklearn 的函式，把 10 個向量兩兩配對，對每一對呼叫 <code>METRIC(a, b)</code>，填成 10×10 的矩陣：第 i 列第 j 行是句 i 和句 j 的值。<code>metric</code> 可以給字串（例如 sklearn 內建的 <code>'euclidean'</code>），也可以像這裡直接給一個 Python 函式。函式名字裡有 distances，但它不檢查你給的是不是「距離」：給 <code>cosine_similarity</code>，它就照填相似度。本書實測，對角線（自己和自己）也會呼叫函式，所以 cosine 版的對角線是 1，不是 0；結果完全對稱。</li>
+  <li><strong>第 111–112 行</strong>：<code>imshow</code> 把 10×10 的二維陣列畫成色塊，沒有指定色表，用 matplotlib 預設的 viridis（第 4 章 <a href="ch04.html#viridis">4.5 節</a>：深紫 → 藍綠 → 黃，數值越大越亮）；<code>colorbar</code> 在旁邊畫出數值與顏色的對照。</li>
+  <li><strong>第 113 行</strong>只設了 <strong>y 軸</strong>的刻度標籤（10 個句子），x 軸沒設，所以 x 軸是 matplotlib 自動決定的刻度，只有 0、2、4、6、8（圖 7.1 下方）。讀圖時 x 軸的第 k 格也是句 k。</li>
+  <li><strong>第 115 行 <code>np.ndenumerate</code></strong>：逐一走過陣列的每個元素，每次給出 <code>((列, 行), 值)</code>，像二維版的 <code>enumerate</code>。<strong>第 116 行</strong>把每個值以兩位小數寫在格子中央。</li>
+</ul>
+<div class="note"><h4>第 116 行其實把行列寫反了</h4>
+<p><code>np.ndenumerate</code> 給的 <code>(i, j)</code> 是（列, 行）；而 <code>plt.text(x, y, …)</code> 的第一個參數是<strong>水平</strong>座標（第幾行），第二個是垂直座標（第幾列）。所以 M[i, j] 的數字被寫在第 j 列、第 i 行的格子上，也就是 M[j, i] 的位置。這張矩陣完全對稱（本書檢查過 M 和它的轉置最大差 0），所以畫出來看不出錯；換成一個不對稱的量，格子裡的數字就會和顏色對不上。正確的寫法是 <code>plt.text(j, i, …)</code>。這一段是由 matplotlib 的參數順序推得的，本書沒有實際畫一個不對稱的例子。</p>
+</div>
+<p>讀這張矩陣的方法畫成圖 7.3：</p>
+<figure class="fig">
+<svg viewBox="0 0 900 430" role="img" aria-label="layer 12、「蘋」的歐氏距離矩陣示意：10 乘 10 格，列與行都是句 0 到 9；左上 0 到 4 是水果組、右下 5 到 9 是公司組，各框成一個方塊，其餘兩塊是組間；對角線是自己和自己，距離 0；矩陣對稱，第 2 列第 6 行和第 6 列第 2 行都是 12.85。歐氏距離越暗越近，cosine 相反，越亮越像">
+  <text class="s-sm" x="70" y="22">layer 12、「蘋」、歐氏距離（顏色依 0–25.86 對應 viridis，近似）</text>
+  <text class="s-mono" x="85.0" y="48" text-anchor="middle">0</text>
+  <text class="s-mono" x="62" y="75.0" text-anchor="end">0</text>
+  <text class="s-mono" x="115.0" y="48" text-anchor="middle">1</text>
+  <text class="s-mono" x="62" y="105.0" text-anchor="end">1</text>
+  <text class="s-mono" x="145.0" y="48" text-anchor="middle">2</text>
+  <text class="s-mono" x="62" y="135.0" text-anchor="end">2</text>
+  <text class="s-mono" x="175.0" y="48" text-anchor="middle">3</text>
+  <text class="s-mono" x="62" y="165.0" text-anchor="end">3</text>
+  <text class="s-mono" x="205.0" y="48" text-anchor="middle">4</text>
+  <text class="s-mono" x="62" y="195.0" text-anchor="end">4</text>
+  <text class="s-mono" x="235.0" y="48" text-anchor="middle">5</text>
+  <text class="s-mono" x="62" y="225.0" text-anchor="end">5</text>
+  <text class="s-mono" x="265.0" y="48" text-anchor="middle">6</text>
+  <text class="s-mono" x="62" y="255.0" text-anchor="end">6</text>
+  <text class="s-mono" x="295.0" y="48" text-anchor="middle">7</text>
+  <text class="s-mono" x="62" y="285.0" text-anchor="end">7</text>
+  <text class="s-mono" x="325.0" y="48" text-anchor="middle">8</text>
+  <text class="s-mono" x="62" y="315.0" text-anchor="end">8</text>
+  <text class="s-mono" x="355.0" y="48" text-anchor="middle">9</text>
+  <text class="s-mono" x="62" y="345.0" text-anchor="end">9</text>
+  <rect x="70" y="56" width="30" height="30" fill="#440154"/>
+  <rect x="100" y="56" width="30" height="30" fill="#25868c"/>
+  <rect x="130" y="56" width="30" height="30" fill="#47b472"/>
+  <rect x="160" y="56" width="30" height="30" fill="#26858c"/>
+  <rect x="190" y="56" width="30" height="30" fill="#27838c"/>
+  <rect x="220" y="56" width="30" height="30" fill="#fde725"/>
+  <rect x="250" y="56" width="30" height="30" fill="#6dcc5c"/>
+  <rect x="280" y="56" width="30" height="30" fill="#2e9d83"/>
+  <rect x="310" y="56" width="30" height="30" fill="#48b571"/>
+  <rect x="340" y="56" width="30" height="30" fill="#6ccc5d"/>
+  <rect x="70" y="86" width="30" height="30" fill="#25868c"/>
+  <rect x="100" y="86" width="30" height="30" fill="#440154"/>
+  <rect x="130" y="86" width="30" height="30" fill="#59c466"/>
+  <rect x="160" y="86" width="30" height="30" fill="#26868c"/>
+  <rect x="190" y="86" width="30" height="30" fill="#2d758c"/>
+  <rect x="220" y="86" width="30" height="30" fill="#f3e529"/>
+  <rect x="250" y="86" width="30" height="30" fill="#5ec962"/>
+  <rect x="280" y="86" width="30" height="30" fill="#39a77c"/>
+  <rect x="310" y="86" width="30" height="30" fill="#41af76"/>
+  <rect x="340" y="86" width="30" height="30" fill="#5cc763"/>
+  <rect x="70" y="116" width="30" height="30" fill="#47b472"/>
+  <rect x="100" y="116" width="30" height="30" fill="#59c466"/>
+  <rect x="130" y="116" width="30" height="30" fill="#440154"/>
+  <rect x="160" y="116" width="30" height="30" fill="#4db96e"/>
+  <rect x="190" y="116" width="30" height="30" fill="#3ba97a"/>
+  <rect x="220" y="116" width="30" height="30" fill="#3fad77"/>
+  <rect x="250" y="116" width="30" height="30" fill="#21908c"/>
+  <rect x="280" y="116" width="30" height="30" fill="#7fcf55"/>
+  <rect x="310" y="116" width="30" height="30" fill="#33a280"/>
+  <rect x="340" y="116" width="30" height="30" fill="#36a47e"/>
+  <rect x="70" y="146" width="30" height="30" fill="#26858c"/>
+  <rect x="100" y="146" width="30" height="30" fill="#26868c"/>
+  <rect x="130" y="146" width="30" height="30" fill="#4db96e"/>
+  <rect x="160" y="146" width="30" height="30" fill="#440154"/>
+  <rect x="190" y="146" width="30" height="30" fill="#26868c"/>
+  <rect x="220" y="146" width="30" height="30" fill="#e7e32d"/>
+  <rect x="250" y="146" width="30" height="30" fill="#5cc763"/>
+  <rect x="280" y="146" width="30" height="30" fill="#36a47e"/>
+  <rect x="310" y="146" width="30" height="30" fill="#47b472"/>
+  <rect x="340" y="146" width="30" height="30" fill="#59c466"/>
+  <rect x="70" y="176" width="30" height="30" fill="#27838c"/>
+  <rect x="100" y="176" width="30" height="30" fill="#2d758c"/>
+  <rect x="130" y="176" width="30" height="30" fill="#3ba97a"/>
+  <rect x="160" y="176" width="30" height="30" fill="#26868c"/>
+  <rect x="190" y="176" width="30" height="30" fill="#440154"/>
+  <rect x="220" y="176" width="30" height="30" fill="#d6e034"/>
+  <rect x="250" y="176" width="30" height="30" fill="#50bc6c"/>
+  <rect x="280" y="176" width="30" height="30" fill="#4ab770"/>
+  <rect x="310" y="176" width="30" height="30" fill="#43b075"/>
+  <rect x="340" y="176" width="30" height="30" fill="#55c069"/>
+  <rect x="70" y="206" width="30" height="30" fill="#fde725"/>
+  <rect x="100" y="206" width="30" height="30" fill="#f3e529"/>
+  <rect x="130" y="206" width="30" height="30" fill="#3fad77"/>
+  <rect x="160" y="206" width="30" height="30" fill="#e7e32d"/>
+  <rect x="190" y="206" width="30" height="30" fill="#d6e034"/>
+  <rect x="220" y="206" width="30" height="30" fill="#440154"/>
+  <rect x="250" y="206" width="30" height="30" fill="#248a8c"/>
+  <rect x="280" y="206" width="30" height="30" fill="#fbe726"/>
+  <rect x="310" y="206" width="30" height="30" fill="#50bc6c"/>
+  <rect x="340" y="206" width="30" height="30" fill="#41af76"/>
+  <rect x="70" y="236" width="30" height="30" fill="#6dcc5c"/>
+  <rect x="100" y="236" width="30" height="30" fill="#5ec962"/>
+  <rect x="130" y="236" width="30" height="30" fill="#21908c"/>
+  <rect x="160" y="236" width="30" height="30" fill="#5cc763"/>
+  <rect x="190" y="236" width="30" height="30" fill="#50bc6c"/>
+  <rect x="220" y="236" width="30" height="30" fill="#248a8c"/>
+  <rect x="250" y="236" width="30" height="30" fill="#440154"/>
+  <rect x="280" y="236" width="30" height="30" fill="#6acb5d"/>
+  <rect x="310" y="236" width="30" height="30" fill="#27838c"/>
+  <rect x="340" y="236" width="30" height="30" fill="#2e728c"/>
+  <rect x="70" y="266" width="30" height="30" fill="#2e9d83"/>
+  <rect x="100" y="266" width="30" height="30" fill="#39a77c"/>
+  <rect x="130" y="266" width="30" height="30" fill="#7fcf55"/>
+  <rect x="160" y="266" width="30" height="30" fill="#36a47e"/>
+  <rect x="190" y="266" width="30" height="30" fill="#4ab770"/>
+  <rect x="220" y="266" width="30" height="30" fill="#fbe726"/>
+  <rect x="250" y="266" width="30" height="30" fill="#6acb5d"/>
+  <rect x="280" y="266" width="30" height="30" fill="#440154"/>
+  <rect x="310" y="266" width="30" height="30" fill="#3ba97a"/>
+  <rect x="340" y="266" width="30" height="30" fill="#4fbc6c"/>
+  <rect x="70" y="296" width="30" height="30" fill="#48b571"/>
+  <rect x="100" y="296" width="30" height="30" fill="#41af76"/>
+  <rect x="130" y="296" width="30" height="30" fill="#33a280"/>
+  <rect x="160" y="296" width="30" height="30" fill="#47b472"/>
+  <rect x="190" y="296" width="30" height="30" fill="#43b075"/>
+  <rect x="220" y="296" width="30" height="30" fill="#50bc6c"/>
+  <rect x="250" y="296" width="30" height="30" fill="#27838c"/>
+  <rect x="280" y="296" width="30" height="30" fill="#3ba97a"/>
+  <rect x="310" y="296" width="30" height="30" fill="#440154"/>
+  <rect x="340" y="296" width="30" height="30" fill="#2e708b"/>
+  <rect x="70" y="326" width="30" height="30" fill="#6ccc5d"/>
+  <rect x="100" y="326" width="30" height="30" fill="#5cc763"/>
+  <rect x="130" y="326" width="30" height="30" fill="#36a47e"/>
+  <rect x="160" y="326" width="30" height="30" fill="#59c466"/>
+  <rect x="190" y="326" width="30" height="30" fill="#55c069"/>
+  <rect x="220" y="326" width="30" height="30" fill="#41af76"/>
+  <rect x="250" y="326" width="30" height="30" fill="#2e728c"/>
+  <rect x="280" y="326" width="30" height="30" fill="#4fbc6c"/>
+  <rect x="310" y="326" width="30" height="30" fill="#2e708b"/>
+  <rect x="340" y="326" width="30" height="30" fill="#440154"/>
+  <text class="s-sm" x="220" y="376" text-anchor="middle">行 j（句 j）</text>
+  <text class="s-sm" x="30" y="206" text-anchor="middle" transform="rotate(-90 30 206)">列 i（句 i）</text>
+  <rect x="70" y="56" width="150" height="150" fill="none" stroke="#ff7b72" stroke-width="3"/>
+  <rect x="220" y="206" width="150" height="150" fill="none" stroke="#58a6ff" stroke-width="3"/>
+  <rect x="252" y="118" width="26" height="26" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="3 2"/>
+  <rect x="132" y="238" width="26" height="26" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="3 2"/>
+  <text class="s-lbl" x="430" y="72" font-weight="700">怎麼讀</text>
+  <text class="s-sm" x="430" y="102">第 i 列第 j 行＝句 i 的「蘋」和句 j 的「蘋」的距離</text>
+  <text class="s-sm" x="430" y="128">紅框：水果組（句 0–4）兩兩之間　藍框：公司組（句 5–9）</text>
+  <text class="s-sm" x="430" y="154">框外的兩塊：一句水果、一句公司（組間）</text>
+  <text class="s-sm" x="430" y="180">對角線：自己和自己，歐氏 0（最暗），cosine 1</text>
+  <text class="s-sm" x="430" y="206">對稱：M[i][j] = M[j][i]，例如白虛線的 (2, 6) 與 (6, 2) 都是 12.85</text>
+  <text class="s-sm" x="430" y="232">分得開＝框內暗、框外亮；句 5 那一列／行在水果句最亮（24–26）</text>
+  <text class="s-lbl" x="430" y="272" font-weight="700">兩種量的顏色方向相反</text>
+  <text class="s-sm" x="430" y="302">歐氏距離：數字小＝近，暗（深紫）＝像</text>
+  <text class="s-sm" x="430" y="328">cosine similarity：數字大＝像，亮（黃）＝像</text>
+  <text class="s-sm" x="430" y="354">同一個 viridis 色表，換 METRIC 之後要反過來讀</text>
+  <rect x="430" y="386" width="20" height="14" fill="#440154"/>
+  <rect x="450" y="386" width="20" height="14" fill="#40216a"/>
+  <rect x="470" y="386" width="20" height="14" fill="#3d4280"/>
+  <rect x="490" y="386" width="20" height="14" fill="#365f8b"/>
+  <rect x="510" y="386" width="20" height="14" fill="#2b788c"/>
+  <rect x="530" y="386" width="20" height="14" fill="#21918c"/>
+  <rect x="550" y="386" width="20" height="14" fill="#39a77b"/>
+  <rect x="570" y="386" width="20" height="14" fill="#52be6a"/>
+  <rect x="590" y="386" width="20" height="14" fill="#7ecf56"/>
+  <rect x="610" y="386" width="20" height="14" fill="#bddb3d"/>
+  <rect x="630" y="386" width="20" height="14" fill="#fde725"/>
+  <text class="s-mono" x="430" y="418">0（歐氏：近）</text>
+  <text class="s-mono" x="650" y="418" text-anchor="end">遠</text>
+  <text class="s-sm" x="670" y="398">cosine 時：暗＝不像、亮＝像（1）</text>
+</svg>
+<figcaption>圖 7.3 — 距離矩陣的讀法。格子的顏色取自 layer 12 的實測值（圖 7.1），用近似的 viridis 重畫；紅框是水果組、藍框是公司組，框外是組間。</figcaption>
+</figure>
+
+<h2 id="layer12">7.7　逐格讀 layer 12</h2>
+<p>回到圖 7.1。它的數字（歐氏距離，layer 12，「蘋」）：</p>
+<pre class="shell"><code>[[ 0.   11.83 16.95 11.74 11.49 25.86 20.01 14.29 17.03 19.97]
+ [11.83  0.   18.85 11.75 10.06 25.45 19.37 15.44 16.34 19.21]
+ [16.95 18.85  0.   17.58 15.71 16.11 12.85 20.73 14.84 15.16]
+ [11.74 11.75 17.58  0.   11.8  24.98 19.18 15.12 16.93 18.83]
+ [11.49 10.06 15.71 11.8   0.   24.27 17.9  17.29 16.51 18.39]
+ [25.86 25.45 16.11 24.98 24.27  0.   12.2  25.77 17.92 16.35]
+ [20.01 19.37 12.85 19.18 17.9  12.2   0.   19.89 11.46  9.79]
+ [14.29 15.44 20.73 15.12 17.29 25.77 19.89  0.   15.71 17.85]
+ [17.03 16.34 14.84 16.93 16.51 17.92 11.46 15.71  0.    9.58]
+ [19.97 19.21 15.16 18.83 18.39 16.35  9.79 17.85  9.58  0.  ]]</code></pre>
+<p>（本書把 <code>similarity_matrix</code> 印出來的結果，第 i 列是句 i；和圖上寫的數字相同。）逐區讀：</p>
+<ul>
+  <li><strong>句 0、1、3、4 最緊</strong>：這四句真的在講吃的水果，彼此 10.06–11.83。圖上左上角這幾格偏藍綠。</li>
+  <li><strong>句 6、8、9 也很緊</strong>：彼此 9.58–11.46，右下角偏藍。</li>
+  <li><strong>句 5 是離群值</strong>：它的「蘋」到水果句 0、1、3、4 是 24.27–25.86，到句 7 是 25.77，是全圖最亮的黃。句 5 有一個 [UNK]（iPhone），也有錯字「發振」；哪一個是原因，本書沒有拆開驗證。</li>
+  <li><strong>句 2「蘋果茶真難喝」反而靠近公司那群</strong>：到句 6 是 12.85、到句 8 是 14.84，比到句 1 的 18.85、到句 3 的 17.58 都近。</li>
+  <li><strong>句 7「今天買了蘋果手機」最靠近句 0「今天買了蘋果來吃」</strong>（14.29），到其他公司句是 15.71–25.77。兩句的前五個字完全一樣。</li>
+</ul>
+<p>本書另外列出每句最近的 3 句（歐氏）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>句</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th></tr></thead>
+<tbody>
+<tr><td>最近的 3 句</td><td>4、3、1</td><td>4、3、0</td><td><b>6、8、9</b></td><td>0、1、4</td><td>1、0、3</td><td>6、2、9</td><td>9、8、5</td><td><b>0、3、1</b></td><td>9、6、2</td><td>8、6、2</td></tr>
+</tbody>
+</table></div>
+<p>看每句<strong>最近的一句</strong>：10 句裡 8 句同組，錯的是句 2（最近的三句全是公司）和句 7（全是水果）。再往後看，句 5、8、9 的第 2 或第 3 近也有句 2，又是它。換成 cosine，只有句 3 的順序變成 1、0、4，其他相同。</p>
+<p>句 7 靠近句 0 的一個可能解讀是「表層句型（今天買了…）壓過了語意」；句 2 為什麼偏向公司，本書沒有答案。這兩個都是觀察，不是驗證過的原因。7.10 節換成「果」之後，情況又不一樣。</p>
+<h3 id="cosine-fig">換成 cosine similarity</h3>
+<p>把第 72 行改成 <code>METRIC = cosine_similarity</code>：</p>
+<figure class="fig">
+<img src="img/ch07_cosine.png" alt="10×10 矩陣，對角線是亮黃的 1.00；句 5 對水果句的格子是最暗的紫，0.31 到 0.39；句 6、8、9 彼此 0.85 到 0.90，偏黃綠">
+<figcaption>圖 7.4 — 同樣的 10 個向量，改用 cosine similarity。顏色方向和圖 7.1 相反：亮＝像，對角線是 1.00。</figcaption>
+</figure>
+<p>這張圖要反過來讀：對角線是亮黃的 1.00；句 5 對水果句是最暗的紫（0.31–0.39），對應圖 7.1 裡最亮的黃；句 6、8、9 彼此 0.85–0.90，偏黃綠。整體的結構（誰和誰近）和歐氏版大致相同，7.5 節的四對數字就是從這兩張圖取的。</p>
+
+<h2 id="layer0">7.8　layer 0：距離剛好是 0</h2>
+<p>把第 76 行改成 <code>LAYER = 0</code>，看 embedding 層（第 6 章 6.6 節：查表加上位置與 token_type，還沒經過任何 attention）。結果很特別：</p>
+<pre class="shell"><code>[[0.   5.83 7.66 7.26 5.83 7.66 7.66 0.   7.66 7.66]
+ [5.83 0.   6.37 7.08 0.   6.37 6.37 5.83 6.37 6.37]
+ [7.66 6.37 0.   7.93 6.37 0.   0.   7.66 0.   0.  ]
+ [7.26 7.08 7.93 0.   7.08 7.93 7.93 7.26 7.93 7.93]
+ [5.83 0.   6.37 7.08 0.   6.37 6.37 5.83 6.37 6.37]
+ [7.66 6.37 0.   7.93 6.37 0.   0.   7.66 0.   0.  ]
+ [7.66 6.37 0.   7.93 6.37 0.   0.   7.66 0.   0.  ]
+ [0.   5.83 7.66 7.26 5.83 7.66 7.66 0.   7.66 7.66]
+ [7.66 6.37 0.   7.93 6.37 0.   0.   7.66 0.   0.  ]
+ [7.66 6.37 0.   7.93 6.37 0.   0.   7.66 0.   0.  ]]</code></pre>
+<figure class="fig">
+<img src="img/ch07_layer0.png" alt="10×10 矩陣只有深紫和黃綠兩種色塊，排成格子狀；句 0 那一列和句 7 那一列一模一樣">
+<figcaption>圖 7.5 — layer 0（<code>LAYER = 0</code>）。只有深紫（0）和黃綠（5.8–7.9）兩種色塊，排成格子狀。</figcaption>
+</figure>
+<p>不在對角線上、距離卻剛好是 0 的有 12 對：(0, 7)、(1, 4)，以及句 2、5、6、8、9 兩兩之間（10 對）。對照 7.4 節「蘋」的 token 位置 <code>[5, 3, 1, 9, 3, 1, 1, 5, 1, 1]</code>：這 12 對<strong>正是「蘋」在同一個位置的句子</strong>。句 0 與句 7 的「蘋」都在位置 5；句 1 與句 4 都在位置 3；句 2、5、6、8、9 都在位置 1。</p>
+<p>原因在 embedding 層怎麼算向量。它把三個查表得到的向量加起來：</p>
+<ul>
+  <li><strong>token embedding</strong>：這個字是什麼（這裡都是「蘋」）；</li>
+  <li><strong>position embedding</strong>（位置 embedding）：這個 token 在序列的第幾格。BERT 為每個位置各學了一個向量，同一個位置不管在哪一句都加上同一個；</li>
+  <li><strong>token_type embedding</strong>：屬於第一段還是第二段（這裡全部是 0）；</li>
+</ul>
+<p>加完之後再做一次 <strong>LayerNorm</strong>（把每個向量的 768 個數字調整成平均 0、標準差 1，再乘上與加上學到的倍率與平移）。這個過程只用到這三樣東西，完全不看句子裡的其他字。所以「同一個字、同一個位置、同一個 token_type」，向量就<strong>完全相同</strong>，距離剛好 0。這不是模型「認為」這幾句的蘋果一樣，而是在 layer 0 它根本還沒看到上下文。非 0 的距離只有 6 種值（5.83、6.37、7.08、7.26、7.66、7.93），只取決於兩句的「蘋」各在第幾個位置。</p>
+<p>這也解釋了 7.9 節表裡 layer 0「公司組內」特別小（3.064）：公司句 5、6、8、9 的「蘋」都在句首（位置 1），彼此距離 0，只有句 7 在位置 5。</p>
+
+<h2 id="layers">7.9　從 layer 0 到 layer 12：什麼時候分得開</h2>
+<p>把 <code>LAYER</code> 從 0 改到 12，每層都算一次矩陣，再取三個平均：水果組內（句 0–4 兩兩）、公司組內（句 5–9 兩兩）、組間（一句水果配一句公司）。<strong>組間明顯大於兩個組內</strong>，就代表兩種蘋果分得開。</p>
+<div class="tablewrap"><table>
+<thead><tr><th rowspan="2">layer</th><th colspan="3">歐氏距離（越大越遠）</th><th colspan="3">cosine similarity（越大越像）</th></tr>
+<tr><th>水果組內</th><th>公司組內</th><th>組間</th><th>水果組內</th><th>公司組內</th><th>組間</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>6.142</td><td>3.064</td><td>5.596</td><td>0.956</td><td>0.976</td><td>0.959</td></tr>
+<tr><td>1</td><td>10.386</td><td>9.454</td><td>11.121</td><td>0.912</td><td>0.924</td><td>0.901</td></tr>
+<tr><td>2</td><td>11.427</td><td>10.138</td><td>12.326</td><td>0.892</td><td>0.912</td><td>0.875</td></tr>
+<tr><td>3</td><td>11.149</td><td>9.928</td><td>12.571</td><td>0.883</td><td>0.905</td><td>0.852</td></tr>
+<tr><td>4</td><td>12.384</td><td>11.772</td><td>15.230</td><td>0.874</td><td>0.885</td><td>0.811</td></tr>
+<tr><td>5</td><td>11.591</td><td>11.726</td><td>15.200</td><td>0.885</td><td>0.884</td><td>0.806</td></tr>
+<tr><td>6</td><td>11.438</td><td>11.754</td><td>15.643</td><td>0.895</td><td>0.891</td><td>0.807</td></tr>
+<tr><td>7</td><td>12.169</td><td>12.299</td><td>16.007</td><td>0.885</td><td>0.882</td><td>0.803</td></tr>
+<tr><td>8</td><td>11.563</td><td>11.447</td><td>15.804</td><td>0.885</td><td>0.886</td><td>0.786</td></tr>
+<tr><td>9</td><td>11.450</td><td>10.945</td><td>15.867</td><td>0.886</td><td>0.892</td><td>0.781</td></tr>
+<tr><td>10</td><td>10.745</td><td>10.695</td><td>14.956</td><td>0.901</td><td>0.897</td><td>0.806</td></tr>
+<tr><td>11</td><td>10.618</td><td>10.910</td><td>14.818</td><td>0.908</td><td>0.902</td><td>0.824</td></tr>
+<tr><td>12</td><td>13.776</td><td>15.652</td><td>18.481</td><td>0.788</td><td>0.719</td><td>0.625</td></tr>
+</tbody>
+</table></div>
+<figure class="fig">
+<img src="img/ch07_layer_sweep.png" alt="兩張折線圖，橫軸 layer 0 到 12。左圖是「蘋」的平均歐氏距離，三條線：水果組內（藍）、公司組內（橘）、組間（綠）；綠線從 layer 1 起在兩條組內線上方，layer 4 起明顯拉開，layer 12 三條都往上跳。右圖是平均 cosine similarity；綠線從 layer 1 起在兩條組內線下方，layer 4 起差距拉大，layer 12 三條一起往下掉">
+<figcaption>圖 7.6 — 「蘋」的組內與組間平均，左：歐氏距離，右：cosine similarity。組間（綠）和組內（藍、橘）拉得越開，兩種蘋果分得越開。</figcaption>
+</figure>
+<p>讀這張表與圖：</p>
+<ul>
+  <li><strong>layer 0 完全分不開</strong>：組間 5.596 甚至<strong>小於</strong>水果組內 6.142。7.8 節說過，這一層的向量只差在位置。</li>
+  <li><strong>layer 4 起明顯分開</strong>：layer 4–12 歐氏的組間都比兩個組內大 2.8 以上；layer 4–11 cosine 的組間比組內低約 0.06–0.11（手算）。</li>
+  <li><strong>layer 8–11 維持在分得最開的程度</strong>：用下面框裡的比值看，這四層都在 1.36–1.45，layer 9 最高；cosine 的「組內 − 組間」在 layer 8–10 約 0.09–0.11，也是 layer 4–11 裡最大的。</li>
+  <li><strong>layer 12 三個數字一起變</strong>：歐氏三個都變大（13.776、15.652、18.481），cosine 三個都變小（0.788、0.719、0.625）。兩組的走向不同：水果組的 cosine 差距變成全表最大（0.788 − 0.625 = 0.163），公司組卻縮回 0.094；歐氏比值也是水果 1.34、公司只剩 1.18（手算）。</li>
+</ul>
+<div class="warn"><h4>跨層比較不能直接比歐氏距離的大小</h4>
+<p>歐氏距離的絕對值會隨層變：layer 12 的組間 18.481 比 layer 8 的 15.804 大，但 layer 12 的組內也一起變大了，不代表 layer 12 分得比較開。跨層比較要看<strong>比值</strong>，或改用不受向量長度影響的 cosine（但 cosine 的整體水準也會隨層變，例如 layer 12 三個值一起往下掉，所以同樣要比組內和組間的<strong>差距</strong>，不是只看組間的大小）。以「組間 ÷ 組內」為例（手算，前者對水果組、後者對公司組）：layer 0 是 0.91、1.83（公司組內被位置相同的 0 拉低，7.8 節）；layer 4 是 1.23、1.29；layer 8 是 1.37、1.38；layer 9 是 1.39、1.45；layer 10 是 1.39、1.40；layer 11 是 1.40、1.36；layer 12 是 1.34、1.18。照比值看，layer 8–11 一樣開（layer 9 略高），layer 12 對公司組明顯退步。</p>
+</div>
+<p>另一種檢查是「最近鄰」：每句在 cosine 下最像的另一句，是不是同組？10 句裡對了幾句：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>layer</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th></tr></thead>
+<tbody>
+<tr><td>「蘋」</td><td>3</td><td>8</td><td>8</td><td>9</td><td>10</td><td>10</td><td>9</td><td>9</td><td>10</td><td>10</td><td>10</td><td>10</td><td><b>8</b></td></tr>
+<tr><td>「果」</td><td>3</td><td>6</td><td>6</td><td>7</td><td>10</td><td>9</td><td>9</td><td>10</td><td>10</td><td>10</td><td>10</td><td>10</td><td><b>10</b></td></tr>
+</tbody>
+</table></div>
+<p>（layer 0 有大量距離 0、相似度相同的平手，程式取第一個，所以那一欄的 3 只是參考。）「蘋」在 layer 8–11 全對，到 layer 12 掉回 8 句：就是 7.7 節的句 2、句 7。也就是說，程式預設看的 layer 12 並不是這組句子分得最好的一層。</p>
+<h3 id="layer8">LAYER = 8 的矩陣</h3>
+<figure class="fig">
+<img src="img/ch07_layer8.png" alt="10×10 矩陣，句 1 到 4 對句 5 到 9 的格子多在 15 到 18 之間，偏黃綠；句 5、6、8、9 彼此 8.98 到 10.66；句 1 對句 4 是 8.17">
+<figcaption>圖 7.7 — 把第 76 行改成 <code>LAYER = 8</code>。</figcaption>
+</figure>
+<p>layer 8 的「蘋」：句 1–4 對句 5–9 多在 15–18（黃綠）；句 5、6、8、9 彼此 8.98–10.66；句 1 與句 4 是 8.17，全圖最小的非對角值。句 2 對水果句 11.11–13.24、對公司句 14.73–17.21：<strong>回到水果那邊了</strong>。句 7 對公司句 12.86–13.80、對水果句 13.32–16.93：最近的是句 8 的 12.86，但和句 0 的 13.32 差不多。</p>
+
+<h2 id="guo">7.10　換成「果」</h2>
+<p>把第 59 行註解掉、第 60 行打開，看「果」字：</p>
+<figure class="fig">
+<img src="img/ch07_guo.png" alt="10×10 矩陣，清楚的兩個方塊：左上句 0 到 4 彼此 9.62 到 14.70，右下句 5 到 9 彼此 9.43 到 14.65，偏藍綠；兩塊之間 15.18 到 19.55，黃綠到黃">
+<figcaption>圖 7.8 — 「果」的 layer 12 矩陣（第 59、60 行對調）。兩個方塊很清楚。</figcaption>
+</figure>
+<p>這張圖有清楚的兩個方塊：左上句 0–4 彼此 9.62–14.70、右下句 5–9 彼此 9.43–14.65；兩塊之間 15.18–19.55。句 2（蘋果茶）的「果」和水果句 12.14–14.70、和公司句 16.30–18.82；句 7（蘋果手機）的「果」和公司句 12.24–14.65、和水果句 16.46–17.51。<strong>用「果」時，句 2 和句 7 都回到自己的組</strong>；7.9 節的最近鄰也顯示「果」在 layer 7–12 全對。</p>
+<p>同一個詞「蘋果」，第一個字和第二個字在第 12 層的表現不一樣，為什麼？<strong>本書不知道原因</strong>，只記錄這個現象。它提醒的是：這份作業的結論（「BERT 分得出兩種蘋果嗎？」「在第幾層？」）會隨你選哪個字、看哪一層、用哪種距離而改變；回答之前，先確認題目指的是哪一種設定。</p>
+<p>「果」的趨勢和「蘋」大致相同：layer 0 組間 5.944 小於水果組內 6.602，分不開；layer 8 組內 12.646／12.342、組間 17.445；layer 12 組內 12.375／11.570、組間 17.130，cosine 0.854／0.874／0.726。</p>
+
+<h2 id="font">7.11　中文字型：font fallback</h2>
+<p>最後是目錄頁<a href="index.html#now">〈先說在前面〉</a>的「第二層：外部資源」那一段，以及第 0 章答應要細說的字型。圖 7.1 的 y 軸是中文句子，matplotlib 預設的字型 DejaVu Sans 沒有中文字。原版 notebook 的做法是在 Colab 上用 <code>gdown</code>（從 Google Drive 下載檔案的命令列工具）下載「台北思源黑體」<code>taipei_sans_tc_beta.ttf</code>，建立 <code>FontProperties(fname=…)</code>，只在 <code>plt.yticks(…, fontproperties=myfont)</code> 那一行指定它（只有 y 軸的句子用中文字型）。本 repo 改用系統內建的字型：</p>
+<figure class="listing"><figcaption>bert_embedding.py:22–24 — 字型檔的路徑</figcaption>
+<pre class="py" data-hot="24"><code># The Colab notebook downloads taipei_sans_tc_beta.ttf to draw Traditional Chinese.
+# Locally any CJK font works; set FONT_PATH to the one you have.
+FONT_PATH = '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf'</code></pre></figure>
+<p>CJK 是中日韓文字的統稱。主程式在這個檔案存在時設定字型（第 0 章 <a href="ch00.html#run-embed">0.5 節</a>引用過整段主程式開頭，這裡只看這 4 行）：</p>
+<figure class="listing"><figcaption>bert_embedding.py:88–91 — 有字型檔才設定，拉丁字型在前、中文字型在後</figcaption>
+<pre class="py" data-hot="90,91"><code>    if os.path.exists(FONT_PATH):
+        # Latin glyphs come from DejaVu Sans, the missing CJK glyphs fall back to FONT_PATH
+        font_manager.fontManager.addfont(FONT_PATH)
+        plt.rcParams['font.family'] = ['DejaVu Sans', font_manager.FontProperties(fname=FONT_PATH).get_name()]</code></pre></figure>
+<p>第 90 行用 <code>font_manager.fontManager.addfont</code> 把字型檔登記給 matplotlib；第 91 行改 <code>plt.rcParams</code>（matplotlib 的全域設定，之後畫的每一張圖都會套用）裡的 <code>font.family</code>，設成一個<strong>清單</strong>：<code>['DejaVu Sans', 'Droid Sans Fallback']</code>（第二個名字是從字型檔讀出來的）。</p>
+<p>清單的意思是 <strong>font fallback</strong>（字型備援）：每一個字，先用清單的第一個字型畫；第一個沒有這個字，就改用第二個。matplotlib 3.6 起支援這種逐字備援。所以英文、數字由 DejaVu Sans 畫，中文由 Droid Sans Fallback 補上。本書實測這個設定：沒有任何缺字警告。</p>
+<p>為什麼不直接只設 Droid Sans Fallback？本書把第 91 行的 <code>'DejaVu Sans'</code> 拿掉跑一次：</p>
+<figure class="fig">
+<img src="img/ch07_font_droid_only.png" alt="同一張矩陣，y 軸的中文句子正常，但格子裡的所有數字、colorbar 的刻度、x 軸刻度、英文標題，以及句子裡的 12.3%、iPhone、Face ID 和半形右括號，全部變成方框">
+<figcaption>圖 7.9 — 只設 Droid Sans Fallback：中文正常，所有英數字變成方框。</figcaption>
+</figure>
+<p>stderr 出現 38 條缺字警告，每一種缺的字一條（matplotlib 畫圖時其實觸發了 568 次，但 Python 對同一個位置、同一句警告預設只印第一次）。每條兩行，第一行是警告，第二行是觸發它的那行程式（第 118 行的 <code>fig.savefig</code>：字是在存檔、真正畫出來時才找字型的），例如：</p>
+<pre class="shell"><code>bert_embedding.py:118: UserWarning: Glyph 41 ()) missing from font(s) Droid Sans Fallback.
+  fig.savefig(path, bbox_inches=&#x27;tight&#x27;)
+bert_embedding.py:118: UserWarning: Glyph 49 (1) missing from font(s) Droid Sans Fallback.
+  fig.savefig(path, bbox_inches=&#x27;tight&#x27;)</code></pre>
+<p>（前兩條。本書跑的是只改了第 91 行的複本，警告開頭的檔名是複本的路徑，這裡換回 <code>bert_embedding.py</code>；第一條的 <code>)</code> 是句 1 的半形右括號。38 條裡也有 <code>Glyph 73 (I)</code>，就是 Face ID 的 I。）</p>
+<p>缺的 38 種全部是英數與符號：a–i、m–p、r、s、B–F、I、P、R、T、W、0–9、<code>%</code>、<code>)</code>、<code>.</code>（就是這張圖用到的那些）。也就是說，這個字型<strong>沒有拉丁字母和數字</strong>，不只是「Face ID」的 I。畫出來中文句子正常，但格子裡的數字、colorbar、x 軸刻度、英文標題、句子裡的英數（12.3%、iPhone、Face ID）和半形 <code>)</code> 全部變成方框。</p>
+<p>反過來，如果 <code>FONT_PATH</code> 指到一個不存在的檔案，第 88 行的 if 不成立，只剩預設的 DejaVu Sans：</p>
+<figure class="fig">
+<img src="img/ch07_font_none.png" alt="同一張矩陣，數字、標題、colorbar 都正常，但 y 軸句子裡的中文全部變成方框，只剩括號、12.3%、iPhone、Face ID 這些英數看得到">
+<figcaption>圖 7.10 — 找不到中文字型：數字與英文正常，y 軸的中文全變方框。</figcaption>
+</figure>
+<p>這次是 71 條缺字警告（71 種中文字各一條；實際觸發 210 次），例如 <code>Glyph 20170 (\N{CJK UNIFIED IDEOGRAPH-4ECA}) missing from font(s) DejaVu Sans.</code>（U+4ECA 是「今」）。數字、標題、英數都正常，y 軸句子的中文全變方框。在你自己的電腦上，如果沒有 <code>/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf</code>，就會得到這張圖；照第 23 行的註解，把 <code>FONT_PATH</code> 改成你有的任何一個中文字型檔即可。</p>
+
+<div class="note"><h4>本章「另外量的」數字從哪來</h4>
+<p><code>bert_embedding.py</code> 只存一張圖。本章的模型規格、token 清單、word 與字元的對照、印出來的矩陣、最近鄰、各層的組內／組間表，以及圖 7.2、7.4–7.10 這些變體，都來自本書另外寫的量測程式 <code>docs/tools/hw09_ch07_embedding.py</code>。它 import <code>bert_embedding.py</code> 取句子與函式；變體是把 <code>bert_embedding.py</code> 的原始碼文字改掉幾行（例如 <code>LAYER = 8</code>、<code>return 0</code>）之後執行同一份主程式，只把存檔路徑換掉，<code>bert_embedding.py</code> 本身沒有被修改。在 <code>HW09/</code> 裡、裝好本 repo 的環境（第 0 章 <a href="ch00.html#env">0.3 節</a>）後執行，CPU 就夠，模型不在快取時會自動下載：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python ../docs/tools/hw09_ch07_embedding.py</code></pre>
+<p>它把數字印在 stdout，並把 8 張 <code>ch07_*.png</code> 寫進 <code>docs/HW09/img/</code>（會覆蓋書裡的圖）。要自己試 TODO 區的改法，不需要這支量測程式：直接改 <code>bert_embedding.py</code> 的第 59–60、72、76 行，再照 7.4 節開頭的指令執行 <code>bert_embedding.py</code> 本身，圖會存成 <code>output/bert_embedding.png</code>。</p>
+<p>本書的機器上它整支跑完約 5.9 秒（real time，模型已在快取）。stdout 的節錄（7.4 節 word／字元對照表與 7.9 節最近鄰表的來源，逐字；其他行省略）：</p>
+<pre class="shell">  sentence 1 index 2: char &#x27;蘋&#x27;, char_to_token -&gt; 3; word_to_tokens -&gt; TokenSpan(start=3, end=4) token &#x27;蘋&#x27;
+  sentence 1 index 13: char &#x27;下&#x27;, char_to_token -&gt; 14; word_to_tokens -&gt; TokenSpan(start=14, end=15) token &#x27;下&#x27;
+  sentence 1 index 15: char &#x27;1&#x27;, char_to_token -&gt; 16; word_to_tokens -&gt; TokenSpan(start=16, end=17) token &#x27;12&#x27;
+  sentence 1 index 16: char &#x27;2&#x27;, char_to_token -&gt; 16; word_to_tokens -&gt; TokenSpan(start=17, end=18) token &#x27;.&#x27;
+  sentence 1 index 17: char &#x27;.&#x27;, char_to_token -&gt; 17; word_to_tokens -&gt; TokenSpan(start=18, end=19) token &#x27;3&#x27;
+  sentence 1 index 18: char &#x27;3&#x27;, char_to_token -&gt; 18; word_to_tokens -&gt; TokenSpan(start=19, end=20) token &#x27;%&#x27;
+  sentence 1 index 19: char &#x27;%&#x27;, char_to_token -&gt; 19; word_to_tokens -&gt; None token None
+蘋: correct out of 10, layer 0..12: [3, 8, 8, 9, 10, 10, 9, 9, 10, 10, 10, 10, 8]
+果: correct out of 10, layer 0..12: [3, 6, 6, 7, 10, 9, 9, 10, 10, 10, 10, 10, 10]</pre>
+<p>（第 1 行起的 <code>sentence 1</code> 就是句 1；<code>index k</code> 對應 7.4 節表的 k。）</p>
+</div>
+
+<div class="note"><h4>現在的做法</h4>
+<ul>
+  <li><strong>用內建的 metric 或向量化計算</strong>：<code>pairwise_distances</code> 收到 Python 函式時，要對每一對各呼叫一次；sklearn 也有內建的 <code>metric='euclidean'</code>、<code>metric='cosine'</code>（注意後者是「cosine 距離」＝ 1 − cosine similarity，方向和本 repo 的 <code>cosine_similarity</code> 相反），或直接用 <code>sklearn.metrics.pairwise.cosine_similarity</code>。10 個向量時差別不大，本書沒有比較速度。</li>
+  <li><strong>按 word 或字元取 token，先檢查回傳值</strong>：<code>word_to_tokens</code> 可能回傳 <code>None</code>（7.4 節）；中文句子有英數字時，用 <code>char_to_token</code> 按字元取 token 比較直觀，但同樣要檢查。</li>
+  <li><strong>畫矩陣時把行列寫對</strong>：<code>plt.text(j, i, …)</code>（7.6 節）；也可以用 <code>imshow</code> 之外的熱圖工具，它們通常內建標數字的選項。</li>
+  <li><strong>中文字型用 fallback 清單</strong>：本 repo 的 <code>font.family = [拉丁字型, 中文字型]</code> 就是現在的做法，比原版每一處都指定 <code>fontproperties</code> 簡單。</li>
+</ul>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>10 個句子（句 0–9）取「蘋」（或「果」）在某一層的 768 維向量，兩兩比較成 10×10 矩陣。本書把句 0–4 當水果、句 5–9 當公司；句 2 是蘋果茶、句 7 是蘋果手機。句 1 括號全半形混用、句 5「發振」是原版的錯字。</li>
+  <li>bert-base-chinese 一字一 token，英文變 [UNK]（iPhone、Face、ID），<code>12</code> 是一個 token。</li>
+  <li><code>word_to_tokens(k)</code> 的 k 是 tokenizer 的 word，不是字元：連續英數字算一個 word、空白不算。純中文時 token 位置 = 字的位置 + 1（[CLS]）；超過 word 數會回傳 None，<code>.start</code> 報錯。</li>
+  <li>歐氏距離 ‖a − b‖（差的 L2 norm），0 = 相同、越小越像；cosine similarity = a·b ÷ (‖a‖‖b‖)，1 = 同方向、越大越像。兩者方向相反，cosine 版的對角線是 1。原版兩個函式都是 <code>return 0</code>，不寫的話整張圖是 0。</li>
+  <li><code>pairwise_distances(…, metric=函式)</code> 對每一對呼叫函式（含對角線）。<code>imshow</code> 用預設 viridis；只有 y 軸有句子標籤；第 116 行 <code>plt.text(i, j)</code> 行列寫反，矩陣對稱所以看不出來（由參數順序推得）。</li>
+  <li>layer 12：句 0、1、3、4 彼此 10–12，句 6、8、9 彼此 9.6–11.5，句 5 離群；句 2 最靠近公司句、句 7 最靠近句 0。</li>
+  <li>layer 0：同字、同位置、同 token_type 的向量完全相同（token + position + token_type embedding，再 LayerNorm），12 對距離剛好 0；這一層分不開兩種蘋果。</li>
+  <li>layer 4 起分開，layer 8–11 比值最高（1.36–1.45，layer 9 略高）；跨層要看比值，或看 cosine 的組內與組間差距，不能直接比歐氏距離。「蘋」在 layer 8–11 最近鄰全對、layer 12 掉回 8 句；「果」在 layer 7–12 全對，原因不明。</li>
+  <li>字型：<code>font.family</code> 設成清單做逐字 fallback。只用 Droid Sans Fallback 時所有英數變方框（它沒有拉丁字母和數字）；找不到中文字型時中文變方框。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 把 <code>LAYER</code> 改成 0，句 0「今天買了蘋果來吃」和句 7「今天買了蘋果手機」的距離剛好是 0。這代表 BERT 認為兩句的「蘋果」意思一樣嗎？</summary>
+<p>不代表。layer 0 是 embedding 層，向量只由「哪個字＋第幾個位置＋token_type」三個查表結果相加、再做 LayerNorm 得到，完全不看句子裡的其他字。兩句的「蘋」都在位置 5、token_type 都是 0，向量就完全相同。同樣的原因，句 2、5、6、8、9（「蘋」都在位置 1）兩兩距離也是 0，雖然它們有水果也有公司（7.8 節）。</p></details>
+<details class="quiz"><summary>2. 把第 72 行改成 <code>METRIC = cosine_similarity</code>，對角線的數字和顏色會變成什麼？讀圖時要注意什麼？</summary>
+<p>對角線變成 1.00、顏色是最亮的黃。<code>pairwise_distances</code> 對每一對（包括自己和自己）呼叫函式，自己和自己的 cosine 是 1。cosine 是「越大越像」，和歐氏距離「越小越像」相反，所以同一個 viridis 色表要反過來讀：亮＝像（7.5 節、圖 7.4）。</p></details>
+<details class="quiz"><summary>3. 同學想看句 1 最後的「%」，把 <code>select_word_index</code> 的第 2 個數字（句 1）改成 19，因為「%」是第 19 個字（從 0 數）。會發生什麼事？</summary>
+<p>程式會在第 80 行出錯：<code>AttributeError: 'NoneType' object has no attribute 'start'</code>。<code>word_to_tokens</code> 的參數是第幾個 <strong>word</strong>，不是第幾個字元；句 1 的 <code>12</code> 兩個字元是一個 word，所以只有 19 個 word（0–18），<code>word_to_tokens(19)</code> 回傳 None。「%」是第 18 個 word，要填 18（7.4 節的表：<code>word_to_tokens(18)</code> → token 19 的 <code>%</code>）。</p></details>
+<details class="quiz"><summary>4. layer 12 的組間平均距離是 18.481，layer 8 是 15.804。可以說「layer 12 把兩種蘋果分得比 layer 8 開」嗎？</summary>
+<p>不行。歐氏距離的大小會隨層變，layer 12 的組內距離也一起變大了（13.776、15.652）。要比「組間 ÷ 組內」：layer 8 約 1.37–1.38，layer 12 約 1.34（水果）與 1.18（公司），反而是 layer 8 比較開。用 cosine 或最近鄰檢查也一樣：「蘋」的最近鄰在 layer 8 全對、layer 12 只對 8 句（7.9 節）。</p></details>
+<details class="quiz"><summary>5. 在 layer 12，用「蘋」時句 2（蘋果茶）靠近公司、句 7（蘋果手機）靠近水果。換成「果」會怎樣？為什麼？</summary>
+<p>換成「果」後兩句都回到自己的組：句 2 的「果」和水果句 12.14–14.70、和公司句 16.30–18.82；句 7 和公司句 12.24–14.65、和水果句 16.46–17.51（圖 7.8）。為什麼同一個詞的兩個字表現不同，本書不知道原因，只能記錄現象。這也說明作業的結論會隨選哪個字、哪一層、哪種距離而改變。</p></details>
+<details class="quiz"><summary>6. 為什麼第 91 行的字型清單要把 <code>'DejaVu Sans'</code> 放在 Droid Sans Fallback 前面？只設 Droid Sans Fallback 會怎樣？</summary>
+<p><code>font.family</code> 是一個清單，matplotlib 每個字依序找第一個有這個字的字型（逐字 fallback）。Droid Sans Fallback 沒有拉丁字母和數字，只設它的話，所有英數字（格子裡的數字、colorbar、刻度、標題、12.3%、iPhone、Face ID）都會變成方框，stderr 印 38 條缺字警告。把 DejaVu Sans 放前面，英數由它畫，中文它沒有，才輪到 Droid Sans Fallback（7.11 節、圖 7.9）。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://huggingface.co/bert-base-chinese">bert-base-chinese 的模型頁</a>：本章用的模型。</li>
+  <li><a href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise_distances.html">scikit-learn — pairwise_distances</a>：<code>metric</code> 可以給字串或函式。</li>
+  <li><a href="https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html">NumPy — numpy.linalg.norm</a>：各種 norm 的定義，一維陣列預設是 L2。</li>
+  <li><a href="https://huggingface.co/docs/transformers/main_classes/tokenizer">Hugging Face transformers — Tokenizer</a>：<code>word_to_tokens</code>、<code>char_to_token</code>、<code>word_ids</code> 等對照方法的說明。</li>
+  <li><a href="https://matplotlib.org/stable/users/explain/text/fonts.html">Matplotlib — Fonts</a>：字型的設定方式與 font fallback。</li>
+  <li><a href="https://arxiv.org/abs/1810.04805">Devlin et al., 2018, BERT</a>：position embedding、token_type（segment）embedding 與 LayerNorm 的原始描述。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="ch08.html">第 8 章 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW09 讀碼教材 · 對應 commit b2dbe4c · 程式碼引用取自本 repo 的 HW09/；實測輸出取自 2026-10-03／04 本機執行</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>
