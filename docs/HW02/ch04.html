@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 4 章　模型：10 層單向 LSTM — HW02 音素分類</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW02 讀碼教材</p>
+  <h1>第 4 章　模型：10 層單向 LSTM</h1>
+  <p class="chap-lead">第 0 章從外面看過這個模型：輸入 (64, 11, 39)，輸出 (64, 11, 41)，兩千萬個參數。本章打開它：LSTM 每一步在算什麼、10 層怎麼疊、<code>model.py</code> 的每一行做了什麼、哪些設定和註解對不上。最重要的一節是 4.5：這個 LSTM 是單向的，被評分的中間那格<strong>看不到</strong>後面 5 格，本章用訓練好的權重實際證明，並看看改成雙向會差多少。</p>
+</header>
+<main>
+
+<h2 id="lstm">4.1　LSTM：一格一格讀，邊讀邊記</h2>
+<p>第 3 章最後說過，LSTM 把 (64, 11, 39) 看成 64 串、每串 11 個時間步、每步 39 個數字。64 串彼此獨立，所以下面只看<strong>一串</strong>：11 個向量 <em>x</em><sub>0</sub>、<em>x</em><sub>1</sub>、…、<em>x</em><sub>10</sub>，每個 39 維，依序是第 t−5 到 t+5 格。</p>
+<p>RNN（循環神經網路）的想法是：<strong>從左到右一步一步讀</strong>，每讀一步，就把「這一步的輸入」和「到目前為止的記憶」合起來，更新記憶，並輸出一個向量。同一套權重在每一步重複使用，所以不管序列多長，參數量都一樣。LSTM 是 RNN 的一種，它每一步帶著兩個 512 維的向量往下走：</p>
+<ul>
+  <li><strong><em>h</em><sub>t</sub>（hidden state）</strong>：第 t 步的輸出，也是下一步用來「回想」的短期狀態。<code>lstm_out</code> 裡存的就是每一步的 <em>h</em><sub>t</sub>。</li>
+  <li><strong><em>c</em><sub>t</sub>（cell state）</strong>：比較長期的記憶。它只被「部分遺忘、部分寫入」，不會每一步整個被改寫，這是 LSTM 比普通 RNN 更能記住遠處資訊的原因。</li>
+</ul>
+<p>每一步怎麼更新？LSTM 用四組「閘」（gate）。四組都看同樣兩樣東西，這一步的輸入 <em>x</em><sub>t</sub> 和上一步的輸出 <em>h</em><sub>t−1</sub>，各自用自己的權重算出一個 512 維的向量（σ 是 sigmoid，把數值壓到 0 到 1；tanh 壓到 −1 到 1；⊙ 是逐元素相乘）。下面的寫法照 PyTorch 文件：</p>
+<div class="eq">
+<em>i</em><sub>t</sub> = σ(<em>W</em><sub>ii</sub><em>x</em><sub>t</sub> + <em>b</em><sub>ii</sub> + <em>W</em><sub>hi</sub><em>h</em><sub>t−1</sub> + <em>b</em><sub>hi</sub>)　　輸入閘：這一步的新內容要寫進去多少<br>
+<em>f</em><sub>t</sub> = σ(<em>W</em><sub>if</sub><em>x</em><sub>t</sub> + <em>b</em><sub>if</sub> + <em>W</em><sub>hf</sub><em>h</em><sub>t−1</sub> + <em>b</em><sub>hf</sub>)　　遺忘閘：舊的記憶要留下多少<br>
+<em>g</em><sub>t</sub> = tanh(<em>W</em><sub>ig</sub><em>x</em><sub>t</sub> + <em>b</em><sub>ig</sub> + <em>W</em><sub>hg</sub><em>h</em><sub>t−1</sub> + <em>b</em><sub>hg</sub>)　候選內容：這一步想寫進去的東西<br>
+<em>o</em><sub>t</sub> = σ(<em>W</em><sub>io</sub><em>x</em><sub>t</sub> + <em>b</em><sub>io</sub> + <em>W</em><sub>ho</sub><em>h</em><sub>t−1</sub> + <em>b</em><sub>ho</sub>)　　輸出閘：記憶要露出多少當作輸出<br>
+<em>c</em><sub>t</sub> = <em>f</em><sub>t</sub> ⊙ <em>c</em><sub>t−1</sub> + <em>i</em><sub>t</sub> ⊙ <em>g</em><sub>t</sub>　　　<em>h</em><sub>t</sub> = <em>o</em><sub>t</sub> ⊙ tanh(<em>c</em><sub>t</sub>)
+</div>
+<p>直觀地說：遺忘閘決定舊記憶留多少，輸入閘決定新內容寫多少，兩者相加成新的記憶 <em>c</em><sub>t</sub>；輸出閘再決定記憶裡哪些部分要變成這一步的輸出 <em>h</em><sub>t</sub>。三個閘都是 0 到 1 之間的比例，而且是逐維決定的：512 維裡，有些維可以完全保留、有些維完全清掉。</p>
+<p>這就解釋了第 0 章的參數形狀。四組閘各有一個「看 <em>x</em><sub>t</sub>」的矩陣（512 × 輸入維度）和一個「看 <em>h</em><sub>t−1</sub>」的矩陣（512 × 512），PyTorch 把四組上下疊起來存：<code>weight_ih_l0</code> 是 (2048, 39)，由上而下依序是 <em>W</em><sub>ii</sub>、<em>W</em><sub>if</sub>、<em>W</em><sub>ig</sub>、<em>W</em><sub>io</sub>；<code>weight_hh_l0</code> 是 (2048, 512)。兩組偏差 <code>bias_ih</code>、<code>bias_hh</code> 各 2048 個，對應上式裡的 <em>b</em><sub>i·</sub> 與 <em>b</em><sub>h·</sub>。</p>
+<p>第一步沒有「上一步」，<em>h</em><sub>−1</sub> 和 <em>c</em><sub>−1</sub> 要從某個初始值開始。<code>model.py</code> 第 22 行呼叫 <code>self.lstm(x, None)</code>，第二個參數 <code>None</code> 就是「初始狀態用全 0」，這也是 PyTorch 的預設值。</p>
+
+<h2 id="stack">4.2　10 層疊起來</h2>
+<p><code>num_layers=10</code> 表示把 10 個 LSTM 疊在一起：第 0 層讀 11 個 39 維的輸入，輸出 11 個 512 維的 <em>h</em>；第 1 層把這 11 個 512 維當成自己的輸入，再讀一遍，依此類推，一直到第 9 層。每一層有自己的權重，所以第 0 層的 <code>weight_ih</code> 是 (2048, 39)，第 1–9 層的是 (2048, 512)。</p>
+<figure class="fig">
+<svg viewBox="0 0 900 430" role="img" aria-label="10 層單向 LSTM 展開圖：橫軸是 11 個時間步，縱軸是第 0、1 層、省略、第 9 層。每個方格把 h 與 c 往右傳、把 h 往上傳。中間第 5 步最上層的輸出只收得到第 0 到 5 步的資訊，第 6 到 10 步在它右邊，箭頭都不往左走">
+  <defs>
+    <marker id="ar04" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 z" fill="#93a1af"/>
+    </marker>
+  </defs>
+  <rect x="512" y="40" width="372" height="330" rx="8" fill="#93a1af" fill-opacity="0.08" stroke="#93a1af" stroke-dasharray="5 4"/>
+  <text class="s-sm" x="698" y="32" text-anchor="middle">第 6–10 步：中間格看不到</text>
+  <text class="s-sm" x="20" y="96">輸出 h</text>
+  <text class="s-sm" x="20" y="146">第 9 層</text>
+  <text class="s-sm" x="20" y="206">⋮</text>
+  <text class="s-sm" x="20" y="256">第 1 層</text>
+  <text class="s-sm" x="20" y="316">第 0 層</text>
+  <text class="s-sm" x="20" y="396">輸入 x</text>
+  <g id="cols">
+    <g><rect x="100" y="126" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="100" y="236" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="100" y="296" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="122" y="396" text-anchor="middle">x0</text><text class="s-mono" x="122" y="206" text-anchor="middle">⋮</text></g>
+    <g><rect x="170" y="126" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="170" y="236" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="170" y="296" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="192" y="396" text-anchor="middle">x1</text><text class="s-mono" x="192" y="206" text-anchor="middle">⋮</text></g>
+    <g><rect x="240" y="126" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="240" y="236" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="240" y="296" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="262" y="396" text-anchor="middle">x2</text><text class="s-mono" x="262" y="206" text-anchor="middle">⋮</text></g>
+    <g><rect x="310" y="126" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="310" y="236" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="310" y="296" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="332" y="396" text-anchor="middle">x3</text><text class="s-mono" x="332" y="206" text-anchor="middle">⋮</text></g>
+    <g><rect x="380" y="126" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="380" y="236" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="380" y="296" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="402" y="396" text-anchor="middle">x4</text><text class="s-mono" x="402" y="206" text-anchor="middle">⋮</text></g>
+    <g><rect x="450" y="126" width="44" height="34" rx="5" class="s-box" style="stroke:#e3b341;stroke-width:2.5"/><rect x="450" y="236" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="450" y="296" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="472" y="396" text-anchor="middle">x5</text><text class="s-mono" x="472" y="206" text-anchor="middle">⋮</text></g>
+    <g><rect x="530" y="126" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="530" y="236" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="530" y="296" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="552" y="396" text-anchor="middle">x6</text><text class="s-mono" x="552" y="206" text-anchor="middle">⋮</text></g>
+    <g><rect x="600" y="126" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="600" y="236" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="600" y="296" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="622" y="396" text-anchor="middle">x7</text><text class="s-mono" x="622" y="206" text-anchor="middle">⋮</text></g>
+    <g><rect x="670" y="126" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="670" y="236" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="670" y="296" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="692" y="396" text-anchor="middle">x8</text><text class="s-mono" x="692" y="206" text-anchor="middle">⋮</text></g>
+    <g><rect x="740" y="126" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="740" y="236" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="740" y="296" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="762" y="396" text-anchor="middle">x9</text><text class="s-mono" x="762" y="206" text-anchor="middle">⋮</text></g>
+    <g><rect x="810" y="126" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="810" y="236" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><rect x="810" y="296" width="44" height="34" rx="5" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="832" y="396" text-anchor="middle">x10</text><text class="s-mono" x="832" y="206" text-anchor="middle">⋮</text></g>
+  </g>
+  <g stroke="#93a1af" stroke-width="1.6" fill="none">
+    <path d="M144,313 H166 M214,313 H236 M284,313 H306 M354,313 H376 M424,313 H446 M494,313 H526 M574,313 H596 M644,313 H666 M714,313 H736 M784,313 H806" marker-end="url(#ar04)"/>
+    <path d="M144,253 H166 M214,253 H236 M284,253 H306 M354,253 H376 M424,253 H446 M494,253 H526 M574,253 H596 M644,253 H666 M714,253 H736 M784,253 H806" marker-end="url(#ar04)"/>
+    <path d="M144,143 H166 M214,143 H236 M284,143 H306 M354,143 H376 M424,143 H446 M494,143 H526 M574,143 H596 M644,143 H666 M714,143 H736 M784,143 H806" marker-end="url(#ar04)"/>
+  </g>
+  <g stroke="#93a1af" stroke-width="1.6">
+    <line x1="122" y1="380" x2="122" y2="334" marker-end="url(#ar04)"/><line x1="192" y1="380" x2="192" y2="334" marker-end="url(#ar04)"/><line x1="262" y1="380" x2="262" y2="334" marker-end="url(#ar04)"/><line x1="332" y1="380" x2="332" y2="334" marker-end="url(#ar04)"/><line x1="402" y1="380" x2="402" y2="334" marker-end="url(#ar04)"/><line x1="472" y1="380" x2="472" y2="334" marker-end="url(#ar04)"/><line x1="552" y1="380" x2="552" y2="334" marker-end="url(#ar04)"/><line x1="622" y1="380" x2="622" y2="334" marker-end="url(#ar04)"/><line x1="692" y1="380" x2="692" y2="334" marker-end="url(#ar04)"/><line x1="762" y1="380" x2="762" y2="334" marker-end="url(#ar04)"/><line x1="832" y1="380" x2="832" y2="334" marker-end="url(#ar04)"/>
+    <line x1="122" y1="296" x2="122" y2="274" marker-end="url(#ar04)"/><line x1="192" y1="296" x2="192" y2="274" marker-end="url(#ar04)"/><line x1="262" y1="296" x2="262" y2="274" marker-end="url(#ar04)"/><line x1="332" y1="296" x2="332" y2="274" marker-end="url(#ar04)"/><line x1="402" y1="296" x2="402" y2="274" marker-end="url(#ar04)"/><line x1="472" y1="296" x2="472" y2="274" marker-end="url(#ar04)"/><line x1="552" y1="296" x2="552" y2="274" marker-end="url(#ar04)"/><line x1="622" y1="296" x2="622" y2="274" marker-end="url(#ar04)"/><line x1="692" y1="296" x2="692" y2="274" marker-end="url(#ar04)"/><line x1="762" y1="296" x2="762" y2="274" marker-end="url(#ar04)"/><line x1="832" y1="296" x2="832" y2="274" marker-end="url(#ar04)"/>
+    <line x1="122" y1="126" x2="122" y2="104" marker-end="url(#ar04)"/><line x1="192" y1="126" x2="192" y2="104" marker-end="url(#ar04)"/><line x1="262" y1="126" x2="262" y2="104" marker-end="url(#ar04)"/><line x1="332" y1="126" x2="332" y2="104" marker-end="url(#ar04)"/><line x1="402" y1="126" x2="402" y2="104" marker-end="url(#ar04)"/><line x1="472" y1="126" x2="472" y2="104" marker-end="url(#ar04)" style="stroke:#e3b341;stroke-width:2.5"/><line x1="552" y1="126" x2="552" y2="104" marker-end="url(#ar04)"/><line x1="622" y1="126" x2="622" y2="104" marker-end="url(#ar04)"/><line x1="692" y1="126" x2="692" y2="104" marker-end="url(#ar04)"/><line x1="762" y1="126" x2="762" y2="104" marker-end="url(#ar04)"/><line x1="832" y1="126" x2="832" y2="104" marker-end="url(#ar04)"/>
+  </g>
+  <text class="s-sm" x="472" y="92" text-anchor="middle" style="fill:#e3b341">中間格的輸出</text>
+  <text class="s-sm" x="20" y="424">橫向箭頭：同一層把 h 與 c 傳給下一步（只往右）。縱向箭頭：把 h 交給上一層當輸入。層與層之間有 dropout 0.5（只在訓練時）。</text>
+</svg>
+<figcaption>圖 4.1　10 層單向 LSTM 沿著 11 個時間步展開（第 2–8 層省略）。每個方格是「某一層在某一步」的計算，同一列的方格共用同一套權重。中間第 5 步最上面的輸出（黃框）只連得到它左邊和下面的方格，也就是 <em>x</em><sub>0</sub> 到 <em>x</em><sub>5</sub>；右邊灰色區域的任何東西都傳不過來。</figcaption>
+</figure>
+<p>圖 4.1 有兩個方向的箭頭。橫向是同一層的記憶往下一步傳，縱向是每一步的輸出往上一層送。資訊<strong>只能往右、往上</strong>流，沒有任何箭頭往左。這個方向性是 4.5 節的伏筆。</p>
+<p><code>dropout=0.5</code> 加在層與層之間：每一層的輸出交給上一層之前，訓練時隨機把一半的數值設成 0。PyTorch 文件說明，這個 dropout 加在「除了最後一層以外」每一層的輸出上，所以 10 層之間一共有 9 處。最後一層的輸出直接交給 <code>self.out</code>，不經過 dropout。</p>
+<p>讀完 11 步，每一層最後一步的 <em>h</em> 和 <em>c</em> 會被收集起來回傳，就是第 22 行的 <code>(h_n, h_c)</code>，形狀都是 (10, 64, 512)：10 層、64 串、每串 512 維。</p>
+
+<h2 id="code">4.3　逐行讀 model.py</h2>
+<figure class="listing"><figcaption>model.py:1–29 — 整個檔案</figcaption>
+<pre class="py" data-hot="5,9,11,22,28"><code>import torch.nn as nn
+
+
+class Classifier(nn.Module):
+    def __init__(self, input_dim, output_dim=41, hidden_layers=1, hidden_dim=256):
+        super(Classifier, self).__init__()
+
+        self.lstm = nn.LSTM(  # LSTM 效果要比 nn.RNN() 好多了
+            input_size=39,  # 图片每行的数据像素点
+            hidden_size=hidden_dim,  # rnn hidden unit
+            num_layers=10,  # 有几层 RNN layers
+            batch_first=True,  # input &amp; output 会是以 batch size 为第一维度的特征集 e.g. (batch, time_step, input_size)
+            dropout=0.5,
+        )
+        self.out = nn.Linear(hidden_dim, output_dim)
+
+    def forward(self, x):
+        # x shape (batch, time_step, input_size)
+        # r_out shape (batch, time_step, output_size)
+        # h_n shape (n_layers, batch, hidden_size)   LSTM 有两个 hidden states, h_n 是分线, h_c 是主线
+        # h_c shape (n_layers, batch, hidden_size)
+        lstm_out, (h_n, h_c) = self.lstm(x, None)  # None 表示 hidden state 会用全0的 state
+
+        # 选取最后一个时间点的 r_out 输出
+        # 这里 r_out[:, -1, :] 的值也是 h_n 的值
+
+        # out = self.out(lstm_out[:, -1, :])  - original
+        out = self.out(lstm_out.contiguous())
+        return out</code></pre></figure>
+
+<h3 id="unused">建構子：四個參數，只有兩個有作用</h3>
+<p>第 5 行宣告了四個參數，<code>train.py:38</code> 傳了三個：<code>input_dim=429</code>、<code>hidden_layers=1</code>、<code>hidden_dim=512</code>。逐一看它們有沒有被用到：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>參數</th><th>傳入的值</th><th>在哪裡用到</th><th>實際效果</th></tr></thead>
+<tbody>
+<tr><td><code>input_dim</code></td><td>429</td><td><b class="hl-bad">沒有用到</b></td><td>第 9 行寫死 <code>input_size=39</code>。429 是拼接後一列的長度，LSTM 每一步只吃 39 個數字，所以寫死 39 反而是對的；但這個參數是誤導</td></tr>
+<tr><td><code>output_dim</code></td><td>沒傳，預設 41</td><td>第 15 行</td><td><b class="hl-ok">有效</b>：41 類</td></tr>
+<tr><td><code>hidden_layers</code></td><td>1（<code>config.py:17</code>）</td><td><b class="hl-bad">沒有用到</b></td><td>第 11 行寫死 <code>num_layers=10</code></td></tr>
+<tr><td><code>hidden_dim</code></td><td>512（<code>config.py:18</code>）</td><td>第 10、15 行</td><td><b class="hl-ok">有效</b>：預設 256 被蓋成 512</td></tr>
+</tbody>
+</table></div>
+<figure class="listing"><figcaption>config.py:14–18 — 模型相關的設定</figcaption>
+<pre class="py" data-hot="17"><code># model parameters
+input_dim = 39 * concat_nframes  # the input dim of the model, you should not change the value
+input_dim_lstm = 39
+hidden_layers = 1  # the number of hidden layers
+hidden_dim = 512  # the hidden dim</code></pre></figure>
+<p>改 <code>config.py</code> 的 <code>hidden_layers</code> 完全沒有作用。本書實測：<code>hidden_layers=1</code> 和 <code>hidden_layers=6</code> 建出來的模型，<code>lstm.num_layers</code> 都是 10、參數都是 20,064,809。這兩個參數是從原版範例程式（全連接網路，4.7 節）的 <code>Classifier</code> 原樣留下來的介面：<code>train.py</code> 和 <code>predict.py</code> 照舊傳，新的模型卻不用。這是一個典型的「設定檔說的和程式做的不一樣」：讀 <code>config.py</code> 會以為模型只有 1 層，要做報告題 1 的「改層數」實驗，改這裡也不會有任何效果。</p>
+
+<h3 id="forward">forward：三行做完</h3>
+<ul>
+  <li><strong>第 22 行</strong>：<code>self.lstm(x, None)</code>，<code>x</code> 是 (64, 11, 39)。回傳 <code>lstm_out</code>（最後一層在每一步的 <em>h</em>，(64, 11, 512)）和 <code>(h_n, h_c)</code>（每一層最後一步的 <em>h</em> 與 <em>c</em>，各 (10, 64, 512)）。</li>
+  <li><strong>第 28 行</strong>：<code>self.out(...)</code> 把 512 維變成 41 維。<code>nn.Linear</code> 只作用在最後一維，前面有幾維都照樣保留，所以 (64, 11, 512) 進去、(64, 11, 41) 出來，等於對 11 步<strong>各自</strong>套用同一個 Linear。</li>
+  <li><strong>第 29 行</strong>：回傳 11 步各 41 個分數。</li>
+</ul>
+<p>第 28 行的 <code>.contiguous()</code> 是什麼？第 2 章說過，contiguous 指 tensor 在記憶體裡是一般的連續排列。本書實測，<code>lstm_out</code> 在 CPU 和 GPU 上都<strong>不是</strong> contiguous，它的 stride 是 <code>(512, 32768, 1)</code>：PyTorch 內部是以（時間, batch, hidden）的順序算的，<code>batch_first=True</code> 回傳的只是一個轉置過的 view。<code>.contiguous()</code> 會複製一份排好的。<code>nn.Linear</code> 其實不要求輸入連續，不加也能算：實測加與不加，結果 <code>allclose</code>（數值上相同），但不是逐位元相同，因為兩種排列走的矩陣乘法路徑不同，捨入順序不一樣。所以這行不影響正確性，只是多一次複製。</p>
+<p>第 27 行被註解掉的 <code>out = self.out(lstm_out[:, -1, :])  - original</code> 是另一種用法：只取最後一步的輸出，整串只給一個答案。本 repo 改成每一步都給答案，配合第 2 章把標籤拼成 11 個。</p>
+
+<h2 id="comments">4.4　註解是從別處抄來的</h2>
+<p><code>model.py</code> 的註解是簡體中文，而且有好幾句和這份作業對不上。它們看起來是從一份用 LSTM 做 MNIST 手寫數字分類的教學範例抄來的：那類範例把 28 × 28 的圖片看成 28 個時間步、每步一行 28 個像素，只取最後一步的輸出做分類。對照本 repo：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>行</th><th>註解（原文）</th><th>在這份作業裡</th></tr></thead>
+<tbody>
+<tr><td>8</td><td>LSTM 效果要比 nn.RNN() 好多了</td><td>沒有在本 repo 實測過，只是經驗之談</td></tr>
+<tr><td>9</td><td>图片每行的数据像素点</td><td>沒有圖片。39 是一格的 MFCC 維度</td></tr>
+<tr><td>11</td><td>有几层 RNN layers</td><td>對，但層數是寫死的 10，不是 <code>hidden_layers</code></td></tr>
+<tr><td>19</td><td>r_out shape (batch, time_step, output_size)</td><td>程式裡的變數叫 <code>lstm_out</code>，不叫 <code>r_out</code>；最後一維是 hidden 512，不是輸出的 41</td></tr>
+<tr><td>20</td><td>h_n 是分线, h_c 是主线</td><td>比喻式說法：<em>h</em> 是每步的輸出，<em>c</em> 是比較長期的記憶（4.1 節）</td></tr>
+<tr><td>24</td><td>选取最后一个时间点的 r_out 输出</td><td>描述的是第 27 行被註解掉的舊寫法；第 28 行實際取的是全部 11 步</td></tr>
+<tr><td>25</td><td>这里 r_out[:, -1, :] 的值也是 h_n 的值</td><td>只對了一半：<code>lstm_out[:, -1]</code> 等於 <code>h_n[-1]</code>（最後一層），不等於 <code>h_n</code> 的其他層。實測 <code>torch.equal(lstm_out[:, -1], h_n[-1])</code> 為 True，和 <code>h_n[0]</code> 比是 False</td></tr>
+</tbody>
+</table></div>
+<p>這些註解不影響程式執行，但會誤導讀者。教訓和第 1 章投影片的筆誤一樣：<strong>註解是人寫的，程式才是實際執行的東西</strong>。讀別人的程式，看到註解和程式不一致時，以程式為準，並且實際跑一次確認。</p>
+
+<h2 id="causal">4.5　單向：中間格看不到後面 5 格</h2>
+<p>回到圖 4.1。<code>train.py</code> 評分時只看第 5 步（中間那格）的輸出（第 5 章），而第 5 步最上層的 <em>h</em> 是由第 0–5 步的輸入一路算上來的。第 6–10 步，也就是中心格<strong>之後</strong>的 5 格，在它算完的時候還沒被讀到。所以 <code>concat_feat</code> 辛苦拼進來的「後 5 格」，對被評分的那個輸出<strong>完全沒有貢獻</strong>；它們只對第 6–10 步自己的輸出有用，而那些輸出只在算 loss 時用到。</p>
+<p>這可以直接用訓練好的權重驗證。拿 <code>2007-149877-0023</code> 的 500 筆，把每筆的第 6–10 格換成亂數，看中間格的輸出變不變；再反過來，換掉第 0–4 格。存成 <code>c4a.py</code>（放在 <code>HW02/</code> 裡，需要 GPU 與 <code>model.ckpt</code>）：</p>
+<pre class="py"><code>import torch
+from model import Classifier
+from utils import concat_feat
+
+m = Classifier(input_dim=429, hidden_layers=1, hidden_dim=512).cuda()
+m.load_state_dict(torch.load('model.ckpt'))
+m.eval()
+
+f = torch.load('libriphone/feat/train/2007-149877-0023.pt')
+x = concat_feat(f, 11).view(-1, 11, 39).cuda()      # 500 筆，每筆 11 格
+torch.manual_seed(0)
+with torch.no_grad():
+    out = m(x)
+    future = x.clone(); future[:, 6:] = torch.randn(500, 5, 39).cuda()
+    past = x.clone(); past[:, :5] = torch.randn(500, 5, 39).cuda()
+    out_f, out_p = m(future), m(past)
+print(out.shape)
+print('middle unchanged when frames 6-10 change:', torch.equal(out[:, 5], out_f[:, 5]))
+print('last changed:', not torch.equal(out[:, 10], out_f[:, 10]))
+print('middle unchanged when frames 0-4 change:', torch.equal(out[:, 5], out_p[:, 5]))
+print('middle predictions that flip when frames 0-4 change:', (out[:, 5].argmax(1) != out_p[:, 5].argmax(1)).sum().item(), '/ 500')</code></pre>
+<pre class="shell cmd"><code>$ ../.venv/bin/python c4a.py</code></pre>
+<pre class="shell"><code>torch.Size([500, 11, 41])
+middle unchanged when frames 6-10 change: True  «1»
+last changed: True  «2»
+middle unchanged when frames 0-4 change: False  «3»
+middle predictions that flip when frames 0-4 change: 405 / 500  «4»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>後 5 格換成亂數，中間格的 41 個分數 <code>torch.equal</code>：一個位元都沒變。不是「影響很小」，是完全沒有影響。</li>
+  <li><span class="mk">2</span>對照組：最後一格（第 10 步）的輸出變了，所以亂數確實有送進模型。</li>
+  <li><span class="mk">3</span>換掉前 5 格，中間格的輸出就變了。</li>
+  <li><span class="mk">4</span>而且變得很多：500 個中間格的預測，有 405 個換了答案。模型非常依賴前面的格子，因為那是它唯一看得到的上下文。</li>
+</ol>
+<p>這個性質叫做<strong>因果性</strong>（causal）：輸出只依賴「現在和過去」。做即時語音辨識時這是必要的，因為未來的聲音還沒錄到；但這份作業是離線的，整句都在手上，中心格前後各 5 格都已經拼好送進模型了，單向等於自己丟掉一半的資訊。</p>
+
+<h3 id="positions">圖 4.2：11 個位置的準確率</h3>
+<p>單向的影響也看得出來在數字上。模型對 11 步都有輸出，每一步也都有自己的標籤（第 2 章），所以可以分別算 11 個位置的準確率。下圖比較本 repo 的模型（第 15 個 epoch 的 <code>model.ckpt</code>）和把 LSTM 改成<strong>雙向</strong>（第 7 章的實驗，其餘設定相同，5 個 epoch 中最好的第 3 個 epoch），兩者都在整個驗證集上計算：</p>
+<figure class="fig">
+<svg viewBox="0 0 900 380" role="img" aria-label="11 個位置的驗證準確率：單向 LSTM 從第 0 格的 0.4555 一路升到第 10 格的 0.6827；雙向 LSTM 以中間為峰，第 5 格 0.7452、第 6 格 0.7457，兩端約 0.66 到 0.69">
+  <line x1="70" y1="300.0" x2="830" y2="300.0" stroke="#2b3540" stroke-width="1"/><text class="s-sm" x="62" y="304.0" text-anchor="end">0.4</text>
+  <line x1="70" y1="235.0" x2="830" y2="235.0" stroke="#2b3540" stroke-width="1"/><text class="s-sm" x="62" y="239.0" text-anchor="end">0.5</text>
+  <line x1="70" y1="170.0" x2="830" y2="170.0" stroke="#2b3540" stroke-width="1"/><text class="s-sm" x="62" y="174.0" text-anchor="end">0.6</text>
+  <line x1="70" y1="105.0" x2="830" y2="105.0" stroke="#2b3540" stroke-width="1"/><text class="s-sm" x="62" y="109.0" text-anchor="end">0.7</text>
+  <line x1="70" y1="40.0" x2="830" y2="40.0" stroke="#2b3540" stroke-width="1"/><text class="s-sm" x="62" y="44.0" text-anchor="end">0.8</text>
+  <rect x="432" y="36" width="36" height="268" rx="4" fill="#e3b341" fill-opacity="0.10"/>
+  <text class="s-sm" x="450" y="30" text-anchor="middle">中間格（被評分）</text>
+  <text class="s-sm" x="100" y="324" text-anchor="middle">0</text>
+  <text class="s-sm" x="170" y="324" text-anchor="middle">1</text>
+  <text class="s-sm" x="240" y="324" text-anchor="middle">2</text>
+  <text class="s-sm" x="310" y="324" text-anchor="middle">3</text>
+  <text class="s-sm" x="380" y="324" text-anchor="middle">4</text>
+  <text class="s-sm" x="450" y="324" text-anchor="middle">5</text>
+  <text class="s-sm" x="520" y="324" text-anchor="middle">6</text>
+  <text class="s-sm" x="590" y="324" text-anchor="middle">7</text>
+  <text class="s-sm" x="660" y="324" text-anchor="middle">8</text>
+  <text class="s-sm" x="730" y="324" text-anchor="middle">9</text>
+  <text class="s-sm" x="800" y="324" text-anchor="middle">10</text>
+  <text class="s-sm" x="450" y="350" text-anchor="middle">位置（第 j 步；0 = 第 t−5 格，5 = 中心格，10 = 第 t+5 格）</text>
+  <text class="s-sm" x="18" y="170" transform="rotate(-90 18 170)" text-anchor="middle">驗證準確率</text>
+  <polyline points="100,263.9 170,218.8 240,190.0 310,169.2 380,154.1 450,142.7 520,133.9 590,127.2 660,122.7 730,119.1 800,116.2" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+  <g><circle cx="100" cy="263.9" r="10" fill="#161c24" fill-opacity="0"/><circle cx="100" cy="263.9" r="4" fill="#3987e5" stroke="#161c24" stroke-width="2"/><title>單向（本 repo），第 0 步：0.4555</title></g>
+  <g><circle cx="170" cy="218.8" r="10" fill="#161c24" fill-opacity="0"/><circle cx="170" cy="218.8" r="4" fill="#3987e5" stroke="#161c24" stroke-width="2"/><title>單向（本 repo），第 1 步：0.5250</title></g>
+  <g><circle cx="240" cy="190.0" r="10" fill="#161c24" fill-opacity="0"/><circle cx="240" cy="190.0" r="4" fill="#3987e5" stroke="#161c24" stroke-width="2"/><title>單向（本 repo），第 2 步：0.5692</title></g>
+  <g><circle cx="310" cy="169.2" r="10" fill="#161c24" fill-opacity="0"/><circle cx="310" cy="169.2" r="4" fill="#3987e5" stroke="#161c24" stroke-width="2"/><title>單向（本 repo），第 3 步：0.6013</title></g>
+  <g><circle cx="380" cy="154.1" r="10" fill="#161c24" fill-opacity="0"/><circle cx="380" cy="154.1" r="4" fill="#3987e5" stroke="#161c24" stroke-width="2"/><title>單向（本 repo），第 4 步：0.6244</title></g>
+  <g><circle cx="450" cy="142.7" r="10" fill="#161c24" fill-opacity="0"/><circle cx="450" cy="142.7" r="4" fill="#3987e5" stroke="#161c24" stroke-width="2"/><title>單向（本 repo），第 5 步：0.6420</title></g>
+  <g><circle cx="520" cy="133.9" r="10" fill="#161c24" fill-opacity="0"/><circle cx="520" cy="133.9" r="4" fill="#3987e5" stroke="#161c24" stroke-width="2"/><title>單向（本 repo），第 6 步：0.6556</title></g>
+  <g><circle cx="590" cy="127.2" r="10" fill="#161c24" fill-opacity="0"/><circle cx="590" cy="127.2" r="4" fill="#3987e5" stroke="#161c24" stroke-width="2"/><title>單向（本 repo），第 7 步：0.6659</title></g>
+  <g><circle cx="660" cy="122.7" r="10" fill="#161c24" fill-opacity="0"/><circle cx="660" cy="122.7" r="4" fill="#3987e5" stroke="#161c24" stroke-width="2"/><title>單向（本 repo），第 8 步：0.6728</title></g>
+  <g><circle cx="730" cy="119.1" r="10" fill="#161c24" fill-opacity="0"/><circle cx="730" cy="119.1" r="4" fill="#3987e5" stroke="#161c24" stroke-width="2"/><title>單向（本 repo），第 9 步：0.6783</title></g>
+  <g><circle cx="800" cy="116.2" r="10" fill="#161c24" fill-opacity="0"/><circle cx="800" cy="116.2" r="4" fill="#3987e5" stroke="#161c24" stroke-width="2"/><title>單向（本 repo），第 10 步：0.6827</title></g>
+  <polyline points="100,127.9 170,109.0 240,94.9 310,84.8 380,78.9 450,75.6 520,75.3 590,77.6 660,84.5 730,94.9 800,109.5" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round"/>
+  <g><circle cx="100" cy="127.9" r="10" fill="#161c24" fill-opacity="0"/><circle cx="100" cy="127.9" r="4" fill="#d95926" stroke="#161c24" stroke-width="2"/><title>雙向，第 0 步：0.6648</title></g>
+  <g><circle cx="170" cy="109.0" r="10" fill="#161c24" fill-opacity="0"/><circle cx="170" cy="109.0" r="4" fill="#d95926" stroke="#161c24" stroke-width="2"/><title>雙向，第 1 步：0.6938</title></g>
+  <g><circle cx="240" cy="94.9" r="10" fill="#161c24" fill-opacity="0"/><circle cx="240" cy="94.9" r="4" fill="#d95926" stroke="#161c24" stroke-width="2"/><title>雙向，第 2 步：0.7155</title></g>
+  <g><circle cx="310" cy="84.8" r="10" fill="#161c24" fill-opacity="0"/><circle cx="310" cy="84.8" r="4" fill="#d95926" stroke="#161c24" stroke-width="2"/><title>雙向，第 3 步：0.7311</title></g>
+  <g><circle cx="380" cy="78.9" r="10" fill="#161c24" fill-opacity="0"/><circle cx="380" cy="78.9" r="4" fill="#d95926" stroke="#161c24" stroke-width="2"/><title>雙向，第 4 步：0.7401</title></g>
+  <g><circle cx="450" cy="75.6" r="10" fill="#161c24" fill-opacity="0"/><circle cx="450" cy="75.6" r="4" fill="#d95926" stroke="#161c24" stroke-width="2"/><title>雙向，第 5 步：0.7452</title></g>
+  <g><circle cx="520" cy="75.3" r="10" fill="#161c24" fill-opacity="0"/><circle cx="520" cy="75.3" r="4" fill="#d95926" stroke="#161c24" stroke-width="2"/><title>雙向，第 6 步：0.7457</title></g>
+  <g><circle cx="590" cy="77.6" r="10" fill="#161c24" fill-opacity="0"/><circle cx="590" cy="77.6" r="4" fill="#d95926" stroke="#161c24" stroke-width="2"/><title>雙向，第 7 步：0.7421</title></g>
+  <g><circle cx="660" cy="84.5" r="10" fill="#161c24" fill-opacity="0"/><circle cx="660" cy="84.5" r="4" fill="#d95926" stroke="#161c24" stroke-width="2"/><title>雙向，第 8 步：0.7315</title></g>
+  <g><circle cx="730" cy="94.9" r="10" fill="#161c24" fill-opacity="0"/><circle cx="730" cy="94.9" r="4" fill="#d95926" stroke="#161c24" stroke-width="2"/><title>雙向，第 9 步：0.7155</title></g>
+  <g><circle cx="800" cy="109.5" r="10" fill="#161c24" fill-opacity="0"/><circle cx="800" cy="109.5" r="4" fill="#d95926" stroke="#161c24" stroke-width="2"/><title>雙向，第 10 步：0.6931</title></g>
+  <text class="s-sm" x="812" y="132.2">單向 0.6827</text>
+  <text class="s-sm" x="812" y="103.5">雙向 0.6931</text>
+  <text class="s-sm" x="450" y="63.599999999999994" text-anchor="middle">0.7452</text>
+  <text class="s-sm" x="450" y="162.7" text-anchor="middle">0.6420</text>
+  <text class="s-sm" x="108" y="267.9">0.4555</text>
+</svg>
+<div class="legend"><span><i style="background:#3987e5"></i>單向 LSTM（本 repo，model.ckpt，第 15 個 epoch）</span><span><i style="background:#d95926"></i>雙向 LSTM（第 7 章實驗，第 3 個 epoch）</span></div>
+<figcaption>圖 4.2　11 個位置各自的驗證準確率（每個位置和它自己那一格的標籤比對，264,570 筆）。滑鼠移到點上可看數值；下方表格是同樣的數字。黃色底是 <code>train.py</code> 實際評分的中間格。</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<thead><tr><th>位置（第 j 步）</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5（中間）</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th></tr></thead>
+<tbody>
+<tr><td>單向（本 repo）</td><td>0.4555</td><td>0.5250</td><td>0.5692</td><td>0.6013</td><td>0.6244</td><td><b class="hl-key">0.6420</b></td><td>0.6556</td><td>0.6659</td><td>0.6728</td><td>0.6783</td><td>0.6827</td></tr>
+<tr><td>雙向</td><td>0.6648</td><td>0.6938</td><td>0.7155</td><td>0.7311</td><td>0.7401</td><td><b class="hl-key">0.7452</b></td><td>0.7457</td><td>0.7421</td><td>0.7315</td><td>0.7155</td><td>0.6931</td></tr>
+</tbody>
+</table></div>
+<p>兩條曲線的形狀說明了一切：</p>
+<ul>
+  <li><strong>單向一路往右升</strong>：第 j 步看得到 j+1 格的上下文（全部在它左邊），越右邊看到的越多。第 0 步只看得到自己，準確率 0.4555，和第 7 章原版範例程式「只看一格」的 0.458 幾乎一樣。</li>
+  <li><strong>雙向中間最高、兩邊對稱地往下</strong>：雙向 LSTM 多了一組從右往左讀的 LSTM，每一步的輸出把兩個方向接起來。中間第 5 步左右各有 5 格上下文，最多；兩端各缺一邊。</li>
+  <li><strong>單向的第 10 步（0.6827）比中間格（0.6420）高</strong>，但不能拿來用：第 10 步預測的是第 t+5 格的標籤，不是中心格的。這只說明「看得到的上下文越多越準」。</li>
+</ul>
+<p>只改成雙向，中間格的驗證準確率從 0.628（單向，同樣第 5 個 epoch）跳到 0.745（雙向，最佳），而且第 1 個 epoch 就有 0.717，超過單向跑滿 20 個 epoch 的 0.642。代價是參數變成 59,003,945 個，約 2.94 倍：每個方向各有一組權重，而且第 1–9 層的輸入變成兩個方向接起來的 1024 維。</p>
+<div class="warn"><h4>只加 <code>bidirectional=True</code> 會出錯</h4>
+<p>雙向 LSTM 每一步的輸出是兩個方向接起來的 2 × 512 = 1024 維，所以 <code>self.out</code> 也要改成 <code>nn.Linear(2 * hidden_dim, output_dim)</code>。只改 LSTM 不改 Linear，第一個 batch 就會停下來。本書實測的錯誤訊息：<code>RuntimeError: mat1 and mat2 shapes cannot be multiplied (704x1024 and 512x41)</code>。704 是 64 筆 × 11 步，1024 是雙向的輸出，512 × 41 是沒改的 Linear。</p>
+</div>
+<div class="note"><h4>現在的做法：雙向，或者乾脆用 attention</h4>
+<p>離線的序列標註（整段輸入都已知、每個位置給一個答案），在 RNN 時代的標準做法就是雙向 LSTM。今天的語音模型多半改用 Transformer 或 Conformer（卷積加 attention）當編碼器：attention 讓每個位置直接看整段序列，本來就沒有「只看過去」的限制，要做即時辨識時才刻意加上遮罩，讓它只看過去。</p>
+</div>
+
+<h2 id="depth">4.6　10 層有必要嗎？</h2>
+<p>10 層 LSTM 在 RNN 裡算是很深的。第 7 章把層數改成 3（其餘設定相同），在同樣的 5 個 epoch 規格下比較：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>模型</th><th>參數</th><th>第 5 個 epoch 的 val acc</th><th>5 個 epoch 中最好</th><th>每個 epoch 約</th></tr></thead>
+<tbody>
+<tr><td>10 層（本 repo）</td><td>20,064,809</td><td>0.627588</td><td>0.627588</td><td>7 分鐘</td></tr>
+<tr><td>3 層</td><td>5,356,073</td><td>0.645678</td><td>0.646574（第 4 個 epoch）</td><td>2 分鐘</td></tr>
+</tbody>
+</table></div>
+<p>3 層只有 27% 的參數，每個 epoch 快三倍多，5 個 epoch 的結果卻比 10 層好，甚至超過 10 層跑滿 20 個 epoch 的 0.641955。這裡只比了 5 個 epoch，不能說 3 層在任何情況下都比較好，但至少說明這個資料量下，<strong>多疊層數不是瓶頸</strong>；真正的瓶頸是 4.5 節的「看不到未來」。（「每個 epoch 約」一欄是量級：10 層的數字取自無干擾的單 epoch 計時，3 層取自第 7 章實驗的紀錄。）</p>
+
+<h2 id="dnn">4.7　model_dnn.py：沒被使用的原版模型</h2>
+<p><code>HW02/</code> 裡還有一個模型檔：</p>
+<figure class="listing"><figcaption>model_dnn.py:1–30 — 原版範例程式的全連接網路</figcaption>
+<pre class="py" data-hot="8-11,22-26"><code>import torch.nn as nn
+
+
+class BasicBlock(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(BasicBlock, self).__init__()
+
+        self.block = nn.Sequential(
+            nn.Linear(input_dim, output_dim),
+            nn.ReLU(),
+        )
+
+    def forward(self, x):
+        x = self.block(x)
+        return x
+
+
+class Classifier(nn.Module):
+    def __init__(self, input_dim, output_dim=41, hidden_layers=1, hidden_dim=256):
+        super(Classifier, self).__init__()
+
+        self.fc = nn.Sequential(
+            BasicBlock(input_dim, hidden_dim),
+            *[BasicBlock(hidden_dim, hidden_dim) for _ in range(hidden_layers)],
+            nn.Linear(hidden_dim, output_dim)
+        )
+
+    def forward(self, x):
+        x = self.fc(x)
+        return x</code></pre></figure>
+<p>這是原版範例程式的模型：兩個類別和原版 notebook 裡的程式一字不差（notebook 那一格另外多 import 了 <code>torch</code> 與 <code>torch.nn.functional</code>，沒有用到）。<code>BasicBlock</code> 是「Linear + ReLU」；<code>Classifier</code> 先用一個 block 把輸入變成 <code>hidden_dim</code> 維，再疊 <code>hidden_layers</code> 個 block，最後一個 Linear 輸出 41 類。在這個模型裡，<code>input_dim</code> 和 <code>hidden_layers</code> <strong>都有作用</strong>：4.3 節那個「傳了沒用」的介面，原本是為它設計的。它吃的是攤平的一列（例如 429 個數字），不分格，也沒有時間的概念。</p>
+<p>但是沒有任何程式用到它：<code>train.py:2</code> 和 <code>predict.py:6</code> 都是 <code>from model import *</code>，拿到的是 LSTM 版的 <code>Classifier</code>。兩個檔案裡的類別名字都叫 <code>Classifier</code>，要換模型只需要改 import 那一行。它的大小：原版設定（輸入 39、hidden 256、1 個 hidden layer）86,569 個參數；套本 repo 的 config（輸入 429、hidden 512）503,849 個參數。</p>
+<p>第 7 章會實際訓練它。先講一個結果：同樣 5 個 epoch，<code>model_dnn.py</code> 加上本 repo 的拼接設定（50 萬參數）驗證準確率 0.671459，<strong>比 10 層 LSTM 的 0.627588 還高</strong>。全連接網路一次看到整列 429 個數字，前後 5 格都看得到；單向 LSTM 的中間格卻只看得到前 5 格。兩千萬參數的模型輸給五十萬參數的模型，原因又回到 4.5 節。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>LSTM 一步一步讀，每步帶著 <em>h</em>（輸出）和 <em>c</em>（長期記憶）；四組閘（輸入、遺忘、候選、輸出）決定記憶怎麼更新。四組權重疊起來存，所以列數是 4 × 512 = 2048。</li>
+  <li>10 層疊起來，層與層之間有 9 處 dropout 0.5（只在訓練時）。初始狀態是全 0（<code>None</code>）。</li>
+  <li><code>input_dim</code>、<code>hidden_layers</code> 傳進去沒有作用（實測改成 6 層，模型仍是 10 層、參數不變），只有 <code>hidden_dim</code> 有效。註解是從 MNIST 範例抄來的，多處不符。</li>
+  <li><code>lstm_out</code> 不是 contiguous；<code>.contiguous()</code> 只是多複製一次，結果在數值上相同。<code>Linear</code> 對 11 步各自套用。</li>
+  <li>單向：中間格的輸出只依賴第 0–5 格。實測把後 5 格換成亂數，輸出一個位元都不變；換前 5 格，500 個預測有 405 個改變。</li>
+  <li>11 個位置的準確率：單向一路往右升（0.4555 → 0.6827），雙向以中間為峰（0.7452）。改成雙向（Linear 也要改成 1024 → 41），5 個 epoch 達到 0.745209。</li>
+  <li>3 層 LSTM 5 個 epoch 就達到 0.646574，層數不是瓶頸。<code>model_dnn.py</code> 是沒被使用的原版模型。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. <code>weight_ih_l0</code> 的形狀是 (2048, 39)。2048 和 39 各是什麼？第 1 層的 <code>weight_ih_l1</code> 為什麼是 (2048, 512)？</summary>
+<p>2048 = 4 組閘 × hidden 512，四組的權重上下疊在一起；39 是第 0 層每一步的輸入維度（一格的 MFCC）。第 1 層的輸入是第 0 層每一步的輸出 <em>h</em>，是 512 維，所以是 (2048, 512)。</p></details>
+<details class="quiz"><summary>2. 為了做報告題 1，把 <code>config.py</code> 的 <code>hidden_layers</code> 改成 6，模型會變成幾層？</summary>
+<p>還是 10 層。<code>model.py</code> 的第 11 行寫死 <code>num_layers=10</code>，<code>hidden_layers</code> 根本沒被用到。本書實測 <code>hidden_layers=1</code> 和 <code>6</code> 建出來的模型，<code>lstm.num_layers</code> 都是 10、參數都是 20,064,809。要改層數，得改 <code>model.py</code>。</p></details>
+<details class="quiz"><summary>3. 用訓練好的模型，把每筆輸入的第 6–10 格換成亂數，中間格的預測會改變幾個？換第 0–4 格呢？</summary>
+<p>換第 6–10 格：一個都不會變，實測中間格的輸出 <code>torch.equal</code> 為 True，因為單向 LSTM 算第 5 步時還沒讀到後面的格子。換第 0–4 格：實測在 <code>2007-149877-0023</code> 的 500 筆裡，有 405 個中間格的預測改變了。</p></details>
+<details class="quiz"><summary>4. 只在 <code>nn.LSTM(...)</code> 裡加上 <code>bidirectional=True</code>，會發生什麼事？要怎麼修？</summary>
+<p>雙向 LSTM 每一步輸出 1024 維（兩個方向各 512），但 <code>self.out</code> 還是 <code>Linear(512, 41)</code>。實測第一個 batch 就報錯：<code>RuntimeError: mat1 and mat2 shapes cannot be multiplied (704x1024 and 512x41)</code>。要把第 15 行改成 <code>nn.Linear(2 * hidden_dim, output_dim)</code>。第 7 章的雙向實驗就是這樣改的。</p></details>
+<details class="quiz"><summary>5. 註解說 <code>r_out[:, -1, :]</code> 的值也是 <code>h_n</code> 的值。哪裡對、哪裡不對？</summary>
+<p><code>lstm_out[:, -1]</code> 是最後一層在最後一步的輸出，它等於 <code>h_n[-1]</code>（最後一層的最後一步），實測 <code>torch.equal</code> 為 True。但 <code>h_n</code> 有 10 層，形狀 (10, 64, 512)，其他 9 層的值和它不同，例如和 <code>h_n[0]</code> 比是 False。所以準確的說法是「等於 <code>h_n</code> 的最後一層」。另外程式裡的變數叫 <code>lstm_out</code>，不叫 <code>r_out</code>。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html">PyTorch — torch.nn.LSTM</a>：四組閘的公式、<code>weight_ih_l[k]</code> 的疊放順序、<code>dropout</code> 加在哪裡、<code>bidirectional</code> 時的輸出形狀。</li>
+  <li><a href="https://colah.github.io/posts/2015-08-Understanding-LSTMs/">Christopher Olah — Understanding LSTM Networks</a>：用圖一步一步解釋 LSTM 的每一組閘。</li>
+  <li>Graves &amp; Schmidhuber, <em>Framewise phoneme classification with bidirectional LSTM and other neural network architectures</em>, Neural Networks, 2005：正好就是這份作業的任務（逐音框音素分類），比較了單向與雙向 LSTM。</li>
+  <li><a href="https://pytorch.org/docs/stable/generated/torch.nn.Linear.html">PyTorch — torch.nn.Linear</a>：輸入可以有任意多個前置維度，只作用在最後一維。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW02 讀碼教材 · 對應 commit 7f11c7e · 程式碼引用取自本 repo 的 HW02/；實測輸出取自 2026-10-03 至 10-05 本機執行</footer>
+
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>
