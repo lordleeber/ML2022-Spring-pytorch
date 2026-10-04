@@ -1470,3 +1470,79 @@ Answering
   - 「ch07 實測」記錄的 568／210 是 matplotlib 實際觸發的次數；Python 預設的 warnings 規則對同一位置、同一訊息只印第一次。ch07 已改成「38 條（觸發 568 次）」「71 條（觸發 210 次）」。
 - **量測工具執行時間**：`hw09_ch07_embedding.py` 整支 real 5.89 s（模型已在快取；`/usr/bin/time`）。重跑一次 stdout 和前一次逐字相同。ch07 6.11 節後的說明框補了 stdout 節錄（句 1 的 7 行 index 對照與兩行最近鄰）。
 - 雲端在 ch07 指出的兩個 FACTS 疑點（「BERT 實測」的「layer 8–9 分得最開」、「ch07 實測」的「cosine layer 4–9 差距最大」）都核對屬實，已更正。
+
+## ch08 實測（2026-10-04，本機；指令都在 HW09/ 裡執行）
+工具：`docs/tools/hw09_ch08_compare.py`（`../.venv/bin/python ../docs/tools/hw09_ch08_compare.py`；import explain_cnn.py，不修改它；印出下面的數字，產生 4 張 `docs/HW09/img/ch08_*.png`）。重跑兩次數字逐位相同。
+
+### 五種方法怎麼算（本工具，對照 explain_cnn.py）
+- LIME：照原程式（`np.random.seed(16)` 在迴圈外設一次、10 張依序、logits、start_label=1、`get_image_and_mask` 同參數）。圖 0 前 3 名 (21, 5.5216)、(25, 3.5899)、(38, 3.1247)，和「CNN 實測 → LIME」相同 → 這一欄就是 lime.png 的內容。
+- Saliency：直接呼叫 `E.compute_saliency_maps`（10 張一個 batch）→ 就是 saliency.png。
+- SmoothGrad：呼叫 `E.smooth_grad(…, 500, 0.4)`，迴圈前 `torch.manual_seed(0)` 一次（explain_cnn.py 沒設 torch seed，所以和 smoothgrad.png 不是同一批雜訊；ch03 實測的變體也各自設 seed，數值不能逐位對照）。
+- Filter：只做 **filter activation**（hook 抓 cnn[6]、cnn[23] 的第 0 個 filter，一次 forward），不做 filter visualization（優化出來的圖不是「這張圖的哪裡」，不能和其他四種比）。cnn[6] 輸出 128×128、cnn[23] 32×32。
+- IG：呼叫 `E.IntegratedGradients(model).generate_integrated_gradients(…, 10)`（repo 版：平均梯度、沒乘 x）；另算「× x」（論文版，baseline 全黑所以 x − baseline = x）。
+- 本 process 計時（僅供參考，教材引用 ch00 0.5 節的逐段計時）：LIME 14.1 s、Saliency 0.12 s、SmoothGrad 22.2 s、兩層 filter activation（只 forward，不優化）0.02 s、IG 0.41 s。
+
+### 並排圖（`img/ch08_side_by_side_a.png` 圖 0–4、`img/ch08_side_by_side_b.png` 圖 5–9）
+- 8 欄：image、LIME、Saliency、SmoothGrad、cnn[6] filter 0、cnn[23] filter 0、IG (repo)、IG x input。每一欄**照 explain_cnn.py 的畫法**：LIME 是 `get_image_and_mask` 的疊色圖；Saliency 二維 + `plt.cm.hot`；SmoothGrad 三通道當 RGB；filter activation 有正負、`normalize` 後用 matplotlib 預設色表（viridis）；IG 三通道 `normalize` 後當 RGB。最後一欄 IG x input 是本書加的，畫法同 IG。左邊列標「編號 + 標籤」。
+- 看得到的：
+  - LIME：只有幾塊 superpixel 上綠（正）或紅（負），其餘是原圖。綠色大多落在食物上：圖 0 披薩上半部、圖 4 鬆餅大半、圖 6 肉與上方配菜、圖 7 麵與左側青菜、圖 8 鮭魚片中段；圖 1 只有奶油塊右下角兩小塊；圖 2 綠色只在草莓一小塊、壺底有一塊橘紅；圖 3 巧克力片附近有紅；圖 9 碗的上緣有紅、海帶有綠。
+  - Saliency：黑底，紅黃亮點沿著物體輪廓與紋理：圖 1 奶油塊方框、圖 2 牛奶壺弧線與草莓、圖 5 荷包蛋圓圈；圖 4、6、9 亮點散在整片食物上。
+  - SmoothGrad：暗、偏灰綠的半透明影像，食物輪廓與紋理可辨（鬆餅格子、荷包蛋圓、湯碗圓）；圖 2 幾乎全黑，只有草莓較亮。
+  - cnn[6] filter 0：像整張圖的浮雕／邊緣圖，**背景也有**（圖 0 的刀叉與盤緣、圖 1 的外框、圖 8 的筷子），和類別無關。
+  - cnn[23] filter 0：32×32 的粗格子，能看出物體大形狀（圖 2 草莓是一塊深色、圖 5 蛋黃圓圈），細節沒了。
+  - IG (repo) 與 IG x input：灰底、沿輪廓的彩色細紋，兩欄幾乎分不出來（× input 的底色略暗）。
+
+### 方法之間一致嗎（`img/ch08_agreement.png`）
+- 比較用的「一張 128×128 的圖」：LIME = 每個像素填它所屬 superpixel 的 |權重|；Saliency = 程式輸出（RGB 取 max、normalize）；SmoothGrad = 程式輸出的 RGB 取 max；filter = |activation|（cnn[23] 最近鄰放大到 128）；IG = |IG| 的 RGB 取 max（repo 版、× x 版各一）。
+- 兩個量，都是 10 張各算再平均：**Spearman 等級相關**（只看大小排名）；**前 10% 像素的 IoU**（兩張圖各取最亮的 10% 像素，交集 ÷ 聯集；兩張隨機圖約 0.053）。
+- Spearman 平均（括號內是 10 張的最小..最大）：
+  | | LIME | Saliency | SmoothGrad | cnn6 | cnn23 | IG repo | IG×x |
+  |---|---|---|---|---|---|---|---|
+  | LIME | 1 | 0.41 | 0.34 | 0.15 | 0.29 | 0.46 | 0.38 |
+  | Saliency | | 1 | 0.48 | 0.08 | 0.20 | 0.68 | 0.59 |
+  | SmoothGrad | | | 1 | 0.09 | 0.29 | 0.49 | 0.40 |
+  | cnn6 | | | | 1 | 0.17 | 0.12 | 0.08 |
+  | cnn23 | | | | | 1 | 0.26 | 0.06 |
+  | IG repo | | | | | | 1 | 0.91 |
+  - 範圍：Saliency–IG repo 0.560..0.779（10 張都 > 0.5，五種方法裡最一致的一對，除了 IG 自己兩版）；IG repo–IG×x 0.817..0.995；Saliency–SmoothGrad 0.251..0.648；LIME–Saliency 0.274..0.557；Saliency–cnn6 −0.088..+0.241。
+- 前 10% IoU 平均：IG repo–IG×x 0.597、Saliency–IG repo 0.340、Saliency–IG×x 0.278、LIME–IG repo 0.181、LIME–Saliency 0.153、Saliency–SmoothGrad 0.143、SmoothGrad–IG repo 0.138；filter 的組合 0.06–0.13；Saliency–cnn6 0.062（≈ 隨機）。
+- 逐張（Saliency–SmoothGrad／Saliency–IG repo／SmoothGrad–IG repo／LIME–IG×x）：圖 0 0.251/0.568/0.294/0.348；1 0.372/0.560/0.534/0.424；2 0.351/0.585/0.265/0.229；3 0.507/0.687/0.432/0.397；4 0.648/0.779/0.613/0.391；5 0.613/0.741/0.574/0.338；6 0.514/0.679/0.653/0.467；7 0.522/0.665/0.571/0.319；8 0.509/0.757/0.511/0.507；9 0.553/0.751/0.494/0.340。圖 0 的 Saliency 與 SmoothGrad 最不一致。
+- 讀法（本書的解讀）：三種梯度方法（Saliency、SmoothGrad、IG）彼此中度一致，Saliency 和 IG 最像（推論：IG 平均的 10 個點 α = 0, 0.1, …, 0.9 裡，後幾個離原圖很近，梯度和 Saliency 在原圖上取的相近；但 Saliency 對 CE、IG 對 logit，不完全相同）；LIME 和梯度方法弱到中度一致；filter activation 和其他四種幾乎無關——它回答的是「這個 filter 在哪裡被激發」，不是「哪裡讓模型判成這一類」。
+- **集中程度**（最亮的 1%／10% 像素佔整張圖總和的比例，10 張平均）：LIME 0.090／0.500、Saliency 0.090／0.419、SmoothGrad 0.029／0.198、cnn6 0.053／0.325、cnn23 0.039／0.261、IG repo 0.086／0.408、IG×x 0.085／0.404。→ SmoothGrad 最分散（加雜訊平均把值抹開），LIME 最集中（只有少數塊權重大，而且一塊內的像素同值）。
+- **中央 64×64（[32:96, 32:96]，面積 25%）佔總和的比例**：LIME 0.437、Saliency 0.392、IG repo 0.403、IG×x 0.397、SmoothGrad 0.324、cnn23 0.287、cnn6 0.260（≈ 均勻）。食物多在中央，有類別資訊的方法都偏中央；filter activation 幾乎均勻。
+- **和「純邊緣」的相關**（灰階圖的 Sobel 梯度大小 vs 各張圖，Spearman 10 張平均）：LIME 0.275、Saliency 0.227、SmoothGrad 0.228、cnn6 0.284、cnn23 0.287、IG repo 0.313、IG×x 0.258；隨機權重模型的 saliency 0.054。→ 每種方法都有一部分是在描邊，但都不只是邊緣偵測。
+- LIME 的 repo mask（num_features=11、min_weight=0.05）在每張圖上色的比例（綠／紅，佔整張圖）：圖 0 0.188/0、1 0.051/0.075、2 0.015/0.087、3 0.102/0.041、4 0.429/0.010、5 0.116/0.021、6 0.269/0、7 0.235/0、8 0.180/0、9 0.129/0.047。塊數（綠/紅）：0 11/0、1 4/7、2 2/9、3 7/4、4 10/1、5 10/1、6 11/0、7 11/0、8 11/0、9 8/3。圖 1、2 紅塊比綠塊多。
+- superpixel 實際塊數（start_label=1 的 slic 輸出，n_segments=200 只是目標）：圖 0–9 = 107、141、151、101、66、120、108、94、128、109。
+
+### 每種方法回答的問題、用到什麼（讀碼）
+- LIME：要標籤（取 logits 的哪一欄）、不用梯度、只把模型當黑盒呼叫 1000 次；輸出每塊 superpixel 一個權重。
+- Saliency／SmoothGrad：要標籤（CE 的 target）、要梯度；輸出每個像素（Saliency 取 RGB max，SmoothGrad 保留三通道）。
+- Filter activation：**不用標籤**、不用梯度（只 forward）；filter visualization 要梯度（對輸入做 gradient ascent），也不用標籤。
+- IG：要標籤（one-hot 只取該類 logit）、要梯度（10 次）；相對於 baseline（全黑）。
+
+### 題庫用：換一個類別（target = 第 2 名類別而不是標籤）
+- 第 2 名類別（logits 排第 2）：圖 0 Fried food、1 Dessert、2 Dessert、3 Seafood、4 Noodles/Pasta、5 Meat、6 Fried food、7 Meat、8 Vegetable/Fruit、9 Dessert。
+- Spearman（標籤的圖 vs 第 2 名的圖）：
+  - Saliency：0.908、0.857、0.805、0.987、0.988、**1.000**、0.928、0.906、0.917、0.994 → **換類別幾乎不變**。
+  - IG repo：0.577、0.765、0.703、0.793、0.811、0.660、0.681、0.634、0.682、0.780 → 比 Saliency 有區別，但仍然相當像。
+- 為什麼 Saliency 換類別幾乎不變（實測 + 推導）：CE 對 logit 的梯度是 p_j − 1[j=y]。模型很自信時 p(標籤) ≈ 1，「對標籤」的梯度 ≈ Σ_{j≠y} p_j ∇z_j − (1 − p_y)∇z_y，主要由第 2 名撐著，大約是 p_2nd·(∇z_2nd − ∇z_y)；「對第 2 名」的梯度 ≈ ∇z_y − ∇z_2nd。兩者方向相反、大小差很多，取絕對值再 normalize 後幾乎一樣。實測兩個原始梯度（CE `reduction='sum'`，不取絕對值）的 cosine：圖 0 −0.942、2 −0.848、3 −0.992、4 −0.989、5 **−1.000**、7 −0.934、8 −0.943、9 −0.997；但圖 1 −0.020、圖 6 −0.000。
+  - 每張的 logit 差（標籤 − 第 2 名）與 1 − p(標籤)（float64、把其他 10 類機率加起來算）：圖 0 13.66／2.38e-06、1 24.31／2.76e-11、2 7.26／1.38e-03、3 15.47／2.22e-07、4 16.52／7.48e-08、5 14.79／3.81e-07、6 37.93／3.38e-17、7 12.83／6.04e-06、8 19.70／4.91e-09、9 15.69／1.54e-07。第 2 名佔「其他機率」的比例：0.49、0.999、0.51、0.86、0.90、0.99、0.996、0.44、0.57、1.000。圖 5、9 這個比例最接近 1，cosine 也最接近 −1。
+  - 同一批的 float32 `1 − softmax`：圖 1、6、8 是 **0**（float32 表示不了這麼接近 1 的差）。圖 1、6 的 cosine 接近 0 可能和這個捨入有關（推論，未逐層驗證）；圖 8 也是 0 但 cosine −0.943，所以不只這個原因。原始梯度最大值：圖 1 3.22e-11、圖 6 1.52e-16（ch03 的 1e-17 級梯度就是這個）。
+- 投影片 p.8 說「output category 的梯度」：ch03 已實測改成對 logit 取梯度（`img/ch03_saliency_logit.png`）；IG 就是對 logit，所以換類別時比 Saliency 有區別。
+
+### 題庫用：隨機權重的模型（sanity check）
+- `torch.manual_seed(0)` 後 `Classifier().cuda().eval()`（沒載入 checkpoint），同樣 10 張圖：預測全部是 6（Noodles/Pasta），最大機率都是 0.094（≈ 1/11 = 0.091，幾乎均勻）。
+- 同一段程式算出的圖和「訓練好的模型」的 Spearman：Saliency 圖 0–9 = 0.108、0.077、0.118、0.220、0.255、0.279、0.184、0.192、0.194、0.260（平均 0.19）；IG repo = 0.161、0.020、0.110、0.143、0.208、0.165、0.182、0.175、0.151、0.114（平均 0.14）。隨機模型 saliency 和 Sobel 邊緣的相關 0.054。
+- 看得到的（`img/ch08_random_model.png`，圖 0，五格：原圖、saliency 訓練好／隨機、IG repo 訓練好／隨機，都 normalize + hot）：訓練好的兩格黑底、披薩上緣餅皮有亮點；隨機權重的兩格整片均勻的紅黃雜點，看不出披薩、刀叉。
+- 意義：這兩種方法的圖確實依賴「模型學到的東西」，不是只反映輸入圖本身（Adebayo et al. 2018 的 model randomization test；本書只做最簡單的版本：整個模型隨機）。
+
+### 題庫：大綱列的題目在 FACTS 的答案位置（已實測，不重量）
+- start_label=0：「ch02 實測 → logits vs 機率、start_label=0」（R² 0.8617；前 5 名是同一組塊、編號各減 1（logits 21、25、38、27、40 → 20、24、37、39、26，排序略有不同）；圖 `ch02_img0_compare.png`）。
+- LIME 改用 softmax：同一節（圖 0 R² 0.5409、|w| ≥ 0.05 只剩 13 塊；10 張裡 5 張完全不上色；圖 `ch02_lime_softmax.png`）。
+- IG 乘上 x：「ch05 實測 → 乘上 x 之後的圖」（圖的相關 0.84–0.98；completeness 見「ch05 實測 → 程式的輸出與 completeness」）；本節 Spearman IG repo vs IG×x 0.817..0.995。
+- SmoothGrad 取樣數：「ch03 實測 → SmoothGrad 取樣次數」（1／10／50 次對 500 次的平均絕對差 0.1563／0.0585／0.0257）。
+- SmoothGrad 不 normalize（第 140 行）：「ch03 實測 → SmoothGrad 的變體」。
+- 換層、換「果」：「ch07 實測 → 各層：組內 vs 組間」「最近鄰檢查」「『果』的 layer 12 矩陣」「Layer 8 的『蘋』」。
+- Filter 從白雜訊出發、限制 [0,1]、lr=1：「ch04 實測 → 變體」。
+- Baseline 換灰／模糊／雜訊：「ch05 實測 → Flexible baseline」。
+- model.train() 的影響：「ch01 實測 → 模型對 10 張圖的預測」末段（logit 最多差 18.9，BN buffer 被改寫）。
