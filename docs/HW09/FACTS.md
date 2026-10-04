@@ -391,6 +391,15 @@
   - 原本的 5 個 TODO 已在「ch03 審稿補測」量好並填入；本機另加 3.12 節「雜訊小到模型認得出來時」與圖 3.9（img/ch03_smoothgrad_small.png）。仍屬推測、沒有查證的：PyTorch 內部 log-softmax 的算法；模型為什麼對 G 通道比較敏感（ch03 寫「本書沒有答案」）。
   - 回指（不重講）：ch00 的 logits／softmax、0.5 節逐段計時（Saliency 0.4 s、SmoothGrad 24.1 s）、0.6 節 smoothgrad.png 每次重跑不同；ch01 的 1 − p 表、batch vs 單張 logit、model.eval()、normalize／save_fig、torch.no_grad()；ch02 的偽亂數與種子。
 
+- ch04（第 4 章，2026-10-04 雲端）：
+  - 圖號：圖 4.1（img/filter_cnn6.png）、圖 4.2（img/filter_cnn23.png）、圖 4.3（forward hook 位置 SVG：輸入 x（藍）→ cnn[0]–[5] → cnn[6] Conv（紫粗框，hook）→ cnn[7] BN → cnn[8] ReLU → cnn[9]–[37] 再加 fc → logits（灰虛線「沒有人用」）；hook → layer_activations（全域，第 164 行）→ objective −[:, 0, :, :].sum()（紫）；黃色 backward 回到 x；Adam([x]) 只改 x）、圖 4.4（img/ch04_trajectory.png）、圖 4.5（img/ch04_xrange.png）、圖 4.6（normalize 數線 SVG：cnn[6] 圖 0 −11.07..12.05 → 0..1，[0,1] → 0.479–0.522）、圖 4.7（img/ch04_variants_cnn6.png）、圖 4.8（img/ch04_variants_cnn23.png）、圖 4.9（img/ch04_crop.png）。
+  - 本章正式定義的名詞：Filter activation／Filter visualization（docstring 158–159 的兩步；本書的 Filter explanation 取自第 157 行標題）、receptive field（感受野；7×7／38×38 與「步距」手算規則）、hook／forward hook、`register_forward_hook`、hook(module, input, output) 與「回傳值取代輸出」、handle 與 `hook_handle.remove()`、Python `global`（區域變數 vs 模組層變數）、「計算記錄」（autograd 在 forward 記下的運算）、優化器（optimizer：`step()`、`zero_grad()`）、Adam（一階／二階動量、第 1 步 ≈ lr × g 的正負號、ε 預設 1e-8）、lr（learning rate）、gradient ascent／gradient descent、viridis（matplotlib 預設色表；二維陣列預設依自身最小最大值對應色表）、BN 推論時是遞增一次函數（γ>0；除以 √running_var）、白雜訊（0–1 均勻分佈）、`torch.rand`、clamp（`x.clamp_(0, 1)`）、`.squeeze()`、`create_feature_extractor`／`torch.use_deterministic_algorithms`（現在的做法框，一句，未實測）。
+  - 本章用語：「第 k 步」＝第 k 次迴圈的 forward（第 k 次更新前）；「k 次更新後」另做一次 forward；「第一次執行」＝hw09_facts.py、產生 img/ 圖、outline 引用的 −11.87..12.32／9,108,426；「第二次執行」＝hw09_ch04_filter.py 的 −11.90..12.31／9,102,480。兩組並列、不混用。
+  - 本章手算（由本 FACTS 推得）：BN 驗算 −53.050 → −6.949；receptive field 7、38；38/128 ≈ 30%；10×128×128×128×4 bytes ≈ 84 MB；|Δx| 最小 0.0999 = 0.1 × 9.06e-6/(9.06e-6+1e-8)；第 50→100 步每步約 0.12；cnn[6] 每張 filter 0 最大值 22.90–48.33。
+  - 標明為推測的：filter 0 像邊緣偵測器；第 2 步變差是 Adam 第一步太大；重跑與 batch vs 單張的差異被 Adam 放大；cnn[6] 紋理尺度和 receptive field 相符；clamp 拿走「放大數值」的捷徑。
+  - TODO(本機實測) 4 個：hook 改掛 cnn[7]／cnn[8] 的對照圖與總和；拿掉第 172 行 global 的錯誤訊息；第 189 行改 `Adam(model.parameters())` 的效果（第三列是否等於原圖、IG 是否改變）；刪掉第 203 行後 filter_cnn23.png 是否只有細微差異、hook 數。
+  - 回指（不重講）：ch00 的 Conv／filter／activation／BN／ReLU／MaxPool、(N,C,H,W)、stage、0.2 逐層表、0.5 逐段計時（2.3／2.9 s）、0.6 重跑差異；ch01 的 normalize／save_fig、permute、model.eval()、Adam 的 exp_avg／exp_avg_sq、batch vs 單張 logit；ch03 的 backward、autograd、requires_grad_()、.grad 累加、x.cuda() 複本、colormap／hot、torch.manual_seed。
+
 ## index／outline 審稿補測（2026-10-03，本機）
 - 舊版套件能不能裝（用 `uv pip install --target <scratch>` 試，不動 .venv）：
   - `lime==0.1.1.37`：**裝得起來**，在 Python 3.12 上也能跑。它另外依賴 `progressbar`（2.5），pip 會一起裝。舊版的進度條是 `progressbar` 的 `|####|` 樣式，不是 tqdm。用它對圖 0 跑同一段 LIME（seed 16、start_label=1、logits）：前 5 名 (21, 5.5216)、(25, 3.5899)、(38, 3.1247)、(27, 3.0233)、(40, 2.9437)，R² 0.8423，**和 0.2.0.1 完全相同**。所以換版本不影響 Q1–4 的結果。
