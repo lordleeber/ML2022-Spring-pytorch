@@ -291,7 +291,11 @@
   - 報告題 2：dropout 0.25 → 0.690010（比無 dropout 的 0.687270 好），0.5 → 0.650421，0.75 → 0.512235。5 個 epoch 內 dropout 越大學得越慢；0.5、0.75 的 val loss 到第 5 epoch 都還在降，是**欠擬合**不是 dropout 無效。train acc 在 model.train() 下量（dropout 開著），所以 dropout 越大 train acc 越低，甚至低於 val acc。
   - BN + dropout 0.25：0.690154，與只加 dropout 0.25 幾乎相同（+0.00014），val loss 最低（0.9748）。
   - 5 個 epoch 下，上面所有 6×1024 的 DNN（約 680 萬參數）都**勝過**本 repo 的 10 層 LSTM（2,006 萬參數，0.627588）；LSTM 20 個 epoch 也只到 0.641955。沒有一組到 medium baseline 0.69747（驗證集）。
-- <!-- 尚未跑（等使用者放行，每組約 45–90 分鐘）：lstm_3layers、lstm_lossmid、bilstm；以及無干擾的 train.py 1 epoch 計時 -->
+- **雙向 LSTM（bilstm，2026-10-04 21:50–23:03，GPU 上只有它）**：與 model.py 相同（10 層、hidden 512、dropout 0.5、loss 算 11 格），只加 `bidirectional=True`，`out` 改成 Linear(1024, 41)。參數 **59,003,945**（單向的 2.94 倍）。每個 epoch 約 864–891 秒，整個 run 4376 秒。
+  - 每個 epoch：1: train 0.661983 / val 0.717266 / val loss 0.995585；2: train 0.744212 / val 0.738704 / val loss 0.922908；3: train 0.777281 / val 0.745209 / val loss 0.911529；4: train 0.804001 / val 0.744570 / val loss 0.938520；5: train 0.826498 / val 0.743554 / val loss 0.966469
+  - 最佳第 3 epoch **0.745209**（整個驗證集一次算完相同）。第 1 個 epoch 的 0.717266 就勝過所有其他實驗；第 2 epoch 起超過 medium baseline 0.69747，最佳離 strong baseline 0.75028 差 0.0051（驗證集，不是 Kaggle）。第 3 epoch 後 val loss 上升（0.9115 → 0.9665）、train acc 0.8265 → 輕微過擬合。
+  - 各位置準確率（最佳權重）：`[0.6648, 0.6938, 0.7155, 0.7311, 0.7401, 0.7452, 0.7457, 0.7421, 0.7315, 0.7155, 0.6931]`。**以中間為峰、左右大致對稱**（第 5 格 0.7452、第 6 格 0.7457 最高，兩端 0.66–0.69），對照單向版從 0.4555 單調升到 0.6827：兩端的格子分別缺少過去或未來的上下文，中間格兩邊各有 5 格。
+- <!-- 尚未跑（等使用者放行，每組約 45 分鐘）：lstm_3layers、lstm_lossmid；以及無干擾的 train.py 1 epoch 計時 -->
 
 ## repo 問題清單（教材附錄素材；本 repo 照原樣保留，未修）
 1. config.py:17 `hidden_layers = 1` 沒作用，model.py:11 寫死 10 層；`input_dim` 也沒作用（model.py:9 寫死 39）。
