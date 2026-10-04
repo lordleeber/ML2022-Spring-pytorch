@@ -1053,7 +1053,7 @@ Ref: https://reurl.cc/mGZNbA
 - 圖：`img/ch04_hook_bn_relu.png`，ch04 用作圖 4.10（4.9 節最後的「hook 掛在 BN 或 ReLU 之後會怎樣」）。
 
 ## ch05 實測（2026-10-04，本機；指令都在 HW09/ 裡執行）
-工具：`docs/tools/hw09_ch05_ig.py`（在 HW09/ 裡跑；印出下面的數字，並產生 5 張 `docs/HW09/img/ch05_*.png`）。工具裡的 `ig(x, c, steps, rule, baseline)` 是「直線路徑上梯度的平均」（不乘 x − baseline），`rule='left'` 和程式一樣取 α = k/steps（k = 0..steps−1），`'mid'` 取 (k + 0.5)/steps；梯度對象是標籤 logit（`model(x)[:, c].sum().backward()`）。
+工具：`docs/tools/hw09_ch05_ig.py`（在 HW09/ 裡跑；印出下面的數字，並產生 4 張 `docs/HW09/img/ch05_*.png`）。工具裡的 `ig(x, c, steps, rule, baseline)` 是「直線路徑上梯度的平均」（不乘 x − baseline），`rule='left'` 和程式一樣取 α = k/steps（k = 0..steps−1），`'mid'` 取 (k + 0.5)/steps；梯度對象是標籤 logit（`model(x)[:, c].sum().backward()`）。
 
 ### 行號（以本檔為準）
 - explain_cnn.py：docstring 223；`class IntegratedGradients` 225–265（`__init__` 226–230 含 `model.eval()` 230；`generate_images_on_linear_path` 232–235，list comprehension 在 234；`generate_gradients` 237–252：`requires_grad = True` 239、forward 241、`model.zero_grad()` 243、one-hot 245–246、`backward(gradient=one_hot_output)` 248、取 `.grad` 249、`.numpy()[0]` 251；`generate_integrated_gradients` 254–265：`np.zeros(input_image.size())` 258、累加 263、`[0]` 265）；`integrated_gradients` 268–281（`images.cuda()` 269、每張 `unsqueeze(0)` 274、steps=10 在 275、畫圖 276–280、存檔 281）；主程式呼叫 312。
@@ -1109,7 +1109,7 @@ Ref: https://reurl.cc/mGZNbA
 | 8 | 16.528 | 12.078 | 17.046 | 16.508 | 18.500 | 15.885 | 16.534 |
 | 9 | 14.522 | 16.341 | 15.205 | 14.563 | 10.629 | 14.299 | 14.681 |
 - 「左 10」就是程式的取點乘上 x（和上表 Σ 程式輸出 × x 在小數第 2 位不同，GPU 浮點）。
-- 200 步時 10 張的誤差都在 3% 以內（最大：圖 7 左 16.957 vs 17.399 ≈ 2.5%；中點 200 步最大是圖 2 10.932 vs 11.135 ≈ 1.8%）。10 步時中點不一定比左端好（圖 2、4、9 中點 10 步反而更差）。
+- 200 步時 10 張的誤差都在 3% 以內（最大：圖 7 左 16.957 vs 17.399 ≈ 2.5%；中點 200 步最大是圖 2 10.932 vs 11.135 ≈ 1.8%）。10 步時中點不一定比左端好（圖 0、4、7、9 中點 10 步反而更差；ch05 審稿更正，原本誤寫成「圖 2、4、9」）。
 - 「CNN 實測」記錄的圖 0 中點 10 步 15.704 和這次 15.750 不同（不同次執行、GPU 浮點）；50 步 18.141 vs 18.146、200 步 17.851 相同。
 
 ### 圖 0 的路徑（圖 `img/ch05_path.png`、`img/ch05_alpha_images.png`）
@@ -1166,3 +1166,23 @@ Ref: https://reurl.cc/mGZNbA
 
 ### 計時
 - 引用 ch00 0.5 節：IG 整段 0.7 s（10 張 × 10 步 = 100 次 forward + backward）。
+
+## ch05 審稿補測（2026-10-04，本機；PR #15）
+工具：`docs/tools/hw09_ch05_review.py`（在 HW09/ 裡跑）。把 explain_cnn.py 第 265 行照 ch05 自我測驗第 1 題字面換成三行（`result = integrated_grads[0] * input_image[0].detach().cpu().numpy()`、`print('sum of IG:', result.sum())`、`return result`；改原始碼文字後 exec，檔案沒動），跑 `integrated_gradients(model, images, labels)`。
+- stdout 逐字：
+  ```
+  sum of IG: 19.11851266922134
+  sum of IG: 24.85052742367112
+  sum of IG: 6.439128675088346
+  sum of IG: 10.975121340375775
+  sum of IG: 17.960180575904484
+  sum of IG: 12.76702126532808
+  sum of IG: 23.017462406626954
+  sum of IG: 16.556605084804794
+  sum of IG: 12.056517770682136
+  sum of IG: 16.326940268601284
+  saved ./output/ch05_quiz1.png
+  ```
+  （工具把存檔名換成 ch05_quiz1.png，照字面改的話是 integrated_gradients.png。）四捨五入到 3 位和「ch05 實測」表的「Σ 程式輸出 × x」完全相同。
+- 看得到的（改後的圖，沒有放進書裡）：第二列仍是灰底、粉紅／綠細紋，輪廓位置和原本的 integrated_gradients.png 相同，肉眼分不太出差別。
+- 雲端在 ch05 指出的 FACTS 疑點已核對並更正：(1) 中點 10 步比左 10 差的是圖 0、4、7、9（不是 2、4、9）；(2) 工具產生 4 張 ch05_*.png，不是 5 張。另：ch05_path.png 右圖 α ≈ 0.15 附近跌到約 −25，看圖確認屬實。

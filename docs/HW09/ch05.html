@@ -1106,11 +1106,11 @@ class IntegratedGradients():
 
 <h2 id="quiz">自我測驗</h2>
 <details class="quiz"><summary>1. <code>integrated_gradients.png</code> 第二列畫的是論文定義的 Integrated Gradients 嗎？要改哪裡才是？改了之後圖會變很多嗎？</summary>
-<p>不是。程式回傳的是 10 個點的梯度平均（路徑平均梯度），少乘了 (x − baseline)。baseline 是全黑圖（0），所以要乘的就是原圖 x：在第 265 行回傳前，逐元素乘上原圖（轉成 NumPy、去掉批次維度的 <code>(3, 128, 128)</code>）即可。乘上之後總和會從程式的 0.273（圖 0）變成 19.119，接近 f(x) − f(0) = 17.911。但圖的樣子幾乎不變：normalize 後和原本的相關係數 0.84–0.98（5.8 節），肉眼很難分辨。本書的數字是用等價的算法（程式的輸出乘上 x）量的，沒有照字面改第 265 行跑過。照字面改的寫法大致如下（示意，本書沒有執行過）：</p>
+<p>不是。程式回傳的是 10 個點的梯度平均（路徑平均梯度），少乘了 (x − baseline)。baseline 是全黑圖（0），所以要乘的就是原圖 x：在第 265 行回傳前，逐元素乘上原圖（轉成 NumPy、去掉批次維度的 <code>(3, 128, 128)</code>）即可。乘上之後總和會從程式的 0.273（圖 0）變成 19.119，接近 f(x) − f(0) = 17.911。但圖的樣子幾乎不變：normalize 後和原本的相關係數 0.84–0.98（5.8 節），肉眼很難分辨。照字面改第 265 行的寫法如下（本書實測跑過）：</p>
 <pre class="py"><code>        result = integrated_grads[0] * input_image[0].detach().cpu().numpy()
         print('sum of IG:', result.sum())
         return result</code></pre>
-<p>把第 265 行換成這三行，在 <code>HW09/</code> 裡照第 0 章 0.5 節的指令重跑 <code>explain_cnn.py</code>，stdout 會多印 10 行總和，預期依序接近 5.4 節表中「Σ 程式輸出 × x」那一欄（GPU 浮點會讓小數末位不同）；<code>integrated_gradients.png</code> 的第二列應該和圖 5.6 第三列相近。<!-- TODO(本機實測): 照字面改第 265 行跑一次，記下 10 行 sum of IG 與改後的 integrated_gradients.png --></p></details>
+<p>把第 265 行換成這三行，在 <code>HW09/</code> 裡照第 0 章 0.5 節的指令重跑 <code>explain_cnn.py</code>，stdout 會多印 10 行總和。本書實測印出的是 19.1185、24.8505、6.4391、10.9751、17.9602、12.7670、23.0175、16.5566、12.0565、16.3269（各取小數 4 位），四捨五入到 3 位和 5.4 節表中「Σ 程式輸出 × x」那一欄完全相同。改後的 <code>integrated_gradients.png</code> 第二列仍是灰底、彩色細紋，和圖 5.6 第三列看起來一樣，肉眼和原本的圖 5.1 也分不太出來。</p></details>
 <details class="quiz"><summary>2. 表裡圖 1 與圖 2 的 f(0) 都是 −3.327，這代表兩張圖的什麼？</summary>
 <p>什麼都不代表。f(0) 是把<strong>全黑圖</strong>送進模型、取目標類別的 logit；baseline 對每張圖都是同一張全黑圖，圖 1、2 的目標類別又都是 Dairy product，所以 f(0) 一定相同，和兩張圖本身無關。圖 3、4（都是 Dessert）的 −3.658 也是同樣的道理。</p></details>
 <details class="quiz"><summary>3. 同學說：「乘上 x 之後總和都接近 f(x) − f(0)，所以程式的 10 步已經夠了。」這句話對嗎？</summary>
