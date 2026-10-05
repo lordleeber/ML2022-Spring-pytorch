@@ -683,7 +683,7 @@ footer.chap-footer {
 <h3 id="parts">四種層，各做一件事</h3>
 <ul>
   <li><strong><code>nn.Conv2d(in, out, 3, 1, 1)</code></strong>：二維卷積（convolution）。用 <code>out</code> 個 3×3 的小濾波器（filter）在圖上滑過，每個濾波器在每個位置看「3×3 個像素 × <code>in</code> 個通道」，算出一個數字，所以輸出有 <code>out</code> 個通道。後兩個數字是步長（stride）1 和補邊（padding）1：一次移一格、四周補一圈 0，所以高和寬不變。第 7 行的註解寫了這五個參數的順序。</li>
-  <li><strong><code>nn.BatchNorm2d(C)</code></strong>：批次正規化（batch normalization）。把每個通道的數值調成平均 0、標準差 1 左右，再乘上、加上兩個可學習的數。它在訓練與評估時的行為不同，第 3、4 章會講這件事為什麼重要。</li>
+  <li><strong><code>nn.BatchNorm2d(C)</code></strong>：批次正規化（batch normalization）。把每個通道的數值調成平均 0、標準差 1 左右，再乘上、加上兩個可學習的數。它在訓練與評估時的行為不同，<a href="ch03.html#bn">第 3 章 3.3 節</a>會實測這件事有多重要。</li>
   <li><strong><code>nn.ReLU()</code></strong>：激活函數，負數變 0、正數不變。沒有參數。</li>
   <li><strong><code>nn.MaxPool2d(2, 2, 0)</code></strong>：最大池化（max pooling）。把每 2×2 個格子取最大的一個，所以高和寬各減半，通道數不變。沒有參數。</li>
 </ul>
@@ -947,7 +947,7 @@ Best model found at epoch 4, saving model</code></pre>
 <ol class="notes">
   <li><span class="mk">1</span><code>FoodDataset</code> 建立時印出第一個檔案（<code>dataset.py:20</code>），訓練集、驗證集各一行。檔案是照檔名的字串順序排的，所以第一個是 <code>0_0.jpg</code>（第 1 章）。</li>
   <li><span class="mk">2</span>第 1 個 epoch 的訓練結果：平均 loss 與訓練時順便量的準確率。三位數的 <code>001/005</code> 是「第幾個 epoch／總共幾個」。</li>
-  <li><span class="mk">3</span>同一個 epoch 結束後，在驗證集上的 loss 與準確率。第 1 個 epoch 的驗證準確率 0.17568 比訓練時的 0.31425 低很多，loss 3.20 也比訓練時高。訓練與評估的條件不一樣：訓練時模型開著 train 模式、權重一邊在變，評估時切到 eval 模式，BatchNorm 的算法也跟著換了。這兩組數字為什麼不能直接比，第 3、4 章會說明。</li>
+  <li><span class="mk">3</span>同一個 epoch 結束後，在驗證集上的 loss 與準確率。第 1 個 epoch 的驗證準確率 0.17568 比訓練時的 0.31425 低很多，loss 3.20 也比訓練時高。訓練與評估的條件不一樣：訓練時模型開著 train 模式、權重一邊在變，評估時切到 eval 模式，BatchNorm 的算法也跟著換了。同一份權重換成 train 模式評估，驗證準確率其實有 0.39679；落差主要來自 BatchNorm 在 eval 模式用的統計量還沒追上，見<a href="ch03.html#epoch1">第 3 章 3.3 節</a>；訓練準確率是怎麼量的，見<a href="ch04.html#train">第 4 章 4.2 節</a>。</li>
   <li><span class="mk">4</span>同一行又印了一次，多了 <code>-&gt; best</code>。這一行原本應該寫進 <code>sample_log.txt</code>，但程式寫錯了，字印到了螢幕上，log 檔永遠是空的（第 4 章逐行說明）。</li>
   <li><span class="mk">5</span>驗證準確率創新高，存下 <code>sample_best.ckpt</code>。這裡的 <code>epoch 0</code> 是從 0 起算的，和上面三行的 <code>001</code> 指的是同一個 epoch。</li>
   <li><span class="mk">6</span>最後一個 epoch：驗證準確率 0.55541。5 個 epoch 每一個都比前一個好，所以每個 epoch 都存了一次，最後留在 <code>sample_best.ckpt</code> 裡的是第 5 個 epoch 的權重。</li>

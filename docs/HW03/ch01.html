@@ -894,7 +894,7 @@ print(len(c), c.most_common(5))
 <details class="quiz"><summary>3. 一張 512×384 的橫圖，<code>Image.open</code> 之後 <code>im.size</code> 是什麼？經過 <code>ToTensor()</code> 之後的 shape 是什麼？</summary>
 <p><code>im.size</code> 是 <code>(512, 384)</code>，寬在前。<code>ToTensor()</code> 之後是 <code>torch.Size([3, 384, 512])</code>，通道在前、然後是高、寬——1.2 節測試集的 <code>0001.jpg</code> 就是這個形狀。</p></details>
 <details class="quiz"><summary>4. 為什麼「永遠猜甜點」在驗證集上只有 0.14577，但第 0 章第 1 個 epoch 的驗證準確率 0.17568 也沒高多少？這代表第 1 個 epoch 的模型很爛嗎？</summary>
-<p>0.14577 是 500 ÷ 3,430，最多的一類只占 14.6%，所以 11 類的分類問題裡，「什麼都沒學會」大約就在這個水準。第 1 個 epoch 的 0.17568 只比它高一點，表示這時候用 eval 模式評估的模型幾乎還沒學會區分類別；但同一個 epoch 的訓練準確率已經是 0.31425，兩者差很多。為什麼 train 與 eval 的數字會差這麼多，第 3、4 章會講 BatchNorm 在兩種模式下的差別。第 2 個 epoch 驗證準確率就到了 0.43092。</p></details>
+<p>0.14577 是 500 ÷ 3,430，最多的一類只占 14.6%，所以 11 類的分類問題裡，「什麼都沒學會」大約就在這個水準。第 1 個 epoch 的 0.17568 只比它高一點，看起來像是什麼都沒學會；但同一個 epoch 的訓練準確率已經是 0.31425。答案在<a href="ch03.html#epoch1">第 3 章 3.3 節</a>：同一份權重改用 train 模式評估，驗證準確率是 0.39679，模型其實學到了東西，是 BatchNorm 在 eval 模式用的 running 統計量還沒追上，把訊號壓扁了。所以這一題的答案是「不代表很爛」。第 2 個 epoch 驗證準確率就到了 0.43092。</p></details>
 <details class="quiz"><summary>5. 想把訓練集與驗證集合併，再隨機切出新的 90% / 10%，用 <code>FoodDataset</code> 的哪個參數最方便？要注意什麼？</summary>
 <p>用 <code>files</code>：自己把兩個資料夾的檔名清單合併、打亂、切開，再建兩個 <code>FoodDataset</code>，各給一份 <code>files</code>。要注意 <code>path</code> 仍然要給一個存在的資料夾（第 17 行照樣會 <code>os.listdir</code>），而且第 20 行印出的 <code>path</code> 不代表實際的檔案來源；另外驗證用的那一份要給 <code>test_tfm</code>，不要給有增強的轉換。第 8 章的「重切 train/val」實驗就是這樣做的（只是比例不同）。</p></details>
 
