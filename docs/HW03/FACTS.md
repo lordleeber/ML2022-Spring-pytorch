@@ -132,3 +132,13 @@ Best model found at epoch 4, saving model
 - **逐位元驗證（2026-10-05）**：`hw03_exp.py` 預設參數（5 epoch）印出的 15 行 Train/Valid/Best 與 train.py 的 stdout `diff` 完全相同；存下的 state_dict 與 train.py 的 `sample_best.ckpt` 41 個 tensor 全部 `torch.equal`。最佳（第 5 epoch）在整個驗證集一次算：acc 0.55394、CE 1.32449（與 Phase 0 用 sample_best.ckpt 算的一致）。
 - 工具多做的事（不消耗亂數）：每個 epoch 另算整個驗證集的真實 acc（答對數 / 3430）與 CE（sum / 3430）；訓練結束後用最佳權重以 `shuffle=False` 算整個驗證集與測試集的 logits，存成 `.npz`（`--dump`）。
 - `--resplit 1` 時 `full_val_*` 不是驗證數字（2/3 的驗證集被拿去訓練），比較要用 holdout 1143 張。
+
+## ch00 實測（2026-10-05，本機；在 HW03/ 裡）
+- 參數計數指令（ch00 0.2 節逐字）：`named_modules()` + `parameters(recurse=False)`，13 行 + `total 12833803`；輸出已逐字放進 ch00。
+- `test.py` stdout 只有一行 `One ./food11/test sample ./food11/test/0001.jpg`。`submission.csv` 3,348 行（標題 + 3,347），開頭 `0001,9`、`0002,9`，最後 `3347,1`。預測類別分布（0–10）：386、120、182、439、351、467、166、49、469、524、194。
+- 在 repo 根目錄執行 `.venv/bin/python HW03/train.py`：`FileNotFoundError: [Errno 2] No such file or directory: './food11/training'`，出自 `dataset.py:17` 的 `os.listdir(path)`（還沒碰到 GPU）。
+- 全部猜最多的一類（第 2 或第 9 類，驗證集各 500 張）：500/3430 = 0.14577。
+- checkpoint 51,360,932 bytes vs 參數 12,833,803 × 4 = 51,335,212 bytes。
+- tqdm 進度條沒有被 `script -qc` 錄到（只剩空行），所以教材不逐字引用進度條；每個 epoch 訓練 39 批、驗證 14 批（由 batch 數推得）。
+- `train.py` 跑完 stderr 沒有任何警告（`grep -ic warn` = 0）。
+- 名詞首見（ch00 已定義）：影像分類、CNN、資料增強、預訓練模型、accuracy、public/private、logits、nn.Sequential、Conv2d（stride、padding、filter）、BatchNorm（buffer：移動平均／移動變異數）、ReLU、MaxPool、卷積區塊、攤平、epoch、patience、weight decay（只提名稱，ch04 解釋）、wall clock、overfitting、deterministic、TTA／cross validation／ensemble（只提名稱，ch06／ch08）。
