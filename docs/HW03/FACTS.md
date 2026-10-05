@@ -207,3 +207,12 @@ Best model found at epoch 4, saving model
 - `submission.csv` 用 csv 讀：`['Id', 'Category']`、`['0001', '9']`、3,347 列。
 - 名詞首見（ch05）：state_dict 載入、weights_only、recall、混淆（confusion）。
 - 上傳前檢查（ch05 5.5 節逐字）：`['Id', 'Category'] 3347`、`Id == test file names: True`、`Id unique: True`、`Category values: [0, 1, ..., 10]`。
+
+## ch06 實測（2026-10-05，本機，CPU）
+- `test_tfm` 對 0_0.jpg 5 次：全部 `torch.equal`。
+- 單一轉換示範圖（`torch.manual_seed(1)` 後依序產生）：`img/aug_crop.jpg`（RandomResizedCrop((128,128), scale=(0.5,1.0))）、`aug_flip.jpg`（Resize + RandomHorizontalFlip(p=1.0)，示範用）、`aug_rot.jpg`（Resize + RandomRotation(15)）、`aug_jitter.jpg`（Resize + ColorJitter(0.3,0.3,0.3)）。mixup 示範：`mixup_b.jpg`（9_0.jpg 經 test_tfm）、`mixup.jpg`（0.5×0_0 + 0.5×9_0）。這 6 張共 36,337 bytes。
+- `torch.manual_seed(0)` 後 RandomResizedCrop.get_params 對 0_0.jpg ×5（上, 左, 高, 寬）：(8, 30, 410, 478)、(22, 50, 398, 430)、(77, 18, 420, 454)、(8, 56, 403, 333)、(20, 2, 415, 366)。RandomRotation(15).get_params ×5：-0.11、8.05、-12.35、-11.04、-5.78 度。
+- CrossEntropyLoss 機率標籤（seed 0 的 randn(2,11)，第 0 列 0/9 各 0.5、第 1 列 one-hot 3）：2.9584498405456543，手寫 `-(y*log_softmax).sum(1).mean()` 相同；one-hot 機率標籤與整數標籤結果相同（allclose）。
+- base40 vs augA40（epoch: train_loss, train_acc, 真實 val acc, 真實 val CE）：base40 5: 1.07386, 0.62643, 0.55394, 1.32449；10: 0.49362, 0.83457, 0.51545, 1.82987；20: 0.00442, 0.9999, 0.65335, 1.71685；30: 0.00037, 1.0, 0.67405, 1.78995；40: 0.00016, 1.0, 0.67259, 1.90464。augA40 5: 1.45072, 0.49833, 0.50292, 1.42699；10: 1.16577, 0.59332, 0.56589, 1.3402；20: 0.80724, 0.71823, 0.60729, 1.19178；30: 0.65052, 0.77397, 0.63907, 1.18154；40: 0.4792, 0.8346, 0.67405, 1.10745。
+- 最低真實 val CE：base40 1.2509（epoch 6）、augA40 0.99139（epoch 35）。平均每 epoch train_secs：base40 27.4、augA40 30.1（augA40 第 40 epoch 41.8 s 受本機其他量測干擾）。
+- 名詞首見（ch06）：RandomResizedCrop、RandomHorizontalFlip、RandomRotation、ColorJitter、mixup、λ／Beta 分布（只提名稱）、TTA 的加權平均、TrivialAugmentWide／RandAugment／AutoAugment／CutMix（只提名稱）。
