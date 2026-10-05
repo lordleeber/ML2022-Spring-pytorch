@@ -3,6 +3,8 @@
 Run from HW03/:  PYTHONPATH=. ../.venv/bin/python ../docs/tools/hw03_facts.py [part ...]
 Parts: data thumbs aug shapes loader  (CPU only)
        timing                          (GPU; run when nothing else is training)
+       threads N                       (CPU; load the training set 3x with torch.set_num_threads(N))
+       steps N                         (CPU; decode/resize/ToTensor/collate cost of 768 images, N threads)
        tta CKDIR                       (GPU; needs the .ckpt/.npz files from hw03_run_grid.sh)
 """
 import collections, os, sys, time
@@ -161,6 +163,30 @@ if 'timing' in parts:
         torch.cuda.synchronize()
         print(f'model steps only (data already in RAM), pass {rep + 1}: {time.time() - t:.1f}s')
     print('peak GPU memory MiB', torch.cuda.max_memory_allocated() // 2**20)
+
+if 'threads' in parts or 'steps' in parts:
+    import resource
+    from torch.utils.data import DataLoader, default_collate
+    from dataset import FoodDataset
+    key = 'threads' if 'threads' in parts else 'steps'
+    torch.set_num_threads(int(sys.argv[sys.argv.index(key) + 1]))
+
+    def clock(f):
+        r0 = resource.getrusage(resource.RUSAGE_SELF); t = time.time(); out = f()
+        r1 = resource.getrusage(resource.RUSAGE_SELF)
+        return out, time.time() - t, (r1.ru_utime - r0.ru_utime) + (r1.ru_stime - r0.ru_stime)
+    if key == 'threads':
+        ds = FoodDataset(os.path.join(DS, 'training'), tfm=test_tfm)
+        for rep in range(3):
+            _, w, c = clock(lambda: [None for _ in DataLoader(ds, batch_size=256, shuffle=True, num_workers=0, pin_memory=True)])
+            print(f'threads={torch.get_num_threads()} rep{rep + 1}: wall {w:.1f}s cpu {c:.1f}s ({c / w * 100:.0f}%)')
+    else:
+        fs = sorted(os.listdir(os.path.join(DS, 'training')))[::10][:768]
+        R, TT = transforms.Resize((128, 128)), transforms.ToTensor()
+        ims, w, c = clock(lambda: [Image.open(os.path.join(DS, 'training', f)).convert('RGB') for f in fs]); print(f'decode   wall {w:.2f}s cpu {c:.2f}s')
+        sm, w, c = clock(lambda: [R(im) for im in ims]); print(f'resize   wall {w:.2f}s cpu {c:.2f}s')
+        ts, w, c = clock(lambda: [TT(im) for im in sm]); print(f'totensor wall {w:.2f}s cpu {c:.2f}s')
+        _, w, c = clock(lambda: [default_collate([(t, 0) for t in ts[i:i + 256]]) for i in range(0, 768, 256)]); print(f'collate  wall {w:.2f}s cpu {c:.2f}s')
 
 if 'tta' in parts:
     ck = sys.argv[sys.argv.index('tta') + 1]

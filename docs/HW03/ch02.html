@@ -703,18 +703,45 @@ valid_loader = DataLoader(valid_set, batch_size=batch_size, shuffle=True, num_wo
 
 <h2 id="cost">2.5　讀圖片的代價：num_workers=0</h2>
 <p>第 0 章量到 <code>train.py</code> 5 個 epoch 花了 3 分 0.70 秒，CPU 使用率 1723%。時間花在哪裡？一個 epoch 裡，CPU 要對 9,866 張訓練圖加 3,430 張驗證圖各做一次：讀檔、JPEG 解碼（大多是 512×512 的圖）、縮成 128×128、轉成 tensor；GPU 則做 39 + 14 個 batch 的 forward（訓練的 39 個還要 backward）。<code>num_workers=0</code> 時這兩件事<strong>輪流做</strong>：CPU 準備好一個 batch，GPU 才開始算；GPU 算的時候，CPU 沒有在準備下一批。</p>
-<p>本書把兩部分分開量（GPU 上沒有其他程式時）：</p>
-<!-- TODO(本機實測): hw03_facts.py timing — num_workers 0/4/8 讀完訓練集一遍的秒數；資料已在記憶體時 39 步訓練的秒數；peak GPU memory -->
+<p>本書把兩部分分開量（2026-10-05，GPU 上沒有任何其他程式時；工具是 <code>docs/tools/hw03_facts.py</code> 的 <code>timing</code>，轉換一律用 <code>test_tfm</code>、batch 256）：</p>
 <div class="tablewrap"><table>
 <thead><tr><th>量什麼</th><th>時間</th></tr></thead>
 <tbody>
-<tr><td>只讀圖、不訓練：<code>num_workers=0</code> 讀完訓練集一遍</td><td>【待量】</td></tr>
-<tr><td>只讀圖：<code>num_workers=4</code></td><td>【待量】</td></tr>
-<tr><td>只讀圖：<code>num_workers=8</code></td><td>【待量】</td></tr>
-<tr><td>只訓練：39 個 batch 已經在記憶體裡，跑一個 epoch 的 forward + backward</td><td>【待量】</td></tr>
+<tr><td>只讀圖、不訓練：<code>num_workers=0</code> 讀完訓練集一遍（重複 3 次）</td><td>22.5、24.8、24.0 秒（CPU 時間約 500 秒）</td></tr>
+<tr><td>只讀圖：驗證集一遍，<code>num_workers=0</code></td><td>9.1 秒</td></tr>
+<tr><td>只訓練：39 個 batch 已經在記憶體裡，跑一個 epoch 的 forward + backward（2 次）</td><td>6.0、5.3 秒</td></tr>
+<tr><td>實驗工具記錄的 <code>train.py</code> 每個 epoch（5 個 epoch）</td><td>訓練 25.1–31.6 秒，含驗證 36.0–41.1 秒</td></tr>
 </tbody>
 </table></div>
-<p>【待量測完成後補上解讀：讀圖與訓練各占多少、多開 worker 能省多少。】</p>
+<p>答案很清楚：<strong>一個 epoch 的訓練約 28 秒裡，GPU 真正在算的只有 5–6 秒，其餘 20 多秒都在等 CPU 讀圖。</strong>模型只有 1,283 萬個參數、輸入只有 128×128，對 GPU 來說太輕了（訓練時 GPU 記憶體最多只用到 5,826 MiB）；瓶頸在 JPEG 解碼與縮放。驗證那一段也一樣，讀 3,430 張要 9 秒，而 14 個 batch 的 forward 只是零頭。</p>
+
+<h3 id="threads">1723% 的 CPU 從哪裡來</h3>
+<p>還有一個怪現象：讀一遍訓練集花了約 500 秒的 CPU 時間，但牆上時間只有 23 秒——平均有 21 個核心在忙。<code>num_workers=0</code> 明明只有一個行程，Pillow 的解碼與縮放也都是單執行緒的。本書把讀一張圖的四個步驟拆開，各量 768 張：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>步驟（768 張）</th><th>PyTorch 預設 24 條執行緒：牆上時間／CPU 時間</th><th>限制成 1 條執行緒：牆上時間／CPU 時間</th></tr></thead>
+<tbody>
+<tr><td>JPEG 解碼（Pillow）</td><td>0.98 秒／1.33 秒</td><td>0.93 秒／0.99 秒</td></tr>
+<tr><td>Resize（Pillow）</td><td>0.50 秒／0.54 秒</td><td>0.50 秒／0.53 秒</td></tr>
+<tr><td>ToTensor（PyTorch）</td><td>0.15 秒／<strong>3.78 秒</strong></td><td>0.08 秒／0.09 秒</td></tr>
+<tr><td>collate 疊成 batch（PyTorch）</td><td>0.07 秒／<strong>1.64 秒</strong></td><td>0.07 秒／0.07 秒</td></tr>
+</tbody>
+</table></div>
+<p>真正花時間的是 Pillow 的解碼與縮放；PyTorch 的兩步本身很快，但在預設設定下用掉了 40 倍的 CPU 時間。PyTorch 在 CPU 上的運算預設用 OpenMP 開滿所有核心（本機 <code>torch.get_num_threads()</code> 是 24），對 <code>ToTensor</code> 的「除以 255」、collate 的「疊起來」這種只有幾十萬個數字的小運算，開 24 條執行緒的成本比運算本身還大，而且執行緒做完之後會先空轉一陣子等下一份工作，和 Pillow 的解碼搶 CPU。所以把執行緒限制成 1 條，讀一遍訓練集反而<strong>更快</strong>：15.0、17.1、15.1 秒，CPU 使用率約 100%。</p>
+<p>對整支 <code>train.py</code> 也一樣。本書在 HW03 的複本裡，不改任何一行程式，只加一個環境變數：</p>
+<pre class="shell cmd"><code>$ OMP_NUM_THREADS=1 ../.venv/bin/python train.py</code></pre>
+<p>5 個 epoch 從 3 分 0.70 秒變成 <strong>2 分 27.89 秒</strong>，CPU 使用率從 1723% 降到 99%；印出的每一行、存下的 <code>sample_best.ckpt</code> 都和原本逐位元組相同（這兩個步驟的結果和用幾條執行緒無關）。</p>
+
+<h3 id="workers">多開幾個 worker</h3>
+<p>更直接的辦法是讓讀圖和訓練同時進行：<code>num_workers=4</code> 會開 4 個子行程，各自讀圖、轉換、疊 batch，主程式只管把現成的 batch 送進 GPU。只讀圖的實測：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>只讀圖、訓練集一遍</th><th>時間</th></tr></thead>
+<tbody>
+<tr><td><code>num_workers=0</code></td><td>22.5–24.8 秒（見上表）</td></tr>
+<tr><td><code>num_workers=4</code></td><td>4.2 秒</td></tr>
+<tr><td><code>num_workers=8</code></td><td>2.7 秒</td></tr>
+</tbody>
+</table></div>
+<p>把複本裡 <code>train.py</code> 的兩個 <code>num_workers=0</code> 都改成 4，整支 5 個 epoch 只要 <strong>46.86 秒</strong>，是原本的四分之一。但這次<strong>印出來的數字變了</strong>：第 1 個 epoch 的訓練 loss 從 1.95937 變成 1.94046，第 5 個 epoch 的驗證準確率從 0.55541 變成 0.48967。只改了讀資料的方式，訓練結果為什麼會不同？答案和 <code>tqdm</code> 進度條有關，它會悄悄改變打亂的順序，第 4 章會完整追一遍。這裡先記住結論：<strong>本書實測，拿掉進度條之後，<code>num_workers=0</code> 與 <code>num_workers=4</code> 的結果逐位元組相同</strong>，而且 4 個 worker 的版本只要 43.31 秒（0 個是 150.19 秒，兩次都設了 <code>OMP_NUM_THREADS=1</code>）。也就是說 worker 數本身不改變結果，是進度條和 worker 的組合改變了它。</p>
 <div class="note"><h4>現在的做法：多個 worker、GPU 解碼</h4>
 <p>今天的訓練程式幾乎都會設 <code>num_workers</code> 大於 0（常見的是 CPU 核心數或它的一半），並加上 <code>persistent_workers=True</code>，讓子行程在 epoch 之間不用重開。圖片很多時，還可以把 JPEG 解碼搬到 GPU（<code>torchvision.io.decode_jpeg(..., device="cuda")</code> 或 NVIDIA DALI），或事先把圖縮小、存成 WebDataset、FFCV 這類連續存放的格式，省掉大部分讀檔與解碼的時間。</p>
 </div>
@@ -726,7 +753,7 @@ valid_loader = DataLoader(valid_set, batch_size=batch_size, shuffle=True, num_wo
   <li><code>ToTensor()</code>：Pillow → tensor、HWC → CHW、0–255 的 <code>uint8</code> → 0–1 的 <code>float32</code>（18 → 0.0706）。程式沒有做 Normalize；訓練集的 RGB 平均是 0.5549／0.4509／0.3436。</li>
   <li>DataLoader 把 256 張疊成 <code>(256, 3, 128, 128)</code>，標籤 <code>(256,)</code> 的 <code>int64</code>。訓練集一個 epoch 39 個 batch（最後一批 138 張），驗證集 14 個（最後一批 102 張）。</li>
   <li>檔案照類別排序，不打亂的 batch 裡全是同一類，所以訓練集要 <code>shuffle=True</code>。驗證集也被打亂了，影響在第 4 章。</li>
-  <li><code>num_workers=0</code> 時讀圖與訓練輪流做，讀圖的 CPU 時間是訓練時間的一大部分（2.5 節的實測）。</li>
+  <li><code>num_workers=0</code> 時讀圖與訓練輪流做：一個 epoch 的訓練約 28 秒裡，GPU 只算了 5–6 秒。PyTorch 預設 24 條執行緒反而拖慢讀圖，<code>OMP_NUM_THREADS=1</code> 讓 <code>train.py</code> 從 3 分 0.70 秒變 2 分 27.89 秒、結果不變；<code>num_workers=4</code> 只要 46.86 秒，但因為進度條的關係結果變了（第 4 章）。</li>
 </ul>
 </div>
 

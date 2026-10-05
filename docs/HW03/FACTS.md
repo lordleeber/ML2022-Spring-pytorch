@@ -165,4 +165,14 @@ Best model found at epoch 4, saving model
 - validation、shuffle=False 的第一個 batch：`torch.Size([256, 3, 128, 128]) torch.float32 torch.Size([256]) torch.int64`，前 8 個標籤全是 0。一個 batch 的圖片 50,331,648 bytes。`len(train_loader)` 39、`len(valid_loader)` 14。
 - 訓練集 9,866 張經 test_tfm 的通道平均 [0.5549, 0.4509, 0.3436]、標準差 [0.2668, 0.2694, 0.2766]。
 - `torch.get_num_threads()` = 24。
-- **待量**（GPU 空出來之後，`hw03_facts.py timing`）：num_workers 0/4/8 只讀圖一遍的秒數、資料在記憶體時 39 步訓練的秒數。ch02 2.5 節的表留了【待量】。
+
+## ch02 計時（2026-10-05 15:50–16:10，GPU 上沒有其他程式，前後 `nvidia-smi --query-compute-apps` 皆空）
+- `hw03_facts.py timing`（test_tfm、batch 256、shuffle、pin_memory）：只讀訓練集一遍 nw=0 29.5 s、nw=4 4.2 s、nw=8 2.7 s；資料已在 RAM 的 39 步 forward+backward 6.0 s、5.3 s；peak GPU memory 5,826 MiB。
+- 重量 nw=0：training 20.6、24.7 s，validation 9.1 s；`torch.set_num_threads(1)` 16.5 s。
+- 3 次重複（`load_threads.py`，scratchpad）：24 threads wall 22.5/24.8/24.0 s、CPU 473.0/538.2/518.9 s（2105/2167/2165%）；1 thread wall 15.0/17.1/15.1 s、CPU 15.9/16.0/16.1 s（106/94/107%）。教材用這組。
+- 768 張逐步（每 10 張取 1，`steps.py`）：24 threads — decode 0.98/1.33、resize 0.50/0.54、ToTensor 0.15/3.78、collate 0.07/1.64（wall/CPU 秒）；1 thread — 0.93/0.99、0.50/0.53、0.08/0.09、0.07/0.07。
+- verify5 每 epoch（train_secs, secs）：(28.8, 38.1)、(27.2, 36.5)、(31.6, 41.1)、(26.2, 37.2)、(25.1, 36.0)。
+- 整支 train.py（scratchpad 複本）：`OMP_NUM_THREADS=1` wall 147.89 s、user 137.44、sys 9.29、CPU 99%，stdout 與 sample_best.ckpt 和原版逐位元組相同。
+- `num_workers=4`（sed 改兩處）：wall 46.86 s、CPU 430%，**結果不同**：epoch 1 train 1.94046/0.32487、valid 2.91845/0.16355；epoch 5 valid 1.55297/0.48967（最佳是 epoch 4 的 0.52569，epoch 5 沒有存）。
+- 拿掉 tqdm（`tqdm(train_loader)` → `train_loader`、valid 同）、`OMP_NUM_THREADS=1`：nw=0 wall 150.19 s、nw=4 43.31 s，stdout 與 ckpt 完全相同；epoch 5 valid 1.39194/0.54913（和有 tqdm 的原版不同，因為少了每個 loop 一次的亂數抽取）。
+- 解釋（ch04）：單行程 iterator 的 sampler 種子在第一次 `next` 才抽；多行程 iterator 在 `__init__` 就預取 batch，所以 tqdm_asyncio 丟掉的那個 iterator 也抽走了 sampler 種子（並開了 4 個 worker）。
