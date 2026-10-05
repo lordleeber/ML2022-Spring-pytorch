@@ -70,3 +70,16 @@ HW02 沒有走雲端分工，整本由同一個本機 session 依序寫完（使
 - **圖表**：資料圖照 dataviz skill（配色先用 validate_palette.js 驗證，深色底 `#161c24`），附 hover 與同數字的表格。SVG 用 PyMuPDF 渲染成 PNG 目視檢查；MuPDF 不吃 CSS class、`marker-end` 與 inline `style`，渲染前要把 `s-lbl`／`s-sm`／`s-mono`／`s-box` 換成屬性。HW02 靠這一步抓到兩處標籤重疊、一處被切掉。
 - **「改 X 會怎樣」的題目照樣實測**，能用現成 checkpoint 推論的就不用重訓（例如驗證集 shuffle 對 acc／loss 的影響）。
 - 單純推論出來、沒有實測的答案，在題目裡註明「本書沒有實際跑」。
+
+## HW03 的調整（2026-10-05）
+
+HW03 也是同一個本機 session 依序寫完（使用者決定），沿用 HW02 的做法，另外學到這些：
+- **實驗工具要「連進度條一起」複製**：`from tqdm.auto import tqdm` 在一般腳本裡是 `tqdm_asyncio`，建構時多呼叫一次 `iter(loader)`，每個迴圈多抽一個亂數；工具第一版拿掉 tqdm，第一個 batch 就不同。工具要用 `tqdm(..., disable=True)` 包住同樣的迴圈，並在動用 GPU 跑大量實驗前，先用 `diff` 比對 stdout、`torch.equal` 比對 checkpoint，確認逐位元一致。驗證不一致時立刻停掉排程，不要讓後面幾組白跑。
+- **`num_workers>0` 也會改變亂數消耗**（多行程迭代器建立時就預取），所以「只改 worker 數」不是中性的修改。
+- **計時要看 CPU 執行緒**：PyTorch 預設開滿核心，讀圖的小運算反而變慢；HW03 用 `OMP_NUM_THREADS=1` 快了 18% 且結果不變。計時前後記 `nvidia-smi --query-compute-apps`，量的時候不要同時跑別的 CPU 量測。
+- **推送**：只在使用者明講「推」時推，一章一個 commit、一次推一個；「繼續」只代表寫下一章。使用者說「不用再等我決定」時，可以自己做完並推上去。
+- **GPU**：使用者核可實驗規格後，可以一組一組依序自己排；規格之外的加跑（例如 HW03 的 res0_40）先問。長時間訓練每 30 分鐘回報一次（session 內的 cron）。
+- **不在規格裡、但能從現成結果算出來的**（holdout 重算、TTA、ensemble），用 `--dump` 存下的 logits 與 checkpoint 推論即可，不必重訓。checkpoint 只放在 scratchpad，session 結束就沒了，數字一定要寫進 FACTS 與 `docs/tools/hwNN_*runs.jsonl`。
+- **回填**：後面的章推翻前面章節的說法時（HW03 ch03 解開 ch00、ch01 的「第 1 個 epoch」），先問使用者，再做點狀修改並重驗那幾章。
+- **圖片**：根目錄 `.gitignore` 排除 `*.jpg`；要放真實圖片時在 `.gitignore` 加 `!docs/HWxx/img/*.jpg`。
+- 冷讀：HW03 使用者在 session 中途停用，各章沒有冷讀；預設仍是要跑。
