@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 7 章　報告題 Q2：殘差連接 — HW03 食物影像分類</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="ch08.html">第 8 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW03 讀碼教材</p>
+  <h1>第 7 章　報告題 Q2：殘差連接</h1>
+  <p class="chap-lead">報告的第二題給了一個 6 層卷積的 <code>Residual_Network</code>，要你只改 <code>forward</code>，照投影片的圖加上殘差連接。本章先讀懂這個模型的形狀與參數，寫出答案，再用實際訓練看它的表現——結果出乎意料：它比範例的 <code>Classifier</code> 差了將近 9 個百分點，而原因不在殘差，在它那個有 6,711 萬個參數的全連接層。</p>
+</header>
+<main>
+
+<h2 id="file">7.1　others.py：一份不能執行的模板</h2>
+<p><code>others.py</code> 是原版 notebook 最後兩格的照抄（第 6 章 6.1 節）。第 1–14 行是 Q1 的 <code>train_tfm</code>，第 16–97 行是 Q2 的模型。它從頭到尾沒有 <code>import torchvision.transforms</code>，第 9 行一用到 <code>transforms</code> 就會出錯。本書實測把整個檔案交給 Python 執行：</p>
+<pre class="shell"><code>NameError: name 'transforms' is not defined</code></pre>
+<p>在 notebook 裡這不是問題，因為前面幾格早就 import 過了；拆成 <code>.py</code> 之後，這個檔案就只能當「題目」看。本 repo 沒有任何程式 import 它，<code>train.py</code> 用的仍是 <code>classifier.py</code> 的 <code>Classifier</code>。本書要訓練這個模型時，是把第 22 行（<code>from torch import nn</code>）以後的部分單獨拿出來執行（<code>docs/tools/hw03_exp.py</code> 的 <code>--arch res</code>／<code>res0</code>）。</p>
+
+<h2 id="model">7.2　Residual_Network 的六層</h2>
+<figure class="listing"><figcaption>others.py:25–61 — Residual_Network 的建構子</figcaption>
+<pre class="py" data-hot="29-31,34-36,39-41,44-46,48-50,52-54,56-59"><code>class Residual_Network(nn.Module):
+    def __init__(self):
+        super(Residual_Network, self).__init__()
+
+        self.cnn_layer1 = nn.Sequential(
+            nn.Conv2d(3, 64, 3, 1, 1),
+            nn.BatchNorm2d(64),
+        )
+
+        self.cnn_layer2 = nn.Sequential(
+            nn.Conv2d(64, 64, 3, 1, 1),
+            nn.BatchNorm2d(64),
+        )
+
+        self.cnn_layer3 = nn.Sequential(
+            nn.Conv2d(64, 128, 3, 2, 1),
+            nn.BatchNorm2d(128),
+        )
+
+        self.cnn_layer4 = nn.Sequential(
+            nn.Conv2d(128, 128, 3, 1, 1),
+            nn.BatchNorm2d(128),
+        )
+        self.cnn_layer5 = nn.Sequential(
+            nn.Conv2d(128, 256, 3, 2, 1),
+            nn.BatchNorm2d(256),
+        )
+        self.cnn_layer6 = nn.Sequential(
+            nn.Conv2d(256, 256, 3, 1, 1),
+            nn.BatchNorm2d(256),
+        )
+        self.fc_layer = nn.Sequential(
+            nn.Linear(256 * 32 * 32, 256),
+            nn.ReLU(),
+            nn.Linear(256, 11)
+        )
+        self.relu = nn.ReLU()</code></pre></figure>
+<p>六個「卷積 + BatchNorm」，<strong>裡面沒有 ReLU、也沒有池化</strong>：ReLU 是第 61 行單獨的一個 <code>self.relu</code>，留給 <code>forward</code> 自己決定放在哪裡（因為殘差要在 ReLU 之前相加，7.3 節）。縮小圖片的工作交給 <code>cnn_layer3</code> 與 <code>cnn_layer5</code> 的 <code>stride=2</code>（第 40、49 行的第四個參數）：第 3 章 3.2 節的公式 ⌊(128 + 2 − 3) ÷ 2⌋ + 1 = 64。本書逐層實測一張圖的輸出形狀與參數：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>層</th><th>Conv</th><th>輸出形狀</th><th>參數（Conv + BN）</th><th>輸入和輸出形狀相同？</th></tr></thead>
+<tbody>
+<tr><td><code>cnn_layer1</code></td><td>3 → 64，stride 1</td><td><code>(64, 128, 128)</code></td><td>1,920</td><td>否（3 → 64 通道）</td></tr>
+<tr><td><code>cnn_layer2</code></td><td>64 → 64，stride 1</td><td><code>(64, 128, 128)</code></td><td>37,056</td><td><strong>是</strong></td></tr>
+<tr><td><code>cnn_layer3</code></td><td>64 → 128，stride 2</td><td><code>(128, 64, 64)</code></td><td>74,112</td><td>否（通道加倍、邊長減半）</td></tr>
+<tr><td><code>cnn_layer4</code></td><td>128 → 128，stride 1</td><td><code>(128, 64, 64)</code></td><td>147,840</td><td><strong>是</strong></td></tr>
+<tr><td><code>cnn_layer5</code></td><td>128 → 256，stride 2</td><td><code>(256, 32, 32)</code></td><td>295,680</td><td>否</td></tr>
+<tr><td><code>cnn_layer6</code></td><td>256 → 256，stride 1</td><td><code>(256, 32, 32)</code></td><td>590,592</td><td><strong>是</strong></td></tr>
+<tr><td><code>fc_layer</code></td><td>Linear 262,144 → 256 → 11</td><td><code>(11,)</code></td><td><strong>67,111,947</strong></td><td>—</td></tr>
+</tbody>
+</table></div>
+<p>全部 68,259,147 個參數，是 <code>Classifier</code>（12,833,803）的 5.3 倍。六層卷積加起來只有 1,147,200 個，剩下的 98.3% 全在 <code>fc_layer</code>：最後的特徵圖是 256 × 32 × 32 = 262,144 個數字（第 57 行的 <code>256 * 32 * 32</code>），第一層全連接把它接到 256 個輸出，就是 262,144 × 256 + 256 = <strong>67,109,120</strong> 個參數。<code>Classifier</code> 經過 5 次池化、攤平後只有 8,192 維；這裡只縮小了兩次，攤平後大了 32 倍。存下來的 checkpoint 是 273,056,689 bytes，也是 <code>sample_best.ckpt</code> 的 5.3 倍。</p>
+
+<h2 id="answer">7.3　照圖接上殘差：只改 forward</h2>
+<p>先看題目給的 <code>forward</code>：</p>
+<figure class="listing"><figcaption>others.py:63–97 — 題目給的 forward（沒有殘差）</figcaption>
+<pre class="py" data-hot="68,70,72,74,93,96"><code>    def forward(self, x):
+        # input (x): [batch_size, 3, 128, 128]
+        # output: [batch_size, 11]
+
+        # Extract features by convolutional layers.
+        x1 = self.cnn_layer1(x)
+
+        x1 = self.relu(x1)
+
+        x2 = self.cnn_layer2(x1)
+
+        x2 = self.relu(x2)
+
+        x3 = self.cnn_layer3(x2)
+
+        x3 = self.relu(x3)
+
+        x4 = self.cnn_layer4(x3)
+
+        x4 = self.relu(x4)
+
+        x5 = self.cnn_layer5(x4)
+
+        x5 = self.relu(x5)
+
+        x6 = self.cnn_layer6(x5)
+
+        x6 = self.relu(x6)
+
+        # The extracted feature map must be flatten before going to fully-connected layers.
+        xout = x6.flatten(1)
+
+        # The features are transformed by fully-connected layers to obtain the final logits.
+        xout = self.fc_layer(xout)
+        return xout</code></pre></figure>
+<p>一條直線：每一層的輸出過 ReLU，當作下一層的輸入；第 93 行攤平（<code>flatten(1)</code> 和第 3 章的 <code>view(B, -1)</code> 效果相同），第 96 行接全連接。每兩行之間空一行，是刻意留給學生插入程式的位置。</p>
+<p>投影片第 39 頁的圖是這樣接的：<code>cnn_layer1</code> → ReLU → <code>cnn_layer2</code> → <strong>⊕</strong> → ReLU → <code>cnn_layer3</code> → ReLU → <code>cnn_layer4</code> → <strong>⊕</strong> → ReLU → <code>cnn_layer5</code> → ReLU → <code>cnn_layer6</code> → <strong>⊕</strong> → ReLU → <code>fc_layer</code>。每一個 ⊕ 都從「前一個 ReLU 的輸出」拉一條線過來相加。對照 7.2 節的表：三個 ⊕ 剛好接在 <code>cnn_layer2</code>、<code>cnn_layer4</code>、<code>cnn_layer6</code> 後面，正是那三個「輸入和輸出形狀相同」的層——相加要求兩個 tensor 形狀完全一樣，所以殘差只能跨過不改變形狀的層。</p>
+<figure class="fig">
+<svg viewBox="0 0 900 230" role="img" aria-label="投影片第 39 頁的殘差接法：layer1 之後 ReLU，layer2 的輸出加上 layer1 經 ReLU 的輸出再 ReLU；layer3 之後 ReLU，layer4 的輸出加上 layer3 經 ReLU 的輸出再 ReLU；layer5 之後 ReLU，layer6 的輸出加上 layer5 經 ReLU 的輸出再 ReLU，最後接 fc_layer">
+  <defs>
+    <marker id="ar07" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#93a1af"/>
+    </marker>
+  </defs>
+  <text class="s-sm" x="10" y="22">綠框：一層 Conv + BN；圓圈 ⊕：相加；R：ReLU。上方的弧線是殘差（跳過一層，直接加到它的輸出上）</text>
+  <rect x="10" y="100" width="70" height="50" rx="8" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="45" y="130" text-anchor="middle">layer1</text>
+  <text class="s-lbl" x="100" y="131" text-anchor="middle">R</text>
+  <rect x="120" y="100" width="70" height="50" rx="8" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="155" y="130" text-anchor="middle">layer2</text>
+  <circle cx="215" cy="125" r="13" fill="none" stroke="#e3b341" stroke-width="2"/><text class="s-lbl" x="215" y="131" text-anchor="middle">+</text>
+  <text class="s-lbl" x="250" y="131" text-anchor="middle">R</text>
+  <rect x="270" y="100" width="70" height="50" rx="8" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="305" y="130" text-anchor="middle">layer3</text>
+  <text class="s-lbl" x="360" y="131" text-anchor="middle">R</text>
+  <rect x="380" y="100" width="70" height="50" rx="8" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="415" y="130" text-anchor="middle">layer4</text>
+  <circle cx="475" cy="125" r="13" fill="none" stroke="#e3b341" stroke-width="2"/><text class="s-lbl" x="475" y="131" text-anchor="middle">+</text>
+  <text class="s-lbl" x="510" y="131" text-anchor="middle">R</text>
+  <rect x="530" y="100" width="70" height="50" rx="8" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="565" y="130" text-anchor="middle">layer5</text>
+  <text class="s-lbl" x="620" y="131" text-anchor="middle">R</text>
+  <rect x="640" y="100" width="70" height="50" rx="8" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="675" y="130" text-anchor="middle">layer6</text>
+  <circle cx="735" cy="125" r="13" fill="none" stroke="#e3b341" stroke-width="2"/><text class="s-lbl" x="735" y="131" text-anchor="middle">+</text>
+  <text class="s-lbl" x="770" y="131" text-anchor="middle">R</text>
+  <rect x="790" y="100" width="100" height="50" rx="8" class="s-box" style="stroke:#3fb950"/><text class="s-mono" x="840" y="130" text-anchor="middle">fc_layer</text>
+  <line x1="80" y1="125" x2="92" y2="125" stroke="#93a1af" stroke-width="2"/>
+  <line x1="108" y1="125" x2="120" y2="125" stroke="#93a1af" stroke-width="2"/>
+  <line x1="190" y1="125" x2="202" y2="125" stroke="#93a1af" stroke-width="2"/>
+  <line x1="228" y1="125" x2="242" y2="125" stroke="#93a1af" stroke-width="2"/>
+  <line x1="258" y1="125" x2="270" y2="125" stroke="#93a1af" stroke-width="2"/>
+  <line x1="340" y1="125" x2="352" y2="125" stroke="#93a1af" stroke-width="2"/>
+  <line x1="368" y1="125" x2="380" y2="125" stroke="#93a1af" stroke-width="2"/>
+  <line x1="450" y1="125" x2="462" y2="125" stroke="#93a1af" stroke-width="2"/>
+  <line x1="488" y1="125" x2="502" y2="125" stroke="#93a1af" stroke-width="2"/>
+  <line x1="518" y1="125" x2="530" y2="125" stroke="#93a1af" stroke-width="2"/>
+  <line x1="600" y1="125" x2="612" y2="125" stroke="#93a1af" stroke-width="2"/>
+  <line x1="628" y1="125" x2="640" y2="125" stroke="#93a1af" stroke-width="2"/>
+  <line x1="710" y1="125" x2="722" y2="125" stroke="#93a1af" stroke-width="2"/>
+  <line x1="748" y1="125" x2="762" y2="125" stroke="#93a1af" stroke-width="2"/>
+  <line x1="778" y1="125" x2="790" y2="125" stroke="#93a1af" stroke-width="2"/>
+  <path d="M108,112 C108,60 215,60 215,108" fill="none" stroke="#e3b341" stroke-width="2"/>
+  <path d="M368,112 C368,60 475,60 475,108" fill="none" stroke="#e3b341" stroke-width="2"/>
+  <path d="M628,112 C628,60 735,60 735,108" fill="none" stroke="#e3b341" stroke-width="2"/>
+  <text class="s-sm" x="161" y="58" text-anchor="middle">x1</text>
+  <text class="s-sm" x="421" y="58" text-anchor="middle">x3</text>
+  <text class="s-sm" x="681" y="58" text-anchor="middle">x5</text>
+  <text class="s-mono" x="155" y="180" text-anchor="middle">(64, 128, 128)</text>
+  <text class="s-mono" x="415" y="180" text-anchor="middle">(128, 64, 64)</text>
+  <text class="s-mono" x="675" y="180" text-anchor="middle">(256, 32, 32)</text>
+  <text class="s-sm" x="10" y="214">layer3、layer5 用 stride 2 讓邊長減半、通道加倍，輸入輸出形狀不同，所以沒有殘差跨過它們。</text>
+</svg>
+<figcaption>圖 7.1　投影片第 39 頁的接法，本書重畫並標上每個 ⊕ 的形狀。三條殘差各自跨過一個「形狀不變」的層。</figcaption>
+</figure>
+<p>寫成程式，只要在三個地方把「前一個 ReLU 的輸出」加回來，其餘不動：</p>
+<pre class="py"><code>    def forward(self, x):
+        x1 = self.relu(self.cnn_layer1(x))
+        x2 = self.relu(self.cnn_layer2(x1) + x1)
+        x3 = self.relu(self.cnn_layer3(x2))
+        x4 = self.relu(self.cnn_layer4(x3) + x3)
+        x5 = self.relu(self.cnn_layer5(x4))
+        x6 = self.relu(self.cnn_layer6(x5) + x5)
+        return self.fc_layer(x6.flatten(1))</code></pre>
+<p>這就是本書的 Q2 答案（<code>hw03_exp.py</code> 的 <code>--arch res</code> 用的就是這段）。<code>__init__</code> 一行都沒改，參數量也完全相同，符合「只改 <code>forward</code>」的規定。關鍵在「先加、再 ReLU」：<code>self.cnn_layer2(x1) + x1</code> 加完才過 <code>self.relu</code>，順序和 ResNet 論文的基本區塊一致。</p>
+<h3 id="why">殘差為什麼有用</h3>
+<p>一般的層學的是「輸入 → 輸出」的整個轉換 <em>H</em>(<em>x</em>)。加了殘差之後，這一層只需要學「輸出比輸入多了什麼」：<em>F</em>(<em>x</em>) = <em>H</em>(<em>x</em>) − <em>x</em>，輸出是 <em>F</em>(<em>x</em>) + <em>x</em>。兩個好處：如果某一層其實不需要做什麼，它只要把 <em>F</em> 學成 0 就好，比學成「恆等轉換」容易得多；反向傳播時，梯度可以沿著那條相加的捷徑直接傳回前面的層，不必每一層都乘一次權重，所以很深的網路也訓練得動。ResNet（2015）就是靠這個把網路疊到 152 層。</p>
+<p>反過來說，殘差解決的是「<strong>深</strong>」的問題。這個模型只有 6 層卷積，本來就不深；7.4 節會看到，它真正的問題在別的地方。</p>
+<div class="warn"><h4>形狀不同的層怎麼跨</h4>
+<p>題目只要求在形狀相同的地方相加。如果想讓殘差也跨過 <code>cnn_layer3</code>（64 → 128 通道、128 → 64 邊長），捷徑那一側要先用一個 <code>nn.Conv2d(64, 128, 1, 2)</code>（1×1 卷積、stride 2）把 <code>x2</code> 轉成同樣的形狀，ResNet 論文叫它 projection shortcut。但這需要在 <code>__init__</code> 加新的層，違反這一題「只改 <code>forward</code>」的規定。</p>
+</div>
+
+<h2 id="result">7.4　實際訓練：殘差網路反而比較差</h2>
+<p>第 8 章用同一套規格訓練了三個模型：都用第 6 章的增強 A、都跑 40 個 epoch，其他設定和 <code>train.py</code> 相同。為了單獨看殘差本身的效果，本書另外多跑了一組「<code>Residual_Network</code> 原樣、不加殘差」（<code>--arch res0</code>）。驗證欄都是整個驗證集一次算的真實值：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>模型</th><th>參數</th><th>最佳 epoch</th><th>最佳驗證 acc（印出／真實）</th><th>第 1 個 epoch 的訓練 loss</th><th>第 40 個 epoch 的訓練 acc</th><th>每個 epoch（含驗證）</th></tr></thead>
+<tbody>
+<tr><td><code>Classifier</code>（augA40）</td><td>12,833,803</td><td>35</td><td>0.69050／0.68805</td><td>2.05614</td><td>0.83460</td><td>39.7 秒</td></tr>
+<tr><td><code>Residual_Network</code> + 殘差（res40）</td><td>68,259,147</td><td>35</td><td>0.59754／0.59883</td><td>19.25814</td><td>0.63875</td><td>46.6 秒</td></tr>
+<tr><td><code>Residual_Network</code> 原樣、不加殘差（res0_40）</td><td>68,259,147</td><td>39</td><td>0.64569／0.64606</td><td>8.45978</td><td>0.69775</td><td>45.0 秒</td></tr>
+</tbody>
+</table></div>
+<p>兩個結論。第一，三個模型裡 <code>Classifier</code> 最好，同一個 <code>Residual_Network</code> 不管有沒有殘差都比它差。第二，也是比較意外的：<strong>在這個模型上，加了殘差反而變差</strong>——不加殘差的版本最佳 0.64606，加了之後是 0.59883，低了 4.7 個百分點。（每一組都只用一個亂數種子跑了一次，差距的一部分可能來自隨機性；但兩者的訓練曲線從第 1 個 epoch 起就分開了，下面會看到原因。）</p>
+<p>和 <code>Classifier</code> 比，有殘差的版本差了將近 9 個百分點。看它的曲線（res40，真實值）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>epoch</th><th>1</th><th>5</th><th>10</th><th>20</th><th>30</th><th>40</th></tr></thead>
+<tbody>
+<tr><td>訓練 loss</td><td>19.25814</td><td>2.01706</td><td>1.76762</td><td>1.42594</td><td>1.19627</td><td>1.05876</td></tr>
+<tr><td>訓練 acc</td><td>0.13929</td><td>0.29604</td><td>0.39163</td><td>0.51025</td><td>0.59062</td><td>0.63875</td></tr>
+<tr><td>驗證 acc</td><td>0.17114</td><td>0.31866</td><td>0.37959</td><td>0.46297</td><td>0.54723</td><td>0.57230</td></tr>
+<tr><td>驗證 loss</td><td>3.83432</td><td>1.93446</td><td>1.75989</td><td>1.62354</td><td>1.37563</td><td>1.30747</td></tr>
+</tbody>
+</table></div>
+<p>這不是過擬合——過擬合是訓練很好、驗證很差。這裡<strong>訓練準確率本身就很低</strong>：40 個 epoch 之後只有 0.64，而同樣有增強的 <code>Classifier</code> 是 0.83。驗證準確率一路還在上升，模型是<strong>學得太慢</strong>（欠擬合，underfitting）。最可疑的是第 1 個 epoch 的平均訓練 loss 19.26：11 類的分類，什麼都不會的模型 loss 也只有 ln 11 ≈ 2.4，19 代表模型在第 1 個 epoch 裡給出了非常極端、而且是錯的預測。</p>
+
+<h3 id="diagnose">原因：262,144 維輸入的全連接層 × Adam</h3>
+<p>本書用 32 張訓練圖，在 CPU 上比較三個模型<strong>剛初始化時</strong>（種子相同、train 模式、還沒更新）的狀況：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>模型</th><th>初始 loss</th><th>logits 的標準差</th><th>梯度長度（裁剪前）</th><th>攤平後特徵的長度（每張圖的 L2）</th></tr></thead>
+<tbody>
+<tr><td><code>Classifier</code></td><td>2.417</td><td>0.105</td><td>4.82</td><td>100.6（8,192 維）</td></tr>
+<tr><td><code>Residual_Network</code> 原樣</td><td>2.498</td><td>0.172</td><td>29.55</td><td>—</td></tr>
+<tr><td><code>Residual_Network</code> + 殘差</td><td>2.528</td><td>0.263</td><td>48.90</td><td>543.3（262,144 維）</td></tr>
+</tbody>
+</table></div>
+<p>初始的 loss 三者都正常（約 ln 11）。差別在梯度：殘差網路的梯度長度是 48.90，遠超過 <code>train.py</code> 的 <code>max_norm=10</code>，第一步就會被裁剪；<code>Classifier</code> 只有 4.82。但裁剪只能限制梯度的大小，限制不了 Adam 的步伐。Adam 把每個參數的梯度除以它自己的「梯度大小的移動平均」（第 4 章 4.3 節），所以訓練初期，<strong>每一個權重每一步都大約走 lr = 0.0003 那麼遠</strong>，和梯度本身有多大幾乎無關。第一步更是精確：Adam 的第一步，每個權重剛好移動 lr、方向是它的梯度的正負號（偏差修正後梯度除以自己的絕對值；這裡忽略很小的 eps 與 weight decay）。</p>
+<p>對一個輸入有 <em>n</em> 維的全連接層，如果每個權重都往「讓 loss 下降」的方向移動 0.0003，一個輸出的變化量大約是 0.0003 × (所有輸入的絕對值總和)。<code>Classifier</code> 的 fc 第 1 層有 8,192 個輸入、平均值約 0.86，一步大約讓輸出變動 0.0003 × 8,192 × 0.86 ≈ 2；殘差網路的 fc 第 1 層有 262,144 個輸入、平均值約 0.65，一步大約是 0.0003 × 262,144 × 0.65 ≈ <strong>51</strong>。一步就讓 logits 跳了幾十，模型立刻變得極端而自信，loss 也就飆到十幾、二十。（這是數量級的估算，不是實測每一步的變化；本書實測了第 1 個 epoch 的平均 loss 與初始的梯度長度，兩者都和這個估算一致：沒有殘差的版本梯度比較小，第 1 個 epoch 的 loss 也比較低。）</p>
+<p>這個估算可以直接驗證。本書用實驗工具重跑三個模型的前 10 步（增強 A，種子與 40 個 epoch 的實驗相同，所以這 10 步就是那三組實驗的前 10 步），記下每一步的訓練 loss 與裁剪前的梯度長度：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>第幾步</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th></tr></thead>
+<tbody>
+<tr><td><code>Classifier</code> loss</td><td>2.425</td><td>2.538</td><td>2.473</td><td>2.277</td><td>2.289</td><td>2.312</td><td>2.229</td><td>2.188</td><td>2.141</td><td>2.063</td></tr>
+<tr><td>原樣 loss</td><td>2.414</td><td><strong>25.471</strong></td><td>28.612</td><td>28.770</td><td>24.166</td><td>22.998</td><td>20.159</td><td>18.898</td><td>15.016</td><td>9.961</td></tr>
+<tr><td>+ 殘差 loss</td><td>2.435</td><td><strong>50.531</strong></td><td>78.717</td><td>46.655</td><td>49.067</td><td>52.124</td><td>44.079</td><td>35.603</td><td>31.509</td><td>33.952</td></tr>
+<tr><td><code>Classifier</code> 梯度長度</td><td>2.38</td><td>5.10</td><td>4.90</td><td>3.50</td><td>2.36</td><td>2.11</td><td>2.09</td><td>2.00</td><td>2.27</td><td>1.93</td></tr>
+<tr><td>原樣 梯度長度</td><td>12.06</td><td>139.97</td><td>262.68</td><td>306.86</td><td>221.19</td><td>306.21</td><td>165.97</td><td>170.68</td><td>193.50</td><td>132.48</td></tr>
+<tr><td>+ 殘差 梯度長度</td><td>20.41</td><td>371.76</td><td>530.89</td><td>417.35</td><td>653.68</td><td>449.05</td><td>558.67</td><td>416.13</td><td>470.40</td><td>500.58</td></tr>
+</tbody>
+</table></div>
+<p>第 1 步三者的 loss 都是 2.4 左右（剛初始化）。<strong>只更新了一次</strong>，第 2 步的 loss 就從 2.4 跳到 25.5（原樣）與 50.5（加殘差），<code>Classifier</code> 則幾乎不動（2.54）。梯度長度也跟著暴增到幾百，每一步都被 <code>max_norm=10</code> 裁剪，但如上所說，裁剪擋不住 Adam 的步伐。加了殘差的版本初始梯度比較大（48.90 對 29.55），第一步跳得更遠、回來得更慢：10 步之後原樣的 loss 已經降到 9.96，加殘差的還在 34。這個開局的差距，一路延續成 40 個 epoch 後 4.7 個百分點的落差。</p>
+<p>所以這個模型的問題，在於 <code>fc_layer</code> 第一層「262,144 維輸入 × 256 輸出」的設計，搭配一個為小模型調的學習率。殘差讓初始梯度更大（從 29.55 變 48.90），第一步就更極端，所以在這個模型上，加殘差反而變差。常見的修法不是動殘差，而是在攤平前加池化（例如 <code>nn.AdaptiveAvgPool2d(1)</code>，第 3 章 3.6 節的「現在的做法」，攤平後只剩 256 維），或把學習率調小、加暖身（warmup）。這些都要改 <code>__init__</code> 或訓練設定，超出 Q2 的範圍；本書沒有實際訓練這些修法。</p>
+<div class="note"><h4>報告題要的是什麼</h4>
+<p>Q2 的評分只看「<code>forward</code> 有沒有照圖接對」，不看這個模型訓練起來好不好。助教選這個結構，是因為它讓殘差的位置一目了然（形狀相同的三層），不是為了拿高分。要往 Strong 以上爬，投影片第 33 頁的建議是「有下採樣（downsampling）的結構比較好」、「有了增強就別怕把模型放大」——放大的應該是卷積部分，不是全連接層。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li><code>others.py</code> 沒有 import <code>transforms</code>，整份執行會 <code>NameError</code>；沒有程式 import 它，它只是報告兩題的題目。</li>
+  <li><code>Residual_Network</code>：6 層「Conv + BN」（ReLU 留給 <code>forward</code>），用兩次 stride 2 縮小；<code>cnn_layer2</code>、<code>4</code>、<code>6</code> 的輸入輸出形狀相同。共 68,259,147 個參數，98.3% 在 <code>fc_layer</code>（262,144 → 256 這一層就有 67,109,120 個）。</li>
+  <li>Q2 答案：<code>x2 = relu(layer2(x1) + x1)</code>、<code>x4 = relu(layer4(x3) + x3)</code>、<code>x6 = relu(layer6(x5) + x5)</code>，先加再 ReLU，只改 <code>forward</code>。殘差只能跨過形狀不變的層；跨形狀要 1×1 卷積的 projection shortcut。</li>
+  <li>殘差讓每一層只學「多了什麼」、讓梯度有捷徑，解決的是「深」的問題。</li>
+  <li>實測（增強 A、40 個 epoch，各一個種子）：<code>Classifier</code> 0.68805、<code>Residual_Network</code> 原樣 0.64606、加殘差 0.59883——<strong>加殘差反而變差</strong>。它是欠擬合：第 1 個 epoch 訓練 loss 19.26，40 個 epoch 後訓練準確率只有 0.64。</li>
+  <li>原因：Adam 讓每個權重每步約走 lr；262,144 維輸入的全連接層一步就讓 logits 變動約 50。實測只更新一次，loss 就從 2.4 跳到 50.5（原樣 25.5，<code>Classifier</code> 2.54）；殘差讓初始梯度更大、第一步更極端。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 為什麼不能寫 <code>x3 = self.relu(self.cnn_layer3(x2) + x2)</code>？</summary>
+<p><code>self.cnn_layer3(x2)</code> 是 <code>(B, 128, 64, 64)</code>，<code>x2</code> 是 <code>(B, 64, 128, 128)</code>，通道數與邊長都不同，相加會因為形狀無法廣播而出錯。要跨過這一層，捷徑上得先用 1×1、stride 2 的卷積把 <code>x2</code> 轉成 <code>(B, 128, 64, 64)</code>，那就要在 <code>__init__</code> 新增一層。（形狀錯誤是依形狀推得的，本書沒有實際執行這一行。）</p></details>
+<details class="quiz"><summary>2. 把答案寫成 <code>x2 = self.relu(self.cnn_layer2(x1)) + x1</code>（先 ReLU 再加），還算照圖嗎？兩者有什麼差別？</summary>
+<p>不算照圖：投影片的圖是「⊕ 之後才是 ReLU」。差別在輸出的範圍：先加再 ReLU，輸出一定 ≥ 0；先 ReLU 再加，<code>x1</code> 本身 ≥ 0、ReLU 的結果也 ≥ 0，輸出同樣 ≥ 0，但數值會比較大，而且這一層的「殘差部分」被限制成只能往上加、不能抵銷 <code>x1</code>。ResNet 原始論文用的是先加再 ReLU；後來的 pre-activation ResNet 把 BN 和 ReLU 移到卷積前面，又是另一種排法。</p></details>
+<details class="quiz"><summary>3. 加了殘差之後，參數量變多了嗎？計算量呢？</summary>
+<p>參數量完全不變，相加沒有參數，<code>__init__</code> 也沒改，仍然是 68,259,147。計算量只多了三次逐元素相加（各 64×128×128、128×64×64、256×32×32 個數字），和卷積比起來可以忽略。</p></details>
+<details class="quiz"><summary>4. 用 7.4 節的估算方法，如果在攤平前加一個 <code>nn.AdaptiveAvgPool2d(1)</code>，fc 第一層改成 <code>nn.Linear(256, 256)</code>，一步大約讓輸出變動多少？</summary>
+<p>攤平後只剩 256 維。假設每個平均後的數值仍是 0.65 左右，一步約 0.0003 × 256 × 0.65 ≈ 0.05，比原本的 51 小了一千倍，就不會在第一步把 logits 推到極端。fc 第一層的參數也從 67,109,120 降到 256 × 256 + 256 = 65,792。（平均值 0.65 是借用攤平前的數字，平均池化後的實際值本書沒有量；這題只是估算。）</p></details>
+<details class="quiz"><summary>5. 為什麼梯度裁剪（<code>max_norm=10</code>）救不了殘差網路的第一步？</summary>
+<p>裁剪把所有梯度等比例縮小，讓總長度不超過 10，但 Adam 接著會把每個參數的梯度除以它自己的梯度大小（的移動平均）：梯度整體縮小 5 倍，分母也跟著縮小，比值幾乎不變，每個權重的步伐仍然約等於 lr。所以對 Adam 來說，裁剪主要防的是「某一步突然暴衝、和之前差很多」的情況，不能把一開始就太大的有效步伐壓下來。要壓步伐，得調小 lr 或加 warmup。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://arxiv.org/abs/1512.03385">He et al. (2015) — Deep Residual Learning for Image Recognition</a>：ResNet 原始論文，殘差區塊與 projection shortcut（投影片第 38 頁引用的就是它）。</li>
+  <li><a href="https://arxiv.org/abs/1603.05027">He et al. (2016) — Identity Mappings in Deep Residual Networks</a>：pre-activation 的排法，以及「先加還是先 ReLU」的實驗比較。</li>
+  <li><a href="https://pytorch.org/vision/stable/models/resnet.html">torchvision — ResNet</a>：<code>resnet18</code> 等標準實作，可以對照它怎麼用池化把攤平後的維度壓小。</li>
+  <li><a href="https://arxiv.org/abs/1706.02677">Goyal et al. (2017) — Accurate, Large Minibatch SGD</a>：學習率暖身（warmup）的來源之一。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="ch08.html">第 8 章 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW03 讀碼教材 · 對應 commit 42ffd90 · 程式碼引用取自本 repo 的 HW03/；實測輸出取自 2026-10-05 本機執行</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>

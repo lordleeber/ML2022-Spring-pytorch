@@ -125,7 +125,7 @@ best_acc, best_ep, best_sd, hist = 0, 0, None, []
 for epoch in range(a.epochs):
     te = time.time()
     model.train()
-    train_loss, train_accs, grad_norms = [], [], []
+    train_loss, train_accs, grad_norms, step_losses = [], [], [], []
     for i, (imgs, labels) in enumerate(tqdm(train_loader, disable=True)):
         logits = model(imgs.to(dev))
         labels_on_device = labels.to(dev)
@@ -135,6 +135,7 @@ for epoch in range(a.epochs):
         gn = nn.utils.clip_grad_norm_(model.parameters(), max_norm=10)
         if a.gradlog:
             grad_norms.append(gn.item())
+            step_losses.append(loss.item())
         optimizer.step()
         acc = torch.eq(logits.argmax(dim=-1), labels_on_device).float().mean()
         train_loss.append(loss.item())
@@ -170,7 +171,8 @@ for epoch in range(a.epochs):
     if a.gradlog:
         g = sorted(grad_norms)
         row.update(grad_min=round(g[0], 3), grad_median=round(g[len(g) // 2], 3), grad_max=round(g[-1], 3),
-                   grad_clipped=sum(v > 10 for v in g), grad_first=round(grad_norms[0], 3))
+                   grad_clipped=sum(v > 10 for v in g), grad_first=round(grad_norms[0], 3),
+                   grad_first10=[round(v, 2) for v in grad_norms[:10]], loss_first10=[round(v, 3) for v in step_losses[:10]])
     hist.append(row)
     if valid_acc > best_acc:
         print(f"Best model found at epoch {epoch}, saving model", flush=True)
