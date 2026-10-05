@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 1 章　解剖 food11 — HW03 食物影像分類</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+<style>
+.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 12px; margin: 1em 0 .4em; }
+.thumbs figure { margin: 0; text-align: center; }
+.thumbs img { width: 96px; height: 96px; object-fit: contain; background: var(--bg-panel); border-radius: 6px; display: block; margin: 0 auto; }
+.thumbs figcaption { font-size: .85em; color: var(--muted); margin-top: 4px; line-height: 1.35; }
+.thumbs figcaption b { color: var(--fg); font-weight: 600; }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW03 讀碼教材</p>
+  <h1>第 1 章　解剖 food11</h1>
+  <p class="chap-lead">在讀任何一行訓練程式之前，先看資料：三個資料夾裡有什麼、檔名怎麼變成標籤、11 類各有幾張、照片有多大。這一章讀完 <code>dataset.py</code> 的 <code>FoodDataset</code>，也會看到本 repo 為了在 Linux 上跑起來改過的那一行，以及改之前會發生什麼事。</p>
+</header>
+<main>
+
+<h2 id="dirs">1.1　三個資料夾</h2>
+<p>第 0 章 0.4 節說過，資料解壓縮到 <code>HW03/food11/</code>，底下有三個資料夾。先數一數每個資料夾有幾個檔案、占多少空間（在 <code>HW03/</code> 裡執行）：</p>
+<pre class="shell cmd"><code>$ for d in training validation test; do echo $d $(ls food11/$d | wc -l); done
+$ du -sh food11/*</code></pre>
+<pre class="shell"><code>training 9866
+validation 3430
+test 3347
+245M	food11/test
+663M	food11/training
+260M	food11/validation</code></pre>
+<p>張數和投影片第 3 頁一致，三個資料夾裡全部是 <code>.jpg</code>。訓練集 663 MB、9,866 張，平均一張約 68 KB：這是 JPEG 壓縮過的大小，解碼成像素之後會大得多（第 2 章）。接著看檔名長什麼樣：</p>
+<pre class="shell cmd"><code>$ ls food11/training | head -5
+$ ls food11/training | tail -2
+$ ls food11/test | head -2</code></pre>
+<pre class="shell"><code>0_0.jpg  «1»
+0_1.jpg
+0_10.jpg  «2»
+0_100.jpg
+0_101.jpg
+9_998.jpg
+9_999.jpg
+0001.jpg  «3»
+0002.jpg</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>訓練集與驗證集的檔名是 <code>類別_序號.jpg</code>：<code>0_0.jpg</code> 是第 0 類的第 0 張。<strong>標籤就寫在檔名裡</strong>，資料集沒有另外附標籤檔。</li>
+  <li><span class="mk">2</span><code>0_10.jpg</code> 排在 <code>0_1.jpg</code> 後面、<code>0_2.jpg</code> 前面：<code>ls</code> 是照字串排序，一個字元一個字元比，不是照數字大小。程式裡的 <code>sorted</code> 也一樣（1.2 節）。</li>
+  <li><span class="mk">3</span>測試集的檔名只有四位數的序號，<strong>沒有類別</strong>；而且序號補了零，所以字串順序剛好就是數字順序。這件事在第 5 章會變得很重要。</li>
+</ol>
+
+<h2 id="dataset">1.2　FoodDataset：檔名就是標籤</h2>
+<p>讀資料的程式全部在 <code>dataset.py</code>。第 1–3 行 import 了 <code>os</code>、PyTorch 的 <code>Dataset</code> 等類別，以及 Pillow 的 <code>Image</code>（Pillow 是 Python 最常用的影像套件，套件名叫 <code>PIL</code>）；第 6–9 行是從原版 notebook 帶過來的一段說明文字：「資料以名稱標示，所以在 <code>__getitem__</code> 裡同時讀圖片和標籤」。接下來就是唯一的類別：</p>
+
+<figure class="listing"><figcaption>dataset.py:12–24 — FoodDataset 的建構子與長度</figcaption>
+<pre class="py" data-hot="14,17-21,23-24"><code>class FoodDataset(Dataset):
+
+    def __init__(self, path, tfm, files=None):
+        super(FoodDataset).__init__()
+        self.path = path
+        self.files = sorted([os.path.join(path, x) for x in os.listdir(path) if x.endswith(".jpg")])
+        if files is not None:
+            self.files = files
+        print(f"One {path} sample", self.files[0])
+        self.transform = tfm
+
+    def __len__(self):
+        return len(self.files)</code></pre></figure>
+<p>PyTorch 的 <code>Dataset</code> 只要求兩件事：<code>__len__</code> 回答「一共幾筆」，<code>__getitem__</code> 回答「第 <code>idx</code> 筆是什麼」。<code>DataLoader</code>（第 2 章）就是靠這兩個方法，一次拿一批索引、逐一呼叫 <code>__getitem__</code>，再把結果疊成一個 batch。</p>
+<p>建構子有三個參數：<code>path</code> 是資料夾、<code>tfm</code> 是要套用的轉換（transform，第 2 章）、<code>files</code> 可以直接指定檔案清單。逐行看：</p>
+<ul>
+  <li><strong>第 17 行</strong>：<code>os.listdir(path)</code> 列出資料夾裡的所有名字，留下 <code>.jpg</code> 結尾的，接上資料夾路徑，再 <code>sorted</code>。排序是字串序，和 1.1 節的 <code>ls</code> 一樣。整個 <code>FoodDataset</code> 只存「檔名清單」，<strong>不會先把圖片讀進記憶體</strong>：9,866 張圖要等到被用到時才一張一張讀。</li>
+  <li><strong>第 18–19 行</strong>：如果呼叫時給了 <code>files</code>，就用它取代第 17 行的結果。<code>train.py:14</code> 的註解說 <code>ConcatDataset</code> 和 <code>Subset</code> 在做半監督學習（semi-supervised learning）時可能有用；<code>files</code> 也是同一類的用途，例如把訓練集與驗證集合併後重新切分（第 8 章會用到）。要注意兩件事：第 17 行<strong>照樣會執行</strong>，所以 <code>path</code> 一定要是存在的資料夾；第 20 行印的是 <code>path</code>，但旁邊的檔案已經是 <code>files</code> 裡的第一個（見下面的實測）。</li>
+  <li><strong>第 20 行</strong>：印出第一個檔案，第 0 章 0.5 節那兩行 <code>One ./food11/training sample …</code> 就是從這裡來的。</li>
+  <li><strong>第 23–24 行</strong>：長度就是檔名清單的長度。</li>
+</ul>
+<p>給了 <code>files</code> 時第 20 行印出來的樣子（在 <code>HW03/</code> 裡執行，只給一個驗證集的檔案）：</p>
+<pre class="shell"><code>One ./food11/training sample ./food11/validation/7_5.jpg</code></pre>
+<p>前面寫的是 <code>training</code>，後面的檔案卻在 <code>validation</code>：印出來的訊息不一定代表實際讀的是哪個資料夾。</p>
+
+<div class="warn"><h4>第 15 行的 super 少了 self</h4>
+<p>第 15 行 <code>super(FoodDataset).__init__()</code> 想呼叫父類別 <code>Dataset</code> 的建構子，但正確寫法是 <code>super(FoodDataset, self).__init__()</code>（或 Python 3 的 <code>super().__init__()</code>）。只給一個參數的 <code>super(FoodDataset)</code> 是一個「沒有綁定任何物件」的 super 物件，對它呼叫 <code>__init__()</code> 只是在初始化這個 super 物件自己，<strong>根本沒有碰到 <code>Dataset</code></strong>。本書實測：在同樣的寫法裡印出 <code>super(D)</code>，得到 <code>&lt;super: &lt;class 'D'&gt;, NULL&gt;</code>，後面的 <code>NULL</code> 就是「沒有綁定物件」。</p>
+<p>這個錯誤剛好沒有影響，因為 <code>torch.utils.data.Dataset</code> 沒有定義自己的 <code>__init__</code>（實測 <code>Dataset.__init__ is object.__init__</code> 是 <code>True</code>），本來就沒有東西需要初始化。換成一個有自己建構子的父類別，同樣的寫法就會悄悄漏掉初始化。<code>classifier.py:6</code> 的 <code>super(Classifier, self).__init__()</code> 是對的寫法，可以對照；那一行如果寫錯，<code>nn.Module</code> 沒被初始化，第一次指定子模組（<code>self.cnn = …</code>）就會出錯。原版 notebook 就是這樣寫的，本 repo 沒有改。</p>
+</div>
+
+<p>接著是讀一筆資料的方法：</p>
+<figure class="listing"><figcaption>dataset.py:26–37 — __getitem__：讀圖、轉換、從檔名取標籤</figcaption>
+<pre class="py" data-hot="28-29,33,36"><code>    def __getitem__(self, idx):
+        fname = self.files[idx]
+        im = Image.open(fname)
+        im = self.transform(im)
+        # im = self.data[idx]
+        try:
+            # basename works on both linux ("/") and windows ("\\") paths
+            label = int(os.path.basename(fname).split("_")[0])
+        except:
+            # test has no label
+            label = -1
+        return im, label</code></pre></figure>
+<ul>
+  <li><strong>第 28 行</strong>：<code>Image.open</code> 打開 JPEG，得到一個 Pillow 的圖片物件。這一步只讀檔頭（知道大小與色彩模式），真正的解碼要等到第一次用到像素時才做。</li>
+  <li><strong>第 29 行</strong>：套用建構子收到的轉換。<code>train.py</code> 傳的轉換會把圖片縮成 128×128 並變成 tensor（第 2 章）；第 30 行被註解掉的 <code>self.data[idx]</code> 是「先把所有圖片讀進記憶體」的另一種寫法，沒有用。</li>
+  <li><strong>第 33 行</strong>：從路徑取出檔名（<code>os.path.basename</code>）、用 <code>_</code> 切開、取第一段、轉成整數。<code>./food11/training/3_120.jpg</code> → <code>3_120.jpg</code> → <code>["3", "120.jpg"]</code> → <code>"3"</code> → <code>3</code>。</li>
+  <li><strong>第 34–36 行</strong>：轉整數失敗就給 -1。1.6 節會看到，測試集就是靠這裡拿到 -1 的。</li>
+  <li><strong>第 37 行</strong>：回傳一個 <code>(圖片, 標籤)</code> 的 tuple。</li>
+</ul>
+<p>用 <code>FoodDataset</code> 實際取一筆看看。這裡的 transform 只用 <code>ToTensor()</code>（把圖片變成 tensor，第 2 章），沒有縮放，所以看得到原圖大小。在 <code>HW03/</code> 裡執行（不需要 GPU）：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+from dataset import FoodDataset
+import torchvision.transforms as T
+ds = FoodDataset('./food11/training', tfm=T.ToTensor())
+print(len(ds), ds.files[:3])
+x, y = ds[0]
+print(x.shape, x.dtype, y)
+t = FoodDataset('./food11/test', tfm=T.ToTensor())
+x, y = t[0]
+print(x.shape, y)
+"</code></pre>
+<pre class="shell"><code>One ./food11/training sample ./food11/training/0_0.jpg
+9866 ['./food11/training/0_0.jpg', './food11/training/0_1.jpg', './food11/training/0_10.jpg']  «1»
+torch.Size([3, 512, 512]) torch.float32 0  «2»
+One ./food11/test sample ./food11/test/0001.jpg
+torch.Size([3, 384, 512]) -1  «3»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>9,866 個檔名，照字串排序，和 <code>ls</code> 一致。路徑前面帶著 <code>./food11/training/</code>，是第 17 行 <code>os.path.join</code> 接上的。</li>
+  <li><span class="mk">2</span>第 0 筆是 <code>0_0.jpg</code>：3 個顏色通道、512 × 512 個像素，標籤 0。</li>
+  <li><span class="mk">3</span>測試集第 0 筆是 <code>0001.jpg</code>：高 384、寬 512，<strong>和訓練集那張大小不同</strong>；標籤是 -1。大小不同的圖片沒辦法直接疊成一個 batch，所以 <code>train.py</code> 的轉換第一步就是縮放成固定大小（第 2 章）。</li>
+</ol>
+
+<h3 id="order">字串排序的類別順序</h3>
+<p>因為是字串排序，<code>self.files</code> 裡的類別順序不是 0, 1, 2, …, 10，而是 <strong>0, 10, 1, 2, 3, …, 9</strong>：比較 <code>1_0.jpg</code> 和 <code>10_0.jpg</code> 時，第一個字元都是 <code>1</code>，第二個字元 <code>_</code>（ASCII 95）比 <code>0</code>（ASCII 48）大，所以 <code>10_…</code> 排在前面。實測 <code>10_0.jpg</code> 在清單的第 994 個位置（0 起算，前面剛好是第 0 類的 994 張），<code>1_0.jpg</code> 在第 1,703 個（再加上第 10 類的 709 張）。</p>
+<p>對訓練集來說這個順序無所謂，因為 <code>train_loader</code> 每個 epoch 都會打亂（第 2 章）。對測試集就很重要了：<code>test.py</code> 的預測是照 <code>self.files</code> 的順序產生的，<code>submission.csv</code> 的 <code>Id</code> 卻是照 1, 2, 3, … 編的；兩者對得上，全靠測試集的檔名補了零（第 5 章）。</p>
+
+<h2 id="basename">1.3　改過的那一行：basename</h2>
+<p>第 33 行是本 repo 為了在 2026 年跑起來而改的地方。這一行在 git 紀錄裡有三個版本：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>版本</th><th>寫法</th><th>能在哪裡跑</th></tr></thead>
+<tbody>
+<tr><td>原版 notebook（2022）</td><td><code>int(fname.split("/")[-1].split("_")[0])</code></td><td>Linux、macOS（Colab、Kaggle 都是 Linux）</td></tr>
+<tr><td>本 repo 改成</td><td><code>int(fname.split("\\")[-1].split("_")[0])</code>，旁邊註解 <code># windows</code></td><td>只有 Windows</td></tr>
+<tr><td>commit <code>381aad0</code>（2026-10-03）</td><td><code>int(os.path.basename(fname).split("_")[0])</code></td><td>兩邊都可以</td></tr>
+</tbody>
+</table></div>
+<p>關鍵在第 17 行的 <code>os.path.join</code>：它用的是<strong>目前作業系統</strong>的路徑分隔符號，Linux 上接出 <code>./food11/training/3_120.jpg</code>，Windows 上接出 <code>./food11\training\3_120.jpg</code>。手寫的 <code>split("/")</code> 或 <code>split("\\")</code> 都只認得其中一種。在 Linux 上用 Windows 版的寫法會怎樣？<code>"./food11/training/3_120.jpg".split("\\")</code> 找不到反斜線，切出來只有一段，<code>[-1]</code> 就是整個路徑；再用 <code>_</code> 切，第一段是 <code>./food11/training/3</code>，<code>int()</code> 失敗，<code>except</code> 給 -1。<strong>每一張訓練圖的標籤都變成 -1</strong>，而且不會有任何錯誤訊息——直到算 loss 的時候。本書在 CPU 上實測，把 -1 交給 <code>nn.CrossEntropyLoss</code>：</p>
+<pre class="shell"><code>IndexError: Target -1 is out of bounds.</code></pre>
+<p>標籤必須在 0 到 10 之間（11 類），-1 不合法。在 GPU 上，這類錯誤通常以 CUDA 的 device-side assert 出現，訊息比較難懂（本書沒有實際在 GPU 上跑這個寫法）。這就是 commit <code>381aad0</code> 非改不可的原因。</p>
+<p><code>os.path.basename</code> 為什麼兩邊都行？因為 <code>os.path</code> 本身就跟著作業系統走：在 Linux 上它是 <code>posixpath</code> 模組，在 Windows 上是 <code>ntpath</code>。可以直接呼叫這兩個模組來比較：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+import ntpath, posixpath
+for p in ['food11/training/3_120.jpg', 'food11\\\\training\\\\3_120.jpg']:
+    print(repr(p), posixpath.basename(p), ntpath.basename(p))
+"</code></pre>
+<pre class="shell"><code>'food11/training/3_120.jpg' 3_120.jpg 3_120.jpg
+'food11\\training\\3_120.jpg' food11\training\3_120.jpg 3_120.jpg  «1»</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>Linux 的 <code>posixpath.basename</code> 不認得反斜線，把整串當成一個檔名；Windows 的 <code>ntpath.basename</code> 兩種斜線都認得。（指令裡寫了四個反斜線，是因為 shell 的雙引號與 Python 字串各吃掉一層。）</li>
+</ol>
+<p>所以第 32 行的註解「basename works on both linux ("/") and windows ("\\") paths」要多讀一層：它能用，是因為路徑由同一個作業系統的 <code>os.path.join</code> 產生、再由同一個作業系統的 <code>os.path.basename</code> 拆開。把 Windows 上產生的路徑字串拿到 Linux 上拆，一樣會失敗。</p>
+<div class="note"><h4>現在的做法：pathlib</h4>
+<p>Python 3.4 起的 <code>pathlib</code> 用物件表示路徑，<code>Path("food11/training/3_120.jpg").stem</code> 直接得到 <code>"3_120"</code>（去掉副檔名的檔名），<code>Path(path).glob("*.jpg")</code> 取代 <code>os.listdir</code> 加 <code>endswith</code>。另外，比賽級的資料通常會附一個標籤檔（CSV 或 JSON），或像 torchvision 的 <code>ImageFolder</code> 那樣「一個類別一個資料夾」，很少把標籤藏在檔名裡；這份資料的格式是課程自己定的。</p>
+</div>
+
+<h2 id="classes">1.4　11 類各有幾張</h2>
+<p>repo 和投影片都只說「11 類」，<strong>沒有寫每一類是什麼食物</strong>。類別名稱要看原始資料集：food-11 是瑞士洛桑聯邦理工學院（EPFL）多媒體訊號處理實驗室（MMSPG）發布的資料集，它的 11 類依序是下面這些（中文是本書的翻譯）。每類各放一張訓練集裡序號 0 的圖，縮成 96 像素見方：</p>
+<div class="thumbs">
+  <figure><img src="img/class00.jpg" alt="第 0 類 Bread 的範例：一盤烤過的麵包片" width="96" height="96"><figcaption><b>0</b> Bread<br>麵包</figcaption></figure>
+  <figure><img src="img/class01.jpg" alt="第 1 類 Dairy product 的範例：起司" width="96" height="96"><figcaption><b>1</b> Dairy product<br>乳製品</figcaption></figure>
+  <figure><img src="img/class02.jpg" alt="第 2 類 Dessert 的範例：一塊層狀蛋糕" width="96" height="96"><figcaption><b>2</b> Dessert<br>甜點</figcaption></figure>
+  <figure><img src="img/class03.jpg" alt="第 3 類 Egg 的範例：盤中的荷包蛋" width="96" height="96"><figcaption><b>3</b> Egg<br>蛋</figcaption></figure>
+  <figure><img src="img/class04.jpg" alt="第 4 類 Fried food 的範例：洋蔥圈" width="96" height="96"><figcaption><b>4</b> Fried food<br>炸物</figcaption></figure>
+  <figure><img src="img/class05.jpg" alt="第 5 類 Meat 的範例：一塊肉排" width="96" height="96"><figcaption><b>5</b> Meat<br>肉類</figcaption></figure>
+  <figure><img src="img/class06.jpg" alt="第 6 類 Noodles/Pasta 的範例：一盤義大利麵" width="96" height="96"><figcaption><b>6</b> Noodles/Pasta<br>麵食</figcaption></figure>
+  <figure><img src="img/class07.jpg" alt="第 7 類 Rice 的範例：一盤炒飯" width="96" height="96"><figcaption><b>7</b> Rice<br>米飯</figcaption></figure>
+  <figure><img src="img/class08.jpg" alt="第 8 類 Seafood 的範例：一堆生蠔" width="96" height="96"><figcaption><b>8</b> Seafood<br>海鮮</figcaption></figure>
+  <figure><img src="img/class09.jpg" alt="第 9 類 Soup 的範例：幾碗濃湯" width="96" height="96"><figcaption><b>9</b> Soup<br>湯</figcaption></figure>
+  <figure><img src="img/class10.jpg" alt="第 10 類 Vegetable/Fruit 的範例：一盤蔬菜" width="96" height="96"><figcaption><b>10</b> Vegetable/Fruit<br>蔬果</figcaption></figure>
+</div>
+<p>本書目視比對過，這 11 張縮圖和類別名稱都對得上（第 0 類的 <code>0_0.jpg</code> 是一盤麵包、第 8 類的 <code>8_0.jpg</code> 是生蠔……）。程式完全不需要這些名字：對模型來說，類別就是 0 到 10 的整數。</p>
+<p>每一類有幾張？用檔名的第一段來數：</p>
+<pre class="shell cmd"><code>$ ls food11/training | cut -d_ -f1 | sort | uniq -c</code></pre>
+<pre class="shell"><code>    994 0
+    429 1
+    709 10
+   1500 2
+    986 3
+    848 4
+   1325 5
+    440 6
+    280 7
+    855 8
+   1500 9</code></pre>
+<p>（<code>sort</code> 也是字串排序，所以 10 排在 1 和 2 之間。）畫成圖：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 420" role="img" aria-label="訓練集每一類的張數，水平長條圖：麵包 994、乳製品 429、甜點 1500、蛋 986、炸物 848、肉類 1325、麵食 440、米飯 280、海鮮 855、湯 1500、蔬果 709">
+  <text class="s-sm" x="10" y="20">訓練集 9,866 張，每一類的張數（平均每類 897 張）</text>
+  <g font-size="13">
+    <line x1="230" y1="34" x2="230" y2="388" stroke="#2b3540" stroke-width="1"/>
+    <text class="s-sm" x="230" y="406" text-anchor="middle">0</text>
+    <text class="s-sm" x="830" y="406" text-anchor="middle">1500</text>
+
+    <text class="s-lbl" x="220" y="54" text-anchor="end">0 麵包</text>
+    <rect x="230" y="40" width="397.6" height="20" rx="3" fill="#3987e5"><title>第 0 類 麵包：994 張（10.1%）</title></rect>
+    <text class="s-sm" x="635.6" y="54">994</text>
+
+    <text class="s-lbl" x="220" y="86" text-anchor="end">1 乳製品</text>
+    <rect x="230" y="72" width="171.6" height="20" rx="3" fill="#3987e5"><title>第 1 類 乳製品：429 張（4.3%）</title></rect>
+    <text class="s-sm" x="409.6" y="86">429</text>
+
+    <text class="s-lbl" x="220" y="118" text-anchor="end">2 甜點</text>
+    <rect x="230" y="104" width="600" height="20" rx="3" fill="#3987e5"><title>第 2 類 甜點：1,500 張（15.2%）</title></rect>
+    <text class="s-sm" x="838" y="118">1500</text>
+
+    <text class="s-lbl" x="220" y="150" text-anchor="end">3 蛋</text>
+    <rect x="230" y="136" width="394.4" height="20" rx="3" fill="#3987e5"><title>第 3 類 蛋：986 張（10.0%）</title></rect>
+    <text class="s-sm" x="632.4" y="150">986</text>
+
+    <text class="s-lbl" x="220" y="182" text-anchor="end">4 炸物</text>
+    <rect x="230" y="168" width="339.2" height="20" rx="3" fill="#3987e5"><title>第 4 類 炸物：848 張（8.6%）</title></rect>
+    <text class="s-sm" x="577.2" y="182">848</text>
+
+    <text class="s-lbl" x="220" y="214" text-anchor="end">5 肉類</text>
+    <rect x="230" y="200" width="530" height="20" rx="3" fill="#3987e5"><title>第 5 類 肉類：1,325 張（13.4%）</title></rect>
+    <text class="s-sm" x="768" y="214">1325</text>
+
+    <text class="s-lbl" x="220" y="246" text-anchor="end">6 麵食</text>
+    <rect x="230" y="232" width="176" height="20" rx="3" fill="#3987e5"><title>第 6 類 麵食：440 張（4.5%）</title></rect>
+    <text class="s-sm" x="414" y="246">440</text>
+
+    <text class="s-lbl" x="220" y="278" text-anchor="end">7 米飯</text>
+    <rect x="230" y="264" width="112" height="20" rx="3" fill="#3987e5"><title>第 7 類 米飯：280 張（2.8%）</title></rect>
+    <text class="s-sm" x="350" y="278">280（最少）</text>
+
+    <text class="s-lbl" x="220" y="310" text-anchor="end">8 海鮮</text>
+    <rect x="230" y="296" width="342" height="20" rx="3" fill="#3987e5"><title>第 8 類 海鮮：855 張（8.7%）</title></rect>
+    <text class="s-sm" x="580" y="310">855</text>
+
+    <text class="s-lbl" x="220" y="342" text-anchor="end">9 湯</text>
+    <rect x="230" y="328" width="600" height="20" rx="3" fill="#3987e5"><title>第 9 類 湯：1,500 張（15.2%）</title></rect>
+    <text class="s-sm" x="838" y="342">1500</text>
+
+    <text class="s-lbl" x="220" y="374" text-anchor="end">10 蔬果</text>
+    <rect x="230" y="360" width="283.6" height="20" rx="3" fill="#3987e5"><title>第 10 類 蔬果：709 張（7.2%）</title></rect>
+    <text class="s-sm" x="521.6" y="374">709</text>
+  </g>
+</svg>
+<figcaption>圖 1.1　訓練集每一類的張數。滑鼠移到長條上會顯示張數與占比；同樣的數字在下表。</figcaption>
+</figure>
+
+<div class="tablewrap"><table>
+<thead><tr><th>類別</th><th>訓練集</th><th>占訓練集</th><th>驗證集</th><th>驗證 ÷ 訓練</th></tr></thead>
+<tbody>
+<tr><td>0 麵包</td><td>994</td><td>10.1%</td><td>362</td><td>0.364</td></tr>
+<tr><td>1 乳製品</td><td>429</td><td>4.3%</td><td>144</td><td>0.336</td></tr>
+<tr><td>2 甜點</td><td>1,500</td><td>15.2%</td><td>500</td><td>0.333</td></tr>
+<tr><td>3 蛋</td><td>986</td><td>10.0%</td><td>327</td><td>0.332</td></tr>
+<tr><td>4 炸物</td><td>848</td><td>8.6%</td><td>326</td><td>0.384</td></tr>
+<tr><td>5 肉類</td><td>1,325</td><td>13.4%</td><td>449</td><td>0.339</td></tr>
+<tr><td>6 麵食</td><td>440</td><td>4.5%</td><td>147</td><td>0.334</td></tr>
+<tr><td>7 米飯</td><td>280</td><td>2.8%</td><td>96</td><td>0.343</td></tr>
+<tr><td>8 海鮮</td><td>855</td><td>8.7%</td><td>347</td><td>0.406</td></tr>
+<tr><td>9 湯</td><td>1,500</td><td>15.2%</td><td>500</td><td>0.333</td></tr>
+<tr><td>10 蔬果</td><td>709</td><td>7.2%</td><td>232</td><td>0.327</td></tr>
+<tr><td><strong>合計</strong></td><td><strong>9,866</strong></td><td>100%</td><td><strong>3,430</strong></td><td>0.348</td></tr>
+</tbody>
+</table></div>
+<p>三件事：</p>
+<ul>
+  <li><strong>不平衡</strong>：最多的甜點和湯各 1,500 張，最少的米飯只有 280 張，相差 5.4 倍。模型看米飯的次數遠少於甜點，學得也可能比較差；第 0 章 0.6 節的 <code>submission.csv</code> 裡，3,347 張測試圖只有 49 張被猜成米飯，是 11 類裡最少的（第 5 章）。</li>
+  <li><strong>驗證集的比例和訓練集幾乎一樣</strong>：每一類的驗證張數大約是訓練張數的 1/3（0.327–0.406），所以驗證集的類別分布和訓練集相近，用它估計模型的表現是合理的。投影片第 15 頁說 train : validation 約 3 : 1，這裡實際是 9,866 : 3,430 ≈ 2.9 : 1。</li>
+  <li><strong>最笨的基準</strong>：永遠猜最多的那一類（甜點或湯），在驗證集上答對 500 ÷ 3,430 = <strong>0.14577</strong>。第 0 章的 0.555 遠高於它，模型確實學到了東西。</li>
+</ul>
+
+<h2 id="sizes">1.5　照片有多大</h2>
+<p>1.2 節的實測已經看到兩張大小不同的圖。全部數一遍（在 <code>HW03/</code> 裡執行；<code>Image.open</code> 只讀檔頭，所以很快）：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+import os, collections
+from PIL import Image
+c = collections.Counter()
+for f in os.listdir('food11/training'):
+    with Image.open('food11/training/' + f) as im:
+        c[im.size] += 1
+print(len(c), c.most_common(5))
+"</code></pre>
+<pre class="shell"><code>542 [((512, 512), 5551), ((512, 384), 1355), ((384, 512), 519), ((382, 512), 320), ((512, 382), 216)]</code></pre>
+<p>Pillow 的 <code>size</code> 是 <strong>(寬, 高)</strong>，和 tensor 的 <code>(通道, 高, 寬)</code> 順序相反，讀的時候要小心。訓練集 9,866 張一共有 542 種不同的大小：</p>
+<ul>
+  <li>最常見的是 512×512 正方形，5,551 張；加上其他正方形尺寸，正方形一共 5,567 張，約 56%。</li>
+  <li>其次是 512×384 的橫圖（1,355 張）和 384×512 的直圖（519 張），也就是 4 : 3 的照片；382×512、512×382 這類是其他比例。大多數照片的長邊是 512。</li>
+  <li>兩個極端：最小的是訓練集的 <code>7_24.jpg</code>，270×207；最大的是驗證集的 <code>10_81.jpg</code>，9216×6144，五千多萬個像素。訓練集裡最大的是 <code>10_445.jpg</code>，7360×4912。</li>
+</ul>
+<p>驗證集與測試集的分布很像：驗證集 251 種大小、2,111 張 512×512；測試集 244 種大小、1,978 張 512×512。全部三萬多張都是 RGB 三通道，沒有灰階或帶透明度的圖，所以 <code>dataset.py</code> 沒有寫 <code>convert("RGB")</code> 也不會出問題。</p>
+<p>大小不一有兩個後果，都在第 2 章處理：第一，要疊成一個 batch，每張圖必須先縮成同樣大小，<code>train.py</code> 選了 128×128，<strong>不保留長寬比</strong>，512×384 的橫圖會被壓扁；第二，每次讀圖都要把 512×512 的 JPEG 解碼、再縮小，這件事很花 CPU 時間——第 0 章看到的 1723% CPU 使用率就是從這裡來的。</p>
+
+<h2 id="test">1.6　測試集的標籤：-1</h2>
+<p>測試集的檔名是 <code>0001.jpg</code>，沒有 <code>_</code>。第 33 行 <code>"0001.jpg".split("_")</code> 切不開，第一段就是整個 <code>"0001.jpg"</code>，<code>int("0001.jpg")</code> 失敗：</p>
+<pre class="shell"><code>ValueError: invalid literal for int() with base 10: '0001.jpg'</code></pre>
+<p>這個例外被第 34 行的 <code>except:</code> 接住，標籤變成 -1。所以同一個 <code>FoodDataset</code> 可以讀訓練集、驗證集和測試集，測試集的每一筆都帶著 -1，<code>test.py</code> 讀到之後直接丟掉（<code>for data,_ in test_loader</code>，第 5 章）。</p>
+<p>第 34 行寫的是不帶例外類型的 <code>except:</code>，它會接住<strong>所有</strong>例外，不只是 <code>ValueError</code>。1.3 節的 Windows 寫法就是靠它「安靜地」把每張訓練圖都變成 -1：如果這裡寫成 <code>except ValueError:</code>，那個錯誤一樣不會被發現，因為它本來就是 <code>ValueError</code>。真正能早點發現問題的寫法，是依資料夾決定要不要取標籤（例如建構子多一個 <code>has_label</code> 參數），訓練集取不到標籤就直接報錯。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li><code>food11/</code> 有三個資料夾：training 9,866 張（663 MB）、validation 3,430 張、test 3,347 張，全部是 RGB 的 JPEG。</li>
+  <li>標籤寫在檔名裡：<code>類別_序號.jpg</code>。<code>FoodDataset</code> 只存排序後的檔名清單，<code>__getitem__</code> 被呼叫時才讀圖、套轉換、從檔名取標籤。</li>
+  <li><code>sorted</code> 是字串排序，類別順序是 0, 10, 1, 2, …, 9；測試集的檔名補了零，字串順序等於數字順序。</li>
+  <li>第 33 行的 <code>os.path.basename</code> 是 commit <code>381aad0</code> 改的；之前 Windows 版的 <code>split("\\")</code> 在 Linux 上會讓每張訓練圖的標籤都變成 -1，算 loss 時才出錯（<code>IndexError: Target -1 is out of bounds.</code>）。</li>
+  <li>11 類很不平衡：甜點、湯各 1,500 張，米飯 280 張；驗證集每類約是訓練集的 1/3。永遠猜最多的一類，驗證準確率 0.14577。類別名稱出自原始的 Food-11 資料集，repo 裡沒有。</li>
+  <li>訓練集有 542 種圖片大小，最常見 512×512（5,551 張）；Pillow 的 <code>size</code> 是 (寬, 高)。</li>
+  <li>測試集檔名沒有 <code>_</code>，<code>int()</code> 失敗，被 <code>except:</code> 接住而得到 -1。<code>super(FoodDataset).__init__()</code> 少了 <code>self</code>，剛好沒有影響。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 驗證集的 <code>valid_set.files</code> 第 0 個與最後一個檔案是什麼？第 10 類的第一個檔案 <code>10_0.jpg</code> 排在第幾個（0 起算）？</summary>
+<p>字串排序下，第 0 個是 <code>./food11/validation/0_0.jpg</code>（第 0 章 0.5 節 stdout 的第二行就是它）。第 10 類緊接在第 0 類之後，驗證集第 0 類有 362 張，<code>0_…</code> 開頭的字串都比 <code>1…</code> 小，所以 <code>10_0.jpg</code> 排在第 362 個。最後一個是第 9 類裡字串最大的序號：第 9 類有 500 張（序號 0–499），字串比較時 <code>9_99.jpg</code> 比 <code>9_499.jpg</code> 大（第三個字元 <code>9</code> 大於 <code>4</code>），所以最後一個是 <code>9_99.jpg</code>。本書實測：第 0 個 <code>0_0.jpg</code>、最後一個 <code>9_99.jpg</code>、<code>10_0.jpg</code> 在第 362 個，和推論一致。</p></details>
+<details class="quiz"><summary>2. 如果把 <code>dataset.py:33</code> 改回原版的 <code>fname.split("/")[-1].split("_")[0]</code>，在 Linux 上會怎樣？在 Windows 上呢？</summary>
+<p>Linux 上沒問題：<code>os.path.join</code> 接出來的是 <code>./food11/training/3_120.jpg</code>，用 <code>/</code> 切取最後一段就是檔名。Windows 上，<code>os.path.join</code> 接出 <code>./food11\training\3_120.jpg</code>，用 <code>/</code> 切得到 <code>["." , "food11\training\3_120.jpg"]</code>，最後一段再用 <code>_</code> 切，第一段是 <code>food11\training\3</code>，<code>int()</code> 失敗，標籤全部變成 -1，算 loss 時出錯。（Windows 的部分是推論，本書沒有在 Windows 上跑。）</p></details>
+<details class="quiz"><summary>3. 一張 512×384 的橫圖，<code>Image.open</code> 之後 <code>im.size</code> 是什麼？經過 <code>ToTensor()</code> 之後的 shape 是什麼？</summary>
+<p><code>im.size</code> 是 <code>(512, 384)</code>，寬在前。<code>ToTensor()</code> 之後是 <code>torch.Size([3, 384, 512])</code>，通道在前、然後是高、寬——1.2 節測試集的 <code>0001.jpg</code> 就是這個形狀。</p></details>
+<details class="quiz"><summary>4. 為什麼「永遠猜甜點」在驗證集上只有 0.14577，但第 0 章第 1 個 epoch 的驗證準確率 0.17568 也沒高多少？這代表第 1 個 epoch 的模型很爛嗎？</summary>
+<p>0.14577 是 500 ÷ 3,430，最多的一類只占 14.6%，所以 11 類的分類問題裡，「什麼都沒學會」大約就在這個水準。第 1 個 epoch 的 0.17568 只比它高一點，表示這時候用 eval 模式評估的模型幾乎還沒學會區分類別；但同一個 epoch 的訓練準確率已經是 0.31425，兩者差很多。為什麼 train 與 eval 的數字會差這麼多，第 3、4 章會講 BatchNorm 在兩種模式下的差別。第 2 個 epoch 驗證準確率就到了 0.43092。</p></details>
+<details class="quiz"><summary>5. 想把訓練集與驗證集合併，再隨機切出新的 90% / 10%，用 <code>FoodDataset</code> 的哪個參數最方便？要注意什麼？</summary>
+<p>用 <code>files</code>：自己把兩個資料夾的檔名清單合併、打亂、切開，再建兩個 <code>FoodDataset</code>，各給一份 <code>files</code>。要注意 <code>path</code> 仍然要給一個存在的資料夾（第 17 行照樣會 <code>os.listdir</code>），而且第 20 行印出的 <code>path</code> 不代表實際的檔案來源；另外驗證用的那一份要給 <code>test_tfm</code>，不要給有增強的轉換。第 8 章的「重切 train/val」實驗就是這樣做的（只是比例不同）。</p></details>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://www.epfl.ch/labs/mmspg/downloads/food-image-datasets/">EPFL MMSPG — Food image datasets</a>：Food-11 原始資料集的發布頁，有 11 類的名稱與資料來源。</li>
+  <li><a href="https://pytorch.org/docs/stable/data.html">PyTorch — torch.utils.data</a>：<code>Dataset</code>、<code>DataLoader</code>、<code>ConcatDataset</code>、<code>Subset</code> 的官方說明。</li>
+  <li><a href="https://pillow.readthedocs.io/en/stable/reference/Image.html">Pillow — Image module</a>：<code>Image.open</code> 為什麼是「懶惰」的、<code>size</code> 與 <code>mode</code> 的定義。</li>
+  <li><a href="https://docs.python.org/3/library/pathlib.html">Python — pathlib</a>：用物件處理路徑，跨平台不必自己切斜線。</li>
+  <li><a href="https://docs.python.org/3/library/functions.html#super">Python — super()</a>：一個參數與兩個參數的 <code>super</code> 有什麼不同。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW03 讀碼教材 · 對應 commit 42ffd90 · 程式碼引用取自本 repo 的 HW03/；實測輸出取自 2026-10-05 本機執行；縮圖取自 food-11 訓練集</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>

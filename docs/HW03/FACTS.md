@@ -142,3 +142,18 @@ Best model found at epoch 4, saving model
 - tqdm 進度條沒有被 `script -qc` 錄到（只剩空行），所以教材不逐字引用進度條；每個 epoch 訓練 39 批、驗證 14 批（由 batch 數推得）。
 - `train.py` 跑完 stderr 沒有任何警告（`grep -ic warn` = 0）。
 - 名詞首見（ch00 已定義）：影像分類、CNN、資料增強、預訓練模型、accuracy、public/private、logits、nn.Sequential、Conv2d（stride、padding、filter）、BatchNorm（buffer：移動平均／移動變異數）、ReLU、MaxPool、卷積區塊、攤平、epoch、patience、weight decay（只提名稱，ch04 解釋）、wall clock、overfitting、deterministic、TTA／cross validation／ensemble（只提名稱，ch06／ch08）。
+
+## ch01 實測（2026-10-05，本機；在 HW03/ 裡，CPU）
+- `du -sh food11/*`：test 245M、training 663M、validation 260M。`ls food11/training | head -5`：0_0.jpg、0_1.jpg、0_10.jpg、0_100.jpg、0_101.jpg；`tail -2`：9_998.jpg、9_999.jpg。test 開頭 0001.jpg、0002.jpg。
+- train/val 每類序號都是連續的 0..n-1。validation 排序後第 0 個 0_0.jpg、最後 9_99.jpg、10_0.jpg 在索引 362。
+- 排序後類別區塊順序（training）：0(994)、10(709)、1(429)、2、…、9；`10_0.jpg` 索引 994、`1_0.jpg` 索引 1703。
+- `FoodDataset(..., tfm=T.ToTensor())`：training 第 0 筆 `torch.Size([3, 512, 512]) torch.float32 0`；test 第 0 筆 `torch.Size([3, 384, 512]) -1`。
+- 給 `files=['./food11/validation/7_5.jpg']`、path 給 training：印 `One ./food11/training sample ./food11/validation/7_5.jpg`，長度 1、標籤 7；第 17 行的 listdir 照樣執行。
+- `super(D)` 印 `<super: <class 'D'>, NULL>`，`.__init__()` 不報錯；`Dataset.__init__ is object.__init__` → True。
+- posixpath/ntpath.basename：`'food11/training/3_120.jpg'` 兩者都 `3_120.jpg`；`'food11\\training\\3_120.jpg'` posixpath 原樣、ntpath `3_120.jpg`。`os.path is posixpath` True。
+- 舊 Windows 寫法在 Linux：`'food11/training/3_120.jpg'.split('\\')[-1].split('_')[0]` → `'food11/training/3'` → -1。CPU 上 `nn.CrossEntropyLoss()(zeros(2,11), tensor([-1,-1]))` → `IndexError: Target -1 is out of bounds.`
+- dataset.py 的 git 紀錄：2274ce9 2022-03-30、403765e 2022-09-29、5e5169b 2022-11-12、717528b 2024-03-28、381aad0 2026-10-03。381aad0 之前的寫法是 `split("\\")`（註解 `# windows`），原版 `split("/")` 留成註解 `# linux`。
+- 尺寸極值：最小 training/7_24.jpg (270,207)；最大 validation/10_81.jpg (9216,6144)；training 最大 10_445.jpg (7360,4912)；test 最大 1598.jpg (9542,5126)。
+- 驗證 ÷ 訓練（每類）：0.364、0.336、0.333、0.332、0.384、0.339、0.334、0.343、0.406、0.333、0.327；合計 0.348。訓練占比：10.1、4.3、15.2、10.0、8.6、13.4、4.5、2.8、8.7、15.2、7.2（%）。
+- 配色：單一系列 `#3987e5`，validate_palette.js dark / surface #161c24 全部 PASS。
+- 名詞首見（ch01）：Dataset／__len__／__getitem__、Pillow、字串排序、半監督學習（只提名稱）、ConcatDataset／Subset（只提名稱）、posixpath／ntpath、pathlib、類別不平衡。
