@@ -24,6 +24,7 @@ the live parameters, so every save writes the weights of that moment. This tool 
 Variants (all default to train.py):
   --d_model --nhead --ffn --layers --dropout   transformer hyper-parameters (layers>1 uses
                                                nn.TransformerEncoder like the commented line 41)
+  --norm_first 1                               pre-norm encoder layers (LayerNorm before attention/FFN)
   --arch conformer                             Conformer blocks (FFN/2, MHSA, conv module, FFN/2, LN)
   --kernel 31                                  depthwise conv kernel of the conformer conv module
   --pool sap                                   self-attention pooling instead of mean pooling
@@ -48,6 +49,7 @@ ap.add_argument('--nhead', type=int, default=2)
 ap.add_argument('--ffn', type=int, default=256)
 ap.add_argument('--layers', type=int, default=1)
 ap.add_argument('--dropout', type=float, default=0.1)
+ap.add_argument('--norm_first', type=int, default=0)  # 1: pre-norm TransformerEncoderLayer
 ap.add_argument('--kernel', type=int, default=31)
 ap.add_argument('--pool', default='mean')          # mean (classifier.py) | sap
 ap.add_argument('--loss', default='ce')            # ce (train.py) | amsm
@@ -68,7 +70,7 @@ a = ap.parse_args()
 dev = 'cuda'
 t0 = time.time()
 DATA = './Dataset'
-is_orig_model = (a.arch == 'transformer' and a.pool == 'mean' and a.loss == 'ce' and a.layers == 1
+is_orig_model = (a.arch == 'transformer' and a.pool == 'mean' and a.loss == 'ce' and a.layers == 1 and not a.norm_first
                  and (a.d_model, a.nhead, a.ffn, a.dropout) == (80, 2, 256, 0.1))
 
 
@@ -164,7 +166,7 @@ class Net(nn.Module):
                                          for _ in range(a.layers)])
         else:
             layer = nn.TransformerEncoderLayer(d_model=d, dim_feedforward=a.ffn, nhead=a.nhead,
-                                               dropout=a.dropout)
+                                               dropout=a.dropout, norm_first=bool(a.norm_first))
             self.encoder = layer if a.layers == 1 else nn.TransformerEncoder(layer, num_layers=a.layers)
         self.pool = SAP(d) if a.pool == 'sap' else None
         if a.loss == 'amsm':
