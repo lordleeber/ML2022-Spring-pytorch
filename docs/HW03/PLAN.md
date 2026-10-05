@@ -27,3 +27,4 @@ HW03（Image Classification，food-11 食物分類 CNN）的 HTML 教材還沒�
 - `.gitignore` 也排除了 `*.ckpt`、`*.csv`、`sample_*.txt`，所以 `sample_best.ckpt`（約 49 M）、`submission.csv` 沒有被追蹤（和 HW02 的 prediction.csv 不同）。實驗仍建議在複本裡跑。
 - 圖片資料：教材裡「看資料」的章節可以放真實圖片的縮圖（參考 HW09 的 `img/` 做法），但要確認授權與檔案大小。
 - `device = "cuda"` 寫死是刻意的，不列為問題。
+- 進度（2026-10-05）：ch00、ch01 已推上 master；ch02 已寫好、本機 commit，**使用者決定：等 2.5 節計時（hw03_facts.py timing，GPU 空出來後）量完、填好再推**。ch08 的 grid（hw03_run_grid.sh）在 scratchpad 依序跑。
