@@ -157,3 +157,12 @@ Best model found at epoch 4, saving model
 - 驗證 ÷ 訓練（每類）：0.364、0.336、0.333、0.332、0.384、0.339、0.334、0.343、0.406、0.333、0.327；合計 0.348。訓練占比：10.1、4.3、15.2、10.0、8.6、13.4、4.5、2.8、8.7、15.2、7.2（%）。
 - 配色：單一系列 `#3987e5`，validate_palette.js dark / surface #161c24 全部 PASS。
 - 名詞首見（ch01）：Dataset／__len__／__getitem__、Pillow、字串排序、半監督學習（只提名稱）、ConcatDataset／Subset（只提名稱）、posixpath／ntpath、pathlib、類別不平衡。
+
+## ch02 實測（2026-10-05，本機；在 HW03/ 裡，CPU，訓練同時在跑，所以沒有計時）
+- `print(test_tfm)`：`Compose(` / `    Resize(size=(128, 128), interpolation=bilinear, max_size=None, antialias=True)` / `    ToTensor()` / `)`。
+- `training/1_0.jpg` (512,384) RGB → Resize → (128,128)；左上角像素 (18, 22, 18) → ToTensor `[0.07058823853731155, 0.08627451211214066, 0.07058823853731155]`；shape (3,128,128) float32，min 1/255、max 0.9490196108818054。自己 `permute(2,0,1).float().div(255)` 與 ToTensor `torch.equal` → True。
+- 對照圖：`img/squash_keep.jpg`（`thumbnail((128,128))` → (128, 96)，3,870 bytes）、`img/squash_128.jpg`（Resize((128,128))，4,514 bytes）。
+- validation、shuffle=False 的第一個 batch：`torch.Size([256, 3, 128, 128]) torch.float32 torch.Size([256]) torch.int64`，前 8 個標籤全是 0。一個 batch 的圖片 50,331,648 bytes。`len(train_loader)` 39、`len(valid_loader)` 14。
+- 訓練集 9,866 張經 test_tfm 的通道平均 [0.5549, 0.4509, 0.3436]、標準差 [0.2668, 0.2694, 0.2766]。
+- `torch.get_num_threads()` = 24。
+- **待量**（GPU 空出來之後，`hw03_facts.py timing`）：num_workers 0/4/8 只讀圖一遍的秒數、資料在記憶體時 39 步訓練的秒數。ch02 2.5 節的表留了【待量】。
