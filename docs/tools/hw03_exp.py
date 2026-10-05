@@ -44,6 +44,7 @@ ap.add_argument('--lr', type=float, default=3e-4)
 ap.add_argument('--max_batches', type=int, default=0)  # >0: stop each training epoch early (smoke test)
 ap.add_argument('--save', default='')           # save the best state_dict here
 ap.add_argument('--dump', default='')           # save best model's val/test logits (.npz) here
+ap.add_argument('--gradlog', type=int, default=0)  # 1: record the pre-clip gradient norm of every step
 a = ap.parse_args()
 dev = 'cuda'
 t0 = time.time()
@@ -124,14 +125,16 @@ best_acc, best_ep, best_sd, hist = 0, 0, None, []
 for epoch in range(a.epochs):
     te = time.time()
     model.train()
-    train_loss, train_accs = [], []
+    train_loss, train_accs, grad_norms = [], [], []
     for i, (imgs, labels) in enumerate(tqdm(train_loader, disable=True)):
         logits = model(imgs.to(dev))
         labels_on_device = labels.to(dev)
         loss = criterion(logits, labels_on_device)
         optimizer.zero_grad()
         loss.backward()
-        nn.utils.clip_grad_norm_(model.parameters(), max_norm=10)
+        gn = nn.utils.clip_grad_norm_(model.parameters(), max_norm=10)
+        if a.gradlog:
+            grad_norms.append(gn.item())
         optimizer.step()
         acc = torch.eq(logits.argmax(dim=-1), labels_on_device).float().mean()
         train_loss.append(loss.item())
@@ -164,6 +167,10 @@ for epoch in range(a.epochs):
                valid_loss=round(valid_loss, 5), valid_acc=round(valid_acc.item(), 5),
                true_acc=round(n_ok / len(valid_set), 5), true_ce=round(ce_sum / len(valid_set), 5),
                train_secs=round(t_train, 1), secs=round(time.time() - te, 1))
+    if a.gradlog:
+        g = sorted(grad_norms)
+        row.update(grad_min=round(g[0], 3), grad_median=round(g[len(g) // 2], 3), grad_max=round(g[-1], 3),
+                   grad_clipped=sum(v > 10 for v in g), grad_first=round(grad_norms[0], 3))
     hist.append(row)
     if valid_acc > best_acc:
         print(f"Best model found at epoch {epoch}, saving model", flush=True)

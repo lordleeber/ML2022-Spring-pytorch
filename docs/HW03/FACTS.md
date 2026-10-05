@@ -189,3 +189,10 @@ Best model found at epoch 4, saving model
 - 乘加次數（一張圖）：cnn.0 28,311,552（2.6%）、cnn.4/8/12 各 301,989,888（27.6%）、cnn.16 150,994,944（13.8%）、fc.0 8,388,608（0.8%）、fc.2 524,288、fc.4 5,632；合計 1,094,194,688。
 - MaxPool2d(2,2,0) 對 arange(16).view(1,1,4,4) → [[5,7],[13,15]]。Conv2d(3,64,3,1,1) weight [64,3,3,3]、bias [64]；padding 0 → [1,64,126,126]；stride 2 padding 1 → [1,64,64,64]。新 BN：parameters weight/bias；buffers running_mean(0)/running_var(1)/num_batches_tracked。`view(2,-1)` 與 `flatten(1)` 相等。
 - 名詞首見（ch03）：kernel、feature map、參數共用、局部性、γ/β、momentum、running 統計量、num_batches_tracked、感受野、跨距（jump）、MAC（乘加）、logits 不需 softmax、全域平均池化、VGG。
+
+## ch04 實測（2026-10-05，本機）
+- `hw03_exp.py --gradlog 1`（新增選項，記錄 clip 前的梯度 L2 長度，不抽亂數；15 行輸出與 train.py `diff` 相同）。每 epoch（第一步、最小、中位數、最大、>10 的步數）：1: 2.342, 1.839, 3.083, 6.748, 0；2: 2.287, 2.205, 3.541, 5.285, 0；3: 5.441, 3.306, 4.312, 5.921, 0；4: 3.149, 3.149, 4.666, 6.206, 0；5: 5.127, 3.982, 5.127, 9.962, 0。195 步全部沒有被裁剪。40 epoch 以上沒有記錄。
+- 每 epoch 真實 val acc／CE（答對 ÷ 3430、CE sum ÷ 3430）：0.17697/3.19892、0.43090/1.62801、0.47988/1.54998、0.48163/1.59486、0.55394/1.32449；印出的 acc 0.17568、0.43092、0.47906、0.48411、0.55541。
+- 第一個訓練 batch 的 loss 2.4208555221557617（scratchpad 的 train.py 複本 t3.py 印的）；ln 11 = 2.3979。
+- tqdm：`train.py:19` `from tqdm.auto import tqdm`；`tqdm/asyncio.py` 的 `__init__` 第 37 行 `self.iterable_iterator = iter(iterable)`（教材引用 23–38 行，中間兩個 `__anext__`/`__aiter__` 分支以 `...` 省略）。追蹤 `Tensor.random_` 看到抽亂數的位置是 torch `dataloader.py:708`（`_BaseDataLoaderIter.__init__`）。
+- 名詞首見（ch04）：cuDNN、deterministic／benchmark、zero_grad／backward／step、梯度累加、gradient accumulation（只提名稱）、log-softmax、Adam、weight decay、AdamW、scheduler／warmup／cosine（只提名稱）、梯度裁剪（L2 norm）、no_grad、early stopping、state_dict、tqdm_asyncio、DataLoader generator。
