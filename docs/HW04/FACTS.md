@@ -136,6 +136,13 @@
 - 每份 ckpt 509,373 bytes 左右（125,896 × 4 = 503,584 bytes 的 float32，加上名稱與 zip 結構）。
 - PyTorch 逐模組計數（`named_modules` + `parameters(recurse=False)`）：`prenet Linear 3280`、`encoder_layer.self_attn MultiheadAttention 19440`（in_proj 掛在 MultiheadAttention 自己身上）、`encoder_layer.self_attn.out_proj NonDynamicallyQuantizableLinear 6480`、`encoder_layer.linear1 Linear 20736`、`encoder_layer.linear2 Linear 20560`、`encoder_layer.norm1 LayerNorm 160`、`encoder_layer.norm2 LayerNorm 160`、`pred_layer.0 Linear 6480`、`pred_layer.2 Linear 48600`、`total 125896`。
 
+## test.py 實測（用上面 baseline 的 model.ckpt，2026-10-05）
+- wall clock **11.36 秒**、最大 RSS 1.08 GB。stdout 三行 `[Info]`（Use cuda now!／Finish loading data!／Finish creating model!），stderr 的進度條最後一格：`100%|█…█| 8000/8000 [00:09<00:00, 886.90it/s]`（`tqdm(dataloader)` 預設樣式，單位 it/s）。
+- `output.csv`：8,001 行、md5 `f926bcf754b7c6edd42c59567ed36c8b`；前三行 `Id,Category`、`uttr-b52ddeaacf1b42ff9c947eadce3e1966.pt,id03196`、`uttr-fc88b32cb5c94af6817ec97e0a145d74.pt,id09112`；最後一行 `uttr-2421915358f84cfeb5cb6a2d653b3d56.pt,id05510`。順序 = testdata.json。
+- 8,000 個答案涵蓋全部 600 人；最多 `id05470` 31 次、最少 `id02607` 2 次（平均 13.3）。
+- 模型吃整句：`(1, 4940, 40)` → `(1, 600)`（hw04_facts.py model）。
+- ch00 的推論（標明是推論）：Simple 基準線 = 跑範例程式（p.12），本 repo = 範例程式，但驗證集整句 0.857 → 驗證集可能比測試集容易得多（同一批說話者、可能同一支影片的句子隨機切）。
+
 ## 實驗工具（docs/tools/hw04_exp.py）
 - `import train` 直接用 train.py 的 set_seed(87)、get_dataloader、collate_batch、scheduler、model_fn；主迴圈照抄，只多記帳。預設參數下用 `classifier.Classifier`。
 - **驗證逐位一致**：預設參數的 `--save_live`（train.py 存下的那份）和 train.py 的 `model.ckpt` 18 個 tensor 全部 `torch.equal`（檔案 md5 不同只因為存的是 deepcopy 的副本，序列化位元組不同）；35 次驗證的 acc 與 train.py 印的一致。
