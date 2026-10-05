@@ -4,10 +4,11 @@ HW04（Speaker Classification，用 Transformer 從 mel-spectrogram 辨認 600 �
 
 ## 狀態（2026-10-05）
 
-- 還沒開始。下一步是 Phase 0。這份計畫是 HW03 完成後，只讀程式與作業 PDF 寫的，**還沒跑任何訓練**。
-- 程式：`HW04/` 下 4 個檔共 524 行（dataset.py 53、classifier.py 70、train.py 310、test.py 91）。作業說明 `HW04/Machine Learning HW4.pdf`（27 頁，已在 repo）。
-- 資料：`HW04/Dataset/`（約 6.6 G，被 `.gitignore` 排除）：`metadata.json`（600 位說話者、56,666 句訓練語句、`n_mels` 40）、`testdata.json`（8,000 句）、`mapping.json`，以及每句一個 `uttr-*.pt`。目錄裡另有 `log_melspectrogram.pt`、`sox_effects.pt`，用途待查。
-- `HW04/model.ckpt`（509,373 bytes，2026-10-03 01:24）與 `output.csv`（400,013 bytes）是之前跑過一次的結果，沒被 git 追蹤（`.gitignore`：`Dataset/*`、`*.csv`、`*.ckpt`）。那一次的時間與分數沒有紀錄。
+- **Phase 0、Phase 1 完成**（同一個本機 session）。使用者決定：照大綱（index、ch00–ch08、appendix）、新版共用樣式、事實一次量完、ch08 每組都跑**原規格 70,000 步**（另加一組 210,000 步長跑）、放少量真實 mel 熱圖、**這本書不冷讀**。
+- 事實全部在 `FACTS.md`；實驗工具 `docs/tools/hw04_exp.py`（與 train.py 逐位一致）、`hw04_facts.py`、`hw04_run_grid.sh`、`hw04_ch08_runs.jsonl/.txt`。
+- 下面「已經看到的疑點」的實測結論：1 成立（第 60k、70k 次存檔存的不是最佳，但影響 ≤ 1 句）；2 drop_last 只丟 3 句、平均再平均沒有偏差，**真正的偏差是驗證切 128 格、測試用整句**（0.686 vs 0.857）；3 單層不印警告，打開 2 層才印 nested tensor 警告；4 8 個 worker 下逐位元可重現；5 確認；6 一個 epoch 1,593 步、70,000 步 = 43.94 epoch；7 只有 2 句短於 128 格（都在訓練集）；8 確認。
+- baseline 只要 3 分 53 秒（Colab 估 30–40 分）。
+- 下一步：寫 ch00（一章一停，使用者說「推」才推）。
 
 ## 投影片重點（只讀了文字，圖還沒看）
 
