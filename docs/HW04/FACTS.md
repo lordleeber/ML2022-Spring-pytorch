@@ -121,6 +121,18 @@
 - 沒有位置編碼（positional encoding），也沒有 padding mask（forward 沒給 `src_key_padding_mask`）。
 - 警告：單一 `TransformerEncoderLayer`（原狀）**不印任何警告**；照 `classifier.py:41` 打開 `TransformerEncoder(..., num_layers=2)` 會印 `enable_nested_tensor is True, but self.use_nested_tensor is False because encoder_layer.self_attn.batch_first was not True(use batch_first for better inference performance)`。（注意：打開第 41 行後 forward 仍呼叫 `self.encoder_layer`，要一起改成 `self.encoder` 才會真的用 2 層；實驗工具 `--layers 2` 是改好的版本。）
 
+## ch04 實測（2026-10-06）
+- 重跑 orig（`hw04_exp.py --snap_dir`，每次驗證存一份 deepcopy，不用亂數）：live 仍與 train.py 的 model.ckpt 逐 tensor 相同；`step_70000.pt` == live。
+- 35 份權重在全部 5,667 句上的 full／fixed-crop（`hw04_facts.py ch04 <snap_dir>`；fixed-crop = `random.Random(0)` 切同樣位置）：2k 0.21281/0.15917 4k 0.35627/0.26557 6k 0.48527/0.34798 8k 0.53662/0.39474 10k 0.59379/0.43427 12k 0.62643/0.45827 14k 0.64726/0.47397 16k 0.67478/0.50044 18k 0.69367/0.50768 20k 0.71449/0.52056 22k 0.72331/0.53432 24k 0.73637/0.55391 26k 0.75737/0.57314 28k 0.74943/0.56767 30k 0.76654/0.58179 32k 0.77642/0.59855 34k 0.78454/0.60049 36k 0.79707/0.61443 38k 0.80360/0.62520 40k 0.81736/0.63049 42k 0.82160/0.64002 44k 0.82089/0.64302 46k 0.82495/0.64796 48k 0.82601/0.65114 50k 0.83960/0.66314 52k 0.84330/0.66384 54k 0.84119/0.66825 56k 0.84701/0.67708 58k 0.85371/0.67584 60k 0.85601/0.68025 62k 0.85283/0.68308 64k 0.85724/0.68414 66k 0.85689/0.68590 68k 0.85724/0.68467 70k 0.85707/0.68555。
+  - 最高：full 0.85724 在 64k 與 68k（並列）；fixed-crop 0.6859 在 66k；printed 0.6859 在 68k。60k–70k 的 full 在 0.85283–0.85724。
+  - deepcopy bug 的兩次：60k 存的是 60k（full 0.85601），本該存 58k（full 0.85371）；70k 存 70k（0.85707），本該存 68k（0.85724）。
+  - **量測陷阱（工具 bug，已修）**：facts 腳本第一版在 random_split 前用了 torch 全域亂數（manual_seed(0)、建模型），切出的「驗證集」和 train.py 不同（混進訓練句），整句準確率虛高到 0.913。修正：random_split 前 `train.set_seed(87)` 並 assert 前五個 index = [43097, 46091, 22324, 24456, 274]。錯的數字沒有進教材。
+- AdamW defaults（2.11）：lr 0.001、betas (0.9, 0.999)、eps 1e-8、weight_decay 0.01、amsgrad False。
+- LambdaLR 建立時就把 lr 設成 lr_lambda(0)=0：第 1 次 optimizer.step() 用 lr 0，參數完全不變，但 Adam 的 exp_avg 已非零；第 2 次 lr 1e-6，參數改變。
+- `sd = model.state_dict()` 後 optimizer.step()：sd 的 tensor 跟著變，data_ptr 與參數相同（參照，不是複本）。
+- 12 組實驗 live−best 的 full 差：orig −0.00017、layers2 +0.00053、med160 +0.0007、med256 −0.0007、conf160 +0.00123、conf256 −0.00053、conf160_sap +0.00106、conf160_sap_am +0.00124、seg256 −0.00159、long −0.00017、med256_lr3e4 +0.00106、med256_pre 0 → 全部在 ±0.0016 以內，6 組 live 較高。
+- ch04 的圖：學習率曲線（單色 #3987e5）、三種準確率（#199e70 整句、#d95926 固定片段虛線、#3987e5 印出；validate_palette.js dark/#161c24 全 PASS，worst adjacent CVD ΔE 9.4）。
+
 ## ch03 實測（`hw04_facts.py ch03 <grid>/orig.ckpt`，2026-10-06）
 - 手寫 post-norm layer（in_proj 切 Q/K/V、2 頭各 40、softmax(QKᵀ/√40)V、out_proj、LN(x+sa)、FFN、LN(h1+ff)）vs `encoder_layer(x)`，eval、x=randn(128,4,80)：allclose True、max diff 2.62e-6。注意力 (4,2,128,128)，列和 0.99999976–1.00000024；1/√40 = 0.158114。`self_attn(..., need_weights=True, average_attn_weights=False)` 的權重與手寫相同。LayerNorm eps 1e-5、activation relu。
 - 訓練模式同一輸入算兩次：輸出不同，max diff 5.96。dropout 四處：MHA 內部 `self_attn.dropout` 0.1、`dropout`（FFN 中間）、`dropout1`、`dropout2`，都是 0.1；named_modules 裡只有後三個是模組。

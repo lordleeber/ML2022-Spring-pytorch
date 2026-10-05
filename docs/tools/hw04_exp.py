@@ -30,6 +30,7 @@ Variants (all default to train.py):
   --pool sap                                   self-attention pooling instead of mean pooling
   --loss amsm --m 0.2 --s 30                   additive margin softmax (model outputs s*cos)
   --steps --warmup --lr --bs --seg             schedule, batch size, segment length
+  --snap_dir DIR                               save the weights at every validation (no RNG draws)
 """
 import argparse, copy, json, math, os, random, time
 import numpy as np
@@ -66,6 +67,7 @@ ap.add_argument('--seg', type=int, default=128)
 ap.add_argument('--save', default='')        # deep-copied best state_dict
 ap.add_argument('--save_live', default='')   # what train.py writes to model.ckpt
 ap.add_argument('--dump', default='')        # .npz: full-length logits of best model on valid + test
+ap.add_argument('--snap_dir', default='')    # save a copy of the weights at every validation (<dir>/step_<N>.pt)
 a = ap.parse_args()
 dev = 'cuda'
 t0 = time.time()
@@ -261,6 +263,9 @@ for step in range(a.steps):
         if va > best_accuracy:
             best_accuracy, best_step = va, step + 1
             best_sd = copy.deepcopy(model.state_dict())
+        if a.snap_dir:
+            os.makedirs(a.snap_dir, exist_ok=True)
+            torch.save(copy.deepcopy(model.state_dict()), os.path.join(a.snap_dir, f'step_{step + 1}.pt'))
 
     if (step + 1) % a.save_steps == 0 and best_sd is not None:
         # train.py:303 saves model.state_dict() as it is right now (the references it kept)

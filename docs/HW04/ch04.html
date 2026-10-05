@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 4 章　訓練迴圈、學習率與驗證 — HW04 說話者辨識</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW04 讀碼教材</p>
+  <h1>第 4 章　訓練迴圈、學習率與驗證</h1>
+  <p class="chap-lead">資料（第 1、2 章）和模型（第 3 章）都備齊了，這一章看 <code>train.py</code> 怎麼把它們接起來：AdamW 與「先升後降」的學習率、一步更新做了哪幾件事、<code>valid()</code> 印出來的準確率到底量的是什麼，以及第 0 章留下的那個問題——log 說「存下最佳模型（0.6859）」，存下的卻不是那一步的權重。本書把同一次訓練的 35 份權重全部存下來，用三種量法各量一次，把這些問題攤開來看。</p>
+</header>
+<main>
+
+<h2 id="optimizer">4.1　優化器：AdamW</h2>
+<p><code>train.py:253</code> 只有一行：<code>optimizer = AdamW(model.parameters(), lr=1e-3)</code>。學習率之外全用預設值，本書在 PyTorch 2.11 上印出來是：</p>
+<pre class="shell"><code>AdamW defaults: {'lr': 0.001, 'betas': (0.9, 0.999), 'eps': 1e-08, 'weight_decay': 0.01, 'amsgrad': False}</code></pre>
+<p>Adam 替每一個參數維護兩個移動平均：梯度的平均（<code>betas[0]</code> = 0.9，像動量）與梯度平方的平均（<code>betas[1]</code> = 0.999），更新量是「平均梯度 ÷ 平均梯度大小」再乘上學習率，所以每個參數的步伐會自動依它的梯度尺度調整。AdamW 的 W 是 weight decay：每一步把參數乘上 (1 − lr × 0.01)，讓權重慢慢往 0 縮。它和 HW03 用的 <code>Adam(..., weight_decay=1e-5)</code> 不一樣：Adam 的 weight decay 是加進梯度裡、跟著 Adam 的縮放走，AdamW 是直接從參數上扣（decoupled weight decay），後者在 Transformer 上效果比較好，也是今天訓練 Transformer 的預設選擇。注意程式裡沒寫 <code>weight_decay</code>，0.01 是 AdamW 的預設值，不是作者的選擇。</p>
+
+<h2 id="lr">4.2　學習率：warmup 加 cosine</h2>
+
+<figure class="listing"><figcaption>train.py:142–162 — get_cosine_schedule_with_warmup()</figcaption>
+<pre class="py" data-hot="150,152-153,155-157,158-160,162"><code>def get_cosine_schedule_with_warmup(
+        optimizer: Optimizer,
+        num_warmup_steps: int,
+        num_training_steps: int,
+        num_cycles: float = 0.5,
+        last_epoch: int = -1,
+):
+
+    def lr_lambda(current_step):
+        # Warmup
+        if current_step &lt; num_warmup_steps:
+            return float(current_step) / float(max(1, num_warmup_steps))
+        # decadence
+        progress = float(current_step - num_warmup_steps) / float(
+            max(1, num_training_steps - num_warmup_steps)
+        )
+        return max(
+            0.0, 0.5 * (1.0 + math.cos(math.pi * float(num_cycles) * 2.0 * progress))
+        )
+
+    return LambdaLR(optimizer, lr_lambda, last_epoch)</code></pre></figure>
+<p><code>LambdaLR</code>（第 162 行）是 PyTorch 的排程器：它每一步呼叫一次 <code>lr_lambda(目前的步數)</code>，把回傳的倍數乘上優化器原本的學習率 0.001。所以 <code>lr_lambda</code> 回傳的是 0 到 1 之間的比例：</p>
+<ul>
+  <li><strong>warmup</strong>（第 152–153 行）：前 1,000 步，比例從 0 線性升到 1，學習率從 0 升到 0.001。</li>
+  <li><strong>cosine 衰減</strong>（第 155–160 行）：之後算出「已經走了剩下路程的幾成」<code>progress</code>（0 到 1），比例是 0.5 × (1 + cos(π × progress))，從 1 沿著半個餘弦降到 0。<code>num_cycles</code> 預設 0.5，<code>math.pi * 0.5 * 2.0 * progress</code> 就是 π × progress；<code>max(0.0, ...)</code> 防止超過總步數時變成負的。</li>
+</ul>
+
+<figure class="fig">
+<svg viewBox="0 0 900 300" role="img" aria-label="學習率曲線：前 1,000 步從 0 線性升到 0.001，之後沿著半個餘弦下降，第 35,500 步降到 0.0005，第 70,000 步降到 0">
+  <line x1="80" y1="197.5" x2="870" y2="197.5" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="72" y="201.5" text-anchor="end">0.00025</text>
+  <line x1="80" y1="145.0" x2="870" y2="145.0" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="72" y="149.0" text-anchor="end">0.0005</text>
+  <line x1="80" y1="92.5" x2="870" y2="92.5" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="72" y="96.5" text-anchor="end">0.00075</text>
+  <line x1="80" y1="40.0" x2="870" y2="40.0" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="72" y="44.0" text-anchor="end">0.001</text>
+  <line x1="80" y1="250" x2="870" y2="250" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-sm" x="72" y="254" text-anchor="end">0</text>
+  <text class="s-sm" x="80.0" y="270" text-anchor="middle">0</text>
+  <text class="s-sm" x="192.9" y="270" text-anchor="middle">10,000</text>
+  <text class="s-sm" x="305.7" y="270" text-anchor="middle">20,000</text>
+  <text class="s-sm" x="418.6" y="270" text-anchor="middle">30,000</text>
+  <text class="s-sm" x="531.4" y="270" text-anchor="middle">40,000</text>
+  <text class="s-sm" x="644.3" y="270" text-anchor="middle">50,000</text>
+  <text class="s-sm" x="757.1" y="270" text-anchor="middle">60,000</text>
+  <text class="s-sm" x="870.0" y="270" text-anchor="middle">70,000</text>
+  <text class="s-sm" x="475.0" y="292" text-anchor="middle">步（scheduler.step() 的次數）</text>
+  <polyline points="80.0,250.0 81.1,229.0 82.3,208.0 83.4,187.0 84.5,166.0 85.6,145.0 86.8,124.0 87.9,103.0 89.0,82.0 90.2,61.0 91.3,40.0 96.9,40.0 102.6,40.1 108.2,40.2 113.9,40.4 119.5,40.7 125.1,41.0 130.8,41.3 136.4,41.7 142.1,42.2 147.7,42.7 153.4,43.3 159.0,43.9 164.6,44.6 170.3,45.3 175.9,46.1 181.6,46.9 187.2,47.8 192.9,48.7 198.5,49.7 204.1,50.7 209.8,51.8 215.4,52.9 221.1,54.1 226.7,55.3 232.4,56.6 238.0,57.9 243.6,59.2 249.3,60.6 254.9,62.1 260.6,63.6 266.2,65.1 271.9,66.7 277.5,68.3 283.1,69.9 288.8,71.6 294.4,73.3 300.1,75.1 305.7,76.9 311.4,78.7 317.0,80.6 322.6,82.5 328.3,84.4 333.9,86.4 339.6,88.4 345.2,90.4 350.9,92.5 356.5,94.6 362.1,96.7 367.8,98.8 373.4,101.0 379.1,103.2 384.7,105.4 390.4,107.6 396.0,109.8 401.6,112.1 407.3,114.4 412.9,116.7 418.6,119.0 424.2,121.3 429.9,123.6 435.5,126.0 441.1,128.3 446.8,130.7 452.4,133.1 458.1,135.5 463.7,137.8 469.4,140.2 475.0,142.6 480.6,145.0 486.3,147.4 491.9,149.8 497.6,152.2 503.2,154.5 508.9,156.9 514.5,159.3 520.1,161.7 525.8,164.0 531.4,166.4 537.1,168.7 542.7,171.0 548.4,173.3 554.0,175.6 559.6,177.9 565.3,180.2 570.9,182.4 576.6,184.6 582.2,186.8 587.9,189.0 593.5,191.2 599.1,193.3 604.8,195.4 610.4,197.5 616.1,199.6 621.7,201.6 627.4,203.6 633.0,205.6 638.6,207.5 644.3,209.4 649.9,211.3 655.6,213.1 661.2,214.9 666.9,216.7 672.5,218.4 678.1,220.1 683.8,221.7 689.4,223.3 695.1,224.9 700.7,226.4 706.4,227.9 712.0,229.4 717.6,230.8 723.3,232.1 728.9,233.4 734.6,234.7 740.2,235.9 745.9,237.1 751.5,238.2 757.1,239.3 762.8,240.3 768.4,241.3 774.1,242.2 779.7,243.1 785.4,243.9 791.0,244.7 796.6,245.4 802.3,246.1 807.9,246.7 813.6,247.3 819.2,247.8 824.9,248.3 830.5,248.7 836.1,249.0 841.8,249.3 847.4,249.6 853.1,249.8 858.7,249.9 864.4,250.0 870.0,250.0" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+  <g><title>第 2,000 步：學習率 9.995e-04</title><circle cx="102.6" cy="40.1" r="9" fill="#000" fill-opacity="0"/><circle cx="102.6" cy="40.1" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 4,000 步：學習率 9.953e-04</title><circle cx="125.1" cy="41.0" r="9" fill="#000" fill-opacity="0"/><circle cx="125.1" cy="41.0" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 6,000 步：學習率 9.871e-04</title><circle cx="147.7" cy="42.7" r="9" fill="#000" fill-opacity="0"/><circle cx="147.7" cy="42.7" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 8,000 步：學習率 9.748e-04</title><circle cx="170.3" cy="45.3" r="9" fill="#000" fill-opacity="0"/><circle cx="170.3" cy="45.3" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 10,000 步：學習率 9.586e-04</title><circle cx="192.9" cy="48.7" r="9" fill="#000" fill-opacity="0"/><circle cx="192.9" cy="48.7" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 12,000 步：學習率 9.386e-04</title><circle cx="215.4" cy="52.9" r="9" fill="#000" fill-opacity="0"/><circle cx="215.4" cy="52.9" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 14,000 步：學習率 9.149e-04</title><circle cx="238.0" cy="57.9" r="9" fill="#000" fill-opacity="0"/><circle cx="238.0" cy="57.9" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 16,000 步：學習率 8.879e-04</title><circle cx="260.6" cy="63.6" r="9" fill="#000" fill-opacity="0"/><circle cx="260.6" cy="63.6" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 18,000 步：學習率 8.576e-04</title><circle cx="283.1" cy="69.9" r="9" fill="#000" fill-opacity="0"/><circle cx="283.1" cy="69.9" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 20,000 步：學習率 8.243e-04</title><circle cx="305.7" cy="76.9" r="9" fill="#000" fill-opacity="0"/><circle cx="305.7" cy="76.9" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 22,000 步：學習率 7.883e-04</title><circle cx="328.3" cy="84.4" r="9" fill="#000" fill-opacity="0"/><circle cx="328.3" cy="84.4" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 24,000 步：學習率 7.500e-04</title><circle cx="350.9" cy="92.5" r="9" fill="#000" fill-opacity="0"/><circle cx="350.9" cy="92.5" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 26,000 步：學習率 7.096e-04</title><circle cx="373.4" cy="101.0" r="9" fill="#000" fill-opacity="0"/><circle cx="373.4" cy="101.0" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 28,000 步：學習率 6.674e-04</title><circle cx="396.0" cy="109.8" r="9" fill="#000" fill-opacity="0"/><circle cx="396.0" cy="109.8" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 30,000 步：學習率 6.239e-04</title><circle cx="418.6" cy="119.0" r="9" fill="#000" fill-opacity="0"/><circle cx="418.6" cy="119.0" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 32,000 步：學習率 5.793e-04</title><circle cx="441.1" cy="128.3" r="9" fill="#000" fill-opacity="0"/><circle cx="441.1" cy="128.3" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 34,000 步：學習率 5.341e-04</title><circle cx="463.7" cy="137.8" r="9" fill="#000" fill-opacity="0"/><circle cx="463.7" cy="137.8" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 36,000 步：學習率 4.886e-04</title><circle cx="486.3" cy="147.4" r="9" fill="#000" fill-opacity="0"/><circle cx="486.3" cy="147.4" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 38,000 步：學習率 4.432e-04</title><circle cx="508.9" cy="156.9" r="9" fill="#000" fill-opacity="0"/><circle cx="508.9" cy="156.9" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 40,000 步：學習率 3.983e-04</title><circle cx="531.4" cy="166.4" r="9" fill="#000" fill-opacity="0"/><circle cx="531.4" cy="166.4" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 42,000 步：學習率 3.542e-04</title><circle cx="554.0" cy="175.6" r="9" fill="#000" fill-opacity="0"/><circle cx="554.0" cy="175.6" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 44,000 步：學習率 3.113e-04</title><circle cx="576.6" cy="184.6" r="9" fill="#000" fill-opacity="0"/><circle cx="576.6" cy="184.6" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 46,000 步：學習率 2.700e-04</title><circle cx="599.1" cy="193.3" r="9" fill="#000" fill-opacity="0"/><circle cx="599.1" cy="193.3" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 48,000 步：學習率 2.306e-04</title><circle cx="621.7" cy="201.6" r="9" fill="#000" fill-opacity="0"/><circle cx="621.7" cy="201.6" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 50,000 步：學習率 1.934e-04</title><circle cx="644.3" cy="209.4" r="9" fill="#000" fill-opacity="0"/><circle cx="644.3" cy="209.4" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 52,000 步：學習率 1.587e-04</title><circle cx="666.9" cy="216.7" r="9" fill="#000" fill-opacity="0"/><circle cx="666.9" cy="216.7" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 54,000 步：學習率 1.269e-04</title><circle cx="689.4" cy="223.3" r="9" fill="#000" fill-opacity="0"/><circle cx="689.4" cy="223.3" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 56,000 步：學習率 9.818e-05</title><circle cx="712.0" cy="229.4" r="9" fill="#000" fill-opacity="0"/><circle cx="712.0" cy="229.4" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 58,000 步：學習率 7.279e-05</title><circle cx="734.6" cy="234.7" r="9" fill="#000" fill-opacity="0"/><circle cx="734.6" cy="234.7" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 60,000 步：學習率 5.094e-05</title><circle cx="757.1" cy="239.3" r="9" fill="#000" fill-opacity="0"/><circle cx="757.1" cy="239.3" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 62,000 步：學習率 3.280e-05</title><circle cx="779.7" cy="243.1" r="9" fill="#000" fill-opacity="0"/><circle cx="779.7" cy="243.1" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 64,000 步：學習率 1.854e-05</title><circle cx="802.3" cy="246.1" r="9" fill="#000" fill-opacity="0"/><circle cx="802.3" cy="246.1" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 66,000 步：學習率 8.269e-06</title><circle cx="824.9" cy="248.3" r="9" fill="#000" fill-opacity="0"/><circle cx="824.9" cy="248.3" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 68,000 步：學習率 2.072e-06</title><circle cx="847.4" cy="249.6" r="9" fill="#000" fill-opacity="0"/><circle cx="847.4" cy="249.6" r="2.5" fill="#3987e5"/></g>
+  <g><title>第 70,000 步：學習率 0.000e+00</title><circle cx="870.0" cy="250.0" r="9" fill="#000" fill-opacity="0"/><circle cx="870.0" cy="250.0" r="2.5" fill="#3987e5"/></g>
+  <text class="s-sm" x="99.3" y="92.0">第 1,000 步：0.001（warmup 結束）</text>
+  <circle cx="480.6" cy="145.0" r="4" fill="#3987e5" stroke="#161c24" stroke-width="2"/>
+  <text class="s-sm" x="490.6" y="137.0">第 35,500 步：0.0005（一半）</text>
+  <text class="s-sm" x="866.0" y="240.0" text-anchor="end">第 70,000 步：0</text>
+</svg>
+<figcaption>圖 4.1　70,000 步的學習率。前 1,000 步從 0 升到 0.001（在這個比例尺下幾乎是一條直線），之後沿著半個餘弦降到 0。圓點是每 2,000 步的驗證時間點，滑鼠移上去會顯示那一步的學習率。</figcaption>
+</figure>
+<p>本書用 <code>docs/tools/hw04_facts.py sched</code> 逐步算過：第 500 步 0.0005、第 1,000 步 0.001（最高）、第 10,000 步 0.000959、第 35,500 步恰好 0.0005（warmup 之後剩下 69,000 步的一半）、第 60,000 步 0.0000509、第 68,000 步 0.0000021、第 70,000 步 0。最後一萬步的學習率已經小到參數幾乎不動，這也是第 8 章會看到「最後幾次驗證差不多」的原因。</p>
+<h3 id="why-warmup">為什麼要 warmup</h3>
+<p><code>train.py:133-139</code> 的說明文字寫：「對 Transformer 架構，學習率排程的設計和 CNN 不同；先前的研究顯示 warmup 對訓練 Transformer 有用。」原因和第 3 章 3.3 節的 post-norm 有關：剛初始化的 post-norm Transformer，最初幾步的梯度可能很大、方向也很亂，加上 Adam 一開始的二階動量估計還不準，大學習率很容易一步把參數推到很糟的地方。先用很小的學習率走幾百步，讓 Adam 的統計量穩定下來，再放大。第 3 章引用的 Xiong 等人（2020）的論文分析的就是這件事，也說明 pre-norm 對 warmup 比較不敏感。第 8 章那組 3 層、寬 256 的 post-norm Transformer 學不起來，換成 pre-norm 或把學習率降到 3e-4 就好了，是同一件事在更大的模型上發作。</p>
+<h3 id="step0">第一步的學習率是 0</h3>
+<p>一個細節：<code>LambdaLR</code> 在<strong>建立的時候</strong>就會呼叫一次 <code>lr_lambda(0)</code>，把學習率設成 0.001 × 0 = 0。所以訓練迴圈的第一個 <code>optimizer.step()</code> 用的學習率是 0，第二步才是 1e-6。本書實測：</p>
+<pre class="shell"><code>lr used by the 1st optimizer.step(): 0.0
+parameters unchanged after the 1st step? True | Adam state exp_avg nonzero? True
+lr used by the 2nd step: 1e-06
+changed after the 2nd step? True</code></pre>
+<p>第一步參數一個都沒變（更新量與 weight decay 都乘上了學習率 0），但 Adam 的移動平均已經記下了第一個 batch 的梯度。所以第一個 batch 不是白跑：它沒有改參數，卻讓 Adam 的統計量先熱身了一步。70,000 步裡少一步更新，對結果沒有影響；但這說明了排程器的「第幾步」和迴圈的 <code>step</code> 差了一個：迴圈第 <code>step</code> 次更新用的是 <code>lr_lambda(step)</code>。</p>
+
+<h2 id="one-step">4.3　一步做了什麼</h2>
+
+<figure class="listing"><figcaption>train.py:172–188 — model_fn()：一個 batch 的 forward、loss 與準確率</figcaption>
+<pre class="py" data-hot="176-177,179,181,184,186"><code>def model_fn(batch, model, criterion, device):
+    """Forward a batch through the model."""
+
+    mels, labels = batch
+    mels = mels.to(device)
+    labels = labels.to(device)
+
+    outs = model(mels)
+
+    loss = criterion(outs, labels)
+
+    # Get the speaker id with highest probability.
+    preds = outs.argmax(1)
+    # Compute accuracy.
+    accuracy = torch.mean((preds == labels).float())
+
+    return loss, accuracy</code></pre></figure>
+<p><code>model_fn</code> 訓練與驗證共用：把 batch 搬上 GPU（第 176–177 行），forward（第 179 行），cross entropy（第 181 行），再算這一批的準確率（第 184–186 行，32 句裡答對的比例）。回傳的 <code>loss</code> 還連著計算圖，<code>accuracy</code> 是一個沒有梯度的 tensor。</p>
+
+<figure class="listing"><figcaption>train.py:270–286 — 迴圈的一步：更新參數、更新進度條</figcaption>
+<pre class="py" data-hot="270-272,275-278,281-286"><code>        loss, accuracy = model_fn(batch, model, criterion, device)
+        batch_loss = loss.item()
+        batch_accuracy = accuracy.item()
+
+        # Updata model
+        loss.backward()
+        optimizer.step()
+        scheduler.step()
+        optimizer.zero_grad()
+
+        # Log
+        pbar.update()
+        pbar.set_postfix(
+            loss=f"{batch_loss:.2f}",
+            accuracy=f"{batch_accuracy:.2f}",
+            step=step + 1,
+        )</code></pre></figure>
+<p>第 271–272 行用 <code>.item()</code> 把 loss 和準確率變成 Python 的浮點數，順便讓 CPU 等 GPU 算完。第 275–278 行是標準的四步：<code>backward</code> 算梯度、<code>optimizer.step()</code> 更新參數、<code>scheduler.step()</code> 把學習率推到下一步、<code>zero_grad</code> 清掉梯度。後兩行的順序 PyTorch 1.1 以後規定是先 <code>optimizer.step()</code> 再 <code>scheduler.step()</code>，這份程式寫對了，所以沒有警告。<code>zero_grad</code> 放在最後而不是最前面，效果一樣，因為下一步 <code>backward</code> 之前梯度已經清掉了。</p>
+<p>第 282–286 行把 <code>batch_loss</code>、<code>batch_accuracy</code> 印在進度條上。這是<strong>最後一個 batch</strong>的值，不是平均：第 0 章看到的 <code>accuracy=0.06, loss=4.01, step=2000</code> 是第 2,000 個 batch 那 32 句的結果，下一段的 <code>0.22</code> 是第 4,000 個 batch 的。32 句的準確率只能是 0/32、1/32……，跳動很大，所以進度條上的數字只能看個大概。本書的實驗工具另外記了每 2,000 步的平均訓練 loss：第一段 5.192，最後一段 1.002（4.4 節的表）。</p>
+
+<h2 id="valid">4.4　驗證：<code>valid()</code> 印出來的是什麼</h2>
+
+<figure class="listing"><figcaption>train.py:196–219 — valid()</figcaption>
+<pre class="py" data-hot="199,202,206-208,210,217,219"><code>def valid(dataloader, model, criterion, device):
+    """Validate on validation set."""
+
+    model.eval()
+    running_loss = 0.0
+    running_accuracy = 0.0
+    pbar = tqdm(total=len(dataloader.dataset), ncols=0, desc="Valid", unit=" uttr")
+
+    for i, batch in enumerate(dataloader):
+        with torch.no_grad():
+            loss, accuracy = model_fn(batch, model, criterion, device)
+            running_loss += loss.item()
+            running_accuracy += accuracy.item()
+
+        pbar.update(dataloader.batch_size)
+        pbar.set_postfix(
+            loss=f"{running_loss / (i + 1):.2f}",
+            accuracy=f"{running_accuracy / (i + 1):.2f}",
+        )
+
+    pbar.close()
+    model.train()
+
+    return running_accuracy / len(dataloader)</code></pre></figure>
+<p>第 199 行切到評估模式（關掉 dropout，第 3 章 3.3 節），第 217 行切回訓練模式。中間把 177 個驗證 batch 各丟進 <code>model_fn</code>，累加每一批的 loss 與準確率，最後第 219 行回傳「準確率的平均」。驗證 loss 只顯示在進度條上（第 211–214 行），沒有回傳，所以 <code>train.py</code> 挑最佳模型只看準確率。第 202 行進度條的總數是 <code>len(dataloader.dataset)</code> = 5,667，第 210 行每批卻加 <code>batch_size</code> 32，加 177 次停在 5,664——第 2 章 2.4 節解釋過那 3 句。</p>
+<p>這個函式本身沒有寫錯，177 批都是 32 句，平均再平均也沒有偏差（第 2 章）。問題在它<strong>量的東西</strong>：驗證集經過的是和訓練一樣的 <code>myDataset.__getitem__</code>，每句隨機切 128 格。本書替 4.5 節重跑了一次 <code>train.py</code>（實驗工具，逐位元相同），在 35 次驗證的時間點各存一份權重，再用三種方法量每一份：</p>
+<ol>
+  <li><strong>印出的</strong>：<code>train.py</code> 自己印的值，5,664 句、每次隨機切 128 格、逐批平均。</li>
+  <li><strong>固定片段</strong>：全部 5,667 句，每句切 128 格，但每一份權重都切<strong>同樣的位置</strong>（用固定種子的 Python 亂數），所以不同時間點可以公平比較。</li>
+  <li><strong>整句</strong>：全部 5,667 句，整句送進模型、一次一句，就是 <code>test.py</code> 的做法（第 5 章）。</li>
+</ol>
+
+<figure class="fig">
+<svg viewBox="0 0 900 390" role="img" aria-label="同一次訓練的 35 個驗證時間點，三種量法的準確率：照 train.py 印出的（隨機 128 格、逐批平均）從 0.15 升到 0.69；同一份權重在全部 5,667 句、固定的 128 格片段上幾乎一樣；整句送進模型則從 0.21 升到 0.86，一路高出 0.06 到 0.17">
+  <line x1="70" y1="272.0" x2="770" y2="272.0" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="62" y="276.0" text-anchor="end">0.2</text>
+  <line x1="70" y1="214.0" x2="770" y2="214.0" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="62" y="218.0" text-anchor="end">0.4</text>
+  <line x1="70" y1="156.0" x2="770" y2="156.0" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="62" y="160.0" text-anchor="end">0.6</text>
+  <line x1="70" y1="98.0" x2="770" y2="98.0" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="62" y="102.0" text-anchor="end">0.8</text>
+  <line x1="70" y1="40.0" x2="770" y2="40.0" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="62" y="44.0" text-anchor="end">1.0</text>
+  <line x1="70" y1="330" x2="770" y2="330" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-sm" x="62" y="334" text-anchor="end">0</text>
+  <text class="s-sm" x="70.0" y="350" text-anchor="middle">0</text>
+  <text class="s-sm" x="170.0" y="350" text-anchor="middle">10,000</text>
+  <line x1="170.0" y1="330" x2="170.0" y2="335" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-sm" x="270.0" y="350" text-anchor="middle">20,000</text>
+  <line x1="270.0" y1="330" x2="270.0" y2="335" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-sm" x="370.0" y="350" text-anchor="middle">30,000</text>
+  <line x1="370.0" y1="330" x2="370.0" y2="335" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-sm" x="470.0" y="350" text-anchor="middle">40,000</text>
+  <line x1="470.0" y1="330" x2="470.0" y2="335" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-sm" x="570.0" y="350" text-anchor="middle">50,000</text>
+  <line x1="570.0" y1="330" x2="570.0" y2="335" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-sm" x="670.0" y="350" text-anchor="middle">60,000</text>
+  <line x1="670.0" y1="330" x2="670.0" y2="335" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-sm" x="770.0" y="350" text-anchor="middle">70,000</text>
+  <line x1="770.0" y1="330" x2="770.0" y2="335" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-sm" x="420.0" y="372" text-anchor="middle">訓練步數（每 2,000 步驗證一次；刻度上的 10,000、20,000 … 是存檔的時間點）</text>
+  <polyline points="90.0,268.3 110.0,226.7 130.0,189.3 150.0,174.4 170.0,157.8 190.0,148.3 210.0,142.3 230.0,134.3 250.0,128.8 270.0,122.8 290.0,120.2 310.0,116.5 330.0,110.4 350.0,112.7 370.0,107.7 390.0,104.8 410.0,102.5 430.0,98.8 450.0,97.0 470.0,93.0 490.0,91.7 510.0,91.9 530.0,90.8 550.0,90.5 570.0,86.5 590.0,85.4 610.0,86.1 630.0,84.4 650.0,82.4 670.0,81.8 690.0,82.7 710.0,81.4 730.0,81.5 750.0,81.4 770.0,81.4" fill="none" stroke="#199e70" stroke-width="2" stroke-linejoin="round"/>
+  <polyline points="90.0,283.8 110.0,253.0 130.0,229.1 150.0,215.5 170.0,204.1 190.0,197.1 210.0,192.5 230.0,184.9 250.0,182.8 270.0,179.0 290.0,175.0 310.0,169.4 330.0,163.8 350.0,165.4 370.0,161.3 390.0,156.4 410.0,155.9 430.0,151.8 450.0,148.7 470.0,147.2 490.0,144.4 510.0,143.5 530.0,142.1 550.0,141.2 570.0,137.7 590.0,137.5 610.0,136.2 630.0,133.6 650.0,134.0 670.0,132.7 690.0,131.9 710.0,131.6 730.0,131.1 750.0,131.4 770.0,131.2" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round" stroke-dasharray="5 3"/>
+  <polyline points="90.0,285.7 110.0,256.1 130.0,232.5 150.0,221.0 170.0,209.4 190.0,194.6 210.0,192.5 230.0,186.0 250.0,183.4 270.0,178.5 290.0,177.4 310.0,171.6 330.0,164.1 350.0,169.0 370.0,163.1 390.0,158.1 410.0,157.8 430.0,157.7 450.0,151.8 470.0,149.4 490.0,145.1 510.0,147.2 530.0,144.7 550.0,141.9 570.0,138.9 590.0,137.7 610.0,136.7 630.0,136.8 650.0,135.7 670.0,135.9 690.0,133.7 710.0,135.0 730.0,132.6 750.0,131.1 770.0,135.3" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+  <g><title>第 2,000 步：整句 0.2128｜固定 128 格 0.1592｜train.py 印出 0.1529</title><rect x="80.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="90.0" cy="268.3" r="3" fill="#199e70"/><circle cx="90.0" cy="285.7" r="3" fill="#3987e5"/></g>
+  <g><title>第 4,000 步：整句 0.3563｜固定 128 格 0.2656｜train.py 印出 0.2549</title><rect x="100.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="110.0" cy="226.7" r="3" fill="#199e70"/><circle cx="110.0" cy="256.1" r="3" fill="#3987e5"/></g>
+  <g><title>第 6,000 步：整句 0.4853｜固定 128 格 0.3480｜train.py 印出 0.3362</title><rect x="120.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="130.0" cy="189.3" r="3" fill="#199e70"/><circle cx="130.0" cy="232.5" r="3" fill="#3987e5"/></g>
+  <g><title>第 8,000 步：整句 0.5366｜固定 128 格 0.3947｜train.py 印出 0.3759</title><rect x="140.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="150.0" cy="174.4" r="3" fill="#199e70"/><circle cx="150.0" cy="221.0" r="3" fill="#3987e5"/></g>
+  <g><title>第 10,000 步：整句 0.5938｜固定 128 格 0.4343｜train.py 印出 0.4158</title><rect x="160.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="170.0" cy="157.8" r="3" fill="#199e70"/><circle cx="170.0" cy="209.4" r="3" fill="#3987e5"/></g>
+  <g><title>第 12,000 步：整句 0.6264｜固定 128 格 0.4583｜train.py 印出 0.4670</title><rect x="180.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="190.0" cy="148.3" r="3" fill="#199e70"/><circle cx="190.0" cy="194.6" r="3" fill="#3987e5"/></g>
+  <g><title>第 14,000 步：整句 0.6473｜固定 128 格 0.4740｜train.py 印出 0.4742</title><rect x="200.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="210.0" cy="142.3" r="3" fill="#199e70"/><circle cx="210.0" cy="192.5" r="3" fill="#3987e5"/></g>
+  <g><title>第 16,000 步：整句 0.6748｜固定 128 格 0.5004｜train.py 印出 0.4966</title><rect x="220.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="230.0" cy="134.3" r="3" fill="#199e70"/><circle cx="230.0" cy="186.0" r="3" fill="#3987e5"/></g>
+  <g><title>第 18,000 步：整句 0.6937｜固定 128 格 0.5077｜train.py 印出 0.5057</title><rect x="240.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="250.0" cy="128.8" r="3" fill="#199e70"/><circle cx="250.0" cy="183.4" r="3" fill="#3987e5"/></g>
+  <g><title>第 20,000 步：整句 0.7145｜固定 128 格 0.5206｜train.py 印出 0.5222</title><rect x="260.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="270.0" cy="122.8" r="3" fill="#199e70"/><circle cx="270.0" cy="178.5" r="3" fill="#3987e5"/></g>
+  <g><title>第 22,000 步：整句 0.7233｜固定 128 格 0.5343｜train.py 印出 0.5263</title><rect x="280.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="290.0" cy="120.2" r="3" fill="#199e70"/><circle cx="290.0" cy="177.4" r="3" fill="#3987e5"/></g>
+  <g><title>第 24,000 步：整句 0.7364｜固定 128 格 0.5539｜train.py 印出 0.5461</title><rect x="300.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="310.0" cy="116.5" r="3" fill="#199e70"/><circle cx="310.0" cy="171.6" r="3" fill="#3987e5"/></g>
+  <g><title>第 26,000 步：整句 0.7574｜固定 128 格 0.5731｜train.py 印出 0.5720</title><rect x="320.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="330.0" cy="110.4" r="3" fill="#199e70"/><circle cx="330.0" cy="164.1" r="3" fill="#3987e5"/></g>
+  <g><title>第 28,000 步：整句 0.7494｜固定 128 格 0.5677｜train.py 印出 0.5551</title><rect x="340.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="350.0" cy="112.7" r="3" fill="#199e70"/><circle cx="350.0" cy="169.0" r="3" fill="#3987e5"/></g>
+  <g><title>第 30,000 步：整句 0.7665｜固定 128 格 0.5818｜train.py 印出 0.5756</title><rect x="360.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="370.0" cy="107.7" r="3" fill="#199e70"/><circle cx="370.0" cy="163.1" r="3" fill="#3987e5"/></g>
+  <g><title>第 32,000 步：整句 0.7764｜固定 128 格 0.5986｜train.py 印出 0.5927</title><rect x="380.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="390.0" cy="104.8" r="3" fill="#199e70"/><circle cx="390.0" cy="158.1" r="3" fill="#3987e5"/></g>
+  <g><title>第 34,000 步：整句 0.7845｜固定 128 格 0.6005｜train.py 印出 0.5939</title><rect x="400.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="410.0" cy="102.5" r="3" fill="#199e70"/><circle cx="410.0" cy="157.8" r="3" fill="#3987e5"/></g>
+  <g><title>第 36,000 步：整句 0.7971｜固定 128 格 0.6144｜train.py 印出 0.5943</title><rect x="420.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="430.0" cy="98.8" r="3" fill="#199e70"/><circle cx="430.0" cy="157.7" r="3" fill="#3987e5"/></g>
+  <g><title>第 38,000 步：整句 0.8036｜固定 128 格 0.6252｜train.py 印出 0.6144</title><rect x="440.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="450.0" cy="97.0" r="3" fill="#199e70"/><circle cx="450.0" cy="151.8" r="3" fill="#3987e5"/></g>
+  <g><title>第 40,000 步：整句 0.8174｜固定 128 格 0.6305｜train.py 印出 0.6229</title><rect x="460.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="470.0" cy="93.0" r="3" fill="#199e70"/><circle cx="470.0" cy="149.4" r="3" fill="#3987e5"/></g>
+  <g><title>第 42,000 步：整句 0.8216｜固定 128 格 0.6400｜train.py 印出 0.6377</title><rect x="480.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="490.0" cy="91.7" r="3" fill="#199e70"/><circle cx="490.0" cy="145.1" r="3" fill="#3987e5"/></g>
+  <g><title>第 44,000 步：整句 0.8209｜固定 128 格 0.6430｜train.py 印出 0.6303</title><rect x="500.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="510.0" cy="91.9" r="3" fill="#199e70"/><circle cx="510.0" cy="147.2" r="3" fill="#3987e5"/></g>
+  <g><title>第 46,000 步：整句 0.8249｜固定 128 格 0.6480｜train.py 印出 0.6391</title><rect x="520.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="530.0" cy="90.8" r="3" fill="#199e70"/><circle cx="530.0" cy="144.7" r="3" fill="#3987e5"/></g>
+  <g><title>第 48,000 步：整句 0.8260｜固定 128 格 0.6511｜train.py 印出 0.6485</title><rect x="540.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="550.0" cy="90.5" r="3" fill="#199e70"/><circle cx="550.0" cy="141.9" r="3" fill="#3987e5"/></g>
+  <g><title>第 50,000 步：整句 0.8396｜固定 128 格 0.6631｜train.py 印出 0.6589</title><rect x="560.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="570.0" cy="86.5" r="3" fill="#199e70"/><circle cx="570.0" cy="138.9" r="3" fill="#3987e5"/></g>
+  <g><title>第 52,000 步：整句 0.8433｜固定 128 格 0.6638｜train.py 印出 0.6630</title><rect x="580.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="590.0" cy="85.4" r="3" fill="#199e70"/><circle cx="590.0" cy="137.7" r="3" fill="#3987e5"/></g>
+  <g><title>第 54,000 步：整句 0.8412｜固定 128 格 0.6683｜train.py 印出 0.6665</title><rect x="600.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="610.0" cy="86.1" r="3" fill="#199e70"/><circle cx="610.0" cy="136.7" r="3" fill="#3987e5"/></g>
+  <g><title>第 56,000 步：整句 0.8470｜固定 128 格 0.6771｜train.py 印出 0.6661</title><rect x="620.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="630.0" cy="84.4" r="3" fill="#199e70"/><circle cx="630.0" cy="136.8" r="3" fill="#3987e5"/></g>
+  <g><title>第 58,000 步：整句 0.8537｜固定 128 格 0.6758｜train.py 印出 0.6698</title><rect x="640.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="650.0" cy="82.4" r="3" fill="#199e70"/><circle cx="650.0" cy="135.7" r="3" fill="#3987e5"/></g>
+  <g><title>第 60,000 步：整句 0.8560｜固定 128 格 0.6803｜train.py 印出 0.6693</title><rect x="660.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="670.0" cy="81.8" r="3" fill="#199e70"/><circle cx="670.0" cy="135.9" r="3" fill="#3987e5"/></g>
+  <g><title>第 62,000 步：整句 0.8528｜固定 128 格 0.6831｜train.py 印出 0.6769</title><rect x="680.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="690.0" cy="82.7" r="3" fill="#199e70"/><circle cx="690.0" cy="133.7" r="3" fill="#3987e5"/></g>
+  <g><title>第 64,000 步：整句 0.8572｜固定 128 格 0.6841｜train.py 印出 0.6723</title><rect x="700.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="710.0" cy="81.4" r="3" fill="#199e70"/><circle cx="710.0" cy="135.0" r="3" fill="#3987e5"/></g>
+  <g><title>第 66,000 步：整句 0.8569｜固定 128 格 0.6859｜train.py 印出 0.6808</title><rect x="720.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="730.0" cy="81.5" r="3" fill="#199e70"/><circle cx="730.0" cy="132.6" r="3" fill="#3987e5"/></g>
+  <g><title>第 68,000 步：整句 0.8572｜固定 128 格 0.6847｜train.py 印出 0.6859</title><rect x="740.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="750.0" cy="81.4" r="3" fill="#199e70"/><circle cx="750.0" cy="131.1" r="3" fill="#3987e5"/></g>
+  <g><title>第 70,000 步：整句 0.8571｜固定 128 格 0.6855｜train.py 印出 0.6714</title><rect x="760.0" y="40" width="20" height="290" fill="#000" fill-opacity="0"/><circle cx="770.0" cy="81.4" r="3" fill="#199e70"/><circle cx="770.0" cy="135.3" r="3" fill="#3987e5"/></g>
+  <text class="s-lbl" x="780" y="85.4">整句 0.857</text>
+  <text class="s-lbl" x="780" y="133.3">印出 0.671</text>
+  <text class="s-lbl" x="780" y="147.2">固定片段 0.686</text>
+  <circle cx="750.0" cy="131.1" r="5.5" fill="none" stroke="#dde5ec" stroke-width="1.5"/>
+  <text class="s-sm" x="742.0" y="157.1" text-anchor="end">印出的最佳：第 68,000 步 0.6859</text>
+  <line x1="80" y1="46" x2="102" y2="46" stroke="#199e70" stroke-width="2"/>
+  <text class="s-sm" x="110" y="50">整句送進模型（像 test.py）</text>
+  <line x1="80" y1="66" x2="102" y2="66" stroke="#d95926" stroke-width="2" stroke-dasharray="5 3"/>
+  <text class="s-sm" x="110" y="70">全部 5,667 句、固定的 128 格</text>
+  <line x1="80" y1="86" x2="102" y2="86" stroke="#3987e5" stroke-width="2"/>
+  <text class="s-sm" x="110" y="90">train.py 印出（隨機 128 格、逐批平均）</text>
+</svg>
+<figcaption>圖 4.2　同一次訓練的 35 個驗證時間點，三種量法的準確率（印出的與整句畫了圓點；固定片段是虛線）。滑鼠移到任一步的位置，會顯示那一步的三個數字；完整數字在下表。</figcaption>
+</figure>
+
+<details class="quiz"><summary>展開：35 次驗證的完整數字（含每 2,000 步的平均訓練 loss 與驗證 loss）</summary>
+<div class="tablewrap"><table>
+<thead><tr><th>步</th><th>印出的準確率</th><th>固定片段</th><th>整句</th><th>訓練 loss（平均）</th><th>驗證 loss（印出）</th></tr></thead>
+<tbody>
+<tr><td>2,000</td><td>0.1529</td><td>0.1592</td><td>0.2128</td><td>5.192</td><td>4.114</td></tr>
+<tr><td>4,000</td><td>0.2549</td><td>0.2656</td><td>0.3563</td><td>3.645</td><td>3.514</td></tr>
+<tr><td>6,000</td><td>0.3362</td><td>0.3480</td><td>0.4853</td><td>3.116</td><td>3.015</td></tr>
+<tr><td>8,000</td><td>0.3759</td><td>0.3947</td><td>0.5366</td><td>2.797</td><td>2.775</td></tr>
+<tr><td>10,000 <strong>存檔</strong></td><td>0.4158</td><td>0.4343</td><td>0.5938</td><td>2.547</td><td>2.604</td></tr>
+<tr><td>12,000</td><td>0.4670</td><td>0.4583</td><td>0.6264</td><td>2.397</td><td>2.408</td></tr>
+<tr><td>14,000</td><td>0.4742</td><td>0.4740</td><td>0.6473</td><td>2.237</td><td>2.381</td></tr>
+<tr><td>16,000</td><td>0.4966</td><td>0.5004</td><td>0.6748</td><td>2.127</td><td>2.263</td></tr>
+<tr><td>18,000</td><td>0.5057</td><td>0.5077</td><td>0.6937</td><td>2.005</td><td>2.181</td></tr>
+<tr><td>20,000 <strong>存檔</strong></td><td>0.5222</td><td>0.5206</td><td>0.7145</td><td>1.949</td><td>2.114</td></tr>
+<tr><td>22,000</td><td>0.5263</td><td>0.5343</td><td>0.7233</td><td>1.847</td><td>2.046</td></tr>
+<tr><td>24,000</td><td>0.5461</td><td>0.5539</td><td>0.7364</td><td>1.785</td><td>1.980</td></tr>
+<tr><td>26,000</td><td>0.5720</td><td>0.5731</td><td>0.7574</td><td>1.712</td><td>1.883</td></tr>
+<tr><td>28,000</td><td>0.5551</td><td>0.5677</td><td>0.7494</td><td>1.650</td><td>1.965</td></tr>
+<tr><td>30,000 <strong>存檔</strong></td><td>0.5756</td><td>0.5818</td><td>0.7665</td><td>1.585</td><td>1.848</td></tr>
+<tr><td>32,000</td><td>0.5927</td><td>0.5986</td><td>0.7764</td><td>1.532</td><td>1.793</td></tr>
+<tr><td>34,000</td><td>0.5939</td><td>0.6005</td><td>0.7845</td><td>1.474</td><td>1.784</td></tr>
+<tr><td>36,000</td><td>0.5943</td><td>0.6144</td><td>0.7971</td><td>1.428</td><td>1.725</td></tr>
+<tr><td>38,000</td><td>0.6144</td><td>0.6252</td><td>0.8036</td><td>1.387</td><td>1.702</td></tr>
+<tr><td>40,000 <strong>存檔</strong></td><td>0.6229</td><td>0.6305</td><td>0.8174</td><td>1.344</td><td>1.646</td></tr>
+<tr><td>42,000</td><td>0.6377</td><td>0.6400</td><td>0.8216</td><td>1.303</td><td>1.606</td></tr>
+<tr><td>44,000</td><td>0.6303</td><td>0.6430</td><td>0.8209</td><td>1.251</td><td>1.639</td></tr>
+<tr><td>46,000</td><td>0.6391</td><td>0.6480</td><td>0.8249</td><td>1.239</td><td>1.564</td></tr>
+<tr><td>48,000</td><td>0.6485</td><td>0.6511</td><td>0.8260</td><td>1.196</td><td>1.567</td></tr>
+<tr><td>50,000 <strong>存檔</strong></td><td>0.6589</td><td>0.6631</td><td>0.8396</td><td>1.161</td><td>1.493</td></tr>
+<tr><td>52,000</td><td>0.6630</td><td>0.6638</td><td>0.8433</td><td>1.137</td><td>1.518</td></tr>
+<tr><td>54,000</td><td>0.6665</td><td>0.6683</td><td>0.8412</td><td>1.113</td><td>1.487</td></tr>
+<tr><td>56,000</td><td>0.6661</td><td>0.6771</td><td>0.8470</td><td>1.075</td><td>1.465</td></tr>
+<tr><td>58,000</td><td>0.6698</td><td>0.6758</td><td>0.8537</td><td>1.065</td><td>1.429</td></tr>
+<tr><td>60,000 <strong>存檔</strong></td><td>0.6693</td><td>0.6803</td><td>0.8560</td><td>1.044</td><td>1.477</td></tr>
+<tr><td>62,000</td><td>0.6769</td><td>0.6831</td><td>0.8528</td><td>1.032</td><td>1.403</td></tr>
+<tr><td>64,000</td><td>0.6723</td><td>0.6841</td><td>0.8572</td><td>1.021</td><td>1.447</td></tr>
+<tr><td>66,000</td><td>0.6808</td><td>0.6859</td><td>0.8569</td><td>1.025</td><td>1.417</td></tr>
+<tr><td>68,000</td><td>0.6859</td><td>0.6847</td><td>0.8572</td><td>1.004</td><td>1.426</td></tr>
+<tr><td>70,000 <strong>存檔</strong></td><td>0.6714</td><td>0.6855</td><td>0.8571</td><td>1.002</td><td>1.443</td></tr>
+</tbody>
+</table></div>
+</details>
+
+<p>圖 4.2 一次看出三件事。</p>
+<h3 id="gap">一、片段和整句差了一大截</h3>
+<p>綠線（整句）從頭到尾都在另外兩條上面：第 2,000 步差 6 個百分點，第 70,000 步差 17 個百分點（0.857 vs 0.686）。模型越好、差距越大。原因第 0 章 0.7 節講過：128 格只是 1.28 秒，平均只看到一句話的 23%（第 1 章）；整句話給了模型多得多的證據，mean pooling 平均起來穩得多。<code>valid()</code> 量的是「拿一段 1.28 秒的片段猜是誰」，<code>test.py</code> 做的卻是「拿整句話猜是誰」。兩者都沒錯，但 <code>train.py</code> 印出來的數字<strong>不能</strong>拿來預估 <code>test.py</code> 的表現。</p>
+<h3 id="noise">二、印出的值會隨機跳動</h3>
+<p>藍線（印出的）和橘色虛線（固定片段）量的都是「片段」，差別只在印出的那條每次切的位置不同、而且少了 3 句。兩條線大致重疊，但藍線一直在橘線上下抖：第 2 章 2.6 節用同一份權重換 10 個種子，量出 0.674 到 0.688，就是這個抖動的大小。第 28,000 步藍線往下掉，橘線和綠線也都掉了一點，所以那一次是模型真的變差了一點；但第 44,000 步藍線往下掉時，固定片段反而是上升的——那一次的下跌只是切到的片段不同。</p>
+<h3 id="select">三、挑「最高的一次」會挑到運氣</h3>
+<p><code>train.py</code> 拿 35 個會抖動的數字，挑最大的那一次當「最佳」。最大值天生偏高：印出的最佳是第 68,000 步的 0.6859，而同一份權重在固定片段上是 0.6847、換 10 個種子平均是 0.6813（第 2 章）。三種量法的「最佳」也不在同一步：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>量法</th><th>最高的一次</th><th>那一步</th></tr></thead>
+<tbody>
+<tr><td>印出的（隨機片段）</td><td>0.6859</td><td>第 68,000 步</td></tr>
+<tr><td>固定片段</td><td>0.6859</td><td>第 66,000 步</td></tr>
+<tr><td>整句</td><td>0.85724</td><td>第 64,000 步與第 68,000 步（相同）</td></tr>
+</tbody>
+</table></div>
+<p>好在最後兩萬步學習率已經很小，三種量法在 60,000 步以後都差不多平，挑到哪一步差別都不大：整句的準確率在第 60,000–70,000 步之間只在 0.8528 到 0.8572 之間變動。在訓練初期就停下來、或學習率還很大的情況下，「挑最高的一次」的偏差會大得多。比較好的做法是用固定、完整的驗證方式（例如整句），而且只把驗證集當作「選模型」的依據，最後的成績另外用一份沒參與挑選的資料來報告。</p>
+
+<h2 id="save">4.5　存檔：沒有 <code>deepcopy</code> 的「最佳模型」</h2>
+
+<figure class="listing"><figcaption>train.py:288–306 — 驗證、保留最佳、每 10,000 步存檔</figcaption>
+<pre class="py" data-hot="292,295-297,302-304"><code>        # Do validation
+        if (step + 1) % valid_steps == 0:
+            pbar.close()
+
+            valid_accuracy = valid(valid_loader, model, criterion, device)
+
+            # keep the best model
+            if valid_accuracy &gt; best_accuracy:
+                best_accuracy = valid_accuracy
+                best_state_dict = model.state_dict()
+
+            pbar = tqdm(total=valid_steps, ncols=0, desc="Train", unit=" step")
+
+        # Save the best model so far.
+        if (step + 1) % save_steps == 0 and best_state_dict is not None:
+            torch.save(best_state_dict, save_path)
+            pbar.write(f"Step {step + 1}, best model saved. (accuracy={best_accuracy:.4f})")
+
+    pbar.close()</code></pre></figure>
+<p>第 295–297 行：驗證準確率比目前最好的高，就記下準確率，並把 <code>model.state_dict()</code> 存進 <code>best_state_dict</code>。第 302–304 行：每 10,000 步把 <code>best_state_dict</code> 寫進 <code>model.ckpt</code>，印出「best model saved」。意圖很清楚——第 294 行的註解寫「keep the best model」——但第 297 行少了一個 <code>copy.deepcopy</code>。</p>
+<p><code>state_dict()</code> 回傳的是一個有序字典，值是模型參數<strong>本身</strong>的 tensor（只是脫離了計算圖），不是複本。本書實測：</p>
+<pre class="shell"><code>sd = model.state_dict(); after optimizer.step(): sd tensor changed? True | same storage as the parameter? True</code></pre>
+<p>拿到 <code>sd</code> 之後再做一次 <code>optimizer.step()</code>，<code>sd</code> 裡的值跟著變了，因為它和參數共用同一塊記憶體。所以 <code>best_state_dict</code> 只是「指向模型參數的一張清單」，之後每一步訓練都會改到它；第 303 行存檔時，寫進去的永遠是<strong>存檔當下</strong>的權重。log 上的準確率卻是 <code>best_accuracy</code>，那個數字是當初記下的、不會變。結果就是：log 說的和檔案裡存的，可能不是同一份權重。</p>
+<p>什麼時候會出問題？只有在「存檔那一刻，最近一次驗證不是最佳」的時候。對照 4.4 節的表，7 次存檔裡有兩次是這樣：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>存檔</th><th>log 印的準確率（來自）</th><th>實際存下的權重</th><th>本該存的權重</th><th>兩者的整句準確率</th></tr></thead>
+<tbody>
+<tr><td>第 10,000–50,000 步（5 次）</td><td>當下那一步</td><td>當下那一步</td><td>同左</td><td>相同，bug 沒有作用</td></tr>
+<tr><td>第 60,000 步</td><td>0.6698（第 58,000 步）</td><td>第 60,000 步</td><td>第 58,000 步</td><td>存下的 0.85601，本該存的 0.85371</td></tr>
+<tr><td>第 70,000 步（最後的 <code>model.ckpt</code>）</td><td>0.6859（第 68,000 步）</td><td>第 70,000 步</td><td>第 68,000 步</td><td>存下的 0.85707，本該存的 0.85724</td></tr>
+</tbody>
+</table></div>
+<p>bug 是真的：最後的 <code>model.ckpt</code> 是第 70,000 步的權重，不是 log 說的那一份；本書比對過，它和第 70,000 步的權重逐位元相同，和第 68,000 步的不同。但在這次訓練裡，它的影響小到看不出來：整句準確率只差 0.00017，也就是 5,667 句裡的 1 句；第 60,000 步那次甚至存到了比較好的權重。原因同樣是學習率：最後幾千步參數幾乎不動，第 68,000 步和第 70,000 步的模型本來就很像。換一個情境——學習率固定不衰減、模型在中途過擬合、最佳出現在很早的時候——存下的權重就可能比 log 說的差很多，而你從 log 上完全看不出來。</p>
+<p>修法有兩種，一行就夠：</p>
+<pre class="py"><code>best_state_dict = copy.deepcopy(model.state_dict())
+# 或者
+best_state_dict = {k: v.detach().clone() for k, v in model.state_dict().items()}</code></pre>
+<p>第 8 章的實驗工具每一組都同時記了兩份：deepcopy 的「真正最佳」與 <code>train.py</code> 會存的那一份，兩者的整句準確率在 12 組實驗裡差距都在 0.0016 以內，有一半的組甚至是 <code>train.py</code> 的那一份比較高。這個 bug 在這份作業裡是一個「程式錯了、運氣很好」的例子。</p>
+<div class="warn"><h4>另一個存檔的盲點</h4>
+<p>第 302 行只在步數是 10,000 的倍數時存檔。如果把 <code>total_steps</code> 改成 75,000 而最佳出現在第 72,000 步，迴圈結束時不會再存一次，最佳模型就永遠不會被寫進檔案。比較穩當的寫法是在迴圈結束後（第 306 行之後）再存一次，或者每次找到新的最佳就立刻存檔。本書沒有實際跑這個修改，這是讀程式得到的結論。</p>
+</div>
+
+<h2 id="repro">4.6　逐位元重現</h2>
+
+<figure class="listing"><figcaption>train.py:21–32 — set_seed()</figcaption>
+<pre class="py" data-hot="22-24,27,28-29,32"><code>def set_seed(seed):
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+
+
+set_seed(87)</code></pre></figure>
+<p><code>set_seed(87)</code> 在 <code>import</code> 之後、任何東西建立之前就執行（第 32 行），固定三種亂數：NumPy（這份程式沒用到）、Python <code>random</code>（主程式沒用到，worker 的由 PyTorch 另外設，第 2 章）、PyTorch（CPU 與每一張 GPU）。第 28–29 行要求 cuDNN 不要自己挑最快的演算法、只用確定性的演算法；這個模型主要是矩陣乘法，應該幾乎沒有用到 cuDNN，這兩行在這裡大概作用不大，但留著無害。</p>
+<p>這次訓練用到 PyTorch 亂數的地方，依序是：<code>random_split</code>（第 2 章）、第一個訓練迭代器的打亂順序與 worker 的 <code>base_seed</code>、模型的初始權重（第 251 行）、每次驗證的 worker <code>base_seed</code>、每個 epoch 重建迭代器、以及 GPU 上的 dropout。只要這個順序不變，結果就逐位元相同：第 0 章兩次跑 <code>train.py</code> 的 <code>model.ckpt</code> md5 一樣，本書的實驗工具 <code>docs/tools/hw04_exp.py</code> 重現出來的權重也和它逐位元相同。HW03 的教材遇過一個進度條改變亂數順序的例子（<code>tqdm.auto</code> 偷偷多呼叫一次 <code>iter()</code>）；這份程式用的是一般的 <code>tqdm</code>，而且進度條沒有包住 DataLoader，所以不受影響。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>AdamW，學習率 0.001，其餘預設（betas 0.9／0.999、weight decay 0.01）。</li>
+  <li>學習率：前 1,000 步 0 → 0.001，之後半個餘弦降到 0；第 35,500 步是一半。第一次 <code>optimizer.step()</code> 的學習率是 0，參數不變，但 Adam 的統計量已經更新。</li>
+  <li>進度條上的 loss／accuracy 是最後一個 batch 的值。</li>
+  <li><code>valid()</code> 量的是「隨機 128 格片段」：比整句低 6–17 個百分點、每次切的位置不同會抖動約 ±0.7 個百分點，挑 35 次裡最高的一次又會偏高。三種量法的「最佳」不在同一步。</li>
+  <li><code>best_state_dict = model.state_dict()</code> 是參照：第 60,000 與 70,000 步存下的都是當下的權重，不是 log 說的那一份。這次整句準確率只差 1 句，因為最後的學習率很小；修法是 <code>copy.deepcopy</code>。</li>
+  <li>種子 87 + 固定的亂數使用順序 ⇒ 逐位元重現。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 如果把 <code>warmup_steps</code> 改成 0，第一步的學習率是多少？</summary>
+<p>是 0.001。<code>current_step &lt; 0</code> 永遠不成立，第 0 步直接走 cosine 那一段，<code>progress</code> = 0，比例 0.5 × (1 + cos 0) = 1。第 156 行的 <code>max(1, num_training_steps - num_warmup_steps)</code> 也照常是 70,000。本書沒有實際訓練這個版本；對這個單層、post-norm 的小模型，不 warmup 不一定會壞，但第 8 章那組 3 層的 post-norm 模型連 1,000 步 warmup 都撐不住。</p></details>
+<details class="quiz"><summary>2. 一位同學把第 297 行改成 <code>best_state_dict = model.state_dict().copy()</code>，這樣修好了嗎？</summary>
+<p>沒有。<code>dict.copy()</code> 是淺複製：新的字典，但裡面的值還是同樣那些 tensor，和參數共用記憶體，之後的訓練一樣會改到它們。要複製 tensor 本身，必須用 <code>copy.deepcopy(model.state_dict())</code> 或對每個值 <code>.clone()</code>。</p></details>
+<details class="quiz"><summary>3. 圖 4.2 裡，第 2,000 步的訓練 loss（平均 5.192）比驗證 loss（4.114）還高，這是過擬合的相反嗎？</summary>
+<p>不是。訓練 loss 是第 1–2,000 步的平均，包括一開始幾乎在亂猜、loss 約 6.4 的那幾百步；驗證 loss 是第 2,000 步<strong>結束時</strong>的模型量的，那時模型已經學了 2,000 步。兩個數字量的不是同一個時間點的模型。另外訓練時開著 dropout，驗證時關掉，也會讓訓練 loss 偏高。到了最後一段，訓練 loss 1.002 低於驗證 loss 1.443，才是正常的樣子。</p></details>
+<details class="quiz"><summary>4. 為什麼說「印出的最佳 0.6859」是偏高的估計？</summary>
+<p>因為它是 35 個會隨機抖動的量測裡最大的那一個。每一次驗證都隨機切片段，同一份權重的準確率會在約 ±0.7 個百分點內跳（第 2 章：0.674–0.688）；從一堆有雜訊的數字挑最大的，挑到的通常是「真實值 + 正的雜訊」。同一份權重在固定片段上是 0.6847，10 個種子的平均是 0.6813，都比 0.6859 低。</p></details>
+<details class="quiz"><summary>5. 想讓 <code>train.py</code> 印出的驗證準確率直接代表 <code>test.py</code> 的做法，最少要改哪裡？</summary>
+<p>讓驗證集不切段、整句評估。例如另外建一個驗證用的 Dataset，<code>__getitem__</code> 不切；DataLoader 用 <code>batch_size=1</code>（或依長度分組再補齊並加 mask）；<code>valid()</code> 照舊。代價是每次驗證變慢：本書的實驗工具在訓練結束後整句評估一份權重，5,667 句大約要十幾秒，35 次就是幾分鐘，比整個 70,000 步的訓練（約 4 分鐘）還久。本書沒有改 <code>train.py</code> 這樣跑，第 8 章是在訓練結束後才對挑出的權重做整句評估。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+  <li>Loshchilov、Hutter，〈Decoupled Weight Decay Regularization〉（ICLR 2019），<a href="https://arxiv.org/abs/1711.05101">arXiv:1711.05101</a>：AdamW 與它和 Adam + L2 的差別；同一組作者的〈SGDR〉提出 cosine 學習率。</li>
+  <li>Xiong 等，〈On Layer Normalization in the Transformer Architecture〉（ICML 2020），<a href="https://arxiv.org/abs/2002.04745">arXiv:2002.04745</a>：為什麼 post-norm Transformer 需要 warmup。</li>
+  <li>PyTorch 文件 <a href="https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.LambdaLR.html"><code>LambdaLR</code></a> 與〈Saving and Loading Models〉教學：<code>state_dict</code> 的用法，以及為什麼要 <code>deepcopy</code>。</li>
+  <li>Hugging Face Transformers 的 <code>get_cosine_schedule_with_warmup</code>：原版 notebook 裡這個函式的 docstring 和它的寫法幾乎一字不差，應該是從那裡來的（本 repo 刪掉了 docstring）。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<footer class="chap-footer">本教材根據 lordleeber/ML2022-Spring-pytorch 的 HW04 程式碼與 ML2022 Spring 作業投影片撰寫。</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>

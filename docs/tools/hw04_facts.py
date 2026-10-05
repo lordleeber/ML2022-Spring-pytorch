@@ -8,6 +8,8 @@ Sections:
   sched    learning rate of get_cosine_schedule_with_warmup at chosen steps; steps/epoch
   workers  what each DataLoader worker's python random is seeded with
   figs     PNG figures for the book into out_dir (mel heatmaps, length histogram)
+  ch04     training-loop facts: AdamW defaults, the first update (lr 0), state_dict() is a reference,
+           and full-length / fixed-crop accuracy of every validation snapshot (needs <snap_dir>)
   ch03     encoder internals: hand-written forward == module, attention shapes, no positional
            encoding (frame order), padding, unused dropout argument (needs <ckpt>)
   ch02     DataLoader facts: a real batch, padding, worker seeds, loader throughput,
@@ -324,3 +326,60 @@ elif sec == 'ch03':
           '| padded to 128 argmax', b2.argmax().item(), 'p(label)', round(b2.softmax(-1)[0, spk].item(), 4))
     L = 4940
     print('attention matrix for the longest test utterance: 2 heads x', L, 'x', L, 'float32 =', 2 * L * L * 4 / 2**20, 'MiB')
+
+elif sec == 'ch04':
+    import copy, glob
+    import train
+    from classifier import Classifier
+    from dataset import myDataset
+    from torch.utils.data import random_split
+    # the first update: lr 0
+    torch.manual_seed(0)
+    m = Classifier(n_spks=600)
+    opt = torch.optim.AdamW(m.parameters(), lr=1e-3)
+    print('AdamW defaults:', {k: opt.defaults[k] for k in ('lr', 'betas', 'eps', 'weight_decay', 'amsgrad')})
+    sch = train.get_cosine_schedule_with_warmup(opt, 1000, 70000)
+    before = copy.deepcopy(m.state_dict())
+    x, y = torch.randn(32, 128, 40), torch.randint(0, 600, (32,))
+    loss = torch.nn.functional.cross_entropy(m(x), y); loss.backward()
+    print('lr used by the 1st optimizer.step():', opt.param_groups[0]['lr'])
+    opt.step(); sch.step(); opt.zero_grad()
+    print('parameters unchanged after the 1st step?', all(torch.equal(before[k], v) for k, v in m.state_dict().items()),
+          '| Adam state exp_avg nonzero?', any(s['exp_avg'].abs().sum() > 0 for s in opt.state.values()))
+    loss = torch.nn.functional.cross_entropy(m(x), y); loss.backward()
+    print('lr used by the 2nd step:', opt.param_groups[0]['lr']); opt.step()
+    print('changed after the 2nd step?', not all(torch.equal(before[k], v) for k, v in m.state_dict().items()))
+    # state_dict() returns references
+    sd = m.state_dict()
+    w0 = sd['prenet.weight'].clone()
+    loss = torch.nn.functional.cross_entropy(m(x), y); loss.backward(); opt.step()
+    print('sd = model.state_dict(); after optimizer.step(): sd tensor changed?', not torch.equal(sd['prenet.weight'], w0),
+          '| same storage as the parameter?', sd['prenet.weight'].data_ptr() == m.prenet.weight.data_ptr())
+    # every validation snapshot: full-length and fixed-crop accuracy on all 5,667 validation utterances
+    snap = sys.argv[2]
+    train.set_seed(87)   # the code above used the global RNG; re-seed so random_split matches train.py
+    ds = myDataset(D)
+    tl = int(0.9 * len(ds))
+    _, va = random_split(ds, [tl, len(ds) - tl])
+    assert va.indices[:5] == [43097, 46091, 22324, 24456, 274], va.indices[:5]
+    mels = [torch.load(os.path.join(D, ds.data[i][0])) for i in va.indices]
+    ys = torch.tensor([ds.data[i][1] for i in va.indices])
+    rng = random.Random(0)
+    crops = []
+    for mel in mels:
+        if len(mel) > 128:
+            s = rng.randint(0, len(mel) - 128); crops.append(mel[s:s + 128])
+        else:
+            crops.append(mel)
+    crop_batch = torch.stack(crops).cuda()   # all validation utterances are >= 152 frames
+    m = Classifier(n_spks=600).cuda().eval()
+    rows = []
+    for f in sorted(glob.glob(os.path.join(snap, 'step_*.pt')), key=lambda s: int(s.split('_')[-1][:-3])):
+        m.load_state_dict(torch.load(f))
+        with torch.no_grad():
+            full = sum(int(m(mel[None].cuda()).argmax().item() == y) for mel, y in zip(mels, ys.tolist()))
+            crop = (m(crop_batch).argmax(1).cpu() == ys).sum().item()
+        rows.append((int(f.split('_')[-1][:-3]), round(full / len(mels), 5), round(crop / len(mels), 5)))
+        print('step', rows[-1][0], 'full', rows[-1][1], 'fixed-crop', rows[-1][2], flush=True)
+    bf = max(rows, key=lambda r: r[1]); bc = max(rows, key=lambda r: r[2])
+    print('best full at step', bf, '| best fixed-crop at step', bc)
