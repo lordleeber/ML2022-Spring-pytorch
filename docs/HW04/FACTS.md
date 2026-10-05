@@ -103,6 +103,16 @@
 - `myDataset[0]` 連取兩次得到不同的 128 格（隨機起點）：同一句話每次被取用都是不同片段。
 - worker 亂數（`hw04_facts.py workers`）：每個 worker 的 Python `random` 由 PyTorch 設成 `base_seed + worker_id`；每建一次迭代器，`base_seed` 從主行程的 torch 亂數抽一個新的；所以 8 個 worker 下也能逐位元重現。
 
+## ch02 實測（`hw04_facts.py ch02 <grid>/orig.ckpt`，2026-10-06）
+- train.py 的第一個 batch（set_seed(87) → get_dataloader → iter 的第一個）：mels `(32, 128, 40)` float32、labels `(32,)` int64，前 8 個 `[257, 50, 560, 538, 336, 338, 415, 594]`，沒有補值。
+- 訓練 sampler `RandomSampler`、驗證 `SequentialSampler`；pin_memory True；prefetch_factor 2。
+- collate 含 91 格那句（完整資料集 index 20902，編號 534）+ index 0,1,2：`[(91,40),(128,40),(128,40),(128,40)]` → `(4, 128, 40)`，第一句尾端 37 格是 -20；labels `[534, 436, 436, 436]`。
+- 補值次數：2 句短句都在訓練集 → 每 epoch 最多 2 個 batch、70,000 步約 88 個；驗證集最短 152 格，從不補。
+- `torch.FloatTensor(x)`（x 是 float32 tensor）回傳新的 tensor 物件，但 `data_ptr` 相同（共用記憶體，不是複本）；切片也一樣。`torch.FloatTensor([436]).long()` → `tensor([436])`、shape (1,)、int64；collate 的 `torch.FloatTensor(tuple of (1,) tensors).long()` → shape (k,)。
+- worker 種子（8 workers 的小 Dataset）：iterator 0 → worker 0/1/2 seed 2882565337522676045/…046/…047；iterator 1 → 8391449358263599247/…248/…249；每個 worker 的第一個 `random.random()` 都等於 `random.Random(seed).random()`。PyTorch 2.11 `_utils/worker.py:258-265`：`seed = base_seed + worker_id; random.seed(seed); torch.manual_seed(seed)`；NumPy 用 `_generate_state(base_seed, worker_id)`。`base_seed` 在 `_BaseDataLoaderIter.__init__`（dataloader.py:706）抽，單行程（num_workers=0）也會抽。
+- 只讀資料的速度（500 個訓練 batch，不跑模型）：num_workers=0 **35.28 s**（約 14 batch/s）、num_workers=8 **1.39 s**（約 360 batch/s）。
+- 驗證的隨機切段造成的跳動：orig 的 deepcopy 最佳（68k）在 10 個不同種子（torch.manual_seed(1000+k) 後 iter valid_loader）下照 valid() 量：0.6854、0.6843、0.6774、0.6741、0.687、0.6758、0.6819、0.6781、0.6813、0.688；min 0.6741、max 0.688、mean 0.6813。訓練時印的 0.6859 偏高。
+
 ## 模型（`hw04_facts.py model`；classifier.py）
 - `Classifier(d_model=80, n_spks=600, dropout=0.1)`：`dropout` **沒有被用到**（`classifier.py:38-40` 沒傳）；`TransformerEncoderLayer` 的預設 dropout 剛好也是 0.1。
 - 參數（共 **125,896**）：prenet 3,280（80×40+80）；self_attn 25,920（in_proj 240×80+240 = 19,440；out_proj 80×80+80 = 6,480）；linear1 20,736（256×80+256）；linear2 20,560（80×256+80）；norm1、norm2 各 160；pred_layer 55,080（80×80+80 = 6,480；600×80+600 = 48,600）。encoder 合計 67,536（53.6%）；最後一層 48,600（38.6%）。

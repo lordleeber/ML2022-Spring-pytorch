@@ -8,6 +8,8 @@ Sections:
   sched    learning rate of get_cosine_schedule_with_warmup at chosen steps; steps/epoch
   workers  what each DataLoader worker's python random is seeded with
   figs     PNG figures for the book into out_dir (mel heatmaps, length histogram)
+  ch02     DataLoader facts: a real batch, padding, worker seeds, loader throughput,
+           and how much the validation accuracy moves with the random crops (needs <ckpt>)
 """
 import json, os, sys, random, warnings, collections
 import numpy as np
@@ -201,3 +203,55 @@ elif sec == 'figs':
     fig.colorbar(im, ax=axs, shrink=0.8, label='log mel energy')
     fig.savefig(os.path.join(out, 'mel3.png'), dpi=110)
     print('wrote mel3.png', picks)
+
+elif sec == 'ch02':
+    import time
+    import train  # set_seed(87)
+    from torch.utils.data import DataLoader, Dataset
+    tl, vl, n = train.get_dataloader(D, 32, 8)
+    it = iter(tl)
+    mels, labels = next(it)
+    print('first batch', tuple(mels.shape), mels.dtype, tuple(labels.shape), labels.dtype, labels[:8].tolist(),
+          'padded frames (value -20 rows):', int((mels == -20).all(-1).sum()))
+    print('train batches', len(tl), 'valid batches', len(vl), 'train sampler', type(tl.sampler).__name__,
+          'valid sampler', type(vl.sampler).__name__, 'pin_memory', tl.pin_memory, 'prefetch', tl.prefetch_factor)
+    # a batch containing the 91-frame utterance (index 20902 of the full dataset)
+    full = tl.dataset.dataset
+    items = [full[20902]] + [full[i] for i in (0, 1, 2)]
+    m, l = train.collate_batch(items)
+    print('collate with the 91-frame utterance:', [tuple(x[0].shape) for x in items], '->', tuple(m.shape),
+          'rows of -20 in item 0:', int((m[0] == -20).all(-1).sum()), 'labels', l.tolist())
+    # worker seeds
+    class W(Dataset):
+        def __len__(self): return 8
+        def __getitem__(self, i):
+            w = torch.utils.data.get_worker_info()
+            return torch.tensor([w.id, w.seed, int(random.random() * 1e9)])
+    torch.manual_seed(87)
+    for k in range(2):
+        b = torch.cat([x for x in DataLoader(W(), batch_size=1, num_workers=8)])
+        rows = sorted(set(tuple(r) for r in b.tolist()))
+        ok = all(int(random.Random(s).random() * 1e9) == v for _, s, v in rows)
+        print(f'iterator {k}: (worker id, seed, first python random*1e9):', rows[:3], '... python random == Random(seed)?', ok)
+    # throughput of the train loader alone (no model)
+    for nw in (0, 8):
+        tl2, _, _ = train.get_dataloader(D, 32, nw)
+        t0 = time.time(); it2 = iter(tl2)
+        for _ in range(500):
+            next(it2)
+        print(f'num_workers={nw}: 500 batches in {time.time() - t0:.2f} s')
+    # validation noise from random crops
+    ck = sys.argv[2]
+    from classifier import Classifier
+    model = Classifier(n_spks=600).cuda()
+    model.load_state_dict(torch.load(ck)); model.eval()
+    accs = []
+    for k in range(10):
+        torch.manual_seed(1000 + k)
+        a = 0.0
+        with torch.no_grad():
+            for mm, ll in vl:
+                a += (model(mm.cuda()).argmax(1) == ll.cuda()).float().mean().item()
+        accs.append(a / len(vl))
+    print('valid() accuracy of', os.path.basename(ck), 'under 10 different crop seeds:', [round(x, 4) for x in accs],
+          'min', round(min(accs), 4), 'max', round(max(accs), 4), 'mean', round(sum(accs) / 10, 4))
