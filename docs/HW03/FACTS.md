@@ -176,3 +176,16 @@ Best model found at epoch 4, saving model
 - `num_workers=4`（sed 改兩處）：wall 46.86 s、CPU 430%，**結果不同**：epoch 1 train 1.94046/0.32487、valid 2.91845/0.16355；epoch 5 valid 1.55297/0.48967（最佳是 epoch 4 的 0.52569，epoch 5 沒有存）。
 - 拿掉 tqdm（`tqdm(train_loader)` → `train_loader`、valid 同）、`OMP_NUM_THREADS=1`：nw=0 wall 150.19 s、nw=4 43.31 s，stdout 與 ckpt 完全相同；epoch 5 valid 1.39194/0.54913（和有 tqdm 的原版不同，因為少了每個 loop 一次的亂數抽取）。
 - 解釋（ch04）：單行程 iterator 的 sampler 種子在第一次 `next` 才抽；多行程 iterator 在 `__init__` 就預取 batch，所以 tqdm_asyncio 丟掉的那個 iterator 也抽走了 sampler 種子（並開了 4 個 worker）。
+
+## ch03 實測（2026-10-05，本機）
+- e1.ckpt：`hw03_exp.py --epochs 1 --save`，印出 `[ Train | 001/001 ] loss = 1.95937, acc = 0.31425`、`[ Valid | 001/001 ] loss = 3.20382, acc = 0.17568`（與 train.py 第 1 epoch 相同）。存在 scratchpad/hw03ck/e1.ckpt。
+- BN 兩種模式（整個集合一次算的真實 acc；train 模式用 deepcopy + no_grad、batch 256、shuffle generator seed 0）：
+  - epoch1：val eval 0.17697／train-mode 0.39679；training set eval 0.18315／train-mode 0.42094。
+  - epoch5（sample_best.ckpt）：val eval 0.55394／train-mode 0.57697。
+  - base40 最佳（第 27 epoch）：val eval 0.67347／train-mode 0.67201。
+- `cnn.1.num_batches_tracked`：39、195、1053。cnn.1 running_mean[:4]：e1 [0.2177, 0.2555, 0.1325, 0.2693]、ep5 [0.1787, 0.2861, 0.0863, 0.2041]、ep27 [0.1368, 0.3869, -0.0345, 0.1515]；running_var[:4]：e1 [0.029, 0.0546, 0.0191, 0.0435]、ep5 [0.0094, 0.0362, 0.0029, 0.0191]、ep27 [0.0061, 0.0387, 0.0028, 0.012]。
+- e1、一個 shuffled val batch（seed 0）的 conv1 輸出：mean[:4] [0.2196, 0.263, 0.1266, 0.275]、var[:4] [0.0126, 0.0384, 0.0026, 0.0264]。conv5（cnn.16）batch mean[:3] [0.468, 1.097, 0.017] vs running_mean [0.575, 1.073, 0.042]；batch var [1.424, 1.362, 2.064] vs running_var [1.398, 1.139, 1.783]。
+- 0.9**39 = 0.016423203268260675。
+- 乘加次數（一張圖）：cnn.0 28,311,552（2.6%）、cnn.4/8/12 各 301,989,888（27.6%）、cnn.16 150,994,944（13.8%）、fc.0 8,388,608（0.8%）、fc.2 524,288、fc.4 5,632；合計 1,094,194,688。
+- MaxPool2d(2,2,0) 對 arange(16).view(1,1,4,4) → [[5,7],[13,15]]。Conv2d(3,64,3,1,1) weight [64,3,3,3]、bias [64]；padding 0 → [1,64,126,126]；stride 2 padding 1 → [1,64,64,64]。新 BN：parameters weight/bias；buffers running_mean(0)/running_var(1)/num_batches_tracked。`view(2,-1)` 與 `flatten(1)` 相等。
+- 名詞首見（ch03）：kernel、feature map、參數共用、局部性、γ/β、momentum、running 統計量、num_batches_tracked、感受野、跨距（jump）、MAC（乘加）、logits 不需 softmax、全域平均池化、VGG。
