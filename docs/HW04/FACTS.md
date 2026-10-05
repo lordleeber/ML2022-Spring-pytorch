@@ -121,6 +121,15 @@
 - 沒有位置編碼（positional encoding），也沒有 padding mask（forward 沒給 `src_key_padding_mask`）。
 - 警告：單一 `TransformerEncoderLayer`（原狀）**不印任何警告**；照 `classifier.py:41` 打開 `TransformerEncoder(..., num_layers=2)` 會印 `enable_nested_tensor is True, but self.use_nested_tensor is False because encoder_layer.self_attn.batch_first was not True(use batch_first for better inference performance)`。（注意：打開第 41 行後 forward 仍呼叫 `self.encoder_layer`，要一起改成 `self.encoder` 才會真的用 2 層；實驗工具 `--layers 2` 是改好的版本。）
 
+## ch03 實測（`hw04_facts.py ch03 <grid>/orig.ckpt`，2026-10-06）
+- 手寫 post-norm layer（in_proj 切 Q/K/V、2 頭各 40、softmax(QKᵀ/√40)V、out_proj、LN(x+sa)、FFN、LN(h1+ff)）vs `encoder_layer(x)`，eval、x=randn(128,4,80)：allclose True、max diff 2.62e-6。注意力 (4,2,128,128)，列和 0.99999976–1.00000024；1/√40 = 0.158114。`self_attn(..., need_weights=True, average_attn_weights=False)` 的權重與手寫相同。LayerNorm eps 1e-5、activation relu。
+- 訓練模式同一輸入算兩次：輸出不同，max diff 5.96。dropout 四處：MHA 內部 `self_attn.dropout` 0.1、`dropout`（FFN 中間）、`dropout1`、`dropout2`，都是 0.1；named_modules 裡只有後三個是模組。
+- `Classifier(dropout=0.5).encoder_layer.dropout.p` = 0.1（參數沒用到）。
+- **沒有位置編碼 → 與格子順序無關**：orig 最佳（68k）在 5,667 句驗證語句整句、正序／倒序／隨機打亂：準確率都是 **0.85724**；正序 vs 打亂的 logits 最大差 1.53e-5。
+- 補值：91 格那句（index 20902，編號 534），訓練好的模型：不補 → argmax 534、p(534)=0.8627；補 37 格 -20 到 128 → argmax 534、p(534)=0.2007。
+- 最長測試句 4,940 格的注意力矩陣：2 × 4940² × 4 bytes = 186.18 MiB。
+- `nn.TransformerEncoderLayer(d_model=80, ..., nhead=3)` → `AssertionError: embed_dim must be divisible by num_heads`；`nhead=4` 參數量仍 125,896。
+
 ## 學習率（`hw04_facts.py sched`；warmup 1000、total 70000）
 - 第 0 次 update（第一個 batch）用的學習率是 **0**：LambdaLR 建立時就把 lr 設成 lr_lambda(0) = 0。
 - scheduler 第 1 步 1e-6、第 500 步 5e-4、第 999 步 9.99e-4、第 1000 步 1e-3（最高）、第 10000 步 9.586e-4、第 35500 步 5e-4（一半）、第 50000 步 1.934e-4、第 60000 步 5.094e-5、第 68000 步 2.072e-6、第 69999 步 5.2e-13、第 70000 步 0。

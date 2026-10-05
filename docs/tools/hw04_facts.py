@@ -8,6 +8,8 @@ Sections:
   sched    learning rate of get_cosine_schedule_with_warmup at chosen steps; steps/epoch
   workers  what each DataLoader worker's python random is seeded with
   figs     PNG figures for the book into out_dir (mel heatmaps, length histogram)
+  ch03     encoder internals: hand-written forward == module, attention shapes, no positional
+           encoding (frame order), padding, unused dropout argument (needs <ckpt>)
   ch02     DataLoader facts: a real batch, padding, worker seeds, loader throughput,
            and how much the validation accuracy moves with the random crops (needs <ckpt>)
 """
@@ -255,3 +257,70 @@ elif sec == 'ch02':
         accs.append(a / len(vl))
     print('valid() accuracy of', os.path.basename(ck), 'under 10 different crop seeds:', [round(x, 4) for x in accs],
           'min', round(min(accs), 4), 'max', round(max(accs), 4), 'mean', round(sum(accs) / 10, 4))
+
+elif sec == 'ch03':
+    import math
+    import torch.nn.functional as F
+    from classifier import Classifier
+    ck = sys.argv[2]
+    torch.manual_seed(0)
+    m = Classifier(n_spks=600)
+    m.load_state_dict(torch.load(ck)); m.eval()
+    el = m.encoder_layer
+    x = torch.randn(128, 4, 80)   # (length, batch, d_model)
+    with torch.no_grad():
+        ref = el(x)
+        # hand-written post-norm layer
+        W, b = el.self_attn.in_proj_weight, el.self_attn.in_proj_bias
+        q, k, v = (x @ W[i*80:(i+1)*80].T + b[i*80:(i+1)*80] for i in range(3))   # (L, B, 80) each
+        def heads(t): return t.reshape(128, 4, 2, 40).permute(1, 2, 0, 3)       # (B, h, L, 40)
+        qh, kh, vh = heads(q), heads(k), heads(v)
+        att = torch.softmax(qh @ kh.transpose(-1, -2) / math.sqrt(40), dim=-1)   # (B, h, L, L)
+        ctx = (att @ vh).permute(2, 0, 1, 3).reshape(128, 4, 80)
+        sa = ctx @ el.self_attn.out_proj.weight.T + el.self_attn.out_proj.bias
+        h1 = F.layer_norm(x + sa, (80,), el.norm1.weight, el.norm1.bias, el.norm1.eps)
+        ff = F.relu(h1 @ el.linear1.weight.T + el.linear1.bias) @ el.linear2.weight.T + el.linear2.bias
+        out = F.layer_norm(h1 + ff, (80,), el.norm2.weight, el.norm2.bias, el.norm2.eps)
+        print('hand-written == encoder_layer (eval):', torch.allclose(out, ref, atol=1e-5), 'max diff', (out - ref).abs().max().item())
+        print('attention', tuple(att.shape), 'row sums', att.sum(-1).min().item(), att.sum(-1).max().item(), 'scale 1/sqrt(40) =', 1 / math.sqrt(40))
+        _, w = el.self_attn(x, x, x, need_weights=True, average_attn_weights=False)
+        print('self_attn need_weights shape', tuple(w.shape), 'equals hand-written', torch.allclose(w, att, atol=1e-6))
+        print('eps', el.norm1.eps, 'activation', el.activation.__name__)
+        # train mode: dropout changes the output
+        el.train(); a1 = el(x); a2 = el(x); el.eval()
+        print('train mode twice differ?', not torch.allclose(a1, a2), 'max diff', (a1 - a2).abs().max().item())
+    # unused dropout argument
+    print('Classifier(dropout=0.5): encoder dropout p =', Classifier(dropout=0.5).encoder_layer.dropout.p)
+    # frame order: the trained model on real validation utterances
+    import train
+    from dataset import myDataset
+    from torch.utils.data import random_split
+    ds = myDataset(D)
+    tl = int(0.9 * len(ds))
+    _, va = random_split(ds, [tl, len(ds) - tl])
+    m = m.cuda()
+    g = torch.Generator().manual_seed(0)
+    ok = {'orig': 0, 'reversed': 0, 'shuffled': 0}
+    maxd = 0.0
+    with torch.no_grad():
+        for i in range(len(va)):
+            p, spk = ds.data[va.indices[i]]
+            mel = torch.load(os.path.join(D, p)).cuda()
+            perm = torch.randperm(len(mel), generator=g).cuda()
+            outs = {'orig': m(mel[None]), 'reversed': m(mel.flip(0)[None]), 'shuffled': m(mel[perm][None])}
+            for kk, o in outs.items():
+                ok[kk] += int(o.argmax().item() == spk)
+            maxd = max(maxd, (outs['orig'] - outs['shuffled']).abs().max().item())
+    n = len(va)
+    print('full-length valid acc, frames in order / reversed / shuffled:', {kk: round(vv / n, 5) for kk, vv in ok.items()},
+          'max |logit diff| orig vs shuffled', maxd)
+    # padding with the trained model: the 91-frame utterance (index 20902, speaker 534)
+    p, spk = ds.data[20902]
+    mel = torch.load(os.path.join(D, p)).cuda()
+    padded = torch.cat([mel, torch.full((37, 40), -20.0, device='cuda')])
+    with torch.no_grad():
+        a, b2 = m(mel[None]), m(padded[None])
+    print('91-frame utterance, label', spk, ': alone argmax', a.argmax().item(), 'p(label)', round(a.softmax(-1)[0, spk].item(), 4),
+          '| padded to 128 argmax', b2.argmax().item(), 'p(label)', round(b2.softmax(-1)[0, spk].item(), 4))
+    L = 4940
+    print('attention matrix for the longest test utterance: 2 heads x', L, 'x', L, 'float32 =', 2 * L * L * 4 / 2**20, 'MiB')
