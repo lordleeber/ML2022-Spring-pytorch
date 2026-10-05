@@ -1,0 +1,10 @@
+# HW03 ch08 runs (hw03_exp.py; one JSON line each in hw03_ch08_runs.jsonl). true = whole validation set in one pass.
+# name        arch aug  ls   resplit epochs best_ep printed  true     n_train n_val minutes
+verify5      cnn  none 0.0  0       5      5       0.55541  0.55394  9866    3430  3.4
+base40       cnn  none 0.0  0       40     27      0.67781  0.67347  9866    3430  25.2
+augA40       cnn  A    0.0  0       40     35      0.69050  0.68805  9866    3430  26.8
+res40        res  A    0.0  0       40     35      0.59754  0.59883  9866    3430  31.4
+resplit40    cnn  A    0.0  1       40     29      0.73748  0.72616  12153   1143  33.6
+ls40         cnn  A    0.1  0       40     39      0.69930  0.69592  9866    3430  27.2
+long200      cnn  A    0.0  0       200    187     0.76669  0.76501  9866    3430  137.1
+res0_40      res0 A    0.0  0       40     39      0.64569  0.64606  9866    3430  30.3

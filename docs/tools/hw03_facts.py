@@ -189,5 +189,42 @@ if 'threads' in parts or 'steps' in parts:
         _, w, c = clock(lambda: [default_collate([(t, 0) for t in ts[i:i + 256]]) for i in range(0, 768, 256)]); print(f'collate  wall {w:.2f}s cpu {c:.2f}s')
 
 if 'tta' in parts:
+    # holdout re-scoring, ensembles and TTA from the files hw03_run_grid.sh / hw03_exp.py saved
+    import random, itertools
+    from torch.utils.data import DataLoader
+    from classifier import Classifier
+    from dataset import FoodDataset
     ck = sys.argv[sys.argv.index('tta') + 1]
-    print('TODO: tta/ensemble from', ck)
+    names = ['base40', 'augA40', 'res0_40', 'res40', 'resplit40', 'ls40', 'long200']
+    Z = {n: np.load(os.path.join(ck, n + '.npz')) for n in names}
+    y = torch.tensor(Z['base40']['val_y'])
+    idx = list(range(len(y))); random.Random(0).shuffle(idx)
+    hold = torch.tensor(sorted(idx[:len(idx) // 3]))          # the same 1,143 images hw03_exp.py --resplit 1 validates on
+    acc = lambda logit, sel=slice(None): (torch.tensor(logit)[sel].argmax(1) == y[sel]).float().mean().item()
+    print('holdout size', len(hold))
+    for n in names:
+        print(f'{n:10s} full-val {acc(Z[n]["val"]):.5f}  holdout {acc(Z[n]["val"], hold):.5f}')
+    prob = {n: torch.softmax(torch.tensor(Z[n]['val']), 1) for n in names}
+    for combo in [('augA40', 'ls40'), ('augA40', 'ls40', 'long200'), ('base40', 'augA40', 'ls40', 'long200'),
+                  ('augA40', 'res0_40', 'ls40', 'long200'), ('long200', 'ls40')]:
+        p_ = sum(prob[n] for n in combo) / len(combo)
+        print('ensemble(prob avg)', '+'.join(combo), f'{(p_.argmax(1) == y).float().mean().item():.5f}')
+    # TTA: K augmented copies (augmentation A) + the test_tfm copy, weights 0.5 / 0.5 as in slides p.13
+    K = 5
+    for n, arch in [('base40', 'cnn'), ('augA40', 'cnn'), ('ls40', 'cnn'), ('long200', 'cnn')]:
+        m = Classifier().cuda(); m.load_state_dict(torch.load(os.path.join(ck, n + '.ckpt'))); m.eval()
+        def run(tfm):
+            out = []
+            with torch.no_grad():
+                for x, _ in DataLoader(FoodDataset(os.path.join(DS, 'validation'), tfm=tfm), batch_size=256, shuffle=False):
+                    out.append(torch.softmax(m(x.cuda()), 1).cpu())
+            return torch.cat(out)
+        p0 = run(test_tfm)
+        torch.manual_seed(0)
+        pa = [run(AUG_A) for _ in range(K)]
+        avg = sum(pa) / K
+        single = [(q.argmax(1) == y).float().mean().item() for q in pa]
+        print(f'TTA {n}: test_tfm {(p0.argmax(1) == y).float().mean().item():.5f} | one aug view {min(single):.5f}-{max(single):.5f}'
+              f' | mean of {K} aug {(avg.argmax(1) == y).float().mean().item():.5f}'
+              f' | 0.5*aug+0.5*test {((0.5 * avg + 0.5 * p0).argmax(1) == y).float().mean().item():.5f}'
+              f' | (K aug + test)/(K+1) {(((sum(pa) + p0) / (K + 1)).argmax(1) == y).float().mean().item():.5f}')

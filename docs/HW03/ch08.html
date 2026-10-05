@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 8 章　往上爬：改良實驗與三級題庫 — HW03 食物影像分類</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a><a href="appendix.html">附錄 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW03 讀碼教材</p>
+  <h1>第 8 章　往上爬：改良實驗與三級題庫</h1>
+  <p class="chap-lead">投影片第 5 頁的四條基準線，每往上一級都多一兩個招式：資料增強、訓練更久、改模型、交叉驗證、ensemble、test time augmentation。本章把它們放在同一套規格下實際跑一遍，讓數字自己說話；最後用兩次推論「免費」再加幾分，並附上入門、進階、挑戰三級的練習題。</p>
+</header>
+<main>
+
+<h2 id="spec">8.1　同一套規格，七組實驗</h2>
+<p>所有實驗都用實驗工具 <code>docs/tools/hw03_exp.py</code> 跑。它的預設參數就是 <code>train.py</code>（第 4 章驗證過：5 個 epoch 印出的每一行、存下的 checkpoint 都逐位元相同），每一組只改題目要比的那一項，其他一律相同：batch 256、Adam lr 0.0003、weight decay 1e-5、梯度裁剪 10、種子 6666、驗證集照原樣打亂。為了在合理的時間內比完，對照組一律跑 <strong>40 個 epoch</strong>；另外附一次 200 個 epoch 的長跑。GPU 一次只跑一組，依序跑完：</p>
+<pre class="shell cmd"><code>$ bash docs/tools/hw03_run_grid.sh &lt;存放 checkpoint 的資料夾&gt;</code></pre>
+<div class="tablewrap"><table>
+<thead><tr><th>名稱</th><th>和 <code>train.py</code> 的差別</th><th>參數</th><th>訓練／驗證張數</th><th>總時間</th></tr></thead>
+<tbody>
+<tr><td>base40</td><td>只把 epoch 改成 40</td><td>12,833,803</td><td>9,866／3,430</td><td>25.2 分</td></tr>
+<tr><td>augA40</td><td>+ 第 6 章的增強 A</td><td>12,833,803</td><td>9,866／3,430</td><td>26.8 分</td></tr>
+<tr><td>res40</td><td>+ 增強 A，模型換成第 7 章的 <code>Residual_Network</code> + 殘差</td><td>68,259,147</td><td>9,866／3,430</td><td>31.4 分</td></tr>
+<tr><td>res0_40</td><td>同上但不加殘差（第 7 章加跑）</td><td>68,259,147</td><td>9,866／3,430</td><td>30.3 分</td></tr>
+<tr><td>resplit40</td><td>+ 增強 A，把驗證集的 2/3 併進訓練集</td><td>12,833,803</td><td>12,153／1,143</td><td>33.6 分</td></tr>
+<tr><td>ls40</td><td>+ 增強 A，<code>CrossEntropyLoss(label_smoothing=0.1)</code></td><td>12,833,803</td><td>9,866／3,430</td><td>27.2 分</td></tr>
+<tr><td>long200</td><td>+ 增強 A，epoch 改成 200</td><td>12,833,803</td><td>9,866／3,430</td><td>137.1 分</td></tr>
+</tbody>
+</table></div>
+<p>因為種子與程式都相同，augA40 和 long200 的前 40 個 epoch 逐位元一樣（本書確認過兩者每個 epoch 的真實驗證準確率完全相同），所以 long200 也可以看成「augA40 繼續訓練」。</p>
+
+<h2 id="table">8.2　總表</h2>
+<p>每一組都列三個數字：<code>train.py</code> 的算法印出的最佳驗證準確率、同一個 epoch 在整個驗證集上一次算的真實值（第 4 章 4.4 節），以及在<strong>同一批 1,143 張</strong>驗證圖（下稱 holdout）上的準確率。最後一欄是為了和 resplit40 公平比較：resplit40 把另外 2,287 張驗證圖拿去訓練了，只能在剩下的 1,143 張上評估，其他組就用存下來的驗證集 logits 在同樣的 1,143 張上重算。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>名稱</th><th>最佳 epoch</th><th>印出</th><th>真實（3,430 張）</th><th>holdout（1,143 張）</th></tr></thead>
+<tbody>
+<tr><td>base40</td><td>27</td><td>0.67781</td><td>0.67347</td><td>0.68241</td></tr>
+<tr><td>augA40</td><td>35</td><td>0.69050</td><td>0.68805</td><td>0.69991</td></tr>
+<tr><td>res40</td><td>35</td><td>0.59754</td><td>0.59883</td><td>0.62030</td></tr>
+<tr><td>res0_40</td><td>39</td><td>0.64569</td><td>0.64606</td><td>0.65967</td></tr>
+<tr><td>resplit40</td><td>29</td><td>0.73748</td><td>—（見下）</td><td><strong>0.72616</strong></td></tr>
+<tr><td>ls40</td><td>39</td><td>0.69930</td><td>0.69592</td><td>0.70079</td></tr>
+<tr><td>long200</td><td>187</td><td>0.76669</td><td><strong>0.76501</strong></td><td><strong>0.76203</strong></td></tr>
+</tbody>
+</table></div>
+<p>resplit40 在完整驗證集上算出來是 0.77901，但那 3,430 張裡有 2,287 張是它訓練過的，這個數字<strong>沒有意義</strong>，所以表裡不列。讀這張表的方法：40 個 epoch 的五組互相比；long200 單獨看「訓練更久」的效果；resplit40 只看 holdout 那一欄。下面幾節一項一項看。</p>
+<div class="warn"><h4>這些都是驗證集上的數字</h4>
+<p>表裡沒有一個是 Kaggle 分數。另外要記得兩件事：第一，「最佳 epoch」本身就是用驗證集挑的，挑出來的數字會比「事先決定好 epoch」稍微樂觀；第二，每一組只用一個種子跑了一次，第 4 章看到光是驗證集的分批方式就會讓印出的數字晃動 ±0.2 個百分點，不同種子之間的差異通常更大。所以 1 個百分點以內的差距，不要當成結論。</p>
+</div>
+
+<h2 id="long">8.3　增強 + 訓練更久：long200</h2>
+<p>投影片說 Medium 要「Training Augmentation + Train Longer」。圖 8.1 把沒有增強的 base40 和有增強的 long200 畫在一起（縱軸是每個 epoch 的真實驗證準確率；滑鼠移到線上可以看到數字）：</p>
+<figure class="fig">
+<svg viewBox="0 0 900 380" role="img" aria-label="驗證準確率（整個驗證集一次算的真實值）對 epoch 的折線圖：沒有增強的 base40 在第 27 個 epoch 達到 0.673 後停滯；增強 A 的長跑在第 68 個 epoch 首次超過 Medium 基準線 0.73207，第 119 個 epoch 0.761，第 187 個 epoch 達到最高 0.765，之後在 0.73 到 0.765 之間上下跳動">
+  <line x1="70" y1="320.0" x2="860" y2="320.0" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="62" y="324.0" text-anchor="end">0.1</text>
+  <line x1="70" y1="283.8" x2="860" y2="283.8" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="62" y="287.8" text-anchor="end">0.2</text>
+  <line x1="70" y1="247.5" x2="860" y2="247.5" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="62" y="251.5" text-anchor="end">0.3</text>
+  <line x1="70" y1="211.2" x2="860" y2="211.2" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="62" y="215.2" text-anchor="end">0.4</text>
+  <line x1="70" y1="175.0" x2="860" y2="175.0" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="62" y="179.0" text-anchor="end">0.5</text>
+  <line x1="70" y1="138.8" x2="860" y2="138.8" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="62" y="142.8" text-anchor="end">0.6</text>
+  <line x1="70" y1="102.5" x2="860" y2="102.5" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="62" y="106.5" text-anchor="end">0.7</text>
+  <line x1="70" y1="66.2" x2="860" y2="66.2" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="62" y="70.2" text-anchor="end">0.8</text>
+  <line x1="70" y1="30.0" x2="860" y2="30.0" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="62" y="34.0" text-anchor="end">0.9</text>
+  <text class="s-sm" x="70.0" y="340" text-anchor="middle">1</text>
+  <text class="s-sm" x="224.8" y="340" text-anchor="middle">40</text>
+  <text class="s-sm" x="383.6" y="340" text-anchor="middle">80</text>
+  <text class="s-sm" x="542.4" y="340" text-anchor="middle">120</text>
+  <text class="s-sm" x="701.2" y="340" text-anchor="middle">160</text>
+  <text class="s-sm" x="860.0" y="340" text-anchor="middle">200</text>
+  <text class="s-sm" x="465.0" y="362" text-anchor="middle">epoch</text>
+  <text class="s-sm" x="10" y="18">驗證準確率（整個驗證集一次算）</text>
+  <line x1="70" y1="90.9" x2="860" y2="90.9" stroke="#93a1af" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text class="s-sm" x="76" y="66.2">虛線：Medium 基準線 0.73207（Kaggle 測試集的分數，只能當參考）</text>
+  <polyline points="70.0,292.1 74.0,200.0 77.9,182.3 81.9,181.7 85.9,155.4 89.8,143.6 93.8,167.2 97.8,168.8 101.8,145.5 105.7,169.4 109.7,145.1 113.7,146.6 117.6,137.3 121.6,144.0 125.6,144.9 129.5,124.3 133.5,126.2 137.5,130.4 141.5,119.8 145.4,119.4 149.4,115.8 153.4,113.9 157.3,113.4 161.3,112.6 165.3,113.0 169.2,113.8 173.2,112.1 177.2,112.2 181.2,113.4 185.1,111.9 189.1,112.6 193.1,112.4 197.0,113.0 201.0,112.5 205.0,112.9 208.9,113.0 212.9,113.1 216.9,112.5 220.9,113.2 224.8,112.4" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round"><title>沒有增強（base40）</title></polyline>
+  <polyline points="70.0,286.8 74.0,215.1 77.9,201.8 81.9,193.3 85.9,173.9 89.8,159.7 93.8,151.0 97.8,173.1 101.8,155.9 105.7,151.1 109.7,135.6 113.7,139.1 117.6,168.6 121.6,148.1 125.6,123.7 129.5,132.9 133.5,145.8 137.5,130.2 141.5,119.6 145.4,136.1 149.4,114.7 153.4,166.0 157.3,145.5 161.3,132.9 165.3,114.5 169.2,117.4 173.2,108.1 177.2,141.0 181.2,128.3 185.1,124.6 189.1,126.7 193.1,109.7 197.0,113.5 201.0,109.2 205.0,106.8 208.9,120.0 212.9,120.0 216.9,116.2 220.9,114.7 224.8,111.9 228.8,131.6 232.8,98.4 236.7,93.5 240.7,110.5 244.7,100.0 248.6,117.1 252.6,107.4 256.6,115.9 260.6,106.2 264.5,102.4 268.5,113.9 272.5,91.9 276.4,101.0 280.4,105.7 284.4,102.9 288.3,98.9 292.3,95.5 296.3,96.3 300.3,105.4 304.2,95.0 308.2,102.7 312.2,93.0 316.1,108.0 320.1,99.3 324.1,95.6 328.0,100.6 332.0,97.4 336.0,89.5 339.9,100.7 343.9,98.1 347.9,91.5 351.9,90.1 355.8,99.4 359.8,93.6 363.8,104.0 367.7,91.1 371.7,95.7 375.7,106.4 379.6,92.6 383.6,97.5 387.6,105.2 391.6,96.1 395.5,99.9 399.5,101.6 403.5,105.7 407.4,93.3 411.4,102.8 415.4,103.2 419.3,110.6 423.3,90.1 427.3,99.6 431.3,105.6 435.2,87.1 439.2,85.7 443.2,92.9 447.1,92.2 451.1,101.2 455.1,96.8 459.0,99.8 463.0,93.0 467.0,95.5 471.0,93.1 474.9,87.4 478.9,88.4 482.9,99.9 486.8,91.5 490.8,94.6 494.8,89.2 498.7,106.3 502.7,90.8 506.7,85.8 510.7,82.4 514.6,98.4 518.6,81.9 522.6,89.5 526.5,97.4 530.5,97.7 534.5,87.1 538.4,80.4 542.4,113.8 546.4,84.7 550.4,84.3 554.3,97.4 558.3,86.9 562.3,87.0 566.2,92.7 570.2,92.8 574.2,81.0 578.1,106.3 582.1,85.1 586.1,99.4 590.1,112.4 594.0,88.9 598.0,83.1 602.0,104.8 605.9,89.1 609.9,90.1 613.9,98.2 617.8,89.8 621.8,91.1 625.8,89.9 629.7,84.2 633.7,87.2 637.7,94.3 641.7,99.3 645.6,105.9 649.6,88.0 653.6,85.4 657.5,109.9 661.5,85.3 665.5,102.8 669.4,103.3 673.4,87.7 677.4,93.3 681.4,102.5 685.3,99.4 689.3,93.5 693.3,96.5 697.2,87.8 701.2,95.0 705.2,82.5 709.1,87.4 713.1,90.7 717.1,92.9 721.1,82.7 725.0,103.1 729.0,92.4 733.0,88.2 736.9,84.0 740.9,81.3 744.9,89.2 748.8,91.2 752.8,87.3 756.8,81.7 760.8,86.6 764.7,89.0 768.7,90.7 772.7,90.1 776.6,81.5 780.6,89.5 784.6,81.9 788.5,87.4 792.5,83.3 796.5,86.4 800.5,87.6 804.4,85.3 808.4,78.9 812.4,85.2 816.3,88.9 820.3,87.5 824.3,86.5 828.2,89.2 832.2,87.1 836.2,85.7 840.2,84.5 844.1,93.2 848.1,87.6 852.1,80.8 856.0,92.2 860.0,83.6" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"><title>增強 A（long200；前 40 個 epoch 就是 augA40）</title></polyline>
+  <circle cx="105.7" cy="151.1" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 10 個 epoch：0.56589</title></circle>
+  <circle cx="145.4" cy="136.1" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 20 個 epoch：0.60729</title></circle>
+  <circle cx="185.1" cy="124.6" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 30 個 epoch：0.63907</title></circle>
+  <circle cx="224.8" cy="111.9" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 40 個 epoch：0.67405</title></circle>
+  <circle cx="264.5" cy="102.4" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 50 個 epoch：0.70029</title></circle>
+  <circle cx="304.2" cy="95.0" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 60 個 epoch：0.72070</title></circle>
+  <circle cx="336.0" cy="89.5" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 68 個 epoch：0.73586</title></circle>
+  <circle cx="343.9" cy="98.1" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 70 個 epoch：0.71224</title></circle>
+  <circle cx="383.6" cy="97.5" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 80 個 epoch：0.71370</title></circle>
+  <circle cx="423.3" cy="90.1" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 90 個 epoch：0.73411</title></circle>
+  <circle cx="463.0" cy="93.0" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 100 個 epoch：0.72624</title></circle>
+  <circle cx="502.7" cy="90.8" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 110 個 epoch：0.73236</title></circle>
+  <circle cx="538.4" cy="80.4" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 119 個 epoch：0.76093</title></circle>
+  <circle cx="542.4" cy="113.8" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 120 個 epoch：0.66880</title></circle>
+  <circle cx="582.1" cy="85.1" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 130 個 epoch：0.74810</title></circle>
+  <circle cx="621.8" cy="91.1" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 140 個 epoch：0.73149</title></circle>
+  <circle cx="661.5" cy="85.3" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 150 個 epoch：0.74752</title></circle>
+  <circle cx="701.2" cy="95.0" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 160 個 epoch：0.72070</title></circle>
+  <circle cx="740.9" cy="81.3" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 170 個 epoch：0.75860</title></circle>
+  <circle cx="780.6" cy="89.5" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 180 個 epoch：0.73586</title></circle>
+  <circle cx="808.4" cy="78.9" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 187 個 epoch：0.76501</title></circle>
+  <circle cx="820.3" cy="87.5" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 190 個 epoch：0.74140</title></circle>
+  <circle cx="860.0" cy="83.6" r="7" fill="#3987e5" fill-opacity="0" stroke="none"><title>增強 A 第 200 個 epoch：0.75219</title></circle>
+  <circle cx="85.9" cy="155.4" r="7" fill="#d95926" fill-opacity="0" stroke="none"><title>沒有增強 第 5 個 epoch：0.55394</title></circle>
+  <circle cx="105.7" cy="169.4" r="7" fill="#d95926" fill-opacity="0" stroke="none"><title>沒有增強 第 10 個 epoch：0.51545</title></circle>
+  <circle cx="125.6" cy="144.9" r="7" fill="#d95926" fill-opacity="0" stroke="none"><title>沒有增強 第 15 個 epoch：0.58309</title></circle>
+  <circle cx="145.4" cy="119.4" r="7" fill="#d95926" fill-opacity="0" stroke="none"><title>沒有增強 第 20 個 epoch：0.65335</title></circle>
+  <circle cx="165.3" cy="113.0" r="7" fill="#d95926" fill-opacity="0" stroke="none"><title>沒有增強 第 25 個 epoch：0.67114</title></circle>
+  <circle cx="173.2" cy="112.1" r="7" fill="#d95926" fill-opacity="0" stroke="none"><title>沒有增強 第 27 個 epoch：0.67347</title></circle>
+  <circle cx="185.1" cy="111.9" r="7" fill="#d95926" fill-opacity="0" stroke="none"><title>沒有增強 第 30 個 epoch：0.67405</title></circle>
+  <circle cx="205.0" cy="112.9" r="7" fill="#d95926" fill-opacity="0" stroke="none"><title>沒有增強 第 35 個 epoch：0.67143</title></circle>
+  <circle cx="224.8" cy="112.4" r="7" fill="#d95926" fill-opacity="0" stroke="none"><title>沒有增強 第 40 個 epoch：0.67259</title></circle>
+  <circle cx="808.4" cy="78.9" r="4.5" fill="#3987e5" stroke="#161c24" stroke-width="2"/>
+  <line x1="808.4" y1="72.9" x2="808.4" y2="49.9" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-sm" x="812.4" y="48.1" text-anchor="end">第 187 個 epoch 0.76501（最佳）</text>
+  <circle cx="336.0" cy="89.5" r="4.5" fill="#3987e5" stroke="#161c24" stroke-width="2"/>
+  <line x1="336.0" y1="95.5" x2="336.0" y2="144.2" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-sm" x="342.0" y="149.6">第 68 個 epoch：第一次超過虛線</text>
+  <circle cx="173.2" cy="112.1" r="4.5" fill="#d95926" stroke="#161c24" stroke-width="2"/>
+  <line x1="502.7" y1="189.1" x2="526.5" y2="189.1" stroke="#d95926" stroke-width="3"/>
+  <text class="s-sm" x="534.5" y="193.1">沒有增強（base40）：40 個 epoch，最佳第 27 個 0.67347</text>
+  <line x1="502.7" y1="207.2" x2="526.5" y2="207.2" stroke="#3987e5" stroke-width="3"/>
+  <text class="s-sm" x="534.5" y="211.2">增強 A（long200）：200 個 epoch；前 40 個就是 augA40</text>
+</svg>
+<figcaption>圖 8.1　驗證準確率（整個驗證集一次算）。沒有增強時，40 個 epoch 內就停在 0.67；有增強時，曲線在 40 個 epoch 之後繼續上升，第 68 個 epoch 第一次超過 Medium 那條虛線（那是 Kaggle 測試集的分數，只能當參考），第 187 個 epoch 達到最高 0.76501。下表列出同樣的數字。</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<thead><tr><th>epoch</th><th>1</th><th>20</th><th>40</th><th>60</th><th>80</th><th>100</th><th>120</th><th>140</th><th>160</th><th>180</th><th>200</th></tr></thead>
+<tbody>
+<tr><td>訓練 acc</td><td>0.27928</td><td>0.71823</td><td>0.83460</td><td>0.90848</td><td>0.94132</td><td>0.95808</td><td>0.96829</td><td>0.96839</td><td>0.98120</td><td>0.97751</td><td>0.97731</td></tr>
+<tr><td>驗證 acc（真實）</td><td>0.19155</td><td>0.60729</td><td>0.67405</td><td>0.72070</td><td>0.71370</td><td>0.72624</td><td>0.66880</td><td>0.73149</td><td>0.72070</td><td>0.73586</td><td>0.75219</td></tr>
+<tr><td>驗證 loss（真實）</td><td>2.55572</td><td>1.19178</td><td>1.10745</td><td>1.12334</td><td>1.27017</td><td>1.28519</td><td>1.87311</td><td>1.41682</td><td>1.59096</td><td>1.52248</td><td>1.33576</td></tr>
+</tbody>
+</table></div>
+<p>幾個觀察：</p>
+<ul>
+  <li><strong>增強延後了「背起來」的時間，但沒有消除它</strong>：訓練準確率在 200 個 epoch 內最高到 0.9836，沒有像 base40 那樣在第 20 個 epoch 就到 1.0。驗證 loss 在第 43 個 epoch 達到最低的 0.9887，之後慢慢上升；驗證<em>準確率</em>卻還在往上爬。loss 看的是信心、準確率只看對錯（第 6 章自我測驗第 3 題），模型越來越自信，猜錯時的懲罰也越來越大。</li>
+  <li><strong>曲線跳得很厲害</strong>：第 120 個 epoch 只有 0.66880，前後的 epoch 都在 0.73 左右。學習率固定在 0.0003、沒有排程，模型在最佳點附近一直跳。最後 20 個 epoch 的真實準確率平均 0.74513，範圍 0.72566–0.76501；200 個 epoch 裡共有 68 個 epoch 的真實值高於 0.73207。<code>train.py</code> 只存「印出的數字創新高」的那一次，200 個 epoch 共存了 27 次，最後一次是第 187 個 epoch。</li>
+  <li><strong>越晚越好，但越來越慢</strong>：只看前 40、80、120 個 epoch 的話，挑出來的最佳真實值分別是 0.68805、0.73411、0.76093；從 120 到 200 個 epoch，只多了 0.4 個百分點。</li>
+  <li><strong>時間</strong>：200 個 epoch 共 137.1 分鐘，平均一個 epoch 41.0 秒。第 2 章看到這裡面大部分是 CPU 在解碼圖片；用 <code>num_workers=4</code> 的話可以縮短到四分之一左右（但要先處理第 4 章 4.6 節的亂數問題，結果才能和這裡比）。</li>
+</ul>
+<p>用驗證集的位置來說：long200 的 0.765 落在 Medium（0.73207）與 Strong（0.81872）之間。<strong>這不代表它在 Kaggle 上過了 Medium</strong>，本書沒有任何上傳紀錄；但第 5 章看到驗證集與測試集的分布很接近，Medium 的「增強 + 訓練更久」配方在本機重現了出來，方向是對的。</p>
+
+<h2 id="others">8.4　其他三個改法</h2>
+<h3 id="ls">label smoothing：ls40</h3>
+<p>只改 <code>train.py</code> 的一行：</p>
+<figure class="listing"><figcaption>train.py:77–78 — loss 的定義（ls40 改成 label_smoothing=0.1）</figcaption>
+<pre class="py" data-hot="78"><code># For the classification task, we use cross-entropy as the measurement of performance.
+criterion = nn.CrossEntropyLoss()</code></pre></figure>
+<p>改成 <code>nn.CrossEntropyLoss(label_smoothing=0.1)</code>。原本的目標是「正確類別機率 1、其他 0」；label smoothing 把它改成「正確類別 0.9 + 0.1/11、其他每一類 0.1/11」，不讓模型追求 100% 的信心（投影片第 34 頁的技巧之一）。結果：真實驗證準確率 0.69592，比同樣有增強的 augA40（0.68805）高 0.8 個百分點；但在 holdout 上只高 0.1 個百分點（0.70079 對 0.69991）。兩種量法差這麼多，表示這個差距多半在雜訊範圍內，<strong>40 個 epoch 看不出 label smoothing 有明確的效果</strong>。注意 ls40 印出的 loss 也包含了 smoothing，數值不能和其他組直接比；表裡的真實值是另外用一般的 cross entropy 算的。</p>
+
+<h3 id="resplit">重切 train／val：resplit40</h3>
+<p>投影片第 15 頁說「目前 train : validation 約 3 : 1，更多訓練資料可能有幫助」。resplit40 用 <code>FoodDataset</code> 的 <code>files</code> 參數（第 1 章 1.2 節）把驗證集打亂（Python 的 <code>random.Random(0)</code>，和 PyTorch 的亂數無關），1/3（1,143 張）留作 holdout，其餘 2,287 張併進訓練集，訓練集變成 12,153 張。在同一批 holdout 上：resplit40 0.72616，augA40 0.69991，<strong>多了 2.6 個百分點</strong>，是 40 個 epoch 的五組裡最大的改善。代價是驗證集只剩 1,143 張，估計出來的準確率比較不穩；每個 epoch 也多花一些時間（訓練圖多了 23%）。</p>
+<p>投影片第 14 頁的交叉驗證（cross validation）把這個想法做完整：把全部有標籤的資料分成 k 份，輪流拿一份當驗證、其餘訓練，訓練 k 個模型，最後把 k 個模型 ensemble 起來。每一份資料都被拿來訓練過 k − 1 次、也被驗證過一次。它需要 k 倍的訓練時間，本書沒有實際跑。</p>
+
+<h3 id="arch">換模型：res40／res0_40</h3>
+<p>第 7 章已經詳細看過：Q2 的 <code>Residual_Network</code> 兩個版本都比 <code>Classifier</code> 差（holdout 0.62030、0.65967，對 0.69991），問題出在 262,144 維輸入的全連接層。投影片第 33 頁的 Strong 提示是「Model Design」，但改模型要往「卷積部分加深加寬、攤平前用池化把維度壓小」的方向走，不是把全連接層變大。</p>
+
+<h2 id="tta">8.5　test time augmentation：不用重新訓練</h2>
+<p>第 6 章 6.6 節介紹的 TTA，只需要存好的 checkpoint。本書對四個模型各做一次：同一張驗證圖用增強 A 隨機變出 5 個版本（<code>torch.manual_seed(0)</code>），再加上一個 <code>test_tfm</code> 的原版，每個版本都過 softmax 變成機率再合併（<code>docs/tools/hw03_facts.py tta</code>）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>模型</th><th>只用 <code>test_tfm</code>（原本）</th><th>單一個增強版本</th><th>5 個增強版本平均</th><th>0.5 × 增強平均 + 0.5 × 原版（投影片的建議）</th><th>6 個版本等權重</th></tr></thead>
+<tbody>
+<tr><td>base40（訓練時沒有增強）</td><td>0.67347</td><td>0.55685–0.57172</td><td>0.63819</td><td>0.67609</td><td>0.65831</td></tr>
+<tr><td>augA40</td><td>0.68805</td><td>0.66472–0.67726</td><td>0.70379</td><td>0.70962</td><td>0.70612</td></tr>
+<tr><td>ls40</td><td>0.69592</td><td>0.67230–0.68163</td><td>0.70321</td><td><strong>0.71545</strong></td><td>0.70933</td></tr>
+<tr><td>long200</td><td>0.76501</td><td>0.74636–0.75423</td><td>0.78163</td><td>0.78309</td><td><strong>0.78950</strong></td></tr>
+</tbody>
+</table></div>
+<ul>
+  <li><strong>單一個增強版本都比原圖差</strong>：增強過的圖比較難認（裁切、黑邊、顏色變化），第 6 章自我測驗第 2 題的推論在這裡得到實測。</li>
+  <li><strong>平均之後反而比原圖好</strong>：有增強訓練的三個模型，5 個版本平均就超過原圖 0.7–1.7 個百分點，再和原圖合併又多一些。long200 從 0.76501 到 0.78309，多了 1.8 個百分點，不需要多訓練一分鐘。</li>
+  <li><strong>沒用增強訓練的模型不適合 TTA</strong>：base40 沒看過增強過的圖，5 個版本平均只有 0.63819，比原圖還差 3.5 個百分點；和原圖各半合併後也只多 0.3 個百分點。TTA 的版本要用「模型訓練時見過的那種變化」。</li>
+  <li><strong>權重沒有一定最好的</strong>：投影片建議 0.5／0.5，對 augA40 與 ls40 最好；對 long200，6 個版本等權重（原圖只占 1/6）反而更好（0.78950）。這種權重如果在驗證集上挑，挑出來的數字會偏樂觀，最好事先決定。</li>
+</ul>
+
+<h2 id="ensemble">8.6　ensemble：把幾個模型平均</h2>
+<p>投影片第 16 頁：ensemble 可以平均 logits 或機率，也可以投票。本書把幾個模型在驗證集上的 softmax 機率直接平均，取最大的一類（沒有加 TTA）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>組合（機率平均）</th><th>各自的真實驗證 acc</th><th>ensemble</th></tr></thead>
+<tbody>
+<tr><td>augA40 + ls40</td><td>0.68805、0.69592</td><td>0.73032</td></tr>
+<tr><td>long200 + ls40</td><td>0.76501、0.69592</td><td>0.77726</td></tr>
+<tr><td>augA40 + ls40 + long200</td><td>0.68805、0.69592、0.76501</td><td><strong>0.78105</strong></td></tr>
+<tr><td>base40 + augA40 + ls40 + long200</td><td>再加 0.67347</td><td>0.78105</td></tr>
+<tr><td>augA40 + res0_40 + ls40 + long200</td><td>改加 0.64606</td><td>0.78017</td></tr>
+</tbody>
+</table></div>
+<p>兩個 0.69 左右的模型，平均起來就到 0.73，多了 3.4 個百分點：augA40 與 ls40 設定不同（一個有 label smoothing），錯的圖不完全一樣，平均之後彼此抵銷了一部分錯誤。這是 ensemble 有效的條件——<strong>成員要「錯得不一樣」</strong>。加入一個明顯較弱的模型（res0_40）會稍微拉低結果；加入 base40 則剛好沒有影響。投影片第 31–32 頁建議的做法，就是用不同的種子、不同的切分、不同的模型結構各訓練一個，再 ensemble。</p>
+<p>本書沒有把 TTA 與 ensemble 疊在一起做，也沒有把任何一組交到 Kaggle。以驗證集的數字來看，long200 加上 TTA 或 ensemble 都在 0.78 左右，距離 Strong 的 0.81872 還有一段；投影片給 Strong 的提示是再加上「Model Design」與「Train Looonger」，也就是 8.4 節說的「把卷積部分做好」，再訓練得更久。</p>
+<div class="note"><h4>現在的做法</h4>
+<p>這一章的每一招，在今天都有更省力的版本：學習率排程（cosine + warmup）讓長時間訓練的曲線穩定、不必靠存最好的那一次；混合精度（<code>torch.autocast</code>）與多個 DataLoader worker 讓同樣的 200 個 epoch 快好幾倍；自動增強策略取代手調（第 6 章）；模型方面直接用 <code>timm</code> 或 <code>torchvision.models</code> 裡現成的 ResNet、ConvNeXt 結構。而最大的一步——從 ImageNet 預訓練的權重開始微調——是這份作業禁止的，比賽結束後投影片第 4 頁也鼓勵你自己試試看。</p>
+</div>
+
+<h2 id="bank">8.7　三級題庫</h2>
+<p>每一題都可以用本書的工具做：訓練用 <code>docs/tools/hw03_exp.py</code>（在 <code>HW03/</code> 裡、<code>PYTHONPATH=.</code>），推論與統計參考 <code>docs/tools/hw03_facts.py</code>。答案裡有「本書實測」的才是量過的數字，其餘是提示。</p>
+
+<h3 id="bank1">入門</h3>
+<details class="quiz"><summary>入門 1. 讓 <code>sample_log.txt</code> 真的記下每個 epoch 的驗證結果。</summary>
+<p>第 4 章 4.5 節：<code>train.py:180</code>、<code>183</code> 的 <code>with open(...)</code> 加上 <code>as f</code>，<code>181</code>、<code>184</code> 的 <code>print</code> 加上 <code>file=f</code>。跑完用 <code>cat sample_log.txt</code> 檢查：應該有 5 行，每行都是 <code>[ Valid | ... ]</code>，有進步的那幾行後面帶 <code>-&gt; best</code>；螢幕上的驗證結果則只剩一次。</p></details>
+<details class="quiz"><summary>入門 2. 把 <code>train.py</code> 的 epoch 改成 40，確認你的第 27 個 epoch 和本書一樣。</summary>
+<p>只改 <code>train.py:71</code> 的 <code>n_epochs = 40</code>。因為種子相同、<code>hw03_exp.py</code> 與 <code>train.py</code> 逐位元一致，你印出的最佳應該是第 27 個 epoch 的 <code>acc = 0.67781</code>（印出時 <code>Best model found at epoch 26</code>，從 0 起算）。換了顯示卡或套件版本，小數點後幾位可能不同。</p></details>
+<details class="quiz"><summary>入門 3. 寫出你自己的 Q1 答案，並驗證它對同一張圖能產生 5 種以上不同的結果。</summary>
+<p>照第 6 章 6.3 節：對同一張 Pillow 圖片呼叫你的 <code>train_tfm</code> 5 次，把 5 個 tensor 兩兩用 <code>torch.equal</code> 比較，除了自己和自己都要是 <code>False</code>。只用 <code>RandomHorizontalFlip</code> 會失敗（只有 2 種結果）。</p></details>
+<details class="quiz"><summary>入門 4. 用 <code>OMP_NUM_THREADS=1</code> 跑 <code>train.py</code>，比較時間與結果。</summary>
+<p>本書實測（第 2 章）：5 個 epoch 從 3 分 0.70 秒變成 2 分 27.89 秒，印出的每一行、<code>sample_best.ckpt</code> 都逐位元組相同。你的機器核心數不同，加速的幅度也會不同。</p></details>
+<details class="quiz"><summary>入門 5. 在驗證集上算出 <code>sample_best.ckpt</code> 每一類的 recall，找出最差的兩類。</summary>
+<p>本書實測（第 5 章 5.4 節）：最差是米飯 0.208 與甜點 0.228，最好是湯 0.802。做法：<code>shuffle=False</code> 的驗證 DataLoader、<code>model.eval()</code>、收集 argmax，和標籤做 11 × 11 的混淆表。</p></details>
+
+<h3 id="bank2">進階</h3>
+<details class="quiz"><summary>進階 1. long200 每一類的 recall 和 <code>sample_best.ckpt</code> 比，哪幾類進步最多？</summary>
+<p>提示：用 <code>hw03_exp.py --dump</code> 存下的驗證集 logits（<code>.npz</code> 的 <code>val</code> 與 <code>val_y</code>）就能算，不必重新推論。第 5 章猜測甜點與米飯是最難的兩類，看看訓練更久之後它們追上了多少。（本書沒有實際算各類的變化。）</p></details>
+<details class="quiz"><summary>進階 2. 把 <code>train_loader</code> 改成 <code>num_workers=4</code>，而且讓結果和 <code>num_workers=0</code> 完全相同。</summary>
+<p>第 4 章 4.6 節：差異來自 <code>tqdm.auto</code> 多建的那個迭代器。兩種做法：拿掉 <code>tqdm</code>（本書實測拿掉後 0 與 4 個 worker 結果逐位元組相同，但和原本的 <code>train.py</code> 不同）；或給 <code>DataLoader</code> 一個專用的 <code>generator</code>，讓打亂順序不受其他亂數抽取影響。注意有隨機增強時，增強在 worker 裡執行，每個 worker 的亂數種子另有規則（<code>worker_init_fn</code>），要另外確認。</p></details>
+<details class="quiz"><summary>進階 3. 給 long200 的設定加上 cosine 學習率排程，看曲線還會不會那樣跳。</summary>
+<p>提示：<code>torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=n_epochs)</code>，每個 epoch 結束呼叫一次 <code>scheduler.step()</code>。預期學習率在後期變小，驗證曲線比較平滑，最佳值可能出現在最後幾個 epoch。（本書沒有實際跑。）</p></details>
+<details class="quiz"><summary>進階 4. 用不同的種子再跑一次 augA40，看 8.2 節表裡的差距有多少是雜訊。</summary>
+<p>提示：<code>hw03_exp.py --seed 1 --aug A --epochs 40</code>。如果兩個種子的 augA40 相差 1 個百分點以上，那麼 ls40 與 augA40 的 0.8 個百分點就不能當作 label smoothing 的效果。（本書沒有實際跑其他種子。）</p></details>
+<details class="quiz"><summary>進階 5. 把 Q2 的 <code>Residual_Network</code> 在攤平前加上 <code>nn.AdaptiveAvgPool2d(1)</code>，fc 第一層改成 <code>nn.Linear(256, 256)</code>，重跑 40 個 epoch。</summary>
+<p>這要改 <code>__init__</code>，已經不是 Q2 的答案，而是「Model Design」。第 7 章的估算：第一步 logits 的變化從約 51 降到約 0.05，參數從 6,826 萬降到約 122 萬（卷積 1,147,200 + 65,792 + 2,827）。預期不會再有第 7 章那種 loss 爆到 50 的開局；加殘差與不加殘差的比較也可能反過來。（本書沒有實際跑。）</p></details>
+
+<h3 id="bank3">挑戰</h3>
+<details class="quiz"><summary>挑戰 1. 實作 mixup，和 augA40 比較 40 個 epoch。</summary>
+<p>第 6 章 6.5 節：每個 batch 從 Beta(α, α)（常見 α = 0.2–0.4）抽一個 λ，<code>x = λ·x + (1−λ)·x[perm]</code>，標籤用 one-hot 後同樣混合；<code>nn.CrossEntropyLoss</code> 可以直接吃機率標籤（本書實測與手寫公式相同）。訓練準確率不再有意義，看驗證集即可。（本書沒有實際訓練 mixup。）</p></details>
+<details class="quiz"><summary>挑戰 2. 做 5-fold 交叉驗證，並把 5 個模型 ensemble，在 holdout 上比較。</summary>
+<p>提示：把訓練集與驗證集合併（13,296 張），先切出固定的 holdout 當最終評估，其餘分 5 份，用 <code>FoodDataset(files=...)</code> 建每一折的訓練／驗證集。5 個模型的機率平均之後，在 holdout 上和單一模型比。這需要 5 倍的訓練時間（40 個 epoch 約 2.5 小時）。（本書沒有實際跑。）</p></details>
+<details class="quiz"><summary>挑戰 3. 把 TTA 和 ensemble 疊在一起：augA40 + ls40 + long200，每個都做 TTA，再平均。</summary>
+<p>提示：<code>hw03_facts.py</code> 的 <code>tta</code> 部分已經有兩者各自的程式，把每個模型的 TTA 機率存下來再平均即可。8.5、8.6 節分別到 0.78309 與 0.78105，疊起來會不會超過 0.79？要注意權重與組合如果都在驗證集上挑，結果會偏樂觀。（本書沒有實際做。）</p></details>
+<details class="quiz"><summary>挑戰 4. 用 long200 的最佳 checkpoint 加 TTA 產生 <code>submission.csv</code>，並通過第 5 章 5.5 節的檢查。</summary>
+<p>需要改 <code>test.py</code>：<code>Classifier</code> 載入 long200 的權重；測試集用 <code>test_tfm</code> 讀一次、用增強 A 讀 K 次（每次都 <code>shuffle=False</code>，順序才一致）；收集 softmax 機率而不是 argmax；合併後再取 argmax。寫檔前後都用 5.5 節的程式檢查，Id 必須和檔名逐一相同。（本書沒有實際產生或上傳。）</p></details>
+<details class="quiz"><summary>挑戰 5. 設計一個能在 40 個 epoch 內超過 long200（0.76501）的 CNN，不用預訓練權重。</summary>
+<p>方向：卷積部分加深（例如每個區塊兩層卷積，類似 VGG 或 ResNet-18 的結構）、攤平前用全域平均池化、輸入大小維持 128 或稍大、搭配增強 A 與 cosine 排程。投影片第 33 頁的提醒：沒有預訓練權重時，ImageNet 上最好的大模型不一定適合；有下採樣的結構比較好。用 holdout 或多個種子確認你的改善不是雜訊。</p></details>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>七組實驗都由 <code>hw03_exp.py</code>（與 <code>train.py</code> 逐位元一致）跑，只改一項；對照組 40 個 epoch，另有 200 個 epoch 的長跑。所有數字都是驗證集上的，每組一個種子。</li>
+  <li>40 個 epoch：增強 A 0.68805 > 沒有增強 0.67347；label smoothing 0.69592（holdout 上幾乎沒差）；重切 train/val 在同一批 holdout 上 0.72616 對 0.69991，是最大的改善；Q2 的殘差網路兩版都比 <code>Classifier</code> 差。</li>
+  <li>增強 + 200 個 epoch：第 68 個 epoch 首次超過 0.73207，第 187 個 epoch 最高 0.76501（holdout 0.76203），曲線跳動大；137 分鐘。</li>
+  <li>TTA：long200 從 0.76501 到 0.78309（0.5／0.5）或 0.78950（6 個版本等權重）；單一增強版本比原圖差，沒用增強訓練的 base40 不適合 TTA。</li>
+  <li>ensemble：augA40 + ls40 從 0.69 左右變 0.73032；augA40 + ls40 + long200 到 0.78105。成員要「錯得不一樣」。</li>
+  <li>以上沒有一個是 Kaggle 分數；挑選最佳 epoch、TTA 權重、ensemble 組合都用了驗證集，數字會偏樂觀。</li>
+</ul>
+</div>
+
+<h2 id="further">延伸閱讀</h2>
+<ul>
+  <li><a href="https://arxiv.org/abs/1512.00567">Szegedy et al. (2015) — Rethinking the Inception Architecture</a>：label smoothing 最早被提出的地方。</li>
+  <li><a href="https://arxiv.org/abs/1608.03983">Loshchilov &amp; Hutter (2016) — SGDR</a>：cosine 學習率排程。</li>
+  <li><a href="https://arxiv.org/abs/1812.01187">He et al. (2018) — Bag of Tricks for Image Classification with CNNs</a>：增強、label smoothing、cosine、mixup 等技巧在同一套規格下的比較。</li>
+  <li><a href="https://scikit-learn.org/stable/modules/cross_validation.html">scikit-learn — Cross-validation</a>：k-fold 的觀念與切分工具。</li>
+  <li><a href="https://huggingface.co/docs/timm/index">timm 文件</a>：投影片第 8 頁推薦的模型庫（記得 <code>pretrained=False</code>）。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a><a href="appendix.html">附錄 →</a></nav>
+<footer class="chap-footer">ML2022 Spring HW03 讀碼教材 · 對應 commit 42ffd90 · 程式碼引用取自本 repo 的 HW03/；實測輸出取自 2026-10-05 本機執行</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>
