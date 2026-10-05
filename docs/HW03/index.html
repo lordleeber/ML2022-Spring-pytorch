@@ -685,7 +685,7 @@ footer.chap-footer {
 <div class="cardgrid">
   <div class="card"><h4>你會學到</h4><p>JPEG 怎麼變成 0–1 的 tensor；<code>Conv2d</code>、<code>BatchNorm2d</code>、<code>MaxPool2d</code> 的形狀與參數怎麼算；感受野；資料增強與 test time augmentation；殘差連接怎麼接；怎麼確認印出來的驗證準確率是真的。</p></div>
   <div class="card"><h4>你會看到</h4><p>只把 <code>DataLoader</code> 包進 <code>tqdm</code> 進度條，打亂的順序就變了——因為 <code>tqdm.auto</code> 會先偷偷呼叫一次 <code>iter()</code>，多抽一次亂數。還有一個每個 epoch 都被打開、卻永遠是空的 log 檔。</p></div>
-  <div class="card"><h4>你會帶走</h4><p>一份在同一規格下並排比較的實驗表（原版、資料增強、殘差網路、重切 train/val、label smoothing、TTA、ensemble），報告兩題的實作與實測，以及入門／進階／挑戰三級題庫。</p></div>
+  <div class="card"><h4>你會帶走</h4><p>一份在同一規格下並排比較的實驗表：40 個 epoch 時增強讓驗證準確率從 0.673 到 0.688，重切 train/val 再多 2.6 個百分點；增強 + 200 個 epoch 到 0.765，加上 TTA 到 0.783——都不用預訓練。還有報告兩題的答案與實測（Q2 的殘差網路反而比較差，第 7 章拆解原因），以及入門／進階／挑戰三級題庫。</p></div>
 </div>
 
 <h2 id="prereq">預備知識</h2>
@@ -705,8 +705,8 @@ footer.chap-footer {
   <li><a href="ch04.html"><span class="toc-title">第 4 章　訓練迴圈與驗證</span></a><p class="toc-desc">亂數種子與 cuDNN 決定性；梯度裁剪；被打亂的驗證集與「平均再平均」的準確率；永遠是空的 log 檔；進度條改變了亂數順序。</p></li>
   <li><a href="ch05.html"><span class="toc-title">第 5 章　預測與 submission.csv</span></a><p class="toc-desc">3,347 張測試圖；<code>pad4</code> 補零；為什麼排序後的檔名剛好對得上 <code>Id</code>。</p></li>
   <li><a href="ch06.html"><span class="toc-title">第 6 章　報告題 Q1：資料增強</span></a><p class="toc-desc">torchvision 常用的隨機轉換；同一張圖增強 5 次的真實結果；增強為什麼只用在訓練；mixup 與 TTA 的原理。</p></li>
-  <li><a href="ch07.html"><span class="toc-title">第 7 章　報告題 Q2：殘差連接</span></a><p class="toc-desc">照投影片的圖補完 <code>forward</code>；哪幾層能直接相加；一個 6,826 萬參數、其中 6,711 萬在第一層全連接的模型。</p></li>
-  <li><a href="ch08.html"><span class="toc-title">第 8 章　往上爬：改良實驗與三級題庫</span></a><p class="toc-desc">同一套規格（40 個 epoch）下並排比較各種改良；TTA 與 ensemble；一次 200 個 epoch 的長跑；入門／進階／挑戰三級題庫。</p></li>
+  <li><a href="ch07.html"><span class="toc-title">第 7 章　報告題 Q2：殘差連接</span></a><p class="toc-desc">照投影片的圖補完 <code>forward</code>；哪幾層能直接相加；一個 6,826 萬參數、其中 6,711 萬在第一層全連接的模型，為什麼加了殘差反而變差（loss 第二步就從 2.4 跳到 50）。</p></li>
+  <li><a href="ch08.html"><span class="toc-title">第 8 章　往上爬：改良實驗與三級題庫</span></a><p class="toc-desc">同一套規格（40 個 epoch）下並排比較七組實驗；200 個 epoch 的長跑在驗證集上到 0.765；用存好的 checkpoint 做 TTA（0.783）與 ensemble（0.781）；入門／進階／挑戰三級題庫。</p></li>
   <li><a href="appendix.html"><span class="toc-title">附錄　名詞對照與速查</span></a><p class="toc-desc">中英名詞對照、指令速查、每一層的 tensor 形狀、關鍵數字一覽，以及讀程式時整理出的 repo 問題清單。</p></li>
 </ol>
 

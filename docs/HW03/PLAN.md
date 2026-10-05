@@ -4,6 +4,8 @@ HW03（Image Classification，food-11 食物分類 CNN）的 HTML 教材還沒�
 
 ## 狀態（2026-10-05）
 
+- **全書完成**：index、outline、ch00–ch08、appendix 都已推上 master；事實與實驗紀錄在 FACTS.md、docs/tools/hw03_*（hw03_exp.py 與 train.py 逐位元一致）。各章沒有冷讀（使用者停用）。以下是寫作過程的紀錄。
+
 - Phase 0 進行中（2026-10-05）。使用者決定：**新版共用樣式**、**事實一次量完**、ch08 用**縮小規格並排＋一次長跑**、ch01／ch06 **放少量小縮圖**（每類約 1 張、約 96px，放 docs/HW03/img/）。
 - **本 session 使用者停用冷讀**（2026-10-05，只限這個 session）。
 - 驗證指標偏差（Phase 0 實測，用 2026-10-03 的 `sample_best.ckpt`）：整個驗證集一次算 acc 0.55394、loss 1.3245；照 train.py 逐批平均（8 種打亂順序）acc 0.5525–0.5563、loss 1.3178–1.3275。最後一批 102 張（3430 = 13×256 + 102）。偏差很小，不必從 ch00 起改數字。
