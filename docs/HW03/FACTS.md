@@ -196,3 +196,14 @@ Best model found at epoch 4, saving model
 - 第一個訓練 batch 的 loss 2.4208555221557617（scratchpad 的 train.py 複本 t3.py 印的）；ln 11 = 2.3979。
 - tqdm：`train.py:19` `from tqdm.auto import tqdm`；`tqdm/asyncio.py` 的 `__init__` 第 37 行 `self.iterable_iterator = iter(iterable)`（教材引用 23–38 行，中間兩個 `__anext__`/`__aiter__` 分支以 `...` 省略）。追蹤 `Tensor.random_` 看到抽亂數的位置是 torch `dataloader.py:708`（`_BaseDataLoaderIter.__init__`）。
 - 名詞首見（ch04）：cuDNN、deterministic／benchmark、zero_grad／backward／step、梯度累加、gradient accumulation（只提名稱）、log-softmax、Adam、weight decay、AdamW、scheduler／warmup／cosine（只提名稱）、梯度裁剪（L2 norm）、no_grad、early stopping、state_dict、tqdm_asyncio、DataLoader generator。
+
+## ch05 實測（2026-10-05，本機）
+- test 檔名排序後 == `[f"{i:04d}.jpg" for i in range(1, 3348)]`（連續、補零）。
+- `pad4`：1→'0001'、42→'0042'、3347→'3347'、12345→'12345'；1..9999 全部 == `str(i).zfill(4)` == `f"{i:04d}"`。
+- squeeze 邊界：(1,11) logits → `np.argmax(...,axis=1).squeeze().tolist()` → `3`（int）；`[1,2] += 3` → `TypeError: 'int' object is not iterable`。19 張 → list。3346 = 2×7×239。
+- `inspect.signature(torch.load)` 的 weights_only 預設是 None（執行時決定；PyTorch 2.6 起等同 True）。
+- sample_best.ckpt 在驗證集（shuffle=False）：acc 0.5539358854293823；各類 recall [0.456, 0.285, 0.228, 0.581, 0.641, 0.668, 0.544, 0.208, 0.66, 0.802, 0.651]；被猜成各類 [412, 122, 180, 453, 377, 488, 150, 38, 484, 541, 185]、真實 [362, 144, 500, 327, 326, 449, 147, 96, 347, 500, 232]。最大混淆（張數, 真, 猜）：(72, 2, 8)、(71, 2, 3)、(65, 2, 5)、(50, 3, 0)、(47, 2, 0)、(47, 0, 4)。第 7 類那一列 [23, 2, 0, 2, 2, 2, 22, 20, 7, 15, 1]。
+- 隨機對應的期望準確率（用驗證集的預測與真實分布）：Σ pred_k × true_k ÷ 3430² = 1,253,923 ÷ 11,764,900 ≈ 0.1066。
+- `submission.csv` 用 csv 讀：`['Id', 'Category']`、`['0001', '9']`、3,347 列。
+- 名詞首見（ch05）：state_dict 載入、weights_only、recall、混淆（confusion）。
+- 上傳前檢查（ch05 5.5 節逐字）：`['Id', 'Category'] 3347`、`Id == test file names: True`、`Id unique: True`、`Category values: [0, 1, ..., 10]`。
