@@ -58,3 +58,4 @@ Thumbs.db
 
 # Python virtual environment
 .venv/
+!docs/HW03/img/*.jpg

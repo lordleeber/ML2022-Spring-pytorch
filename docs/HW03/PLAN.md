@@ -4,7 +4,9 @@ HW03（Image Classification，food-11 食物分類 CNN）的 HTML 教材還沒�
 
 ## 狀態（2026-10-05）
 
-- 還沒開始。下一步是 Phase 0。
+- Phase 0 進行中（2026-10-05）。使用者決定：**新版共用樣式**、**事實一次量完**、ch08 用**縮小規格並排＋一次長跑**、ch01／ch06 **放少量小縮圖**（每類約 1 張、約 96px，放 docs/HW03/img/）。
+- **本 session 使用者停用冷讀**（2026-10-05，只限這個 session）。
+- 驗證指標偏差（Phase 0 實測，用 2026-10-03 的 `sample_best.ckpt`）：整個驗證集一次算 acc 0.55394、loss 1.3245；照 train.py 逐批平均（8 種打亂順序）acc 0.5525–0.5563、loss 1.3178–1.3275。最後一批 102 張（3430 = 13×256 + 102）。偏差很小，不必從 ch00 起改數字。
 - **使用者 2026-10-05 決定：HW03 像 HW02 一樣，在本機一章一章寫**（一章一停、使用者確認後才推上 master、寫下一章），不寫雲端 prompt。冷讀照 skill 預設要跑（HW02 的暫停只限那個 session），除非使用者另外說。
 - 程式：`HW03/` 下 6 個檔共 435 行（config.py 4、dataset.py 43、classifier.py 49、others.py 97、train.py 196、test.py 46）。作業說明 `HW03/Machine Learning HW3 - Image Classification.pdf`（已在 repo）。
 - 2026-10-03 在共用 .venv 跑過一次：5 個 epoch 後 val acc 0.555。
