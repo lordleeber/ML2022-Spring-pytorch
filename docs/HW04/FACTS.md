@@ -82,6 +82,17 @@
   - 補齊用的 -20 比下限 -20.72 高一點點，和「沒有聲音」幾乎一樣，所以補的格子看起來像靜音。
   - 第一個檔 `uttr-18e3…`（id03074）前 2 格、前 6 個 mel：`[[2.8591, 3.6222, 2.3766, 1.9587, 2.6407, 2.2761], [2.9617, 2.3626, 3.1416, 2.5672, 2.6972, 2.7577]]`。
 
+## ch01 實測補充（2026-10-06）
+- 檔案大小：`log_melspectrogram.pt` 56,729 bytes、`sox_effects.pt` 4,190 bytes；`uttr-18e3….pt` 70,315 bytes（435×40×4 = 69,600 + 715）。整個 `Dataset/`：apparent size 6,854,834,577 bytes、占用 6,982,430,720 bytes；全部 64,666 句共 42,492,208 格（平均 657.1），float32 數值 6,798,753,280 bytes。
+- 每 100 格一組的訓練長度直方圖（ch01 圖 1.1）：0–99 1、100–199 9、200–299 310、300–399 6,357、400–499 16,608、500–599 10,570、600–699 6,689、700–799 4,410、800–899 2,965、900–999 2,152、1000–1099 1,460、1100–1199 1,180、1200–1299 850、1300–1399 631、1400–1499 492、1500–1599 394、1600–1699 287、1700–1799 223、1800–1899 188、1900–1999 165、≥2000 725（>2000 是 724，有 1 句剛好 2000）。最長 7,193 格是 id00924 的 `uttr-be8ab8b8…`。
+- 每人句數：最少 id00905（編號 3）80 句、最多 id00206（編號 599）111 句（唯一一位）。5 句一組：80–84 87 人、85–89 120、90–94 95、95–99 111、100–104 102、105–109 67、110–111 18。
+- `myDataset('./Dataset')`：建立 0.79 秒；`len` 56,666、`get_speaker_number()` 600；`data[0]` = `['uttr-18e375195dc146fd8d14b8a322c29b90.pt', 436]`、`data[1]` 同人 436、`data[-1]` = `['uttr-b92e3aefd528451d92cba54a97bd3b62.pt', 347]`。id03074 的編號是 436。
+- `mapping.json` 是單行 JSON（沒有縮排）；metadata/testdata 是 4 空白縮排。
+- `torch.jit.load('Dataset/log_melspectrogram.pt')` 的 `m.code`：`melspectrogram.forward` → `torch.numpy_T(torch.squeeze(_0, 0))` → `torch.clamp(mel_tensor, 1.0000000000000001e-09)` → `torch.log`。
+- `torch.load('Dataset/log_melspectrogram.pt')`（預設 weights_only=True）：先 UserWarning（looks like a TorchScript archive dispatching to 'torch.jit.load'），再 `RuntimeError: Cannot use ``weights_only=True`` with TorchScript archives passed to ``torch.load``. In PyTorch 2.6, we changed the default value of the `weights_only` argument in `torch.load` from `False` to `True`. …`；`weights_only=False` 可以載入。`uttr-*.pt` 與 `model.ckpt` 在預設下都能載入。
+- `sox_effects.pt` 的 data.pkl 字串：effects = `[["channels","1"],["rate","16000"],["norm","-3.0"],["silence","1","0.1","1.0%","-1","0.1","1.0%"]]`（後三個是 pickle memo 參照，照順序還原）。SoX 語法：`-1` 是負數 → 整段聲音中每段 ≥0.1 秒、<1% 的靜音都刪掉（不只是頭尾）。沒有執行驗證。
+- `train.py:44` 的說明列了 `metadata_path` 參數，但 `myDataset.__init__(self, data_dir, segment_len=128)` 沒有這個參數（文件與程式不一致）。`dataset.py:15` 註解 "speaker neme" 是原版的錯字。
+
 ## 切分與 DataLoader（`hw04_facts.py split`；set_seed(87) 後照 train.py 做）
 - `random_split` → 訓練 50,999、驗證 5,667；驗證集的前幾個 index `[43097, 46091, 22324, 24456, 274]`。
 - 600 位說話者在訓練、驗證兩邊都有；驗證集每人 1–20 句（平均 9.45）。驗證集長度 mean 658.6、median 541、min 152。
