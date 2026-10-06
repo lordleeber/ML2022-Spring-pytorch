@@ -8,7 +8,7 @@ HW04（Speaker Classification，用 Transformer 從 mel-spectrogram 辨認 600 �
 - 事實全部在 `FACTS.md`；實驗工具 `docs/tools/hw04_exp.py`（與 train.py 逐位一致）、`hw04_facts.py`、`hw04_run_grid.sh`、`hw04_ch08_runs.jsonl/.txt`。
 - 下面「已經看到的疑點」的實測結論：1 成立（第 60k、70k 次存檔存的不是最佳，但影響 ≤ 1 句）；2 drop_last 只丟 3 句、平均再平均沒有偏差，**真正的偏差是驗證切 128 格、測試用整句**（0.686 vs 0.857）；3 單層不印警告，打開 2 層才印 nested tensor 警告；4 8 個 worker 下逐位元可重現；5 確認；6 一個 epoch 1,593 步、70,000 步 = 43.94 epoch；7 只有 2 句短於 128 格（都在訓練集）；8 確認。
 - baseline 只要 3 分 53 秒（Colab 估 30–40 分）。
-- ch00–ch07 已推。下一步：ch08（一章一停，使用者說「推」才推）。
+- ch00–ch08 已推。下一步：appendix，然後 Phase 4（一章一停，使用者說「推」才推）。
 - 2026-10-06 scratchpad 被清空：grid／snaps 的 ckpt 都沒了，需要時用 `hw04_exp.py --save/--save_live/--snap_dir` 重跑（每組約 4 分鐘，逐位元相同）。
 
 ## 投影片重點（只讀了文字，圖還沒看）

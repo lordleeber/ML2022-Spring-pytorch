@@ -270,7 +270,8 @@
   - conf256（480 萬參數、17 分鐘）只比 conf160 多 0.3 個百分點。
   - 長跑（Boss 配方 × 3 倍步數，27 分鐘）：full 0.967、printed 0.900；70k 時的同一配方是 0.949 → 訓練更久比換配方更有用。
   - seg256：printed 從 0.686 升到 0.773（因為驗證時看的片段變長了），但 full 幾乎不變（0.856 vs 0.857）→ printed 的提升大多是「量法」改變，不是模型變好。
-  - deepcopy（best）和 live 在 full 上的差距都在 ±0.0013 以內；有幾組 live 反而較高。printed 的最佳 ≠ full 的最佳。
+  - deepcopy（best）和 live 在 full 上的差距：16 組全部在 ±0.0018 以內（最大 conf160_k15 +0.00177）；7 組 live 較高、1 組相同、8 組較低（ch04 寫的是當時的 12 組：±0.0016、6 組）。printed 的最佳 ≠ full 的最佳。
+  - med256 是唯一 full（0.521）< crop（0.557）的一組。
   - printed 與 full 的差距隨模型變好而縮小（orig 0.17、conf160_sap 0.09）。
   - layers2／med160／med256 在 stderr 印 `enable_nested_tensor is True, but self.use_nested_tensor is False because encoder_layer.self_attn.batch_first was not True(use batch_first for better inference performance)`；其他組 stderr 是空的。
 - 這些都是驗證集上的數字。驗證集和訓練集是同一批 600 人的句子隨機切的；Kaggle 的測試集分數無法在本機取得，不能宣稱過了哪條基準線。
