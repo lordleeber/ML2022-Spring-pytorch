@@ -185,6 +185,24 @@
 - 模型吃整句：`(1, 4940, 40)` → `(1, 600)`（hw04_facts.py model）。
 - ch00 的推論（標明是推論）：Simple 基準線 = 跑範例程式（p.12），本 repo = 範例程式，但驗證集整句 0.857 → 驗證集可能比測試集容易得多（同一批說話者、可能同一支影片的句子隨機切）。
 
+## ch05 實測（`hw04_facts.py ch05 <live> <best>`，2026-10-06）
+- scratchpad 在 2026-10-06 被清空（grid/snaps 都不見了）；用 `hw04_exp.py --name orig --save best --save_live live` 重跑一次（229.2 s 訓練），best full 0.85724／live 0.85707，與先前一致；live 預測寫出的 csv md5 = `f926bcf7…`，與 train.py 的 model.ckpt 跑 test.py 的 output.csv 相同 → live 就是 train.py 的 model.ckpt。nvidia-smi compute apps 前後皆空。
+- `InferenceDataset[0]` = (`uttr-b52d….pt`, (813, 40))，[1] = (`uttr-fc88….pt`, (738, 40))。`inference_collate_batch` 兩句 → `RuntimeError: stack expects each tensor to be equal size, but got [813, 40] at entry 0 and [738, 40] at entry 1`。一句 → paths 是 tuple（長度 1）、mels (1, 813, 40)。
+- `outs.argmax(1).cpu().numpy()` 的元素型別是 `numpy.int64`（repr `np.int64(292)`）；`str(pred)` = `'292'` → `id03196`；`id2speaker[pred]`（不轉字串）→ `KeyError: np.int64(292)`。speaker2id 與 id2speaker 對 600 個都互為反函數。
+- 測試 8,000 句、batch 1、只算模型（mel 已在 RAM）：3.03 s；逐句時間中位數：<500 格 0.37 ms、500–1000 0.38、1000–2000 0.41、2000–3000 0.62、3000–5000 0.78 ms；最長 4,940 格 1.37 ms；合計 3.10 s。test.py 整支 11.36 s（含啟動、8 個 worker 讀 8,000 個檔）。
+- live（70k）vs best（68k）：測試集預測不同 **82 句**（1.0%）；驗證集不同 22 句，準確率只差 1 句（0.85707 vs 0.85724）。
+- 忘了 `model.eval()`（dropout 開著，manual_seed(0)）：驗證整句 **0.8583**（比 eval 的 0.85707 還略高）；測試預測和 eval 不同 396 句；兩次 train() 模式（seed 0 vs 1）彼此不同 405 句 → 結果變成隨機的，不一定變差。
+- 依長度分組（驗證集，live；整句 vs 固定 128 格片段 random.Random(0)）；測試句數同組：
+  - [0,400)：驗證 696 句、整句 0.8161、片段 0.6580；測試 948
+  - [400,500)：1,641、0.8105、0.6435；2,435
+  - [500,650)：1,418、0.8512、0.7003；2,048
+  - [650,900)：1,028、0.9027、0.7179；1,393
+  - [900,1300)：591、0.9272、0.7343；760
+  - ≥1300：293、0.9420、0.7031；416
+  - 驗證長度 min 152、median 541、max 7,193；固定片段整體 0.68555。
+- 測試集依長度排序、每 32 句補 -20 成一批：**不加 mask** 0.59 s，預測和 batch 1 不同 **91 句**；**加 mask**（src_key_padding_mask + 只平均真實格子）2.31 s，**0 句**不同。一批長度 538–539（最多補 1 格）：加 mask 的 logits 與 batch 1 最大差 2.29e-05，不加 mask 1.78e-01。加 mask 比不加慢的原因沒有追究。
+- 每 32 句一批的補值比例：照檔案順序 62.7%，依長度排序 0.6%。
+
 ## 實驗工具（docs/tools/hw04_exp.py）
 - `import train` 直接用 train.py 的 set_seed(87)、get_dataloader、collate_batch、scheduler、model_fn；主迴圈照抄，只多記帳。預設參數下用 `classifier.Classifier`。
 - **驗證逐位一致**：預設參數的 `--save_live`（train.py 存下的那份）和 train.py 的 `model.ckpt` 18 個 tensor 全部 `torch.equal`（檔案 md5 不同只因為存的是 deepcopy 的副本，序列化位元組不同）；35 次驗證的 acc 與 train.py 印的一致。

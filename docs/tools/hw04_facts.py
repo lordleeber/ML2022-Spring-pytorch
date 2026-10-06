@@ -14,6 +14,8 @@ Sections:
            encoding (frame order), padding, unused dropout argument (needs <ckpt>)
   ch02     DataLoader facts: a real batch, padding, worker seeds, loader throughput,
            and how much the validation accuracy moves with the random crops (needs <ckpt>)
+  ch05     test.py facts: torch.stack with 2 utterances, id2speaker keys, eval() vs train(), live vs best
+           predictions, accuracy by length, padding with/without a mask, inference time (needs <live> <best>)
 """
 import json, os, sys, random, warnings, collections
 import numpy as np
@@ -383,3 +385,157 @@ elif sec == 'ch04':
         print('step', rows[-1][0], 'full', rows[-1][1], 'fixed-crop', rows[-1][2], flush=True)
     bf = max(rows, key=lambda r: r[1]); bc = max(rows, key=lambda r: r[2])
     print('best full at step', bf, '| best fixed-crop at step', bc)
+
+elif sec == 'ch05':
+    # test.py facts: torch.stack with batch 2, id2speaker keys, eval() vs train(), deepcopy bug on the
+    # test predictions, accuracy by utterance length, padding with / without a mask, inference time.
+    import csv, hashlib, io, time
+    import train  # set_seed(87)
+    import test as T
+    from dataset import myDataset
+    from classifier import Classifier
+    from torch.utils.data import random_split
+    live_ck, best_ck = sys.argv[2], sys.argv[3]
+    tds = T.InferenceDataset(D)
+    a, b = tds[0], tds[1]
+    print('test[0]', a[0], tuple(a[1].shape), '| test[1]', b[0], tuple(b[1].shape))
+    try:
+        T.inference_collate_batch([a, b])
+    except RuntimeError as e:
+        print('stack of 2 ->', type(e).__name__ + ':', e)
+    paths, x = T.inference_collate_batch([a])
+    print('batch of 1 ->', type(paths).__name__, len(paths), tuple(x.shape))
+    mapping = json.load(open(os.path.join(D, 'mapping.json')))
+    m = Classifier(n_spks=600).cuda()
+    m.load_state_dict(torch.load(live_ck)); m.eval()
+    with torch.no_grad():
+        pred = m(x.cuda()).argmax(1).cpu().numpy()
+    p0 = pred[0]
+    print('pred type', type(p0).__name__, repr(p0), '| str(pred) ->', repr(str(p0)),
+          '| id2speaker[str]', mapping['id2speaker'][str(p0)])
+    try:
+        mapping['id2speaker'][p0]
+    except KeyError as e:
+        print('id2speaker[pred] ->', 'KeyError:', e)
+    print('speaker2id[id2speaker[str(p)]] == p for all 600?',
+          all(mapping['speaker2id'][mapping['id2speaker'][str(i)]] == i for i in range(600)))
+
+    # load everything once
+    test_paths = [u['feature_path'] for u in tds.data]
+    test_mels = [torch.load(os.path.join(D, p)) for p in test_paths]
+    train.set_seed(87)
+    ds = myDataset(D)
+    tl = int(0.9 * len(ds))
+    _, va = random_split(ds, [tl, len(ds) - tl])
+    assert va.indices[:5] == [43097, 46091, 22324, 24456, 274], va.indices[:5]
+    v_mels = [torch.load(os.path.join(D, ds.data[i][0])) for i in va.indices]
+    v_y = np.array([ds.data[i][1] for i in va.indices])
+
+    def preds_b1(model, mels, times=None):
+        out = []
+        with torch.no_grad():
+            for mel in mels:
+                if times is not None:
+                    torch.cuda.synchronize(); t = time.perf_counter()
+                p = model(mel[None].cuda()).argmax(1).cpu().numpy()
+                if times is not None:
+                    times.append(time.perf_counter() - t)
+                out.append(int(p[0]))
+        return np.array(out)
+
+    def csv_md5(preds):
+        f = io.StringIO(newline='')
+        w = csv.writer(f)
+        w.writerows([['Id', 'Category']] + [[p, mapping['id2speaker'][str(q)]] for p, q in zip(test_paths, preds)])
+        s = f.getvalue().encode()
+        return hashlib.md5(s).hexdigest(), s.count(b'\n')
+
+    preds_b1(m, test_mels[:200])  # warm-up
+    t0 = time.perf_counter(); live_test = preds_b1(m, test_mels); t_b1 = time.perf_counter() - t0
+    print('live: test batch-1 model loop %.2f s (mels already in RAM)' % t_b1, '| csv md5/lines', csv_md5(live_test))
+    live_val = preds_b1(m, v_mels)
+    print('live: valid full acc', round((live_val == v_y).mean(), 5))
+
+    mb = Classifier(n_spks=600).cuda(); mb.load_state_dict(torch.load(best_ck)); mb.eval()
+    best_test = preds_b1(mb, test_mels)
+    best_val = preds_b1(mb, v_mels)
+    print('best(68k) valid full acc', round((best_val == v_y).mean(), 5),
+          '| test preds differing live vs best:', int((best_test != live_test).sum()),
+          '| valid preds differing:', int((best_val != live_val).sum()))
+
+    # forgetting model.eval(): dropout stays on
+    m.train(); torch.manual_seed(0)
+    tr_val = preds_b1(m, v_mels); tr_test = preds_b1(m, test_mels)
+    torch.manual_seed(1); tr_test2 = preds_b1(m, test_mels)
+    m.eval()
+    print('train() mode: valid full acc', round((tr_val == v_y).mean(), 5),
+          '| test preds differing from eval():', int((tr_test != live_test).sum()),
+          '| two train()-mode runs differ on', int((tr_test != tr_test2).sum()))
+
+    # accuracy by utterance length (validation), full vs fixed 128-frame crop; test lengths in the same bins
+    rng = random.Random(0)
+    crops = []
+    for mel in v_mels:
+        s = rng.randint(0, len(mel) - 128); crops.append(mel[s:s + 128])
+    with torch.no_grad():
+        crop_pred = m(torch.stack(crops).cuda()).argmax(1).cpu().numpy()
+    vl = np.array([len(x) for x in v_mels]); tlen = np.array([len(x) for x in test_mels])
+    edges = [0, 400, 500, 650, 900, 1300, 10 ** 9]
+    print('valid crop acc (fixed) overall', round((crop_pred == v_y).mean(), 5))
+    for lo, hi in zip(edges[:-1], edges[1:]):
+        k = (vl >= lo) & (vl < hi)
+        print(f'len [{lo},{hi}): valid n={k.sum()} full={(live_val[k] == v_y[k]).mean():.4f} '
+              f'crop={(crop_pred[k] == v_y[k]).mean():.4f} | test n={((tlen >= lo) & (tlen < hi)).sum()}')
+    print('valid lengths min/median/max', vl.min(), int(np.median(vl)), vl.max())
+
+    # batching the test set: sort by length, pad with -20 (like train.py), with and without a mask
+    def fwd_masked(model, x, lens):
+        out = model.prenet(x).permute(1, 0, 2)
+        mask = torch.arange(x.shape[1], device=x.device)[None, :] >= lens[:, None]  # True = padding
+        out = model.encoder_layer(out, src_key_padding_mask=mask).transpose(0, 1)
+        keep = (~mask).unsqueeze(-1).float()
+        return model.pred_layer((out * keep).sum(1) / keep.sum(1))
+
+    order = np.argsort(tlen, kind='stable')
+    def batched(masked, bs=32):
+        pred = np.zeros(len(test_mels), dtype=int); maxdiff = 0.0
+        with torch.no_grad():
+            for i in range(0, len(order), bs):
+                idx = order[i:i + bs]
+                xs = [test_mels[j] for j in idx]
+                lens = torch.tensor([len(t) for t in xs], device='cuda')
+                x = torch.nn.utils.rnn.pad_sequence(xs, batch_first=True, padding_value=-20).cuda()
+                o = fwd_masked(m, x, lens) if masked else m(x)
+                pred[idx] = o.argmax(1).cpu().numpy()
+        return pred
+    for masked in (False, True):
+        batched(masked)  # warm-up
+        torch.cuda.synchronize(); t0 = time.perf_counter(); p = batched(masked); torch.cuda.synchronize()
+        print(f'sorted batches of 32, pad -20, mask={masked}: {time.perf_counter() - t0:.2f} s, '
+              f'preds differing from batch-1: {int((p != live_test).sum())}')
+    # unsorted (test.py order) batches without mask: how much padding
+    pads = []
+    for i in range(0, len(tlen), 32):
+        L = tlen[i:i + 32]; pads.append((L.max() - L).sum() / (L.max() * len(L)))
+    pads_s = []
+    for i in range(0, len(order), 32):
+        L = tlen[order[i:i + 32]]; pads_s.append((L.max() - L).sum() / (L.max() * len(L)))
+    print('padding fraction, batches of 32: file order %.3f, sorted by length %.4f' % (np.mean(pads), np.mean(pads_s)))
+    # masked logits vs batch-1 logits for one batch
+    with torch.no_grad():
+        idx = order[4000:4032]; xs = [test_mels[j] for j in idx]
+        lens = torch.tensor([len(t) for t in xs], device='cuda')
+        x = torch.nn.utils.rnn.pad_sequence(xs, batch_first=True, padding_value=-20).cuda()
+        ob = fwd_masked(m, x, lens); on = m(x)
+        o1 = torch.cat([m(t[None].cuda()) for t in xs])
+        print('one batch (lens %d-%d): max |logit diff| masked vs batch-1 %.2e, unmasked vs batch-1 %.2e'
+              % (lens.min(), lens.max(), (ob - o1).abs().max(), (on - o1).abs().max()))
+
+    # per-utterance time (batch 1, model only) by length
+    times = []
+    preds_b1(m, test_mels, times)
+    times = np.array(times) * 1000
+    for lo, hi in [(0, 500), (500, 1000), (1000, 2000), (2000, 3000), (3000, 5000)]:
+        k = (tlen >= lo) & (tlen < hi)
+        print(f'time len [{lo},{hi}): n={k.sum()} median {np.median(times[k]):.2f} ms max {times[k].max():.2f} ms')
+    print('time total %.2f s, longest utterance %d frames: %.2f ms' % (times.sum() / 1000, tlen.max(), times[tlen.argmax()]))
