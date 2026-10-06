@@ -26,7 +26,7 @@ Variants (all default to train.py):
                                                nn.TransformerEncoder like the commented line 41)
   --norm_first 1                               pre-norm encoder layers (LayerNorm before attention/FFN)
   --arch conformer                             Conformer blocks (FFN/2, MHSA, conv module, FFN/2, LN)
-  --kernel 31                                  depthwise conv kernel of the conformer conv module
+  --kernel 31                                  depthwise conv kernel of the conformer conv module (0: no conv module)
   --pool sap                                   self-attention pooling instead of mean pooling
   --loss amsm --m 0.2 --s 30                   additive margin softmax (model outputs s*cos)
   --steps --warmup --lr --bs --seg             schedule, batch size, segment length
@@ -157,6 +157,12 @@ class ConformerBlock(nn.Module):
         return self.ln_out(x)
 
 
+class NoConv(nn.Module):
+    """--kernel 0 (ch07 ablation): replaces a block's conv module, so `x + self.conv(x)` adds nothing."""
+    def forward(self, x):
+        return torch.zeros_like(x)
+
+
 class Net(nn.Module):
     """Same skeleton as classifier.py (prenet -> encoder -> pooling -> pred_layer), with switches."""
     def __init__(self, n_spks):
@@ -164,8 +170,11 @@ class Net(nn.Module):
         d = a.d_model
         self.prenet = nn.Linear(40, d)
         if a.arch == 'conformer':
-            self.blocks = nn.ModuleList([ConformerBlock(d, a.nhead, a.ffn, a.kernel, a.dropout)
+            self.blocks = nn.ModuleList([ConformerBlock(d, a.nhead, a.ffn, a.kernel or 31, a.dropout)
                                          for _ in range(a.layers)])
+            if a.kernel == 0:
+                for b in self.blocks:
+                    b.conv = NoConv()
         else:
             layer = nn.TransformerEncoderLayer(d_model=d, dim_feedforward=a.ffn, nhead=a.nhead,
                                                dropout=a.dropout, norm_first=bool(a.norm_first))

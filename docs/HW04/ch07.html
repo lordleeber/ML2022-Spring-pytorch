@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 7 章　報告題 Q2：為什麼加卷積 — HW04 說話者辨識</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="ch08.html">第 8 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW04 讀碼教材</p>
+  <h1>第 7 章　報告題 Q2：為什麼在 Transformer 加卷積</h1>
+  <p class="chap-lead">投影片 p.22 的第二題：「簡要說明為什麼在 Transformer 加卷積層能提升表現」，2 分。這一章先把 Conformer 的卷積模組拆開，一層一層算形狀與參數；再講標準的答案——注意力看全域、卷積看局部，兩者互補。接著用實驗檢查這個答案在這份作業裡成不成立：把卷積模組拿掉、換不同的卷積核大小，看訓練好的模型怎麼使用卷積，以及它對格子順序有多敏感。第 6 章已經看到同樣大小的普通 Transformer 比 Conformer 好，所以這一章的結論會比課本的說法謹慎一些。</p>
+</header>
+<main>
+
+<h2 id="module">7.1　卷積模組逐層拆解</h2>
+
+<figure class="listing"><figcaption>docs/tools/hw04_exp.py:111–127 — 卷積模組（投影片 p.15 的紅框）</figcaption>
+<pre class="py" data-hot="116-119,123-126"><code>class ConvModule(nn.Module):
+    """Conformer convolution module (slides p.15): LN, pointwise, GLU, depthwise, BN, Swish, pointwise, dropout."""
+    def __init__(self, d, k, p):
+        super().__init__()
+        self.ln = nn.LayerNorm(d)
+        self.pw1 = nn.Conv1d(d, 2 * d, 1)
+        self.dw = nn.Conv1d(d, d, k, padding=k // 2, groups=d)
+        self.bn = nn.BatchNorm1d(d)
+        self.pw2 = nn.Conv1d(d, d, 1)
+        self.drop = nn.Dropout(p)
+
+    def forward(self, x):                       # (B, T, d)
+        y = self.ln(x).transpose(1, 2)          # (B, d, T)
+        y = F.glu(self.pw1(y), dim=1)
+        y = F.silu(self.bn(self.dw(y)))
+        y = self.drop(self.pw2(y)).transpose(1, 2)
+        return y</code></pre></figure>
+<p>卷積模組收到的是 <code>(batch, 長度, 160)</code>：每一格是一個 160 維的向量。<code>nn.Conv1d</code> 要的是 <code>(batch, 通道, 長度)</code>，所以第 123 行先做 LayerNorm 再換軸，把 160 維當成 160 個「通道」，卷積沿著時間方向滑動。之後依序是：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>步驟（行）</th><th>做什麼</th><th>輸出形狀（batch 2、128 格）</th><th>參數</th></tr></thead>
+<tbody>
+<tr><td>LayerNorm、換軸（123）</td><td>每一格各自正規化</td><td>(2, 160, 128)</td><td>320</td></tr>
+<tr><td>pointwise 卷積 <code>pw1</code>（116、124）</td><td>核大小 1：每一格各自做 160 → 320 的線性變換，不看鄰居</td><td>(2, 320, 128)</td><td>51,520</td></tr>
+<tr><td>GLU（124）</td><td>把 320 個通道切成兩半 a、b，輸出 a × sigmoid(b)：b 決定 a 的每個值放行多少</td><td>(2, 160, 128)</td><td>0</td></tr>
+<tr><td>depthwise 卷積 <code>dw</code>（117、125）</td><td><strong>唯一看鄰居的一步</strong>：每個通道各自用一個長 31 的核，對前後各 15 格加權相加</td><td>(2, 160, 128)</td><td>5,120</td></tr>
+<tr><td>BatchNorm、Swish（118、125）</td><td>依整個 batch 的統計量正規化每個通道，再過 Swish</td><td>(2, 160, 128)</td><td>320</td></tr>
+<tr><td>pointwise 卷積 <code>pw2</code>、dropout、換軸（119、126）</td><td>每一格各自 160 → 160，換回 <code>(batch, 長度, 160)</code></td><td>(2, 128, 160)</td><td>25,760</td></tr>
+</tbody>
+</table></div>
+<p>第 117 行的 <code>groups=d</code> 是「depthwise」的關鍵：通道分成 160 組，每組只有自己一個通道，所以每個通道只和自己的過去、未來相加，不和別的通道混。一般的卷積（<code>groups=1</code>）每個輸出通道要看全部 160 個輸入通道，權重是 160 × 160 × 31 = 793,600 個；depthwise 只要 160 × 31 + 160 = 5,120 個參數，少了約 155 倍。通道之間的混合交給前後兩個 pointwise 卷積，這種「depthwise + pointwise」的拆法來自 MobileNet 一類的輕量 CNN。</p>
+<p>一個核大小 31 的卷積看得到前後各 15 格，也就是 150 ms，總共 310 ms；兩個 block 疊起來，光靠卷積就能看到 61 格（610 ms）。一般的音素長度大約在幾十到一百多毫秒，所以一個卷積核大致涵蓋了「一個音素加上前後的過渡」。</p>
+<p>BatchNorm 和其他的正規化不同：訓練時用目前這個 batch 的平均與變異數，並累積成移動平均；<code>model.eval()</code> 之後改用移動平均。所以第 5 章 <code>test.py</code> 一次只送一句時，BatchNorm 用的是訓練時累積的統計量，不會因為 batch 只有 1 而出問題——前提是有呼叫 <code>model.eval()</code>。</p>
+
+<h2 id="why">7.2　標準答案：全域與局部互補</h2>
+<p>為什麼加卷積可能有用？論文與課程給的理由可以整理成三點：</p>
+<div class="cardgrid">
+  <div class="card"><h4>局部樣式</h4><p>語音的很多線索在幾十毫秒內：共振峰的移動、音高的週期、子音的爆破。卷積天生只看附近、而且在每個位置用同一組權重，正好適合抓這種「在哪裡出現都一樣」的局部樣式。自注意力要從整句的 softmax 裡「學會只看鄰居」，比較難。</p></div>
+  <div class="card"><h4>相對位置</h4><p>自注意力本身不知道格子的順序（第 3 章）。卷積核的每一個位置對應一個固定的位移（前 3 格、後 5 格……），所以它自然帶進了相對位置。第 6 章已經看到：加了卷積，模型就不再對格子順序不變。</p></div>
+  <div class="card"><h4>便宜</h4><p>depthwise 卷積的計算量和參數都很小（一個 block 只有 5,120 個參數），計算量和長度成線性，不像注意力是平方。</p></div>
+</div>
+<p>所以 Conformer 的想法是分工：注意力負責「整句裡哪些地方和我有關」，卷積負責「我附近發生了什麼」。這是報告題的標準答案，也是 Conformer 論文的動機。下面看它在這份作業裡實際成立多少。</p>
+
+<h2 id="ablation">7.3　把卷積拿掉：消融實驗</h2>
+<p>本書加跑了三組，和第 8 章的 <code>conf160</code>（2 個 Conformer block、寬 160、卷積核 31）只差卷積模組：一組完全拿掉（實驗工具 <code>--kernel 0</code>，把每個 block 的卷積模組換成輸出 0 的模組），兩組把核改成 3 和 15。其餘設定全部相同（70,000 步、種子 87），每組約 9 分鐘。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>組別</th><th>卷積模組</th><th>參數量</th><th>訓練秒數</th><th>整句</th><th>固定 128 格</th></tr></thead>
+<tbody>
+<tr><td>conf160_noconv</td><td>拿掉</td><td>1,159,960</td><td>422</td><td>0.93277</td><td>0.82319</td></tr>
+<tr><td>conf160_k3</td><td>核 3（前後各 1 格）</td><td>1,317,080</td><td>502</td><td>0.93983</td><td>0.83183</td></tr>
+<tr><td>conf160_k15</td><td>核 15（前後各 7 格）</td><td>1,320,920</td><td>503</td><td><strong>0.94106</strong></td><td>0.82936</td></tr>
+<tr><td>conf160</td><td>核 31（前後各 15 格）</td><td>1,326,040</td><td>508</td><td>0.93736</td><td>0.83325</td></tr>
+<tr><td>tf160x4_pre（第 6 章）</td><td>沒有卷積，4 層 pre-norm Transformer</td><td>1,366,040</td><td>509</td><td><strong>0.94583</strong></td><td><strong>0.84860</strong></td></tr>
+</tbody>
+</table></div>
+<p>三件事：</p>
+<ol>
+  <li><strong>卷積有幫助，但幅度不大。</strong>三種核大小都比拿掉卷積好：整句高 0.5 到 0.8 個百分點，固定片段高 0.6 到 1.0 個百分點。拿掉卷積之後參數少了 166,080 個（12.5%），訓練快了 17%。</li>
+  <li><strong>核的大小幾乎不重要。</strong>核 3、15、31 之間的差距在 0.4 個百分點以內，而且順序不一致（整句 15 最好、片段 31 最好），這個大小的差距在換種子時就可能翻過來。連只看前後各 1 格（30 ms）的卷積，都拿到了大部分的好處。</li>
+  <li><strong>它仍然輸給同樣大小的 Transformer。</strong>第 6 章的 <code>tf160x4_pre</code> 沒有任何卷積，整句 0.946、片段 0.849，比四組 Conformer 都好。也就是說，在這份作業、這個規模下，把參數花在更多層注意力上，比花在卷積上划算。</li>
+</ol>
+<p>這些都只是一個種子的結果。第 2 章量過，光是驗證時切片段的隨機性就有約 ±0.7 個百分點的變動；整句評估沒有這個雜訊，但訓練本身換種子也會變。0.5 到 0.8 個百分點的差距，「方向一致」比「大小」可信。</p>
+
+<h2 id="order">7.4　訓練好的模型怎麼用卷積</h2>
+<h3 id="order-test">它在乎格子的順序</h3>
+<p>第 3 章量過，<code>classifier.py</code> 的模型把格子倒過來或打亂，整句準確率完全一樣。本書對訓練好的三個模型做同樣的事（打亂用固定的種子）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>模型</th><th>正常順序</th><th>整句倒過來</th><th>整句隨機打亂</th></tr></thead>
+<tbody>
+<tr><td>conf160（有卷積）</td><td>0.93736</td><td>0.93489</td><td><strong>0.82619</strong></td></tr>
+<tr><td>conf160_noconv</td><td>0.93277</td><td>0.93277</td><td>0.93277</td></tr>
+<tr><td>tf160x4_pre</td><td>0.94583</td><td>0.94583</td><td>0.94583</td></tr>
+</tbody>
+</table></div>
+<p>沒有卷積的兩個模型，三欄完全相同：它們真的只看「有哪些聲音片段」，不管順序。有卷積的 <code>conf160</code> 被打亂後掉了 11 個百分點，表示它確實學會依賴「相鄰的格子彼此連貫」這件事。但倒過來只掉 0.25 個百分點：倒過來之後，每一格的鄰居還是同一批格子，只是前後對調，局部的頻譜變化大致還在；打亂之後，每一格的鄰居變成整句裡隨機的格子，局部結構就消失了。卷積用到的是「局部的連貫」，而不是「時間往哪個方向走」。</p>
+
+<h3 id="kernels">學到的卷積核</h3>
+<p>depthwise 卷積的權重形狀是 <code>(160, 1, 31)</code>：每個通道一個長 31 的核。把 160 個通道的權重取絕對值再平均，可以看出「每一個位移被看得多重」：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 350" role="img" aria-label="conf160 兩個 block 的 depthwise 卷積核，160 個通道的權重絕對值平均，依位置畫出：第 1 個 block 在中央（位移 0）最大 0.24，往兩邊降到約 0.07；第 2 個 block 幾乎是平的，在 0.11 到 0.18 之間">
+  <line x1="80" y1="232.0" x2="760" y2="232.0" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="72" y="236.0" text-anchor="end">0.05</text>
+  <line x1="80" y1="184.0" x2="760" y2="184.0" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="72" y="188.0" text-anchor="end">0.10</text>
+  <line x1="80" y1="136.0" x2="760" y2="136.0" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="72" y="140.0" text-anchor="end">0.15</text>
+  <line x1="80" y1="88.0" x2="760" y2="88.0" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="72" y="92.0" text-anchor="end">0.20</text>
+  <line x1="80" y1="40.0" x2="760" y2="40.0" stroke="#2b3540" stroke-width="1"/>
+  <text class="s-sm" x="72" y="44.0" text-anchor="end">0.25</text>
+  <line x1="80" y1="280" x2="760" y2="280" stroke="#93a1af" stroke-width="1"/>
+  <text class="s-sm" x="72" y="284" text-anchor="end">0</text>
+  <text class="s-sm" x="80.0" y="298" text-anchor="middle">-15</text>
+  <text class="s-sm" x="193.3" y="298" text-anchor="middle">-10</text>
+  <text class="s-sm" x="306.7" y="298" text-anchor="middle">-5</text>
+  <text class="s-sm" x="420.0" y="298" text-anchor="middle">0</text>
+  <text class="s-sm" x="533.3" y="298" text-anchor="middle">+5</text>
+  <text class="s-sm" x="646.7" y="298" text-anchor="middle">+10</text>
+  <text class="s-sm" x="760.0" y="298" text-anchor="middle">+15</text>
+  <text class="s-sm" x="420.0" y="320" text-anchor="middle">相對於中央那一格的位移（格，一格 10 ms；負的是之前、正的是之後）</text>
+  <polyline points="80.0,190.8 102.7,208.5 125.3,212.0 148.0,215.9 170.7,213.4 193.3,210.9 216.0,198.4 238.7,200.8 261.3,188.2 284.0,177.1 306.7,148.5 329.3,120.9 352.0,96.7 374.7,100.5 397.3,85.1 420.0,48.2 442.7,77.9 465.3,107.1 488.0,115.6 510.7,126.9 533.3,151.8 556.0,180.3 578.7,184.3 601.3,197.6 624.0,201.4 646.7,203.8 669.3,209.2 692.0,210.8 714.7,213.7 737.3,214.2 760.0,202.6" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+  <polyline points="80.0,147.1 102.7,164.9 125.3,163.9 148.0,149.3 170.7,156.1 193.3,155.3 216.0,145.9 238.7,135.8 261.3,117.2 284.0,110.7 306.7,108.3 329.3,131.6 352.0,140.9 374.7,166.2 397.3,165.6 420.0,158.8 442.7,169.0 465.3,170.9 488.0,163.7 510.7,154.0 533.3,140.2 556.0,130.4 578.7,148.7 601.3,136.8 624.0,140.5 646.7,143.9 669.3,145.9 692.0,144.3 714.7,152.0 737.3,144.6 760.0,148.1" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round" stroke-dasharray="5 3"/>
+  <g><title>位移 -15 格：第 1 個 block 0.0929｜第 2 個 block 0.1384</title><rect x="69.0" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="80.0" cy="190.8" r="2.5" fill="#3987e5"/><circle cx="80.0" cy="147.1" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 -14 格：第 1 個 block 0.0745｜第 2 個 block 0.1199</title><rect x="91.7" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="102.7" cy="208.5" r="2.5" fill="#3987e5"/><circle cx="102.7" cy="164.9" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 -13 格：第 1 個 block 0.0708｜第 2 個 block 0.1209</title><rect x="114.3" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="125.3" cy="212.0" r="2.5" fill="#3987e5"/><circle cx="125.3" cy="163.9" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 -12 格：第 1 個 block 0.0668｜第 2 個 block 0.1361</title><rect x="137.0" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="148.0" cy="215.9" r="2.5" fill="#3987e5"/><circle cx="148.0" cy="149.3" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 -11 格：第 1 個 block 0.0694｜第 2 個 block 0.1291</title><rect x="159.7" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="170.7" cy="213.4" r="2.5" fill="#3987e5"/><circle cx="170.7" cy="156.1" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 -10 格：第 1 個 block 0.0720｜第 2 個 block 0.1299</title><rect x="182.3" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="193.3" cy="210.9" r="2.5" fill="#3987e5"/><circle cx="193.3" cy="155.3" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 -9 格：第 1 個 block 0.0850｜第 2 個 block 0.1397</title><rect x="205.0" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="216.0" cy="198.4" r="2.5" fill="#3987e5"/><circle cx="216.0" cy="145.9" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 -8 格：第 1 個 block 0.0825｜第 2 個 block 0.1502</title><rect x="227.7" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="238.7" cy="200.8" r="2.5" fill="#3987e5"/><circle cx="238.7" cy="135.8" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 -7 格：第 1 個 block 0.0956｜第 2 個 block 0.1696</title><rect x="250.3" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="261.3" cy="188.2" r="2.5" fill="#3987e5"/><circle cx="261.3" cy="117.2" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 -6 格：第 1 個 block 0.1072｜第 2 個 block 0.1764</title><rect x="273.0" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="284.0" cy="177.1" r="2.5" fill="#3987e5"/><circle cx="284.0" cy="110.7" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 -5 格：第 1 個 block 0.1370｜第 2 個 block 0.1789</title><rect x="295.7" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="306.7" cy="148.5" r="2.5" fill="#3987e5"/><circle cx="306.7" cy="108.3" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 -4 格：第 1 個 block 0.1657｜第 2 個 block 0.1546</title><rect x="318.3" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="329.3" cy="120.9" r="2.5" fill="#3987e5"/><circle cx="329.3" cy="131.6" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 -3 格：第 1 個 block 0.1909｜第 2 個 block 0.1449</title><rect x="341.0" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="352.0" cy="96.7" r="2.5" fill="#3987e5"/><circle cx="352.0" cy="140.9" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 -2 格：第 1 個 block 0.1870｜第 2 個 block 0.1185</title><rect x="363.7" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="374.7" cy="100.5" r="2.5" fill="#3987e5"/><circle cx="374.7" cy="166.2" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 -1 格：第 1 個 block 0.2030｜第 2 個 block 0.1192</title><rect x="386.3" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="397.3" cy="85.1" r="2.5" fill="#3987e5"/><circle cx="397.3" cy="165.6" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +0 格：第 1 個 block 0.2415｜第 2 個 block 0.1263</title><rect x="409.0" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="420.0" cy="48.2" r="2.5" fill="#3987e5"/><circle cx="420.0" cy="158.8" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +1 格：第 1 個 block 0.2105｜第 2 個 block 0.1156</title><rect x="431.7" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="442.7" cy="77.9" r="2.5" fill="#3987e5"/><circle cx="442.7" cy="169.0" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +2 格：第 1 個 block 0.1801｜第 2 個 block 0.1136</title><rect x="454.3" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="465.3" cy="107.1" r="2.5" fill="#3987e5"/><circle cx="465.3" cy="170.9" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +3 格：第 1 個 block 0.1712｜第 2 個 block 0.1211</title><rect x="477.0" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="488.0" cy="115.6" r="2.5" fill="#3987e5"/><circle cx="488.0" cy="163.7" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +4 格：第 1 個 block 0.1595｜第 2 個 block 0.1312</title><rect x="499.7" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="510.7" cy="126.9" r="2.5" fill="#3987e5"/><circle cx="510.7" cy="154.0" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +5 格：第 1 個 block 0.1335｜第 2 個 block 0.1456</title><rect x="522.3" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="533.3" cy="151.8" r="2.5" fill="#3987e5"/><circle cx="533.3" cy="140.2" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +6 格：第 1 個 block 0.1039｜第 2 個 block 0.1558</title><rect x="545.0" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="556.0" cy="180.3" r="2.5" fill="#3987e5"/><circle cx="556.0" cy="130.4" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +7 格：第 1 個 block 0.0997｜第 2 個 block 0.1368</title><rect x="567.7" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="578.7" cy="184.3" r="2.5" fill="#3987e5"/><circle cx="578.7" cy="148.7" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +8 格：第 1 個 block 0.0858｜第 2 個 block 0.1492</title><rect x="590.3" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="601.3" cy="197.6" r="2.5" fill="#3987e5"/><circle cx="601.3" cy="136.8" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +9 格：第 1 個 block 0.0819｜第 2 個 block 0.1453</title><rect x="613.0" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="624.0" cy="201.4" r="2.5" fill="#3987e5"/><circle cx="624.0" cy="140.5" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +10 格：第 1 個 block 0.0794｜第 2 個 block 0.1418</title><rect x="635.7" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="646.7" cy="203.8" r="2.5" fill="#3987e5"/><circle cx="646.7" cy="143.9" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +11 格：第 1 個 block 0.0738｜第 2 個 block 0.1397</title><rect x="658.3" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="669.3" cy="209.2" r="2.5" fill="#3987e5"/><circle cx="669.3" cy="145.9" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +12 格：第 1 個 block 0.0721｜第 2 個 block 0.1414</title><rect x="681.0" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="692.0" cy="210.8" r="2.5" fill="#3987e5"/><circle cx="692.0" cy="144.3" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +13 格：第 1 個 block 0.0691｜第 2 個 block 0.1333</title><rect x="703.7" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="714.7" cy="213.7" r="2.5" fill="#3987e5"/><circle cx="714.7" cy="152.0" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +14 格：第 1 個 block 0.0685｜第 2 個 block 0.1410</title><rect x="726.3" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="737.3" cy="214.2" r="2.5" fill="#3987e5"/><circle cx="737.3" cy="144.6" r="2.5" fill="#d95926"/></g>
+  <g><title>位移 +15 格：第 1 個 block 0.0806｜第 2 個 block 0.1374</title><rect x="749.0" y="40" width="22" height="240" fill="#000" fill-opacity="0"/><circle cx="760.0" cy="202.6" r="2.5" fill="#3987e5"/><circle cx="760.0" cy="148.1" r="2.5" fill="#d95926"/></g>
+  <text class="s-lbl" x="772" y="206.6">第 1 個 block</text>
+  <text class="s-lbl" x="772" y="152.1">第 2 個 block</text>
+  <text class="s-sm" x="428.0" y="40.2">中央 0.24</text>
+  <line x1="90" y1="44" x2="112" y2="44" stroke="#3987e5" stroke-width="2"/>
+  <text class="s-sm" x="120" y="48">第 1 個 block：集中在附近幾格</text>
+  <line x1="90" y1="64" x2="112" y2="64" stroke="#d95926" stroke-width="2" stroke-dasharray="5 3"/>
+  <text class="s-sm" x="120" y="68">第 2 個 block：攤得很平（中央反而略低）</text>
+</svg>
+<figcaption>圖 7.1　conf160 兩個 block 的 depthwise 卷積核：160 個通道的權重絕對值的平均，依相對位移畫出。滑鼠移到任一位移上會顯示兩個數字。</figcaption>
+</figure>
+
+<p>兩個 block 學到的東西很不一樣。第 1 個 block 的核集中在中央：中央那一格的平均權重 0.24，是兩端（約 0.07）的 3 倍多；以每個通道來算，中央 3 格占了整個核的 17.8%（中位數；如果 31 格一樣重應該是 9.7%），離中央 8 格以上的 16 格只占 31.7%（一樣重的話是 51.6%）。它主要在看前後幾十毫秒。第 2 個 block 幾乎是平的，中央 3 格只占 7.5%，比均勻還少；它用到整個 310 ms 的範圍，做的比較像「把附近一段平滑起來」。第一層抓局部、後面的層看更大的範圍，和 CNN 一層層擴大感受野的典型模式一致。這也解釋了為什麼核 3 就有大部分的好處：第 1 個 block 本來就主要用中央附近幾格。</p>
+
+<h3 id="branches">卷積分支有多大</h3>
+<p>還有一個問題：卷積模組會不會只是被學成「幾乎輸出 0」、等於沒用？本書把 200 句驗證語句整句送進 <code>conf160</code>，量每一段殘差分支的輸出大小，除以進入 block 時的大小（每一格向量長度的平均）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>半步 FFN 1</th><th>注意力</th><th>卷積</th><th>半步 FFN 2</th></tr></thead>
+<tbody>
+<tr><td>第 1 個 block</td><td>0.478</td><td>0.296</td><td><strong>0.490</strong></td><td>0.356</td></tr>
+<tr><td>第 2 個 block</td><td>0.915</td><td>1.097</td><td>0.778</td><td>0.123</td></tr>
+</tbody>
+</table></div>
+<p>在第 1 個 block，卷積是四個分支裡最大的，比注意力還大。模型並沒有忽略卷積，它在第一層大量使用卷積抓局部特徵，第二層再交給注意力。這和圖 7.1 一致。只是「用得很多」不等於「不可或缺」：拿掉卷積的模型會改用其他分支補上，最後只差 0.5 個百分點（7.3 節）。</p>
+
+<h2 id="discussion">7.5　那為什麼論文說加卷積有用？</h2>
+<p>這一章的實驗和論文並不矛盾，只是任務與規模不同。本書沒有實驗驗證下面的推測，但它們是合理的方向：</p>
+<ul>
+  <li><strong>輸出的粒度。</strong>語音辨識要在每一格（或每幾格）輸出文字，局部的細節直接決定答案；說話者辨識最後把整句平均成一個向量，局部細節被平均掉了一大部分，比較在意「整體的音色」。</li>
+  <li><strong>位置資訊。</strong>這份作業的模型都沒有位置編碼，說話者是誰也不太需要順序（7.4 節：不看順序的模型照樣有 0.93–0.95）。卷積「補上位置」的那部分好處，在這裡用處不大。</li>
+  <li><strong>規模與訓練長度。</strong>論文用 16 個 block、SpecAugment、訓練得更久；這裡只有 2 個 block、70,000 步。第 8 章會看到，Conformer 加上 SAP 與 AM-Softmax 的配方訓練三倍久，整句還能從 0.949 升到 0.967。</li>
+</ul>
+<p>所以，報告題要的「為什麼」可以照 7.2 節回答；但如果要寫「在本作業中確實提升了表現」，就應該附上對照：和拿掉卷積的同一個模型比（有，+0.5 個百分點），以及和同樣大小的 Transformer 比（沒有，−0.85 個百分點）。</p>
+
+<h2 id="answer">7.6　作答範例</h2>
+<div class="note"><h4>Q2：為什麼在 Transformer 加卷積層能提升表現（範例，約 250 字）</h4>
+<p>自注意力讓每一格直接看整句，擅長抓全域關係，但它對局部的連續變化沒有特別的偏好，本身也不知道格子的順序。語音的許多線索（共振峰移動、音高、子音）集中在幾十毫秒內，卷積只看相鄰的幾格、在每個位置共用同一組權重，正好適合抓這種局部樣式，而且卷積核的每個位置對應固定的位移，等於帶入了相對位置資訊。depthwise 卷積的參數與計算都很少。兩者互補：注意力管全域、卷積管局部。我在本作業的 Conformer（2 個 block、寬 160）上拿掉卷積模組，驗證集整句準確率從 0.937 降到 0.933；訓練好的模型把格子打亂後準確率掉了 11 個百分點，第一層的卷積核集中在前後幾格，表示它確實利用了局部的連貫性。不過同樣參數量的 4 層 Transformer 有 0.946，在這個任務上，增加注意力層比加卷積更有效。</p>
+</div>
+
+<div class="note"><h4>現在的做法：卷積與注意力的混合仍是主流</h4>
+<p>在語音上，「注意力加卷積」的混合在 Conformer 之後仍是主流，改良版多半在調整兩者怎麼分工：E-Branchformer 讓注意力分支與卷積分支並排再合併，Zipformer 讓不同層用不同的時間解析度。自監督的語音模型（wav2vec 2.0、HuBERT）則在最前面用一疊卷積把波形轉成特徵，再接 Transformer。說話者辨識的主力模型 ECAPA-TDNN 甚至主要是卷積（加上通道注意力與 attentive pooling）。這些都說明局部的卷積和全域的注意力各有用處，但比例要看任務來調——本章的實驗就是一個「這個任務不太需要卷積」的例子。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>卷積模組 = LN → pointwise（160→320）→ GLU → depthwise（核 31）→ BN → Swish → pointwise → dropout；只有 depthwise 那一步看鄰居，參數 5,120（一般卷積要 793,600）。</li>
+  <li>標準答案：注意力看全域、卷積看局部；卷積帶進相對位置；而且便宜。</li>
+  <li>消融：拿掉卷積整句 0.933，核 3／15／31 是 0.940／0.941／0.937；卷積有幫助，但只有 0.5–0.8 個百分點，核大小幾乎不重要；同參數的 Transformer 0.946 仍然最好。</li>
+  <li>訓練好的 Conformer 依賴局部連貫：打亂格子掉 11 個百分點，倒過來幾乎不變；沒有卷積的模型完全不受順序影響。</li>
+  <li>第 1 個 block 的卷積核集中在中央、卷積分支比注意力還大；第 2 個 block 的核攤得很平。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 把第 117 行的 <code>groups=d</code> 拿掉（變成一般的卷積），參數會變多少？</summary>
+<p>一般的 <code>Conv1d(160, 160, 31)</code> 有 160 × 160 × 31 + 160 = 793,760 個參數，depthwise 是 160 × 31 + 160 = 5,120。一個 block 多了 788,640 個，兩個 block 多了約 158 萬，整個模型會從 1.33M 變成約 2.9M，超過兩倍。</p></details>
+<details class="quiz"><summary>2. GLU 之前的 pointwise 卷積為什麼輸出 320 個通道，而不是 160？</summary>
+<p>GLU 會把通道切成兩半：一半是內容 a，一半是閘門 b，輸出 a × sigmoid(b)。要讓 GLU 之後回到 160 個通道，之前就得先產生 2 × 160 = 320 個。</p></details>
+<details class="quiz"><summary>3. 為什麼把格子倒過來，<code>conf160</code> 的準確率幾乎不變，打亂卻掉了 11 個百分點？</summary>
+<p>卷積看的是每一格和它的鄰居。倒過來之後，每一格的鄰居還是原本那幾格，只是前後對調；卷積核不是左右對稱的，所以輸出會有一點不同，但局部的頻譜變化大致保留。打亂之後，每一格的鄰居變成整句裡隨機的格子，局部的連貫性完全消失，卷積抓到的特徵就不對了。注意力和 FFN 對順序本來就不敏感，mean pooling 也是。</p></details>
+<details class="quiz"><summary>4. 測試時 <code>batch_size=1</code>，裡面的 BatchNorm 會不會出問題？</summary>
+<p>只要有 <code>model.eval()</code> 就不會：評估模式下 BatchNorm 用的是訓練時累積的移動平均與變異數，不依賴當下的 batch。忘了 <code>eval()</code> 的話，BatchNorm 會用「這一句」的統計量來正規化，和訓練時的做法不一致。本書實測：只把 <code>conf160</code> 的 BatchNorm 切回訓練模式（dropout 仍關著），一次一句的整句準確率從 0.937 掉到 0.908。第 5 章忘了 <code>eval()</code> 的原版模型準確率幾乎沒變，因為 <code>classifier.py</code> 沒有 BatchNorm，只有 dropout。</p></details>
+<details class="quiz"><summary>5. 核 3 的 Conformer 已經拿到卷積大部分的好處。從圖 7.1 看，這合理嗎？</summary>
+<p>合理。第 1 個 block 的卷積核集中在中央附近幾格，主要的作用本來就在前後幾十毫秒；第 2 個 block 的核攤得很平，比較像平滑，這種效果也可以由注意力或第 1 層的卷積疊加出來。所以把核縮到 3，損失的主要是第 2 個 block 那種「大範圍平滑」，對這個任務影響不大。不過三種核大小之間的差距都在一個種子的雜訊範圍內，不能據此說哪一個最好。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+  <li>Gulati 等，〈Conformer〉，<a href="https://arxiv.org/abs/2005.08100">arXiv:2005.08100</a>：卷積模組的設計，以及論文自己的消融實驗（拿掉卷積、改核大小）。</li>
+  <li>Dauphin 等，〈Language Modeling with Gated Convolutional Networks〉（ICML 2017），<a href="https://arxiv.org/abs/1612.08083">arXiv:1612.08083</a>：GLU 的出處。</li>
+  <li>Howard 等，〈MobileNets〉（2017），<a href="https://arxiv.org/abs/1704.04861">arXiv:1704.04861</a>：depthwise separable 卷積。</li>
+  <li>Desplanques 等，〈ECAPA-TDNN〉，<a href="https://arxiv.org/abs/2005.07143">arXiv:2005.07143</a>：以卷積為主的說話者辨識模型。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="ch08.html">第 8 章 →</a></nav>
+<footer class="chap-footer">本教材根據 lordleeber/ML2022-Spring-pytorch 的 HW04 程式碼與 ML2022 Spring 作業投影片撰寫。</footer>
+<script src="enhance.js"></script>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>

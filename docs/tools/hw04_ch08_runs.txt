@@ -654,3 +654,135 @@ valid step 66000: acc=0.8462 loss=0.7591 exact=0.84622 train_loss=0.1310 lr=8.26
 valid step 68000: acc=0.8443 loss=0.7707 exact=0.84428 train_loss=0.1301 lr=2.072e-06
 valid step 70000: acc=0.8455 loss=0.7713 exact=0.84552 train_loss=0.1325 lr=0.000e+00
 Step 70000, best model saved. (accuracy=0.8462)
+=== conf160_noconv --arch conformer --d_model 160 --nhead 4 --ffn 640 --layers 2 --kernel 0 (17:27:46)
+[Info]: conf160_noconv: 1159960 parameters
+valid step 2000: acc=0.2256 loss=3.6652 exact=0.22564 train_loss=4.8292 lr=9.995e-04
+valid step 4000: acc=0.3550 loss=2.9120 exact=0.35505 train_loss=3.1751 lr=9.953e-04
+valid step 6000: acc=0.4228 loss=2.5182 exact=0.42285 train_loss=2.5467 lr=9.871e-04
+valid step 8000: acc=0.5012 loss=2.1721 exact=0.50124 train_loss=2.1668 lr=9.748e-04
+valid step 10000: acc=0.5376 loss=2.0196 exact=0.53761 train_loss=1.8826 lr=9.586e-04
+Step 10000, best model saved. (accuracy=0.5376)
+valid step 12000: acc=0.5809 loss=1.7952 exact=0.58086 train_loss=1.7023 lr=9.386e-04
+valid step 14000: acc=0.5948 loss=1.7501 exact=0.59481 train_loss=1.5541 lr=9.149e-04
+valid step 16000: acc=0.6211 loss=1.6614 exact=0.62112 train_loss=1.4271 lr=8.879e-04
+valid step 18000: acc=0.6435 loss=1.5279 exact=0.64354 train_loss=1.2885 lr=8.576e-04
+valid step 20000: acc=0.6600 loss=1.4735 exact=0.65996 train_loss=1.2234 lr=8.243e-04
+Step 20000, best model saved. (accuracy=0.6600)
+valid step 22000: acc=0.6637 loss=1.4446 exact=0.66367 train_loss=1.1390 lr=7.883e-04
+valid step 24000: acc=0.6854 loss=1.3443 exact=0.68538 train_loss=1.0551 lr=7.500e-04
+valid step 26000: acc=0.6997 loss=1.3140 exact=0.69968 train_loss=0.9743 lr=7.096e-04
+valid step 28000: acc=0.7083 loss=1.2540 exact=0.70833 train_loss=0.9141 lr=6.674e-04
+valid step 30000: acc=0.7196 loss=1.2327 exact=0.71963 train_loss=0.8562 lr=6.239e-04
+Step 30000, best model saved. (accuracy=0.7196)
+valid step 32000: acc=0.7325 loss=1.1554 exact=0.73252 train_loss=0.8048 lr=5.793e-04
+valid step 34000: acc=0.7383 loss=1.1546 exact=0.73835 train_loss=0.7457 lr=5.341e-04
+valid step 36000: acc=0.7329 loss=1.1639 exact=0.73287 train_loss=0.6925 lr=4.886e-04
+valid step 38000: acc=0.7468 loss=1.0984 exact=0.74682 train_loss=0.6570 lr=4.432e-04
+valid step 40000: acc=0.7574 loss=1.0816 exact=0.75742 train_loss=0.6055 lr=3.983e-04
+Step 40000, best model saved. (accuracy=0.7574)
+valid step 42000: acc=0.7664 loss=1.0479 exact=0.76642 train_loss=0.5560 lr=3.542e-04
+valid step 44000: acc=0.7692 loss=1.0178 exact=0.76924 train_loss=0.5272 lr=3.113e-04
+valid step 46000: acc=0.7782 loss=0.9719 exact=0.77825 train_loss=0.4959 lr=2.700e-04
+valid step 48000: acc=0.7850 loss=0.9700 exact=0.78496 train_loss=0.4505 lr=2.306e-04
+valid step 50000: acc=0.7903 loss=0.9473 exact=0.79025 train_loss=0.4220 lr=1.934e-04
+Step 50000, best model saved. (accuracy=0.7903)
+valid step 52000: acc=0.7929 loss=0.9235 exact=0.79290 train_loss=0.3953 lr=1.587e-04
+valid step 54000: acc=0.8028 loss=0.8927 exact=0.80279 train_loss=0.3763 lr=1.269e-04
+valid step 56000: acc=0.8044 loss=0.9110 exact=0.80438 train_loss=0.3511 lr=9.818e-05
+valid step 58000: acc=0.8081 loss=0.8891 exact=0.80809 train_loss=0.3304 lr=7.279e-05
+valid step 60000: acc=0.8113 loss=0.8398 exact=0.81126 train_loss=0.3157 lr=5.094e-05
+Step 60000, best model saved. (accuracy=0.8113)
+valid step 62000: acc=0.8095 loss=0.8732 exact=0.80950 train_loss=0.3008 lr=3.280e-05
+valid step 64000: acc=0.8183 loss=0.8720 exact=0.81833 train_loss=0.2957 lr=1.854e-05
+valid step 66000: acc=0.8134 loss=0.8393 exact=0.81338 train_loss=0.2826 lr=8.269e-06
+valid step 68000: acc=0.8194 loss=0.8192 exact=0.81939 train_loss=0.2844 lr=2.072e-06
+valid step 70000: acc=0.8148 loss=0.8718 exact=0.81480 train_loss=0.2795 lr=0.000e+00
+Step 70000, best model saved. (accuracy=0.8194)
+=== conf160_k3 --arch conformer --d_model 160 --nhead 4 --ffn 640 --layers 2 --kernel 3 (17:35:41)
+[Info]: conf160_k3: 1317080 parameters
+valid step 2000: acc=0.2083 loss=3.7487 exact=0.20833 train_loss=4.8188 lr=9.995e-04
+valid step 4000: acc=0.3385 loss=2.9734 exact=0.33845 train_loss=3.2129 lr=9.953e-04
+valid step 6000: acc=0.4266 loss=2.4673 exact=0.42655 train_loss=2.5596 lr=9.871e-04
+valid step 8000: acc=0.4841 loss=2.2273 exact=0.48411 train_loss=2.1564 lr=9.748e-04
+valid step 10000: acc=0.5288 loss=2.0216 exact=0.52878 train_loss=1.8763 lr=9.586e-04
+Step 10000, best model saved. (accuracy=0.5288)
+valid step 12000: acc=0.5757 loss=1.7995 exact=0.57574 train_loss=1.6727 lr=9.386e-04
+valid step 14000: acc=0.5885 loss=1.7278 exact=0.58845 train_loss=1.5203 lr=9.149e-04
+valid step 16000: acc=0.6278 loss=1.5617 exact=0.62782 train_loss=1.3814 lr=8.879e-04
+valid step 18000: acc=0.6428 loss=1.5146 exact=0.64283 train_loss=1.2661 lr=8.576e-04
+valid step 20000: acc=0.6610 loss=1.4486 exact=0.66102 train_loss=1.1791 lr=8.243e-04
+Step 20000, best model saved. (accuracy=0.6610)
+valid step 22000: acc=0.6644 loss=1.4107 exact=0.66437 train_loss=1.0967 lr=7.883e-04
+valid step 24000: acc=0.6958 loss=1.3226 exact=0.69580 train_loss=1.0161 lr=7.500e-04
+valid step 26000: acc=0.7157 loss=1.2341 exact=0.71575 train_loss=0.9202 lr=7.096e-04
+valid step 28000: acc=0.7133 loss=1.2177 exact=0.71328 train_loss=0.8805 lr=6.674e-04
+valid step 30000: acc=0.7300 loss=1.1544 exact=0.73005 train_loss=0.8286 lr=6.239e-04
+Step 30000, best model saved. (accuracy=0.7300)
+valid step 32000: acc=0.7299 loss=1.1474 exact=0.72987 train_loss=0.7735 lr=5.793e-04
+valid step 34000: acc=0.7496 loss=1.0818 exact=0.74965 train_loss=0.7155 lr=5.341e-04
+valid step 36000: acc=0.7576 loss=1.0535 exact=0.75759 train_loss=0.6706 lr=4.886e-04
+valid step 38000: acc=0.7632 loss=1.0219 exact=0.76324 train_loss=0.6324 lr=4.432e-04
+valid step 40000: acc=0.7719 loss=1.0154 exact=0.77189 train_loss=0.5816 lr=3.983e-04
+Step 40000, best model saved. (accuracy=0.7719)
+valid step 42000: acc=0.7835 loss=0.9478 exact=0.78355 train_loss=0.5362 lr=3.542e-04
+valid step 44000: acc=0.7966 loss=0.9174 exact=0.79661 train_loss=0.5083 lr=3.113e-04
+valid step 46000: acc=0.7883 loss=0.9587 exact=0.78831 train_loss=0.4770 lr=2.700e-04
+valid step 48000: acc=0.7940 loss=0.9245 exact=0.79396 train_loss=0.4385 lr=2.306e-04
+valid step 50000: acc=0.8061 loss=0.8640 exact=0.80614 train_loss=0.4052 lr=1.934e-04
+Step 50000, best model saved. (accuracy=0.8061)
+valid step 52000: acc=0.8044 loss=0.8756 exact=0.80438 train_loss=0.3822 lr=1.587e-04
+valid step 54000: acc=0.8134 loss=0.8773 exact=0.81338 train_loss=0.3680 lr=1.269e-04
+valid step 56000: acc=0.8132 loss=0.8403 exact=0.81321 train_loss=0.3423 lr=9.818e-05
+valid step 58000: acc=0.8072 loss=0.8332 exact=0.80720 train_loss=0.3295 lr=7.279e-05
+valid step 60000: acc=0.8153 loss=0.8412 exact=0.81532 train_loss=0.3132 lr=5.094e-05
+Step 60000, best model saved. (accuracy=0.8153)
+valid step 62000: acc=0.8178 loss=0.8470 exact=0.81780 train_loss=0.2958 lr=3.280e-05
+valid step 64000: acc=0.8180 loss=0.8283 exact=0.81797 train_loss=0.2878 lr=1.854e-05
+valid step 66000: acc=0.8277 loss=0.8049 exact=0.82768 train_loss=0.2867 lr=8.269e-06
+valid step 68000: acc=0.8264 loss=0.8239 exact=0.82645 train_loss=0.2788 lr=2.072e-06
+valid step 70000: acc=0.8247 loss=0.8086 exact=0.82468 train_loss=0.2791 lr=0.000e+00
+Step 70000, best model saved. (accuracy=0.8277)
+=== conf160_k15 --arch conformer --d_model 160 --nhead 4 --ffn 640 --layers 2 --kernel 15 (17:44:57)
+[Info]: conf160_k15: 1320920 parameters
+valid step 2000: acc=0.1788 loss=3.8510 exact=0.17885 train_loss=4.7862 lr=9.995e-04
+valid step 4000: acc=0.3471 loss=2.8785 exact=0.34710 train_loss=3.1257 lr=9.953e-04
+valid step 6000: acc=0.4297 loss=2.4666 exact=0.42973 train_loss=2.4670 lr=9.871e-04
+valid step 8000: acc=0.5184 loss=2.0543 exact=0.51836 train_loss=2.0685 lr=9.748e-04
+valid step 10000: acc=0.5643 loss=1.8805 exact=0.56427 train_loss=1.7679 lr=9.586e-04
+Step 10000, best model saved. (accuracy=0.5643)
+valid step 12000: acc=0.5923 loss=1.7297 exact=0.59234 train_loss=1.5894 lr=9.386e-04
+valid step 14000: acc=0.6220 loss=1.6119 exact=0.62200 train_loss=1.4253 lr=9.149e-04
+valid step 16000: acc=0.6441 loss=1.5284 exact=0.64407 train_loss=1.3039 lr=8.879e-04
+valid step 18000: acc=0.6630 loss=1.4442 exact=0.66296 train_loss=1.1935 lr=8.576e-04
+valid step 20000: acc=0.6877 loss=1.3381 exact=0.68768 train_loss=1.1142 lr=8.243e-04
+Step 20000, best model saved. (accuracy=0.6877)
+valid step 22000: acc=0.6900 loss=1.3366 exact=0.68997 train_loss=1.0283 lr=7.883e-04
+valid step 24000: acc=0.7018 loss=1.2636 exact=0.70180 train_loss=0.9557 lr=7.500e-04
+valid step 26000: acc=0.7064 loss=1.2664 exact=0.70639 train_loss=0.8914 lr=7.096e-04
+valid step 28000: acc=0.7189 loss=1.2100 exact=0.71893 train_loss=0.8312 lr=6.674e-04
+valid step 30000: acc=0.7361 loss=1.1457 exact=0.73605 train_loss=0.7745 lr=6.239e-04
+Step 30000, best model saved. (accuracy=0.7361)
+valid step 32000: acc=0.7382 loss=1.1278 exact=0.73817 train_loss=0.7155 lr=5.793e-04
+valid step 34000: acc=0.7592 loss=1.0518 exact=0.75918 train_loss=0.6673 lr=5.341e-04
+valid step 36000: acc=0.7587 loss=1.0494 exact=0.75865 train_loss=0.6367 lr=4.886e-04
+valid step 38000: acc=0.7698 loss=1.0138 exact=0.76977 train_loss=0.5807 lr=4.432e-04
+valid step 40000: acc=0.7775 loss=0.9490 exact=0.77754 train_loss=0.5472 lr=3.983e-04
+Step 40000, best model saved. (accuracy=0.7775)
+valid step 42000: acc=0.7835 loss=0.9364 exact=0.78355 train_loss=0.5028 lr=3.542e-04
+valid step 44000: acc=0.7880 loss=0.9210 exact=0.78796 train_loss=0.4656 lr=3.113e-04
+valid step 46000: acc=0.7993 loss=0.8823 exact=0.79926 train_loss=0.4437 lr=2.700e-04
+valid step 48000: acc=0.8116 loss=0.8318 exact=0.81162 train_loss=0.4111 lr=2.306e-04
+valid step 50000: acc=0.8120 loss=0.8510 exact=0.81197 train_loss=0.3717 lr=1.934e-04
+Step 50000, best model saved. (accuracy=0.8120)
+valid step 52000: acc=0.8176 loss=0.8161 exact=0.81762 train_loss=0.3575 lr=1.587e-04
+valid step 54000: acc=0.8181 loss=0.8117 exact=0.81815 train_loss=0.3276 lr=1.269e-04
+valid step 56000: acc=0.8270 loss=0.7750 exact=0.82698 train_loss=0.3066 lr=9.818e-05
+valid step 58000: acc=0.8204 loss=0.8268 exact=0.82044 train_loss=0.2894 lr=7.279e-05
+valid step 60000: acc=0.8252 loss=0.8178 exact=0.82521 train_loss=0.2772 lr=5.094e-05
+Step 60000, best model saved. (accuracy=0.8270)
+valid step 62000: acc=0.8355 loss=0.7615 exact=0.83545 train_loss=0.2625 lr=3.280e-05
+valid step 64000: acc=0.8339 loss=0.7830 exact=0.83386 train_loss=0.2548 lr=1.854e-05
+valid step 66000: acc=0.8231 loss=0.8048 exact=0.82309 train_loss=0.2521 lr=8.269e-06
+valid step 68000: acc=0.8335 loss=0.7634 exact=0.83351 train_loss=0.2477 lr=2.072e-06
+valid step 70000: acc=0.8275 loss=0.7883 exact=0.82751 train_loss=0.2447 lr=0.000e+00
+Step 70000, best model saved. (accuracy=0.8355)

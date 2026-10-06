@@ -18,6 +18,8 @@ Sections:
            predictions, accuracy by length, padding with/without a mask, inference time (needs <live> <best>)
   ch06     Conformer block of hw04_exp.py (classes exec'd from its source, CPU only): parameters per part,
            shapes, a same-size pre-norm Transformer, frame-order sensitivity at random init
+  ch07     trained conf160 / conf160_noconv / tf160x4_pre (needs <grid_dir> with their .ckpt): full-length
+           accuracy with frames in order / reversed / shuffled, learned depthwise kernels, residual branch sizes
 """
 import json, os, sys, random, warnings, collections
 import numpy as np
@@ -588,3 +590,84 @@ elif sec == 'ch06':
           % ((a0 - ar).abs().max(), (a0 - ap_).abs().max(), (b0 - br).abs().max(), (b0 - bp).abs().max(), b0.std()))
     # how far the depthwise conv sees
     print('depthwise kernel 31 frames = 310 ms; 2 blocks -> receptive field of the convs alone', 2 * 30 + 1, 'frames')
+
+elif sec == 'ch07':
+    import types
+    import torch.nn as nn
+    import torch.nn.functional as F
+    import train  # set_seed(87)
+    from dataset import myDataset
+    from torch.utils.data import random_split
+    grid = sys.argv[2]
+    src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hw04_exp.py')).read()
+    code = src[src.index('class SAP'):src.index('# ---------------------------------------------------------------- data')]
+    def build(**kw):
+        args = dict(arch='transformer', d_model=80, nhead=2, ffn=256, layers=1, dropout=0.1, norm_first=0,
+                    kernel=31, pool='mean', loss='ce', s=30.0)
+        args.update(kw)
+        ns = dict(torch=torch, nn=nn, F=F, a=types.SimpleNamespace(**args))
+        exec(code, ns)
+        return ns['Net'](600)
+    conf = dict(arch='conformer', d_model=160, nhead=4, ffn=640, layers=2)
+    models = {
+        'conf160': build(**conf),
+        'conf160_noconv': build(**dict(conf, kernel=0)),
+        'tf160x4_pre': build(d_model=160, nhead=4, ffn=640, layers=4, norm_first=1),
+    }
+    for n, m in models.items():
+        m.load_state_dict(torch.load(os.path.join(grid, n + '.ckpt')))
+        m.cuda().eval()
+    train.set_seed(87)   # building the models used the global RNG; re-seed so random_split matches train.py
+    ds = myDataset(D)
+    tl = int(0.9 * len(ds))
+    _, va = random_split(ds, [tl, len(ds) - tl])
+    assert va.indices[:5] == [43097, 46091, 22324, 24456, 274], va.indices[:5]
+    mels = [torch.load(os.path.join(D, ds.data[i][0])) for i in va.indices]
+    ys = [ds.data[i][1] for i in va.indices]
+    g = torch.Generator().manual_seed(0)
+    perms = [torch.randperm(len(x), generator=g) for x in mels]
+    with torch.no_grad():
+        for n, m in models.items():
+            acc = {}
+            for how in ('in order', 'reversed', 'shuffled'):
+                ok = 0
+                for x, y, pm in zip(mels, ys, perms):
+                    xx = x if how == 'in order' else (x.flip(0) if how == 'reversed' else x[pm])
+                    ok += int(m(xx[None].cuda()).argmax().item() == y)
+                acc[how] = ok / len(mels)
+            print(n, ' '.join(f'{k}={v:.5f}' for k, v in acc.items()))
+    # learned depthwise kernels: mean |w| per tap (31 taps, centre = tap 15), per block
+    m = models['conf160']
+    for bi, b in enumerate(m.blocks):
+        w = b.conv.dw.weight.detach().cpu()[:, 0, :]            # (160, 31)
+        prof = w.abs().mean(0)
+        centre3 = w.abs()[:, 14:17].sum(1) / w.abs().sum(1)       # share of |w| within +-1 tap, per channel
+        far = w.abs()[:, list(range(0, 8)) + list(range(23, 31))].sum(1) / w.abs().sum(1)
+        print(f'block {bi} dw mean|w| by tap:', ' '.join(f'{v:.4f}' for v in prof.tolist()))
+        print(f'block {bi} share of |w| in the centre 3 taps: median {centre3.median():.3f} (uniform would be {3/31:.3f}); '
+              f'in the outer 16 taps (>=8 frames away): median {far.median():.3f} (uniform {16/31:.3f})')
+        print(f'block {bi} channel with the most centre-heavy kernel: share {centre3.max():.3f}; most spread: {centre3.min():.3f}')
+    # residual branch sizes on 200 validation utterances (full length): ||branch|| / ||x|| per block
+    with torch.no_grad():
+        for n in ('conf160', 'conf160_noconv'):
+            m = models[n]
+            r = collections.defaultdict(list)
+            for x in mels[:200]:
+                h = m.prenet(x[None].cuda())
+                for bi, b in enumerate(m.blocks):
+                    nx = h.norm(dim=-1).mean()
+                    f1 = 0.5 * b.ff1(h); h = h + f1
+                    yv = b.ln_att(h); at = b.drop(b.att(yv, yv, yv, need_weights=False)[0]); h = h + at
+                    cv = b.conv(h); h = h + cv
+                    f2 = 0.5 * b.ff2(h); h = h + f2
+                    for k, v in (('ff1', f1), ('att', at), ('conv', cv), ('ff2', f2)):
+                        r[(bi, k)].append((v.norm(dim=-1).mean() / nx).item())
+                    h = b.ln_out(h)
+            print(n, 'mean ||branch|| / ||block input||:', ' '.join(f'b{bi}.{k}={np.mean(v):.3f}' for (bi, k), v in sorted(r.items())))
+    # batch of 1 with BatchNorm in training mode (as if model.eval() were forgotten), dropout kept off
+    m = models['conf160']
+    for b in m.blocks:
+        b.conv.bn.train()
+    with torch.no_grad():
+        ok = sum(int(m(x[None].cuda()).argmax().item() == y) for x, y in zip(mels, ys))
+    print('conf160, batch 1, BatchNorm in train mode (dropout off): full acc %.5f' % (ok / len(mels)))

@@ -209,6 +209,16 @@
 - 隨機初始化、eval、mean pooling 後：Transformer layer 倒序／打亂差 5.96e-08；Conformer block 倒序 5.97e-03、打亂 7.18e-03（輸出 std 0.11）。
 - **tf160x4_pre（同參數 pre-norm 4 層 Transformer）full 0.94583 > conf160 0.93736**（crop 0.8486 vs 0.8333，訓練 508.7 vs 507.5 s）；最後一段 train loss 0.132 vs 0.258。med256_pre 0.951 > conf256 0.940。→ 本書的設定下看不到 Conformer 結構本身的好處（單一種子）。GPU 前後 compute apps 皆空；17:03–17:12。
 
+## ch07 實測（2026-10-06 17:27–18:05；`hw04_facts.py ch07 <grid>`）
+- 消融（同 conf160 其餘設定）：無卷積 full 0.93277／crop 0.82319；核 3 0.93983／0.83183；核 15 0.94106／0.82936；核 31（conf160）0.93736／0.83325；tf160x4_pre 0.94583／0.84860。卷積 +0.5–0.8 個百分點（full），核大小之間的差在 0.4 個百分點內；全部仍低於同參數 Transformer。訓練秒數：無卷積 421.8、核 31 507.5。
+- conf160 重訓（--save，結果不寫進 jsonl）：full 0.93736、printed 0.82998（64k），和 jsonl 裡的原紀錄數字相同（權重本身沒有逐位比對，原本的 ckpt 已隨 scratchpad 消失）。
+- `--kernel 0` 的做法：Net 建好 block 後把 conv 換成回傳 0 的 NoConv（不改 ConformerBlock 的程式，ch06 引用的行號不變）。
+- facts 腳本陷阱又出現一次：建模型用掉全域亂數，random_split 前要 `train.set_seed(87)`（assert 抓到）。
+- 整句驗證，格子順序：conf160 正序 0.93736、倒序 0.93489、打亂 0.82619；conf160_noconv 三者都是 0.93277；tf160x4_pre 三者都是 0.94583。
+- conf160 的 depthwise 核（160 通道 |w| 平均，位移 −15…+15）：block 0 中央 0.2415、兩端約 0.07；中央 3 格占比中位數 0.178（均勻 0.097）、距離 ≥8 格的 16 格占 0.317（均勻 0.516）；最集中的通道 0.475。block 1 平：中央 3 格 0.075、外圍 0.518。
+- 只把 conf160 的 BatchNorm 切回 train 模式（dropout 仍關）、batch 1 整句：**0.90753**（eval 0.93736）。
+- 殘差分支大小（‖branch‖/‖block 輸入‖，200 句整句）：conf160 b0 ff1 0.478、att 0.296、conv 0.490、ff2 0.356；b1 ff1 0.915、att 1.097、conv 0.778、ff2 0.123。noconv b0 ff1 0.637、att 0.491、ff2 0.422；b1 0.874、0.815、0.472。
+
 ## 實驗工具（docs/tools/hw04_exp.py）
 - `import train` 直接用 train.py 的 set_seed(87)、get_dataloader、collate_batch、scheduler、model_fn；主迴圈照抄，只多記帳。預設參數下用 `classifier.Classifier`。
 - **驗證逐位一致**：預設參數的 `--save_live`（train.py 存下的那份）和 train.py 的 `model.ckpt` 18 個 tensor 全部 `torch.equal`（檔案 md5 不同只因為存的是 deepcopy 的副本，序列化位元組不同）；35 次驗證的 acc 與 train.py 印的一致。
@@ -241,6 +251,9 @@
 | med256_lr3e4 | med256 + `--lr 3e-4` | 2,599,768 | 575.0 | 0.86405（60k） | 0.94883 | 0.86377 | 0.25650 | 0.94989 |
 | med256_pre | med256 + `--norm_first 1`（pre-norm） | 2,599,768 | 586.9 | 0.85999（70k） | 0.95059 | 0.86289 | 0.29837 | 0.95059 |
 | tf160x4_pre | `--d_model 160 --nhead 4 --ffn 640 --layers 4 --norm_first 1`（與 conf160 同參數量的 pre-norm Transformer，2026-10-06 加跑，ch06） | 1,366,040 | 508.7 | 0.84622（66k） | 0.94583 | 0.84860 | 0.28744 | 0.94565 |
+| conf160_noconv | conf160 + `--kernel 0`（拿掉卷積模組，ch07） | 1,159,960 | 421.8 | 0.81939（68k） | 0.93277 | 0.82319 | 0.32800 | 0.93242 |
+| conf160_k3 | conf160 + `--kernel 3`（ch07） | 1,317,080 | 502.0 | 0.82768（66k） | 0.93983 | 0.83183 | 0.30580 | 0.93947 |
+| conf160_k15 | conf160 + `--kernel 15`（ch07） | 1,320,920 | 503.4 | 0.83545（62k） | 0.94106 | 0.82936 | 0.30697 | 0.94283 |
 | long_sap_am | conf160_sap_am + `--steps 210000`（warmup 仍 1000、cosine 拉長到 210k） | 1,325,601 | 1615.5 | 0.90025（194k） | **0.96700** | 0.89571 | — | 0.96683 |
 
 - 觀察（寫章時要照實說）：
