@@ -203,6 +203,12 @@
 - 測試集依長度排序、每 32 句補 -20 成一批：**不加 mask** 0.59 s，預測和 batch 1 不同 **91 句**；**加 mask**（src_key_padding_mask + 只平均真實格子）2.31 s，**0 句**不同。一批長度 538–539（最多補 1 格）：加 mask 的 logits 與 batch 1 最大差 2.29e-05，不加 mask 1.78e-01。加 mask 比不加慢的原因沒有追究。
 - 每 32 句一批的補值比例：照檔案順序 62.7%，依長度排序 0.6%。
 
+## ch06 實測（`hw04_facts.py ch06`，CPU；2026-10-06）
+- ConformerBlock(160, 4, 640, 31, 0.1) = 598,560：ff1 205,920、ln_att 320、att 103,040、conv 83,040（ln 320、pw1 51,520 (320,160,1)、dw 5,120 (160,1,31)、bn 320、pw2 25,760）、ff2 205,920、ln_out 320。TransformerEncoderLayer(160,4,640) = 309,280。prenet+pred_layer（d 160）128,920 → conf160 1,326,040、tf160x4 1,366,040、med160 665,304。
+- 形狀：conv (2,128,160) → (2,160,128) → pw1 (2,320,128) → GLU (2,160,128) → dw (2,160,128) → pw2 (2,128,160)；block (2,128,160)→(2,128,160)；T=4940 也可。
+- 隨機初始化、eval、mean pooling 後：Transformer layer 倒序／打亂差 5.96e-08；Conformer block 倒序 5.97e-03、打亂 7.18e-03（輸出 std 0.11）。
+- **tf160x4_pre（同參數 pre-norm 4 層 Transformer）full 0.94583 > conf160 0.93736**（crop 0.8486 vs 0.8333，訓練 508.7 vs 507.5 s）；最後一段 train loss 0.132 vs 0.258。med256_pre 0.951 > conf256 0.940。→ 本書的設定下看不到 Conformer 結構本身的好處（單一種子）。GPU 前後 compute apps 皆空；17:03–17:12。
+
 ## 實驗工具（docs/tools/hw04_exp.py）
 - `import train` 直接用 train.py 的 set_seed(87)、get_dataloader、collate_batch、scheduler、model_fn；主迴圈照抄，只多記帳。預設參數下用 `classifier.Classifier`。
 - **驗證逐位一致**：預設參數的 `--save_live`（train.py 存下的那份）和 train.py 的 `model.ckpt` 18 個 tensor 全部 `torch.equal`（檔案 md5 不同只因為存的是 deepcopy 的副本，序列化位元組不同）；35 次驗證的 acc 與 train.py 印的一致。
@@ -234,6 +240,7 @@
 | seg256 | `--seg 256`（其餘同 orig） | 125,896 | 240.8 | 0.77331（68k） | 0.85636 | 0.76919 | 0.66713 | 0.85477 |
 | med256_lr3e4 | med256 + `--lr 3e-4` | 2,599,768 | 575.0 | 0.86405（60k） | 0.94883 | 0.86377 | 0.25650 | 0.94989 |
 | med256_pre | med256 + `--norm_first 1`（pre-norm） | 2,599,768 | 586.9 | 0.85999（70k） | 0.95059 | 0.86289 | 0.29837 | 0.95059 |
+| tf160x4_pre | `--d_model 160 --nhead 4 --ffn 640 --layers 4 --norm_first 1`（與 conf160 同參數量的 pre-norm Transformer，2026-10-06 加跑，ch06） | 1,366,040 | 508.7 | 0.84622（66k） | 0.94583 | 0.84860 | 0.28744 | 0.94565 |
 | long_sap_am | conf160_sap_am + `--steps 210000`（warmup 仍 1000、cosine 拉長到 210k） | 1,325,601 | 1615.5 | 0.90025（194k） | **0.96700** | 0.89571 | — | 0.96683 |
 
 - 觀察（寫章時要照實說）：

@@ -16,6 +16,8 @@ Sections:
            and how much the validation accuracy moves with the random crops (needs <ckpt>)
   ch05     test.py facts: torch.stack with 2 utterances, id2speaker keys, eval() vs train(), live vs best
            predictions, accuracy by length, padding with/without a mask, inference time (needs <live> <best>)
+  ch06     Conformer block of hw04_exp.py (classes exec'd from its source, CPU only): parameters per part,
+           shapes, a same-size pre-norm Transformer, frame-order sensitivity at random init
 """
 import json, os, sys, random, warnings, collections
 import numpy as np
@@ -539,3 +541,50 @@ elif sec == 'ch05':
         k = (tlen >= lo) & (tlen < hi)
         print(f'time len [{lo},{hi}): n={k.sum()} median {np.median(times[k]):.2f} ms max {times[k].max():.2f} ms')
     print('time total %.2f s, longest utterance %d frames: %.2f ms' % (times.sum() / 1000, tlen.max(), times[tlen.argmax()]))
+
+elif sec == 'ch06':
+    # hw04_exp.py parses argv and trains at import time, so exec only its model classes (ConvModule..ConformerBlock)
+    import re as _re
+    import torch.nn as nn
+    import torch.nn.functional as F
+    src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hw04_exp.py')).read()
+    code = src[src.index('class ConvModule'):src.index('class Net')]
+    ns = dict(torch=torch, nn=nn, F=F)
+    exec(code, ns)
+    torch.manual_seed(0)
+    cnt = lambda mod: sum(p.numel() for p in mod.parameters())
+    blk = ns['ConformerBlock'](160, 4, 640, 31, 0.1)
+    print('ConformerBlock(d=160, heads=4, ffn=640, kernel=31): total', cnt(blk))
+    for n, mod in blk.named_children():
+        print('  ', n, type(mod).__name__, cnt(mod))
+    for n, mod in blk.conv.named_children():
+        print('     conv.', n, type(mod).__name__, cnt(mod), tuple(getattr(mod, 'weight', torch.empty(0)).shape))
+    tl = nn.TransformerEncoderLayer(160, 4, 640)
+    print('TransformerEncoderLayer(160, 4, 640):', cnt(tl))
+    head = 40 * 160 + 160 + 160 * 160 + 160 + 160 * 600 + 600
+    print('prenet + pred_layer (d=160, 600 speakers):', head,
+          '| conf160 (2 blocks):', head + 2 * cnt(blk), '| tf160x4 (4 layers):', head + 4 * cnt(tl),
+          '| med160 (2 layers, ffn 512):', head + 2 * cnt(nn.TransformerEncoderLayer(160, 4, 512)))
+    # shapes through the block and the conv module
+    blk.eval()
+    x = torch.randn(2, 128, 160)
+    c = blk.conv
+    y = c.ln(x).transpose(1, 2); print('conv: in', tuple(x.shape), '-> LN+transpose', tuple(y.shape), end=' ')
+    y = c.pw1(y); print('-> pointwise1', tuple(y.shape), end=' ')
+    y = F.glu(y, dim=1); print('-> GLU', tuple(y.shape), end=' ')
+    y = c.dw(y); print('-> depthwise', tuple(y.shape), end=' ')
+    y = c.pw2(F.silu(c.bn(y))); print('-> BN, Swish, pointwise2', tuple(y.transpose(1, 2).shape))
+    with torch.no_grad():
+        print('block: in', tuple(x.shape), 'out', tuple(blk(x).shape), '| T=4940:', tuple(blk(torch.randn(1, 4940, 160)).shape))
+    # frame-order sensitivity at random init (eval mode): mean-pooled output, original vs reversed vs shuffled
+    perm = torch.randperm(128)
+    tl.eval()
+    with torch.no_grad():
+        xt = torch.randn(128, 2, 160)  # (T, B, d) for the post-norm layer
+        a0, ar, ap_ = (tl(xt).mean(0), tl(xt.flip(0)).mean(0), tl(xt[perm]).mean(0))
+        b0, br, bp = (blk(x).mean(1), blk(x.flip(1)).mean(1), blk(x[:, perm]).mean(1))
+    print('random init, mean-pooled output max |diff|: Transformer layer reversed %.2e shuffled %.2e | '
+          'Conformer block reversed %.2e shuffled %.2e (output std %.2f)'
+          % ((a0 - ar).abs().max(), (a0 - ap_).abs().max(), (b0 - br).abs().max(), (b0 - bp).abs().max(), b0.std()))
+    # how far the depthwise conv sees
+    print('depthwise kernel 31 frames = 310 ms; 2 blocks -> receptive field of the convs alone', 2 * 30 + 1, 'frames')

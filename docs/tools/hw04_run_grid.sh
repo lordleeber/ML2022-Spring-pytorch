@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # HW04 ch08 experiments: one run at a time, all at train.py's schedule (70,000 steps)
 # except long_sap_am (210,000 steps, run separately: bash ... <ckpt_dir> long_sap_am).
-# med256_lr3e4 / med256_pre (why med256 fails) are also run by name.
+# med256_lr3e4 / med256_pre (why med256 fails) and tf160x4_pre (a pre-norm Transformer with as many
+# parameters as conf160, ch06) are also run by name.
 # Usage (repo root): bash docs/tools/hw04_run_grid.sh <ckpt_dir> [name ...]
 # Appends one JSON line per run to docs/tools/hw04_ch08_runs.jsonl and the stdout to hw04_ch08_runs.txt.
 set -u
@@ -20,6 +21,7 @@ declare -A V=(
   [seg256]="--seg 256"
   [med256_lr3e4]="--d_model 256 --nhead 8 --ffn 1024 --layers 3 --lr 3e-4"
   [med256_pre]="--d_model 256 --nhead 8 --ffn 1024 --layers 3 --norm_first 1"
+  [tf160x4_pre]="--d_model 160 --nhead 4 --ffn 640 --layers 4 --norm_first 1"
   [long_sap_am]="--arch conformer --d_model 160 --nhead 4 --ffn 640 --layers 2 --pool sap --loss amsm --steps 210000"
 )
 NAMES=("$@"); [ ${#NAMES[@]} -eq 0 ] && NAMES=(orig layers2 med160 med256 conf160 conf256 conf160_sap conf160_sap_am seg256)
