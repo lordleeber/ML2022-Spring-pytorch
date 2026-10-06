@@ -983,6 +983,10 @@ set_seed(87)</code></pre></figure>
 <p><code>set_seed(87)</code> 在 <code>import</code> 之後、任何東西建立之前就執行（第 32 行），固定三種亂數：NumPy（這份程式沒用到）、Python <code>random</code>（主程式沒用到，worker 的由 PyTorch 另外設，第 2 章）、PyTorch（CPU 與每一張 GPU）。第 28–29 行要求 cuDNN 不要自己挑最快的演算法、只用確定性的演算法；這個模型主要是矩陣乘法，應該幾乎沒有用到 cuDNN，這兩行在這裡大概作用不大，但留著無害。</p>
 <p>這次訓練用到 PyTorch 亂數的地方，依序是：<code>random_split</code>（第 2 章）、第一個訓練迭代器的打亂順序與 worker 的 <code>base_seed</code>、模型的初始權重（第 251 行）、每次驗證的 worker <code>base_seed</code>、每個 epoch 重建迭代器、以及 GPU 上的 dropout。只要這個順序不變，結果就逐位元相同：第 0 章兩次跑 <code>train.py</code> 的 <code>model.ckpt</code> md5 一樣，本書的實驗工具 <code>docs/tools/hw04_exp.py</code> 重現出來的權重也和它逐位元相同。HW03 的教材遇過一個進度條改變亂數順序的例子（<code>tqdm.auto</code> 偷偷多呼叫一次 <code>iter()</code>）；這份程式用的是一般的 <code>tqdm</code>，而且進度條沒有包住 DataLoader，所以不受影響。</p>
 
+<div class="note"><h4>現在的做法：內建排程器與存檔慣例</h4>
+<p>warmup 加 cosine 今天不必自己寫：PyTorch 可以用 <code>torch.optim.lr_scheduler.SequentialLR</code> 把 <code>LinearLR</code>（warmup）和 <code>CosineAnnealingLR</code> 接起來，Hugging Face Transformers 也直接提供 <code>get_cosine_schedule_with_warmup</code>——本 repo 的那個函式就是從那裡抄來的。存「最佳模型」時，常見的做法是一找到新的最佳就立刻寫檔（<code>torch.save(model.state_dict(), path)</code> 會把當下的值序列化，不會有 4.5 節的參照問題），或交給訓練框架的 checkpoint 功能（例如 PyTorch Lightning 的 <code>ModelCheckpoint</code>）。不少訓練流程也會另外保存權重的指數移動平均（EMA），用平均過的權重做驗證與預測，讓結果不那麼依賴「剛好停在哪一步」。</p>
+</div>
+
 <div class="recap"><h4>本章重點</h4>
 <ul>
   <li>AdamW，學習率 0.001，其餘預設（betas 0.9／0.999、weight decay 0.01）。</li>
