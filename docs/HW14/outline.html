@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HW14 教學大綱 — 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=LXGW+WenKai+TC:wght@400;700&amp;display=swap">
+<style id="book-style">
+/* HW14 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「記憶實驗紀錄本」——偏藍綠的石墨底、紙白的字、赭黃只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   方法色（圖表與標籤）：baseline 灰、EWC 藍、MAS 橘、SI 青、RWalk 黃、SCP 洋紅、joint 紫、replay 綠
+   （dataviz 參考色盤的暗色步階，2026-10-08 以 validate_palette.js 對 #181e25 驗證通過）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #12161b;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #d9a35b;      /* 赭黃：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(217, 163, 91, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #d9a35b;
+  /* 方法色 */
+  --m-baseline: #8b949e; --m-ewc: #3987e5; --m-mas: #d95926; --m-si: #199e70;
+  --m-rwalk: #c98500; --m-scp: #d55181; --m-joint: #9085e9; --m-replay: #008300;
+  /* type */
+  --font-display: "LXGW WenKai TC", "Kaiti TC", "BiauKai", "Noto Serif TC", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "任務 1 → 2 → 3 → 4 → 5　·　0° 20° 40° 60° 80°　·　784 → 1024 → 512 → 256 → 10";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fbf4e8; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #161d24; border-color: rgba(217, 163, 91, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #16120b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 方法標籤（色塊只標身分，文字一律用內文色） ---------- */
+.mth { white-space: nowrap; }
+.mth::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--mc, var(--muted)); }
+.mth.baseline { --mc: var(--m-baseline); } .mth.ewc { --mc: var(--m-ewc); } .mth.mas { --mc: var(--m-mas); }
+.mth.si { --mc: var(--m-si); } .mth.rwalk { --mc: var(--m-rwalk); } .mth.scp { --mc: var(--m-scp); }
+.mth.joint { --mc: var(--m-joint); } .mth.replay { --mc: var(--m-replay); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">開始閱讀 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW14 讀碼教材</p>
+  <h1>教學大綱</h1>
+  <p class="chap-lead">這一頁是全書的設計圖：每一章對應哪些檔案、要回答什麼問題、用哪些實測數字。2026-10-08 經使用者核可。寫作中發現大綱和程式不符時，以程式為準，並回頭修改這一頁。</p>
+</header>
+<main>
+
+<h2 id="principles">寫法</h2>
+<ul>
+<li>每一章對應真實的檔案與函式，程式碼逐字引用、標注 <code>檔名:行號</code>（以 commit <code>17ee265</code> 為準）。</li>
+<li>具象先於抽象：先看資料長什麼樣、遺忘矩陣長什麼樣，再讀重要度的公式。</li>
+<li>每一個數字都在本機實測，原始紀錄在 <code>docs/tools/hw14_runs.jsonl</code>；「改 X 會怎樣」的題目一律實際跑過，推論而沒跑的會註明。</li>
+<li>新名詞在全書第一次出現的地方交代。遇到 2022 年的寫法已經過時，加「現在的做法」框。</li>
+<li>圖表的顏色代表方法：<span class="mth baseline">baseline</span>、<span class="mth ewc">EWC</span>、<span class="mth mas">MAS</span>、<span class="mth si">SI</span>、<span class="mth rwalk">RWalk</span>、<span class="mth scp">SCP</span>、<span class="mth joint">一起訓練</span>、<span class="mth replay">replay</span>，全書一致。</li>
+<li>最後一章是總結章（題庫、名詞對照、速查），不寫附錄。</li>
+</ul>
+
+<h2 id="chapters">各章規劃</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>章</th><th>對應原始碼</th><th>要回答的問題</th><th>用到的實測</th></tr></thead>
+<tbody>
+<tr><td>第 0 章　全貌</td><td><code>train.py</code>、<code>model.py</code>、<code>plot.py</code></td><td>這份作業在做什麼、怎麼跑、跑多久；模型總覽（架構圖、各層形狀、參數量手算與 PyTorch 印出）；notebook 拆成哪些檔、哪兩行非改不可；怎麼確認拆完沒有改變結果</td><td>六種方法 52 分 07 秒；參數 1,462,538；逐位元驗證；成績表</td></tr>
+<tr><td>第 1 章　資料</td><td><code>dataset.py</code>、<code>config.py</code></td><td>旋轉怎麼做（<code>ToTensor</code> 之後才轉，邊角補 0）；<code>Pad(28)</code> 為什麼什麼都沒做；任務數是 5 不是 10；五個任務的樣本圖；任務 1 學完時對其他角度的準確率（角度差越大越不會）</td><td>樣本圖；baseline 學完任務 1 時 98.0 / 90.5 / 55.7 / 25.7 / 14.0</td></tr>
+<tr><td>第 2 章　訓練迴圈與指標</td><td><code>trainer.py</code></td><td>一步裡 <code>penalty</code>、<code>update</code>、<code>backward</code> 的順序；<code>total_loss = loss</code> 其實是同一個 tensor；每個任務重建 Adam；<strong>作業的指標</strong>（報告題）：已學任務的平均，分母會變；逐任務矩陣、ACC、BWT；評估用掉亂數；<code>evaluate</code> 沒有 <code>no_grad</code>、模型停在 eval 模式</td><td>六種方法的逐任務矩陣；指標在換任務時的跳動</td></tr>
+<tr><td>第 3 章　Baseline 與災難性遺忘</td><td><code>methods/baseline.py</code>、<code>train.py</code> 的 <code>run_baseline</code></td><td>六種方法共用的介面（<code>_calculate_importance</code>、<code>penalty</code>、<code>update</code>）；遺忘矩陣；任務 1 從 98% 掉到 35%；忘得多寡和角度差的關係；種子之間差多少</td><td>baseline 逐 epoch 矩陣；A 組 5 個種子</td></tr>
+<tr><td>第 4 章　EWC</td><td><code>methods/ewc.py</code>、<code>run_ewc</code></td><td>Fisher 資訊與它的對角近似；程式用 batch 平均梯度的平方（和逐樣本平均不同）；要用 label；公式的 λ/2 和程式；<code>prev_guards</code> 讓舊任務的重要度一直加倍；重要度只有 0.44，λ=100 為什麼幾乎沒效果</td><td>重要度總和 0.444 → 4.77；B 組 λ 掃描；C 組只算一次</td></tr>
+<tr><td>第 5 章　MAS（TODO）</td><td><code>methods/mas.py</code>、<code>run_mas</code></td><td>TODO 怎麼寫、報告要貼哪一段；不用 label；global 與 local 版；重要度大六個數量級；舊任務保住了、新任務學不好（對角線 97.9 → 89.7）：stability 與 plasticity 的取捨</td><td>MAS 矩陣；B 組 λ 掃描（λ 調小之後）</td></tr>
+<tr><td>第 6 章　SI</td><td><code>methods/si.py</code>、<code>run_si</code></td><td>路徑積分：每一步 −g·Δθ 累加成 W；<code>update()</code> 放在 <code>backward()</code> 之前，用的是上一步的梯度；為什麼存進 <code>register_buffer</code>；ε 的作用；docstring 引錯論文；不需要額外掃一遍資料</td><td>SI 重要度；B 組 λ 掃描</td></tr>
+<tr><td>第 7 章　RWalk 與 SCP</td><td><code>methods/rwalk.py</code>、<code>methods/scp.py</code></td><td>RWalk：Fisher 的移動平均加上 SI 式的分數；SCP：在輸出分布上取隨機方向（sliced）、不用 label；程式先把 100 個方向平均再平方，等於只剩一個方向</td><td>兩者的矩陣；D 組每個方向各自平方；C 組</td></tr>
+<tr><td>第 8 章　總結</td><td><code>docs/tools/hw14_exp.py</code>、<code>docs/tools/hw14_extra.py</code></td><td>五個種子的平均與標準差；λ 調過之後誰贏；修正重複累加後的變化；一起訓練（上界）與 replay 的對照；選擇題考的 iCaRL、LwF、GEM、DGR 與三種持續學習情境；三級題庫、名詞對照、速查表；現在的做法（LLM 微調的遺忘）</td><td>A、B、C、D、E 全部</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="issues">讀程式找到的問題（各章實測）</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>#</th><th>問題</th><th>位置</th><th>章</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>notebook 沒有 <code>import tqdm.auto</code>，用一般 Python 跑會 <code>AttributeError</code></td><td>notebook [4]、[21]</td><td>0、2</td></tr>
+<tr><td>2</td><td><code>lineStyle</code> 在 Matplotlib 3.11 報錯</td><td>notebook [44]</td><td>0</td></tr>
+<tr><td>3</td><td>說明與註解寫 10 個任務，程式是 5 個（0°、20°、40°、60°、80°）</td><td><code>config.py</code>、<code>dataset.py</code>、notebook [9] [28]</td><td>1</td></tr>
+<tr><td>4</td><td><code>Pad(28)</code> 對 28×28 的圖補 0 格，沒有作用</td><td><code>dataset.py</code></td><td>1</td></tr>
+<tr><td>5</td><td>作業的指標是「已學任務的平均」，分母隨任務改變，看不到個別任務的遺忘</td><td><code>trainer.py</code> 的 <code>train</code></td><td>2</td></tr>
+<tr><td>6</td><td>測試資料 <code>shuffle=True</code>，每次評估都用掉全域亂數，影響之後的訓練順序</td><td><code>train.py</code></td><td>2</td></tr>
+<tr><td>7</td><td><code>evaluate</code> 沒有 <code>torch.no_grad()</code>；<code>train</code> 只在開頭 <code>model.train()</code></td><td><code>trainer.py</code></td><td>2</td></tr>
+<tr><td>8</td><td><code>prev_guards</code> 存的是已經含舊 guard 的矩陣，再加總一次，舊任務的重要度每個任務加倍</td><td><code>train.py</code> 的 EWC／MAS／RWalk／SCP 迴圈</td><td>4、7、8</td></tr>
+<tr><td>9</td><td>EWC 的 Fisher 用 batch 平均梯度的平方；公式有 λ/2，程式沒有</td><td><code>methods/ewc.py</code></td><td>4</td></tr>
+<tr><td>10</td><td>各方法的 λ 與重要度量級對不上（EWC 0.44 vs MAS 44 萬）</td><td><code>train.py</code></td><td>4、5、8</td></tr>
+<tr><td>11</td><td>SI 的 docstring 引用的是 EWC 的論文</td><td><code>methods/si.py</code></td><td>6</td></tr>
+<tr><td>12</td><td>SCP 先把 L=100 個方向的投影平均，再 backward、平方</td><td><code>methods/scp.py</code></td><td>7</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="experiments">實驗規格（2026-10-08 核可）</h2>
+<p>一組 = 一種方法完整跑 5 個任務 × 10 個 epoch，約 7–8 分鐘。所有實驗一組一組依序跑，不並行。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>組</th><th>內容</th><th class="num">組數</th></tr></thead>
+<tbody>
+<tr><td>參照</td><td>notebook 原樣（六種方法共用一條亂數流），用來驗證拆檔與工具</td><td class="num">1（六種方法）</td></tr>
+<tr><td>A</td><td>六種方法 × 種子 0–4，每組只跑一種方法（亂數流和參照不同）</td><td class="num">30</td></tr>
+<tr><td>B</td><td>λ 掃描，種子 0：EWC、RWalk、SCP 試 10／1000／10000；SI 試 0.1／10／100；MAS 試 0.001／0.01／1</td><td class="num">15</td></tr>
+<tr><td>C</td><td>每個任務的重要度只算一次（<code>--guards latest</code>）：EWC、MAS、RWalk、SCP</td><td class="num">4</td></tr>
+<tr><td>D</td><td>SCP 每個方向各自平方再平均</td><td class="num">1</td></tr>
+<tr><td>E</td><td>本書加的對照：五個任務混在一起訓練（上界）；replay，每個學完的任務留 50／200／1000 張</td><td class="num">4</td></tr>
+</tbody>
+</table></div>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">開始閱讀 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW14 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW14 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+</script>
+</body>
+</html>
