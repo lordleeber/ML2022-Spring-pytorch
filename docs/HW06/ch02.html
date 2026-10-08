@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 2 章　生成器與判別器逐行 — HW06 動漫臉生成</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch01.html">← 第 1 章</a><a href="ch03.html">第 3 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW06 讀碼教材</p>
+  <h1>第 2 章　生成器與判別器逐行</h1>
+  <p class="chap-lead">第 0 章看過兩個模型的形狀與參數量，這一章拆開每一層：判別器用的普通卷積怎麼把長寬減半；生成器用的轉置卷積為什麼叫「轉置」、怎麼把長寬剛好加倍、<code>output_padding=1</code> 是做什麼的；為什麼生成器用 ReLU、判別器用 LeakyReLU，最後各接一個 Tanh 與 Sigmoid；<code>weights_init</code> 把哪些層初始化成 N(0, 0.02)、又漏了哪一層；以及剛初始化、還沒訓練的兩個模型會輸出什麼。</p>
+</header>
+<main>
+
+<h2 id="conv">2.1　判別器的卷積：k4、s2、p1 讓長寬減半</h2>
+<p>先從熟悉的卷積開始（<a href="../HW03/index.html">HW03</a> 講過）。一層 <code>nn.Conv2d</code> 的輸出長寬由四個數決定：輸入長寬 <em>n</em>、kernel 大小 <em>k</em>、stride <em>s</em>、padding <em>p</em>：</p>
+<div class="eq">卷積的輸出長寬 = ⌊(<em>n</em> + 2<em>p</em> − <em>k</em>) / <em>s</em>⌋ + 1</div>
+<p>判別器的前四層都是 <code>kernel_size=4, stride=2, padding=1</code>（<code>discriminator.py:22</code> 寫成具名參數，<code>conv_bn_lrelu</code> 第 41 行寫成 <code>4, 2, 1</code>）。代進去：(64 + 2 − 4) / 2 + 1 = 32，(32 + 2 − 4) / 2 + 1 = 16……每一層剛好減半，沒有餘數，所以 64 → 32 → 16 → 8 → 4。本書實測 <code>Conv2d(3, 64, 4, 2, 1)</code> 吃 64×64 吐 32×32，和公式一致。最後一層 <code>Conv2d(512, 1, kernel_size=4, stride=1, padding=0)</code>：(4 + 0 − 4) / 1 + 1 = 1，把 4×4 收成一點。</p>
+<p>用 stride 2 的卷積來縮小，而不是「卷積 + 池化（pooling）」，是 DCGAN 論文的建議之一：讓網路自己學怎麼縮小，而不是固定取最大值或平均。HW03 的分類器用的是 max pooling；GAN 的判別器與生成器都把池化拿掉了。</p>
+
+<h2 id="tconv">2.2　轉置卷積：把卷積倒過來用</h2>
+<p>生成器要做相反的事：從 4×4 放大到 64×64。它用的是 <code>nn.ConvTranspose2d</code>，<strong>轉置卷積</strong>（transposed convolution）。有些文章叫它「反卷積」（deconvolution），但這個名字容易誤會——它並不是把卷積的計算「還原」回去，而是另一種有自己權重的運算；<code>generator.py</code> 的函式名稱 <code>dconv_bn_relu</code> 的 d 就是 deconvolution。</p>
+
+<h3 id="why-transposed">為什麼叫「轉置」：它就是卷積的反向傳播</h3>
+<p>一層卷積是一個線性運算：輸入攤平成一個長向量 <strong>x</strong>，輸出 <strong>y</strong> = <em>C</em> <strong>x</strong>，<em>C</em> 是一個由 kernel 權重排成的大矩陣。stride 2 的卷積把 16×16 變 8×8，<em>C</em> 就是「64 列、256 行」（再乘上 channel 數）的矩陣。把這個矩陣<strong>轉置</strong>，<em>C</em><sup>T</sup> 就是「256 列、64 行」——它吃 8×8、吐 16×16。這就是轉置卷積：<strong>用同一組 kernel 權重，做卷積矩陣的轉置</strong>。</p>
+<p>而 <em>C</em><sup>T</sup> 不是新東西：反向傳播時，loss 對卷積輸入的梯度就是 <em>C</em><sup>T</sup> 乘上 loss 對輸出的梯度。PyTorch 在算每一層卷積的 backward 時，本來就在做轉置卷積。本書用數值驗證這件事：</p>
+<pre class="py"><code>W = torch.randn(8, 4, 5, 5)                     # 卷積權重：8 個輸出 channel、4 個輸入 channel
+big = torch.randn(1, 4, 16, 16, requires_grad=True)
+small = F.conv2d(big, W, stride=2, padding=2)    # 16×16 → 8×8
+g = torch.randn_like(small)                      # 隨便一個「對輸出的梯度」
+grad, = torch.autograd.grad(small, big, g)       # 反向傳播算出對輸入的梯度
+ct = F.conv_transpose2d(g, W, stride=2, padding=2, output_padding=1)   # 同一個 W 做轉置卷積</code></pre>
+<p>實測 <code>grad</code> 與 <code>ct</code> 的形狀都是 <code>(1, 4, 16, 16)</code>，兩者的最大差距是 <strong>0.00e+00</strong>——一個位元都不差（程式在 <code>docs/tools/hw06_facts.py model</code>）。這也解釋了第 0 章看到的權重形狀：同一個 tensor <code>W</code>，當卷積的權重時是 (輸出 8, 輸入 4, 5, 5)，當轉置卷積的權重時意思反過來，是 (輸入 8, 輸出 4, 5, 5)。所以生成器的 <code>l2.0.0.weight</code> 是 <code>(512, 256, 5, 5)</code>：512 進、256 出。</p>
+
+<h3 id="scatter">直觀的看法：每個輸入「蓋一個印章」</h3>
+<p>矩陣轉置的說法很精確，但不好想像。另一個等價的看法是：<strong>每一個輸入值，把整個 kernel 乘上自己，蓋到輸出上；相鄰的輸入蓋的位置相隔 stride 格；重疊的地方相加</strong>。用一維、kernel 長 5、stride 2 來看，4 個輸入會蓋出 (4 − 1) × 2 + 5 = 11 格：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 380" role="img" aria-label="一維轉置卷積：4 個輸入 x0 到 x3，每個把長度 5 的 kernel 蓋到輸出上，相鄰相隔 2 格，總共蓋出 11 格；padding 2 與 output_padding 1 裁掉左邊 2 格、右邊 1 格，留下中間 8 格。被留下的格子分別被 2、2、3、2、3、2、2、1 個輸入蓋到">
+  <text class="s-lbl" x="20" y="34">輸入（4 格）</text>
+  <rect x="190" y="14" width="56" height="30" rx="4" class="s-box" style="stroke:#58a6ff"/><text class="s-mono" x="218" y="34" text-anchor="middle">x0</text>
+  <rect x="302" y="14" width="56" height="30" rx="4" class="s-box" style="stroke:#58a6ff"/><text class="s-mono" x="330" y="34" text-anchor="middle">x1</text>
+  <rect x="414" y="14" width="56" height="30" rx="4" class="s-box" style="stroke:#58a6ff"/><text class="s-mono" x="442" y="34" text-anchor="middle">x2</text>
+  <rect x="526" y="14" width="56" height="30" rx="4" class="s-box" style="stroke:#58a6ff"/><text class="s-mono" x="554" y="34" text-anchor="middle">x3</text>
+
+  <text class="s-sm" x="20" y="82">x0 × kernel</text>
+  <rect x="190" y="66" width="280" height="24" rx="4" fill="#3fb950" fill-opacity="0.25" stroke="#3fb950"/>
+  <text class="s-sm" x="20" y="114">x1 × kernel</text>
+  <rect x="302" y="98" width="280" height="24" rx="4" fill="#3fb950" fill-opacity="0.25" stroke="#3fb950"/>
+  <text class="s-sm" x="20" y="146">x2 × kernel</text>
+  <rect x="414" y="130" width="280" height="24" rx="4" fill="#3fb950" fill-opacity="0.25" stroke="#3fb950"/>
+  <text class="s-sm" x="20" y="178">x3 × kernel</text>
+  <rect x="526" y="162" width="280" height="24" rx="4" fill="#3fb950" fill-opacity="0.25" stroke="#3fb950"/>
+
+  <text class="s-lbl" x="20" y="232">相加後（11 格）</text>
+  <g>
+    <rect x="190" y="212" width="56" height="30" rx="4" class="s-box" style="stroke:#93a1af"/>
+    <rect x="246" y="212" width="56" height="30" rx="4" class="s-box" style="stroke:#93a1af"/>
+    <rect x="302" y="212" width="56" height="30" rx="4" class="s-box" style="stroke:#3fb950"/>
+    <rect x="358" y="212" width="56" height="30" rx="4" class="s-box" style="stroke:#3fb950"/>
+    <rect x="414" y="212" width="56" height="30" rx="4" class="s-box" style="stroke:#3fb950"/>
+    <rect x="470" y="212" width="56" height="30" rx="4" class="s-box" style="stroke:#3fb950"/>
+    <rect x="526" y="212" width="56" height="30" rx="4" class="s-box" style="stroke:#3fb950"/>
+    <rect x="582" y="212" width="56" height="30" rx="4" class="s-box" style="stroke:#3fb950"/>
+    <rect x="638" y="212" width="56" height="30" rx="4" class="s-box" style="stroke:#3fb950"/>
+    <rect x="694" y="212" width="56" height="30" rx="4" class="s-box" style="stroke:#3fb950"/>
+    <rect x="750" y="212" width="56" height="30" rx="4" class="s-box" style="stroke:#93a1af"/>
+  </g>
+  <text class="s-mono" x="218" y="232" text-anchor="middle">1</text>
+  <text class="s-mono" x="274" y="232" text-anchor="middle">1</text>
+  <text class="s-mono" x="330" y="232" text-anchor="middle">2</text>
+  <text class="s-mono" x="386" y="232" text-anchor="middle">2</text>
+  <text class="s-mono" x="442" y="232" text-anchor="middle">3</text>
+  <text class="s-mono" x="498" y="232" text-anchor="middle">2</text>
+  <text class="s-mono" x="554" y="232" text-anchor="middle">3</text>
+  <text class="s-mono" x="610" y="232" text-anchor="middle">2</text>
+  <text class="s-mono" x="666" y="232" text-anchor="middle">2</text>
+  <text class="s-mono" x="722" y="232" text-anchor="middle">1</text>
+  <text class="s-mono" x="778" y="232" text-anchor="middle">1</text>
+  <text class="s-sm" x="190" y="262">格子裡的數字 = 這一格被幾個輸入的 kernel 蓋到</text>
+
+  <line x1="190" y1="282" x2="300" y2="282" stroke="#e3b341" stroke-width="2"/>
+  <text class="s-sm" x="196" y="300">padding=2：裁掉左 2 格</text>
+  <line x1="752" y1="282" x2="804" y2="282" stroke="#e3b341" stroke-width="2"/>
+  <text class="s-sm" x="660" y="300">右邊只裁 1 格（2 − output_padding 1）</text>
+  <line x1="304" y1="282" x2="748" y2="282" stroke="#3fb950" stroke-width="2"/>
+  <text class="s-lbl" x="20" y="338">留下的輸出</text>
+  <text class="s-sm" x="190" y="338">第 2–9 格，共 8 格 = (4 − 1) × 2 − 2 × 2 + 5 + 1。輸入 4 格 → 輸出 8 格：長寬加倍。</text>
+  <text class="s-sm" x="190" y="362">留下的 8 格分別被 2、2、3、2、3、2、2、1 個輸入蓋到：重疊次數不平均（見「棋盤格」一段）。</text>
+</svg>
+<figcaption>圖 2.1　一維轉置卷積，kernel 5、stride 2、padding 2、output_padding 1。藍是輸入，綠是被保留的輸出，黃是被裁掉的部分。生成器的每一層在高與寬兩個方向各做一次這件事，所以 4×4 變 8×8。本書用 <code>F.conv_transpose1d</code> 實測：不加 padding 時輸出 11 格，加上 padding 2、output_padding 1 後輸出剛好是那 11 格的第 2–9 格。</figcaption>
+</figure>
+
+<p>寫成公式，轉置卷積的輸出長寬是：</p>
+<div class="eq">轉置卷積的輸出長寬 = (<em>n</em> − 1) × <em>s</em> − 2<em>p</em> + <em>k</em> + <em>output_padding</em></div>
+<p>生成器的四層都是 <code>kernel_size=5, stride=2, padding=2, output_padding=1</code>：(4 − 1) × 2 − 4 + 5 + 1 = 8，(8 − 1) × 2 − 4 + 5 + 1 = 16，再來 32、64。每一層剛好加倍，所以第 36 行的註解寫「double height and width」。</p>
+
+<h3 id="output-padding">output_padding 在做什麼</h3>
+<p>為什麼需要 <code>output_padding</code>？因為卷積的縮小是「多對一」的。用同樣的 k5、s2、p2 做普通卷積，輸入 16 格會得到 ⌊(16 + 4 − 5) / 2⌋ + 1 = 8 格，輸入 15 格也會得到 ⌊(15 + 4 − 5) / 2⌋ + 1 = 8 格——除法的餘數被地板函數吃掉了。反過來從 8 格放大時，轉置卷積就不知道該還原成 15 還是 16。不加 <code>output_padding</code> 時 PyTorch 選小的：本書實測 <code>ConvTranspose2d(512, 256, 5, 2, 2, output_padding=0)</code> 把 4×4 變成 <strong>7×7</strong>；加上 <code>output_padding=1</code> 才是 <strong>8×8</strong>。這個參數只是「在輸出的右下多留一格」，不增加任何參數。</p>
+<div class="note"><h4>棋盤格：重疊次數不平均</h4>
+<p>圖 2.1 的格子裡寫著每一格被幾個 kernel 蓋到：中間是 3、2、3、2 交替。kernel 大小（5）不是 stride（2）的倍數時，某些位置總是比相鄰位置多被蓋一次，二維時就形成棋盤狀的明暗格紋，叫做 <strong>checkerboard artifact</strong>。訓練好的權重可以把它補償掉，但在 GAN 訓練初期或崩潰時，常能在生成圖上看到細細的格子紋。這個生成器用的就是 k5、s2。第 5 章 mode collapse 的樣本格放大後，可以看到規則重複的格狀紋路；它是不是就是這個效應，本書沒有進一步驗證。</p>
+</div>
+<div class="note"><h4>現在的做法：先放大，再卷積</h4>
+<p>2016 年 Odena 等人在 Distill 上的文章〈Deconvolution and Checkerboard Artifacts〉指出棋盤格的成因，建議改成「先用最近鄰或雙線性內插把圖放大兩倍，再接一層普通的 stride 1 卷積」（resize-convolution）。這樣每一格都被同樣多的 kernel 蓋到，就沒有格紋。後來的 StyleGAN 系列與 diffusion 模型的 U-Net 大多採用「內插放大 + 卷積」，轉置卷積在生成模型裡用得越來越少。</p>
+</div>
+
+<h2 id="generator">2.3　生成器逐行</h2>
+<figure class="listing"><figcaption>generator.py:12–46 — Generator 的 __init__、dconv_bn_relu、forward</figcaption>
+<pre class="py" data-hot="17,18,19,22,23,24,29,31,35,36,38,43"><code>    def __init__(self, in_dim, feature_dim=64):
+        super().__init__()
+
+        # input: (batch, 100)
+        self.l1 = nn.Sequential(
+            nn.Linear(in_dim, feature_dim * 8 * 4 * 4, bias=False),
+            nn.BatchNorm1d(feature_dim * 8 * 4 * 4),
+            nn.ReLU()
+        )
+        self.l2 = nn.Sequential(
+            self.dconv_bn_relu(feature_dim * 8, feature_dim * 4),  # (batch, feature_dim * 16, 8, 8)
+            self.dconv_bn_relu(feature_dim * 4, feature_dim * 2),  # (batch, feature_dim * 16, 16, 16)
+            self.dconv_bn_relu(feature_dim * 2, feature_dim),  # (batch, feature_dim * 16, 32, 32)
+        )
+        self.l3 = nn.Sequential(
+            nn.ConvTranspose2d(feature_dim, 3, kernel_size=5, stride=2,
+                               padding=2, output_padding=1, bias=False),
+            nn.Tanh()
+        )
+        self.apply(utils.weights_init)
+
+    def dconv_bn_relu(self, in_dim, out_dim):
+        return nn.Sequential(
+            nn.ConvTranspose2d(in_dim, out_dim, kernel_size=5, stride=2,
+                               padding=2, output_padding=1, bias=False),  # double height and width
+            nn.BatchNorm2d(out_dim),
+            nn.ReLU(True)
+        )
+
+    def forward(self, x):
+        y = self.l1(x)
+        y = y.view(y.size(0), -1, 4, 4)
+        y = self.l2(y)
+        y = self.l3(y)
+        return y</code></pre></figure>
+<ul>
+  <li><strong>第 17–19 行，<code>l1</code></strong>：<code>Linear(100, 8192, bias=False)</code> 接 <code>BatchNorm1d(8192)</code> 接 ReLU。這一層是生成器裡唯一的全連接層：亂數 z 的每一個數都會影響 4×4 特徵圖上的每一個位置。DCGAN 論文的做法是用一個全連接層把 z「投影並 reshape」成第一張小特徵圖，第 43 行的 <code>view(y.size(0), -1, 4, 4)</code> 就是那個 reshape：<code>-1</code> 讓 PyTorch 自己算出 8192 / 16 = 512 個 channel。</li>
+  <li><strong>第 22–24 行，<code>l2</code></strong>：三個 <code>dconv_bn_relu</code>，channel 512 → 256 → 128 → 64、長寬 4 → 8 → 16 → 32。<strong>行尾的形狀註解是錯的</strong>：三行都寫 <code>feature_dim * 16</code>（= 1,024 個 channel），實際是 <code>feature_dim * 4</code>、<code>* 2</code>、<code>* 1</code>，也就是 256、128、64。大概是從別處複製過來沒改。</li>
+  <li><strong>第 38 行，<code>nn.ReLU(True)</code></strong>：參數 <code>True</code> 是 <code>inplace=True</code>，直接改寫輸入的 tensor、不另外配置記憶體。第 19 行的 <code>nn.ReLU()</code> 沒有加，兩種寫法的計算結果一樣，只差記憶體。</li>
+  <li><strong>第 26–30 行，<code>l3</code></strong>：最後一層轉置卷積 64 → 3、32 → 64，後面<strong>沒有 BatchNorm</strong>，直接接 <code>nn.Tanh()</code>。DCGAN 論文的規則是「生成器的輸出層不加 BatchNorm」：BatchNorm 會把每個 channel 拉成固定的平均與變異數，用在最後一層等於強迫每一批圖的顏色分布都一樣，畫不出整體偏紅或偏暗的圖。Tanh 把輸出壓進 (-1, 1)，配合第 1 章把真圖正規化到 [-1, 1]。</li>
+  <li><strong>第 31 行，<code>self.apply(utils.weights_init)</code></strong>：建完所有層之後，對每一個子模組呼叫一次 <code>weights_init</code>，重設權重（2.5 節）。</li>
+</ul>
+<p>剛初始化、還沒訓練的生成器會畫出什麼？本書照 <code>train.py</code> 的順序設好種子、建好模型，送 64 個亂數 z 進去（訓練模式）：輸出形狀 <code>(64, 3, 64, 64)</code>，平均 -0.051、標準差 0.270，最小 -0.942、最大 0.938，沒有任何像素的絕對值超過 0.99。也就是說，一開始的輸出是一片接近 0（換回圖片就是接近 0.5 的灰色）的雜訊，Tanh 還沒有飽和。第 0 章那張第 1 個 epoch 的樣本格，就是從這樣的灰色雜訊開始學的。</p>
+
+<h2 id="discriminator">2.4　判別器逐行</h2>
+<figure class="listing"><figcaption>discriminator.py:21–29 — Discriminator 的 l1</figcaption>
+<pre class="py" data-hot="22,23,27,28"><code>        self.l1 = nn.Sequential(
+            nn.Conv2d(in_dim, feature_dim, kernel_size=4, stride=2, padding=1),  # (batch, 3, 32, 32)
+            nn.LeakyReLU(0.2),
+            self.conv_bn_lrelu(feature_dim, feature_dim * 2),  # (batch, 3, 16, 16)
+            self.conv_bn_lrelu(feature_dim * 2, feature_dim * 4),  # (batch, 3, 8, 8)
+            self.conv_bn_lrelu(feature_dim * 4, feature_dim * 8),  # (batch, 3, 4, 4)
+            nn.Conv2d(feature_dim * 8, 1, kernel_size=4, stride=1, padding=0),
+            nn.Sigmoid()
+        )</code></pre></figure>
+<ul>
+  <li><strong>第 22–23 行，第一層沒有 BatchNorm</strong>：這是 DCGAN 論文的另一條規則，「判別器的輸入層不加 BatchNorm」，和生成器的輸出層對稱。直接接 <code>LeakyReLU(0.2)</code>。</li>
+  <li><strong>LeakyReLU 而不是 ReLU</strong>：ReLU 把負數全部變成 0，負數那一側的梯度也是 0。判別器的梯度最後要一路傳回生成器（生成器就是靠「判別器覺得哪裡不像」來學的，第 3 章），梯度在任何一層被截斷，生成器就少了那部分的訊號。LeakyReLU 讓負數乘上 0.2 通過，梯度在負數那一側是 0.2 而不是 0，訊號比較不容易斷掉。生成器內部用 ReLU 沒有這個顧慮。</li>
+  <li><strong>第 24–26 行，同樣是錯的形狀註解</strong>：三行都寫 <code>(batch, 3, …)</code>，好像 channel 一直是 3；實際是 128、256、512，第 22 行的 <code>(batch, 3, 32, 32)</code> 也應該是 64。長寬的部分（32、16、8、4）是對的。</li>
+  <li><strong>第 27 行，最後的 4×4 卷積</strong>：它的一個輸出值，看的是整張 4×4×512 的特徵圖，而那張特徵圖的每一格又各自看了原圖的一大塊，所以<strong>最後的分數是根據整張 64×64 的圖算出來的</strong>：判別器給的是「整張圖像不像」的一個判斷。（後來的 PatchGAN 等設計則故意讓判別器輸出一張小圖，每一格只判斷原圖的一塊。）</li>
+  <li><strong>第 28 行，<code>nn.Sigmoid()</code></strong>：把分數壓成 0 到 1 之間的機率，接下來的 <code>nn.BCELoss</code>（第 3 章）需要的就是機率。第 19 行的註解提醒：做 WGAN 時要把這一層拿掉（第 6 章）。</li>
+</ul>
+<figure class="listing"><figcaption>discriminator.py:32–49 — conv_bn_lrelu 與 forward</figcaption>
+<pre class="py" data-hot="36,37,41,42,43,48"><code>    def conv_bn_lrelu(self, in_dim, out_dim):
+        """
+        NOTE FOR SETTING DISCRIMINATOR:
+
+        You can't use nn.Batchnorm for WGAN-GP
+        Use nn.InstanceNorm2d instead
+        """
+
+        return nn.Sequential(
+            nn.Conv2d(in_dim, out_dim, 4, 2, 1),
+            nn.BatchNorm2d(out_dim),
+            nn.LeakyReLU(0.2),
+        )
+
+    def forward(self, x):
+        y = self.l1(x)
+        y = y.view(-1)
+        return y</code></pre></figure>
+<p>第 36–37 行的註解寫給第 7 章：WGAN-GP 不能用 BatchNorm，要換成 InstanceNorm。原因先說個大概：gradient penalty 要求判別器對<strong>每一張圖</strong>的梯度大小都接近 1，但 BatchNorm 用整批的平均與變異數做正規化，一張圖的輸出會受到同一批其他圖的影響，「單張圖的梯度」就不再只和那張圖有關。InstanceNorm 改成每張圖自己算平均與變異數，各張圖之間就不互相干擾了。第 48 行的 <code>view(-1)</code> 在第 0 章看過：把 <code>(batch, 1, 1, 1)</code> 攤成 <code>(batch,)</code>。</p>
+<p>剛初始化的判別器會給什麼分數？同樣照 <code>train.py</code> 的種子順序，拿資料集的前 64 張真圖和剛初始化的生成器畫的 64 張假圖去問它：真圖的平均分數 <strong>0.513</strong>（最低 0.065、最高 0.899），假圖的平均分數 <strong>0.632</strong>（0.160–0.923）。兩者都在 0.5 附近亂跳，甚至假圖還比真圖高——一個沒訓練過的判別器只是在亂猜。這時判別器的 loss（真圖要接近 1、假圖要接近 0 的 BCE，兩者平均）是 0.995，生成器的 loss（假圖要接近 1 的 BCE）是 0.526。作為對照，如果判別器對每一張圖都說 0.5，兩個 loss 都是 ln 2 = 0.693。</p>
+
+<h2 id="init">2.5　weights_init：N(0, 0.02)，以及漏掉的那一層</h2>
+<figure class="listing"><figcaption>utils.py:38–45 — weights_init：依類別名稱決定怎麼初始化</figcaption>
+<pre class="py" data-hot="40,41,42,43,44,45"><code># setting for weight init function
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        m.weight.data.normal_(0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        m.weight.data.normal_(1.0, 0.02)
+        m.bias.data.fill_(0)</code></pre></figure>
+<p><code>module.apply(fn)</code> 會走過模組裡的每一個子模組（包括 <code>nn.Sequential</code> 這種容器本身）各呼叫一次 <code>fn</code>。<code>weights_init</code> 看類別名稱決定要不要動它：</p>
+<ul>
+  <li>名稱裡有 <code>'Conv'</code>：權重設成平均 0、標準差 0.02 的常態分布。<code>Conv2d</code> 與 <code>ConvTranspose2d</code> 的名稱都含 <code>Conv</code>，所以兩種卷積都會被處理。<strong>bias 沒有動</strong>，保留 PyTorch 預設的均勻分布。</li>
+  <li>名稱裡有 <code>'BatchNorm'</code>：縮放 weight 設成平均 1、標準差 0.02（每個 channel 先不放大也不縮小，只加一點擾動），平移 bias 設成 0。<code>BatchNorm1d</code> 與 <code>BatchNorm2d</code> 都會被處理。</li>
+  <li>其他（<code>Linear</code>、<code>ReLU</code>、<code>Tanh</code>、<code>Sequential</code>……）：什麼都不做。</li>
+</ul>
+<p>N(0, 0.02) 是 DCGAN 論文的設定（「All weights were initialized from a zero-centered Normal distribution with standard deviation 0.02」）。本書實測初始化後每一層的權重：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>層</th><th>類別</th><th>weights_init</th><th>權重平均</th><th>權重標準差</th></tr></thead>
+<tbody>
+<tr><td>G <code>l1.0</code></td><td>Linear</td><td><strong>沒處理</strong></td><td>+0.0000</td><td><strong>0.0577</strong></td></tr>
+<tr><td>G <code>l1.1</code></td><td>BatchNorm1d</td><td>BatchNorm</td><td>+0.9998</td><td>0.0198</td></tr>
+<tr><td>G <code>l2.0.0</code>、<code>l2.1.0</code>、<code>l2.2.0</code></td><td>ConvTranspose2d</td><td>Conv</td><td>+0.0000</td><td>0.0200</td></tr>
+<tr><td>G <code>l2.*.1</code></td><td>BatchNorm2d</td><td>BatchNorm</td><td>+0.997 – +1.002</td><td>0.017 – 0.021</td></tr>
+<tr><td>G <code>l3.0</code></td><td>ConvTranspose2d</td><td>Conv</td><td>-0.0004</td><td>0.0199</td></tr>
+<tr><td>D <code>l1.0</code>、<code>l1.2.0</code>…<code>l1.5</code></td><td>Conv2d</td><td>Conv（bias 未動）</td><td>±0.0001</td><td>0.0199 – 0.0200</td></tr>
+<tr><td>D <code>l1.*.1</code></td><td>BatchNorm2d</td><td>BatchNorm</td><td>+0.9999 – +1.0009</td><td>0.019 – 0.020</td></tr>
+</tbody>
+</table></div>
+<p>只有生成器的第一層 <code>Linear</code> 沒被處理：它保留 PyTorch 對 <code>nn.Linear</code> 的預設初始化，均勻分布 U(−1/√100, 1/√100) = U(−0.1, 0.1)，標準差 0.1 / √3 = 0.0577，實測一致（最大的絕對值是 0.1000）。DCGAN 論文說的是「所有權重」，所以嚴格來說範例程式漏了這一層；不過它後面緊接著 BatchNorm1d，輸出會被重新正規化，權重整體大一點或小一點對下一層的影響不大，這個遺漏在實際訓練中不太要緊。判別器卷積的 bias 也沒被歸零，原因相同：後面三層都接 BatchNorm，bias 本來就會被減掉（第 0 章）。</p>
+<p>還有一個和亂數有關的細節：<code>weights_init</code> 用的 <code>normal_</code> 會消耗 PyTorch 的全域亂數，而生成器建立時（<code>Generator(100)</code> 的建構子）是先用 PyTorch 預設方法初始化每一層、再被 <code>weights_init</code> 覆蓋，兩次都消耗亂數。所以「先建生成器、再建判別器」的順序是逐位元重現的一部分：<code>TrainerGAN.__init__</code> 先 <code>Generator(100)</code> 再 <code>Discriminator(3)</code>（第 3 章），本書的實驗工具也照這個順序。</p>
+
+<h2 id="summary">2.6　兩個網路放在一起看</h2>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>生成器 G</th><th>判別器 D</th></tr></thead>
+<tbody>
+<tr><td>方向</td><td>100 → 4×4 → … → 64×64，放大</td><td>64×64 → … → 4×4 → 1，縮小</td></tr>
+<tr><td>主要的層</td><td>轉置卷積 k5、s2、p2、op1（長寬加倍）</td><td>卷積 k4、s2、p1（長寬減半）</td></tr>
+<tr><td>第一層</td><td>Linear + BN1d + ReLU（z 投影成 512×4×4）</td><td>卷積 + LeakyReLU（<strong>沒有 BN</strong>）</td></tr>
+<tr><td>中間層</td><td>BN + ReLU</td><td>BN + LeakyReLU(0.2)</td></tr>
+<tr><td>最後一層</td><td>轉置卷積 + Tanh（<strong>沒有 BN</strong>），輸出 [-1, 1]</td><td>4×4 卷積 + Sigmoid，輸出 0–1 的機率</td></tr>
+<tr><td>bias</td><td>全部 <code>bias=False</code></td><td>保留預設</td></tr>
+<tr><td>參數</td><td>5,142,080</td><td>2,766,529</td></tr>
+<tr><td>形狀註解</td><td>第 22–24 行錯（寫 <code>feature_dim * 16</code>）</td><td>第 22–26 行錯（寫 3 個 channel）</td></tr>
+</tbody>
+</table></div>
+<p>這張表幾乎就是 DCGAN 論文的那幾條設計規則：用 stride 卷積取代池化、生成器與判別器都用 BatchNorm（但不用在生成器的輸出層與判別器的輸入層）、拿掉全連接的隱藏層、生成器用 ReLU 而輸出用 Tanh、判別器全部用 LeakyReLU。兩個網路的大小是同一個數量級（G 比 D 大將近一倍），這很重要：GAN 的訓練是兩個網路互相較勁，一方太強另一方就學不到東西。第 3 章會看到它們怎麼輪流更新，第 5 章會看到「判別器太強」時發生什麼事。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>判別器的卷積 k4、s2、p1：⌊(<em>n</em> + 2 − 4) / 2⌋ + 1，長寬剛好減半；最後一層 4×4 卷積把 4×4 收成 1 個分數，看的是整張圖。</li>
+  <li>轉置卷積就是卷積矩陣的轉置，也就是卷積的反向傳播（本書數值驗證差距 0）；直觀上是「每個輸入把 kernel 蓋到輸出上、間隔 stride、重疊相加」。輸出長寬 (<em>n</em> − 1)<em>s</em> − 2<em>p</em> + <em>k</em> + <em>output_padding</em>；k5、s2、p2、op1 剛好加倍，不加 <code>output_padding</code> 會變成 7×7。權重形狀 (輸入, 輸出, k, k)。</li>
+  <li>k5、s2 讓重疊次數 3、2 交替，可能產生棋盤格紋；現在的生成模型多改用「內插放大 + 卷積」。</li>
+  <li>DCGAN 的設計規則：生成器 ReLU + 輸出 Tanh、判別器 LeakyReLU(0.2) + 輸出 Sigmoid、生成器輸出層與判別器輸入層不加 BN。兩個檔案裡的 channel 形狀註解都是錯的。</li>
+  <li><code>weights_init</code>：Conv 類 N(0, 0.02)、BatchNorm 類 weight N(1, 0.02)、bias 0；生成器第一層 Linear 沒被處理（保留 U(−0.1, 0.1)，標準差 0.0577）。剛初始化時生成器輸出接近 0 的雜訊（標準差 0.27），判別器對真假圖都給 0.5 附近的分數。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 把生成器四層轉置卷積的 <code>output_padding</code> 都改成 0，輸出會是多大？判別器吃得下嗎？</summary>
+<p>每一層變成 (<em>n</em> − 1) × 2 − 4 + 5 = 2<em>n</em> − 1：4 → 7 → 13 → 25 → 49，輸出 49×49。判別器的四層 stride 2 卷積會把 49 縮成 24 → 12 → 6 → 3，最後的 4×4 卷積蓋不上 3×3 的特徵圖，會報錯。本書實測：生成器輸出 <code>(2, 3, 49, 49)</code>，送進判別器得到 <code>RuntimeError: Calculated padded input size per channel: (3 x 3). Kernel size: (4 x 4). Kernel size can't be greater than actual input size</code>。<code>output_padding</code> 雖然不增加參數，卻決定了形狀能不能接得上。</p></details>
+<details class="quiz"><summary>2. 轉置卷積「把卷積倒過來」，那麼先做一次 k5、s2、p2 的卷積、再用同一組權重做轉置卷積，會得到原來的圖嗎？</summary>
+<p>不會。轉置卷積是卷積矩陣 <em>C</em> 的轉置 <em>C</em><sup>T</sup>，不是反矩陣 <em>C</em><sup>−1</sup>；<em>C</em><sup>T</sup><em>C</em><strong>x</strong> 一般不等於 <strong>x</strong>。而且 stride 2 的卷積把 16×16 壓成 8×8，資訊已經少了四分之三，任何運算都不可能完整還原。所以「反卷積」這個名字容易誤導；生成器的轉置卷積有自己學出來的權重，它學的是「怎麼從小特徵圖畫出大圖」，和任何一個卷積的還原都沒有關係。</p></details>
+<details class="quiz"><summary>3. 判別器為什麼用 LeakyReLU 而不是 ReLU？生成器為什麼可以用 ReLU？</summary>
+<p>判別器的梯度要一路傳回生成器：生成器的 loss 是透過判別器算出來的，生成器的權重要更新，梯度必須穿過判別器的每一層。ReLU 在負數那一側梯度是 0，會截斷一部分訊號；LeakyReLU 在負數那一側的梯度是 0.2，訊號不會完全斷掉。生成器的 ReLU 只影響生成器自己的權重怎麼更新，而且它後面接的是 BatchNorm 正規化過的值，大約一半是正的，不會整片死掉。這是 DCGAN 論文的經驗規則。</p></details>
+<details class="quiz"><summary>4. <code>weights_init</code> 用 <code>classname.find('Conv') != -1</code> 判斷。如果有人在模型裡加了一個自己寫的 <code>class ConvBlock(nn.Module)</code>，裡面包著幾層卷積，會發生什麼事？</summary>
+<p><code>apply</code> 會走到 <code>ConvBlock</code> 本身，它的名稱含 <code>Conv</code>，於是執行 <code>m.weight.data.normal_(...)</code>——但 <code>ConvBlock</code> 自己沒有 <code>weight</code> 這個屬性，會丟出錯誤。本書實測一個只包著一層 <code>nn.Conv2d</code> 的 <code>ConvBlock</code>：<code>AttributeError: 'ConvBlock' object has no attribute 'weight'</code>。用類別名稱字串比對很脆弱；比較穩的寫法是 <code>isinstance(m, (nn.Conv2d, nn.ConvTranspose2d))</code>。</p></details>
+<details class="quiz"><summary>5. 剛初始化的判別器給假圖的平均分數（0.632）比真圖（0.513）還高。這代表什麼？訓練第一步時，哪一個網路的 loss 比較大？</summary>
+<p>只代表判別器還沒學會任何東西，分數是隨機權重的副產品，沒有意義。這時判別器的 loss 是 0.995、生成器的 loss 是 0.526：判別器的 loss 比較大，因為它把假圖判得比真圖還像真的，完全答反了；生成器的 loss 小，因為它的假圖剛好被判成偏「真」。第 0 章看到的訓練第一步是 <code>loss_D=0.929, loss_G=3.43</code>。本書照 <code>train.py</code> 重現了那一步：判別器更新前，那一批真圖、假圖的平均分數是 0.516、0.613，loss_D 0.9293；<strong>判別器只用 Adam 更新一步</strong>，新畫的一批假圖分數就掉到 0.052，loss_G 變成 3.4329——印出來的 3.43 是判別器更新之後才算的，一步就讓生成器的處境差了很多（第 3 章會看到這個順序）。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+  <li>Radford、Metz、Chintala，〈Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks〉（ICLR 2016）：第 3 節列出本章的那幾條架構規則，第 4 節是 N(0, 0.02) 初始化與 LeakyReLU 0.2，<a href="https://arxiv.org/abs/1511.06434">arXiv:1511.06434</a>。</li>
+  <li>Dumoulin、Visin，〈A guide to convolution arithmetic for deep learning〉：卷積與轉置卷積的形狀公式、圖解，以及「轉置卷積 = 卷積的梯度」的推導，<a href="https://arxiv.org/abs/1603.07285">arXiv:1603.07285</a>。</li>
+  <li>Odena、Dumoulin、Olah，〈<a href="https://distill.pub/2016/deconv-checkerboard/">Deconvolution and Checkerboard Artifacts</a>〉（Distill, 2016）：棋盤格紋的成因與「內插放大 + 卷積」的替代做法，有互動圖。</li>
+  <li>PyTorch 文件 <a href="https://pytorch.org/docs/stable/generated/torch.nn.ConvTranspose2d.html"><code>torch.nn.ConvTranspose2d</code></a>：輸出形狀公式與 <code>output_padding</code> 的說明。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch01.html">← 第 1 章</a><a href="ch03.html">第 3 章 →</a></nav>
+<footer class="chap-footer">本教材根據 lordleeber/ML2022-Spring-pytorch 的 HW06 程式碼與 ML2022 Spring 作業投影片撰寫。</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>

@@ -5,6 +5,9 @@
   stats    per-channel mean / std of all 71,314 images after the transform (8 workers, CPU)
   loader   len(dataloader), last batch size, and the wall time of one epoch of the DataLoader
            alone (no model) for num_workers 0 / 2 / 4 / 8
+  model    ch02: transposed-conv shape formula, conv_transpose2d == gradient of conv2d, which modules
+           weights_init touches and the resulting weight statistics, outputs of the freshly
+           initialized G and D (train.py's seed order: same_seeds(2022) -> Generator -> Discriminator)
   figs     PNG grids for the book: the first 24 files by number at 96x96 and after the transform
            (64x64), written to the directory given as the second argument
 """
@@ -65,6 +68,58 @@ elif cmd == 'loader':
         for x in dl:
             nb += 1; last = x.shape
         print(f'workers {w}: len {len(dl)} batches {nb} last batch {tuple(last)} one epoch {time.time() - t0:.1f}s', flush=True)
+
+elif cmd == 'model':
+    import torch.nn as nn, torch.nn.functional as F
+    from generator import Generator
+    from discriminator import Discriminator
+    x = torch.randn(1, 512, 4, 4)
+    for op in (1, 0):
+        ct = nn.ConvTranspose2d(512, 256, 5, 2, 2, output_padding=op, bias=False)
+        print(f'ConvTranspose2d k5 s2 p2 output_padding={op}: 4x4 ->', tuple(ct(x).shape[2:]))
+    for h in (4, 8, 16, 32):
+        print(f'  in {h}: (h-1)*2 - 2*2 + 5 + 1 =', (h - 1) * 2 - 4 + 5 + 1)
+    c = nn.Conv2d(3, 64, 4, 2, 1)
+    print('Conv2d k4 s2 p1: 64x64 ->', tuple(c(torch.randn(1, 3, 64, 64)).shape[2:]), '; floor((64+2-4)/2)+1 =', (64 + 2 - 4) // 2 + 1)
+    # conv_transpose2d is the gradient of conv2d w.r.t. its input
+    torch.manual_seed(0)
+    W = torch.randn(8, 4, 5, 5)           # conv2d weight (out=8, in=4); the same tensor is a conv_transpose weight (in=8, out=4)
+    big = torch.randn(1, 4, 16, 16, requires_grad=True)
+    small = F.conv2d(big, W, stride=2, padding=2)          # 16 -> 8
+    g = torch.randn_like(small)
+    grad, = torch.autograd.grad(small, big, g)
+    ct = F.conv_transpose2d(g, W, stride=2, padding=2, output_padding=1)
+    print('conv2d 16->8 shape', tuple(small.shape), '; conv_transpose2d 8->16 shape', tuple(ct.shape),
+          '; max |grad - conv_transpose| = %.2e' % (grad - ct).abs().max().item())
+    utils.same_seeds(2022)
+    G = Generator(100); D = Discriminator(3)
+    for name, m in [('G', G), ('D', D)]:
+        for n, mod in m.named_modules():
+            if len(list(mod.children())) or not any(True for _ in mod.parameters(recurse=False)):
+                continue
+            cls = mod.__class__.__name__
+            hit = 'Conv' if cls.find('Conv') != -1 else ('BatchNorm' if cls.find('BatchNorm') != -1 else 'not touched')
+            w = mod.weight.data
+            print(f'{name} {n:8s} {cls:16s} weights_init:{hit:12s} weight mean {w.mean():+.4f} std {w.std():.4f}'
+                  + (f' bias all zero {bool((mod.bias == 0).all())}' if mod.bias is not None else ''))
+    lin = G.l1[0]
+    print('default Linear init bound 1/sqrt(100) = %.4f; uniform std = bound/sqrt(3) = %.4f; measured |w| max %.4f'
+          % (0.1, 0.1 / 3 ** 0.5, lin.weight.detach().abs().max()))
+    G.train(); D.train()
+    with torch.no_grad():
+        z = torch.randn(64, 100)
+        f = G(z)
+        print('fresh G(z) train mode: shape', tuple(f.shape), 'mean %.4f std %.4f min %.4f max %.4f |x|>0.99: %.4f'
+              % (f.mean(), f.std(), f.min(), f.max(), (f.abs() > 0.99).float().mean()))
+        ds = utils.get_dataset('faces')
+        r = torch.stack([ds[i] for i in range(64)])
+        dr, df = D(r), D(f)
+        print('fresh D(real) mean %.4f min %.4f max %.4f ; D(fake) mean %.4f min %.4f max %.4f'
+              % (dr.mean(), dr.min(), dr.max(), df.mean(), df.min(), df.max()))
+        bce = nn.BCELoss()
+        print('BCE at init: D loss %.4f (ln2 = %.4f), G loss %.4f' % (
+            ((bce(dr, torch.ones(64)) + bce(df, torch.zeros(64))) / 2).item(), torch.log(torch.tensor(2.)).item(),
+            bce(df, torch.ones(64)).item()))
 
 elif cmd == 'figs':
     out = sys.argv[2]

@@ -291,3 +291,14 @@ FID64（n = 1000、z 種子 0；FID96 與 AFD 見 jsonl）：
 - `figs`：`docs/HW06/img/ch01_crypko96.png`（0–23.jpg 原圖，12×2）、`ch01_crypko64.png`（轉換後再 (x+1)/2）。
 - 71,313 = 3 × 11 × 2,161；batch 3、11、33 時最後一批剩 1 張。生成器（train 模式）吃 1 個 z：`ValueError: Expected more than 1 value per channel when training, got input size torch.Size([1, 8192])`。
 - 解碼後大小：96×96 全部 ≈ 1.97 GB（uint8）、64×64 ≈ 0.876 GB。
+
+## ch02 實測（`hw06_facts.py model` 與單次驗證，2026-10-08）
+- 轉置卷積 k5 s2 p2：`output_padding=1` 4×4 → 8×8；`output_padding=0` → **7×7**。公式 (n−1)·2 − 4 + 5 + 1：4→8→16→32→64。卷積 k4 s2 p1：64 → 32。
+- **conv_transpose2d = conv2d 的梯度**：W (8,4,5,5)、16×16 → 8×8 的 conv2d，`autograd.grad` 對輸入的梯度與 `F.conv_transpose2d(g, W, stride=2, padding=2, output_padding=1)` 最大差 **0.00e+00**（形狀都是 (1, 4, 16, 16)）。
+- 一維 `conv_transpose1d`，輸入 [1, 10, 100, 1000]、kernel 全 1、s2：無 padding 11 格 `[1, 1, 11, 11, 111, 110, 1110, 1100, 1100, 1000, 1000]`；p2 op1 → 8 格 = 完整 11 格的第 2–9 格。保留的 8 格重疊次數 2、2、3、2、3、2、2、1。
+- `weights_init`（same_seeds(2022) → Generator → Discriminator）：G `l1.0` Linear **沒被處理**，std 0.0577（= 0.1/√3，|w| 最大 0.1000）；ConvTranspose2d／Conv2d std 0.0199–0.0200、mean ±0.0004 以內；BN weight mean 0.997–1.0015、std 0.017–0.021、bias 全 0；D 的 conv bias 不是 0（未動）。
+- 剛初始化（CPU、z 64 個、訓練模式）：G 輸出 mean −0.0511、std 0.2703、min −0.9416、max 0.9381、|x|>0.99 的比例 0。D 對前 64 張真圖平均 0.5134（0.0652–0.8986），對 G 的假圖 0.6320（0.1602–0.9226）；BCE loss_D 0.9949、loss_G 0.5257（ln2 = 0.6931）。
+- **重現 train.py 第 0 步（GPU，照 train.py 的亂數順序）**：D 更新前 D(real) 0.5164、D(fake) 0.6125、loss_D **0.9293**（進度條印 0.929）、用更新前的 D 算的 loss_G 0.5622；D 用 Adam 更新一步後，新的一批假圖 D(fake) **0.0520**、loss_G **3.4329**（進度條印 3.43）。
+- G 四層 output_padding 全改 0：輸出 (2, 3, 49, 49)；送進 D：`RuntimeError: Calculated padded input size per channel: (3 x 3). Kernel size: (4 x 4). Kernel size can't be greater than actual input size`。
+- 自訂 `class ConvBlock(nn.Module)`（只包一層 Conv2d）`.apply(utils.weights_init)`：`AttributeError: 'ConvBlock' object has no attribute 'weight'`。
+- `Epoch_020.jpg` 放大：有規則重複的格狀紋路（週期大於 2 px），**未驗證**是否為 checkerboard artifact。
