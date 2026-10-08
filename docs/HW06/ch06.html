@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 6 章　報告題 Q1：從 GAN 到 WGAN — HW06 動漫臉生成</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch05.html">← 第 5 章</a><a href="ch07.html">第 7 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW06 讀碼教材</p>
+  <h1>第 6 章　報告題 Q1：從 GAN 到 WGAN</h1>
+  <p class="chap-lead">報告第 1 題要你列出 WGAN 和 GAN 至少兩點不同。這一章先講 WGAN 想解決的問題——原始 GAN 在兩個分布不重疊時給不出有用的梯度——再把 WGAN 的五個改動一一對到範例程式裡留好的註解；接著照註解「字面」改一次，看三種常見的改法各自怎麼失敗；最後跑正確的 WGAN，看它的 FID 一路降到 90.3、沒有崩潰，而且它的 loss 第一次和圖的好壞同步。</p>
+</header>
+<main>
+
+<h2 id="question">6.1　題目</h2>
+<p>投影片第 19 頁的報告第 1 題：「Describe the difference between WGAN and GAN, list at least two differences」，並標註 WGAN 指的是 WGAN 論文（Arjovsky、Chintala、Bottou，2017）、GAN 指的是原始 GAN 論文（Goodfellow 等，2014）。第 24 頁給了實作提示：</p>
+<ol>
+  <li>拿掉判別器最後的 Sigmoid。</li>
+  <li>算 loss 時不取對數。</li>
+  <li>把判別器的權重限制在一個常數範圍內（投影片寫「1 ~ -1」）。</li>
+  <li>用 RMSProp 或 SGD 當優化器。</li>
+</ol>
+<p>本章先講為什麼要這樣改，再實測。題目要的答案放在 6.6 節。</p>
+
+<h2 id="js">6.2　GAN 在最小化什麼，以及它的問題</h2>
+<p>原始 GAN 論文證明了一件事：如果判別器每一步都訓練到最好，那麼生成器的目標，等於在最小化真實分布與生成分布之間的 <strong>Jensen–Shannon 散度</strong>（JS divergence）。JS 散度是一種「兩個分布有多不同」的量，兩個分布完全相同時是 0，完全不重疊時是最大值 log 2。</p>
+<p>問題就出在「完全不重疊」。64×64×3 = 12,288 維的空間裡，真正像動漫臉的圖只占極小的一塊（一個低維的曲面）；剛初始化的生成器畫出的灰色雜訊（第 2 章）又落在另一小塊。兩塊幾乎不可能重疊。這時：</p>
+<ul>
+  <li>JS 散度是常數 log 2——不管生成器的分布離真的近一點還是遠一點，數值都一樣，對生成器的參數微分是 0，<strong>沒有方向可走</strong>。</li>
+  <li>實務上，判別器很容易把兩塊完全分開，Sigmoid 的輸出貼到 0 或 1，梯度跟著消失。第 3 章看到的「判別器幾乎一直贏」、第 5 章的崩潰，都和這件事有關。</li>
+</ul>
+<p>WGAN 論文用一個一維的例子說明：真實分布是「只在 0 這一點」、生成分布是「只在 θ 這一點」。只要 θ ≠ 0，兩者就不重疊，JS 散度永遠是 log 2；但直覺上，θ 從 5 移到 1 明明是更接近了。WGAN 改用 <strong>Wasserstein-1 距離</strong>（又叫 Earth Mover's Distance，推土機距離）：把一堆土（生成分布）搬成另一堆土（真實分布）的形狀，最少要搬多少「土量 × 距離」。在這個例子裡它就是 |θ|——θ 越接近 0 越小，處處都有梯度。</p>
+<div class="eq">W(P<sub>r</sub>, P<sub>g</sub>) = max<sub>‖f‖<sub>L</sub> ≤ 1</sub>  𝔼<sub>x∼P<sub>r</sub></sub>[ f(x) ] − 𝔼<sub>x∼P<sub>g</sub></sub>[ f(x) ]</div>
+<p>直接算推土的距離很難，但它有一個等價的寫法（Kantorovich–Rubinstein 對偶）：在所有「<strong>1-Lipschitz</strong>」的函數 f 裡，找一個讓「真圖的平均分數 − 假圖的平均分數」最大的；那個最大值就是 Wasserstein 距離。1-Lipschitz 的意思是 |f(x) − f(y)| ≤ ‖x − y‖：輸入改變多少，輸出最多改變多少，函數不能有太陡的地方。這個 f 就由判別器來扮演——但它不再是「判斷真假的機率」，而是一個打分數的函數，WGAN 論文改叫它 <strong>critic</strong>（評論家）。</p>
+
+<h2 id="changes">6.3　WGAN 的五個改動，範例程式都留了註解</h2>
+<p>從上面的公式直接推出 WGAN 的寫法。範例程式在對應的地方都留好了註解，這一節逐一對照。</p>
+
+<h3 id="c1">改動 1：判別器不要 Sigmoid（critic 輸出任意實數）</h3>
+<figure class="listing"><figcaption>discriminator.py:15–20 — 第一個提示</figcaption>
+<pre class="py" data-hot="19"><code>        # input: (batch, 3, 64, 64)
+        """
+        NOTE FOR SETTING DISCRIMINATOR:
+
+        Remove last sigmoid layer for WGAN
+        """</code></pre></figure>
+<p>critic 的分數是用來相減、估距離的，沒有「機率」的意義，也不能被壓在 0–1 之間——Sigmoid 會讓分數飽和，正是原始 GAN 梯度消失的來源之一。</p>
+
+<h3 id="c2">改動 2：loss 不取 log</h3>
+<figure class="listing"><figcaption>trainer_gan.py:116–126 — 判別器 loss 的提示</figcaption>
+<pre class="py" data-hot="121,122"><code>                """
+                NOTE FOR SETTING DISCRIMINATOR LOSS:
+
+                GAN: 
+                    loss_D = (r_loss + f_loss)/2
+                WGAN: 
+                    loss_D = -torch.mean(r_logit) + torch.mean(f_logit)
+                WGAN-GP: 
+                    gradient_penalty = self.gp(r_imgs, f_imgs)
+                    loss_D = -torch.mean(r_logit) + torch.mean(f_logit) + gradient_penalty
+                """</code></pre></figure>
+<figure class="listing"><figcaption>trainer_gan.py:156–162 — 生成器 loss 的提示</figcaption>
+<pre class="py" data-hot="160"><code>                    """
+                    NOTE FOR SETTING LOSS FOR GENERATOR:
+
+                    GAN: loss_G = self.loss(f_logit, r_label)
+                    WGAN: loss_G = -torch.mean(self.D(f_imgs))
+                    WGAN-GP: loss_G = -torch.mean(self.D(f_imgs))
+                    """</code></pre></figure>
+<p>critic 要讓「真圖平均 − 假圖平均」越大越好，寫成要最小化的 loss 就是 <code>loss_D = -mean(D(真)) + mean(D(假))</code>，<strong>−loss_D 就是 critic 對 Wasserstein 距離的估計</strong>。生成器要讓這個距離變小，它只能影響假圖那一項，所以 <code>loss_G = -mean(D(假))</code>：讓 critic 給假圖的分數越高越好。沒有標籤、沒有 BCE、沒有 log。</p>
+
+<h3 id="c3">改動 3：權重 clipping，讓 critic 保持 Lipschitz</h3>
+<figure class="listing"><figcaption>trainer_gan.py:137–143 — clipping 的提示（被註解掉的兩行）</figcaption>
+<pre class="py" data-hot="142,143"><code>                """
+                NOTE FOR SETTING WEIGHT CLIP:
+
+                WGAN: below code
+                """
+                # for p in self.D.parameters():
+                #     p.data.clamp_(-self.config["clip_value"], self.config["clip_value"])</code></pre></figure>
+<p>公式要求 critic 是 1-Lipschitz（或至少是某個 K-Lipschitz，只差一個倍數）。WGAN 論文用最粗暴的方法：每次更新判別器之後，把<strong>每一個參數</strong>都截到 [−c, c] 之間。權重有上限，網路能做出的最陡斜率也就有上限。論文用 c = 0.01；投影片第 24 頁寫「1 ~ -1」，對這個判別器幾乎等於沒有限制（第 2 章：卷積權重初始化在 ±0.02 附近），本書照論文用 0.01。論文自己也說：weight clipping 是「a clearly terrible way to enforce a Lipschitz constraint」——c 太大，critic 要很久才訓練得好；c 太小，梯度容易消失。第 7 章的 WGAN-GP 就是為了換掉它。</p>
+
+<h3 id="c4">改動 4：RMSProp，不用動量</h3>
+<figure class="listing"><figcaption>trainer_gan.py:38–46 — 優化器的提示</figcaption>
+<pre class="py" data-hot="42"><code>        """
+        NOTE FOR SETTING OPTIMIZER:
+
+        GAN: use Adam optimizer
+        WGAN: use RMSprop optimizer
+        WGAN-GP: use Adam optimizer 
+        """
+        self.opt_D = torch.optim.Adam(self.D.parameters(), lr=self.config["lr"], betas=(0.5, 0.999))
+        self.opt_G = torch.optim.Adam(self.G.parameters(), lr=self.config["lr"], betas=(0.5, 0.999))</code></pre></figure>
+<p>WGAN 論文發現用 Adam 這類有動量的優化器時，critic 的訓練有時會不穩定，改用沒有動量的 RMSProp，學習率 5×10<sup>−5</sup>。</p>
+
+<h3 id="c5">改動 5：critic 多訓練幾次（n_critic = 5）</h3>
+<p>這一個不需要改程式：<code>config.py</code> 的 <code>"n_critic"</code> 與 <code>trainer_gan.py:148</code> 的 <code>if self.steps % self.config["n_critic"] == 0</code> 已經寫好了（第 3 章）。Wasserstein 距離的估計要在 critic 「訓練得夠好」時才準，所以論文讓 critic 每更新 5 次，生成器才更新 1 次。對 HW06 來說，同樣 100 個 epoch（111,500 步），生成器只更新 22,300 次。</p>
+
+<h2 id="literal">6.4　照註解字面改：三種下場</h2>
+<p>repo 裡的 <code>筆記.txt</code> 第二條寫著：「WGAN, WGAN-GP 只替換 loss_G 是不能使用的，需進一步研究」。本書把 HW06 複製一份到暫存資料夾，照三種常見的「改一部分」各跑一次。</p>
+
+<h3 id="lit-clip">下場 1：拿掉 clipping 的註解 → KeyError</h3>
+<p>把 <code>trainer_gan.py:142–143</code> 前面的 <code>#</code> 刪掉、其他不改，跑 <code>train.py</code>，第一步就停下來：</p>
+<pre class="shell"><code>    p.data.clamp_(-self.config["clip_value"], self.config["clip_value"])
+                   ~~~~~~~~~~~^^^^^^^^^^^^^^
+KeyError: 'clip_value'</code></pre>
+<p><code>config.py</code> 裡沒有 <code>clip_value</code> 這個鍵（第 0 章），要自己加上 <code>"clip_value": 0.01</code>。</p>
+
+<h3 id="lit-lossg">下場 2：只換 loss_G → 第 1 個 epoch 是雜訊，但會恢復</h3>
+<p>這是筆記的字面做法：只把 <code>trainer_gan.py:164</code> 換成 <code>loss_G = -torch.mean(self.D(f_imgs))</code>，判別器仍是 Sigmoid + BCE。為了省時間，<code>n_epoch</code> 改成 20。每個 epoch 結束時的進度條（逐字）：</p>
+<pre class="shell"><code>Epoch 1: 100%|██████████| 1115/1115 [00:24&lt;00:00, 45.03it/s, loss_D=6.96e-7, loss_G=-3.85e-7]  «1»
+Epoch 2: 100%|██████████| 1115/1115 [00:17&lt;00:00, 62.17it/s, loss_D=0.133, loss_G=-7.75e-5]
+Epoch 3: 100%|██████████| 1115/1115 [00:17&lt;00:00, 63.99it/s, loss_D=0.266, loss_G=-0.00744]
+Epoch 4: 100%|██████████| 1115/1115 [00:17&lt;00:00, 63.52it/s, loss_D=0.193, loss_G=-0.0681]  «2»
+Epoch 5: 100%|██████████| 1115/1115 [00:17&lt;00:00, 62.48it/s, loss_D=0.0542, loss_G=-0.0168]
+Epoch 10: 100%|██████████| 1115/1115 [00:17&lt;00:00, 62.26it/s, loss_D=0.0777, loss_G=-0.0179]
+Epoch 20: 100%|██████████| 1115/1115 [00:18&lt;00:00, 61.88it/s, loss_D=1.51e-5, loss_G=-6.74e-6]</code></pre>
+<ol class="notes">
+  <li><span class="mk">1</span>第 1 個 epoch 結束時，判別器的 BCE loss 是 6.96×10<sup>−7</sup>，完全壓制；<code>loss_G</code> = −mean(D(假)) = −3.85×10<sup>−7</sup>，也就是判別器給假圖的平均機率只有約 4×10<sup>−7</sup>。</li>
+  <li><span class="mk">2</span>到第 3–4 個 epoch，判別器給假圖的機率回升到 0.007–0.07，生成器開始學得動。</li>
+</ol>
+<figure class="fig">
+<img src="img/ch06_lossg_epoch001.png" alt="只換 loss_G 的第 1 個 epoch：10 格都是一樣的灰色雜訊" style="max-width:100%;image-rendering:pixelated">
+<figcaption>圖 6.1　只換 loss_G，第 1 個 epoch 的樣本格第一列：全是灰色雜訊。</figcaption>
+</figure>
+<figure class="fig">
+<img src="img/ch06_lossg_epoch020.png" alt="只換 loss_G 的第 20 個 epoch：10 張清楚、各不相同的動漫臉" style="max-width:100%;image-rendering:pixelated">
+<figcaption>圖 6.2　同一次訓練的第 20 個 epoch：清楚、各不相同的臉。</figcaption>
+</figure>
+<p>第 1 個 epoch 為什麼是雜訊？判別器仍有 Sigmoid，<code>-mean(D(假))</code> 對 Sigmoid 之前的值 <em>a</em> 微分是 −σ(<em>a</em>)(1 − σ(<em>a</em>))：判別器給假圖的機率接近 0 時，這個梯度也接近 0——和第 3 章講的 minimax loss log(1 − D) 一樣是「飽和」的。判別器一開始就贏得太徹底，生成器幾乎收不到訊號。但判別器並不是每一步都完美，等它鬆動一點，生成器就能學起來：FID64 在第 1、5、10、15、20 個 epoch 是 319.9、266.1、136.7、131.0、<strong>122.9</strong>。</p>
+<p>所以筆記的觀察只對了一半：<strong>只換 loss_G 不是不能用，而是第 1 個 epoch 看起來不能用</strong>。原版 notebook 的 <code>n_epoch</code> 是 1，照 notebook 跑只會看到圖 6.1。它也不是 WGAN：判別器還是在做 BCE 分類、沒有 Lipschitz 限制，只是換了一種（比較差的）生成器 loss。和原版 DCGAN 比，第 15 個 epoch 是 131.0 對 105.0，比較差；但第 20 個 epoch 沒有崩（122.9 對 DCGAN 的 347.1）。這是單一次訓練的結果，不能說它比較穩。</p>
+
+<h3 id="lit-sigmoid">下場 3：WGAN 的 loss，但保留 Sigmoid、不 clip → 卡死</h3>
+<p>另一種常見的半套改法：兩個 loss 都換成 WGAN 的寫法，但忘了拿掉 Sigmoid、也沒做 clipping（優化器、<code>n_critic</code> 照原樣）。本書的實驗工具用 <code>--model_type WGAN --sigmoid 1 --clip 0</code> 跑完 100 個 epoch，記下的判別器分數：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>epoch</th><th>D(真圖) 平均</th><th>D(假圖) 平均</th><th>loss_D 中位數</th><th>loss_G 中位數</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>0.7623</td><td>0.0010</td><td>−0.9998</td><td>−0.0000</td></tr>
+<tr><td>2</td><td>1.0000</td><td>0.4234</td><td>−1.0000</td><td>−0.0000</td></tr>
+<tr><td>5、10、20…100</td><td>1.0000</td><td>1.0000</td><td>−0.0000</td><td>−1.0000</td></tr>
+</tbody>
+</table></div>
+<p>從第 5 個 epoch 起，判別器對<strong>所有</strong>圖都輸出 1.0000——真圖 1、假圖也是 1。loss_D = −1 + 1 = 0，loss_G = −1。這是一個死結：Sigmoid 的輸入大到 float32 算出來剛好是 1.0，σ(1 − σ) = 0，兩個網路的梯度都是 0（實驗工具記下的判別器 5 層梯度範數，在第 91–100 個 epoch 全部是 0）。之後的 95 個 epoch 什麼都沒有學：FID64 從第 5 個 epoch 起一直是 336–338，AFD 全部是 0，樣本格的多樣性一直在 22 以下（第 5 章的指標；真圖約 58）。</p>
+<p>WGAN 的 loss 沒有 log 把分數「拉開」，Sigmoid 又把分數壓在 0–1 之間：critic 想讓真圖分數大、假圖分數小，生成器想讓假圖分數大，結果兩邊一起把分數推到 Sigmoid 的上限，然後在那裡同歸於盡。這就是筆記說「不能使用」最可能的真正原因，也是第 1 個提示（拿掉 Sigmoid）不能省的理由。</p>
+
+<h2 id="wgan">6.5　正確的 WGAN</h2>
+<p>五個改動全部做齊：拿掉 Sigmoid、WGAN loss、clip 到 ±0.01、RMSProp 學習率 5×10<sup>−5</sup>、<code>n_critic</code> 5。本書的實驗工具 <code>hw06_exp.py</code> 對應的幾行：</p>
+<figure class="listing"><figcaption>docs/tools/hw06_exp.py:68–71 — 拿掉 Sigmoid（建完模型之後換成 Identity，不消耗亂數）</figcaption>
+<pre class="py" data-hot="71"><code>wgan = args.model_type in ('WGAN', 'WGANGP')
+keep_sigmoid = (not wgan) if args.sigmoid &lt; 0 else bool(args.sigmoid)
+if not keep_sigmoid:
+    D.l1[-1] = nn.Identity()</code></pre></figure>
+<figure class="listing"><figcaption>docs/tools/hw06_exp.py:79–81 — RMSProp</figcaption>
+<pre class="py" data-hot="80,81"><code>if args.opt == 'rmsprop':
+    opt_D = torch.optim.RMSprop(D.parameters(), lr=args.lr)
+    opt_G = torch.optim.RMSprop(G.parameters(), lr=args.lr)</code></pre></figure>
+<figure class="listing"><figcaption>docs/tools/hw06_exp.py:123–134 — critic 的 loss 與 clipping</figcaption>
+<pre class="py" data-hot="124,132,133,134"><code>        else:
+            loss_D = -torch.mean(r_logit) + torch.mean(f_logit)
+            if args.model_type == 'WGANGP':
+                loss_D = loss_D + gradient_penalty(r_imgs, f_imgs)
+        D.zero_grad()
+        loss_D.backward()
+        if steps % args.gn_every == 0:
+            gn = [c.weight.grad.norm(2).item() for c in convs]
+        opt_D.step()
+        if args.model_type == 'WGAN' and args.clip &gt; 0:
+            for p in D.parameters():
+                p.data.clamp_(-args.clip, args.clip)</code></pre></figure>
+<figure class="listing"><figcaption>docs/tools/hw06_exp.py:141 — 生成器的 loss</figcaption>
+<pre class="py" data-hot="141"><code>            loss_G = loss(f_logit, r_label) if args.model_type == 'GAN' else -torch.mean(D(f_imgs))</code></pre></figure>
+<p>注意 clipping 寫在 <code>opt_D.step()</code> 之後：先照梯度更新，再把超出範圍的參數截回來。第 141 行照 <code>trainer_gan.py</code> 的註解寫成 <code>-torch.mean(D(f_imgs))</code>，前一行已經算過 <code>f_logit = D(f_imgs)</code>，所以判別器會多跑一次 forward；直接寫 <code>-torch.mean(f_logit)</code> 結果相同、比較省。改在 repo 的 <code>trainer_gan.py</code> 上也是同樣幾處：刪掉 <code>discriminator.py:28</code> 的 Sigmoid、換掉第 128–130 與 164 行的 loss、打開第 142–143 行並在 <code>config.py</code> 加 <code>clip_value</code>、把第 45–46 行換成 RMSprop、<code>n_critic</code> 設 5、<code>lr</code> 設 5e-5。</p>
+
+<h3 id="wgan-result">結果：不崩潰，FID 一路下降</h3>
+<div class="legend">
+  <span><i style="background:#3987e5"></i>DCGAN（照跑 train.py）</span>
+  <span><i style="background:#d95926"></i>WGAN（clip 0.01、RMSProp 5e-5、n_critic 5）</span>
+</div>
+<figure class="fig">
+<svg viewBox="0 0 900 560" role="img" aria-label="上圖：DCGAN 與 WGAN 每個存檔的 FID64。DCGAN 第 15 個 epoch 最低 105.0 後崩潰、震盪，最後 211.9；WGAN 幾乎單調下降，從 382.6 降到 90.3。下圖：WGAN 判別器（critic）對 Wasserstein 距離的估計（每個 epoch 的負 loss_D 中位數），第 4 個 epoch 最高 1.35，之後一路降到 0.52，和 FID 一起下降">
+<line x1="70" y1="260.0" x2="880" y2="260.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="264.0" text-anchor="end">0</text>
+<line x1="70" y1="205.0" x2="880" y2="205.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="209.0" text-anchor="end">100</text>
+<line x1="70" y1="150.0" x2="880" y2="150.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="154.0" text-anchor="end">200</text>
+<line x1="70" y1="95.0" x2="880" y2="95.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="99.0" text-anchor="end">300</text>
+<line x1="70" y1="40.0" x2="880" y2="40.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="44.0" text-anchor="end">400</text>
+<text class="s-sm" x="62" y="30">FID64（1000 張，越低越好）</text>
+<polyline points="70.0,60.2 102.7,145.8 143.6,194.4 184.5,202.3 225.5,69.1 266.4,107.9 307.3,103.3 348.2,106.6 389.1,135.4 430.0,162.0 470.9,147.2 511.8,140.1 552.7,150.3 593.6,133.3 634.5,127.0 675.5,124.5 716.4,139.6 757.3,157.9 798.2,143.6 839.1,140.7 880.0,143.4" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+<g><title>DCGAN 第 1 個 epoch：FID64 363.2</title><circle cx="70.0" cy="60.2" r="9" fill="#000" fill-opacity="0"/><circle cx="70.0" cy="60.2" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 5 個 epoch：FID64 207.6</title><circle cx="102.7" cy="145.8" r="9" fill="#000" fill-opacity="0"/><circle cx="102.7" cy="145.8" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 10 個 epoch：FID64 119.3</title><circle cx="143.6" cy="194.4" r="9" fill="#000" fill-opacity="0"/><circle cx="143.6" cy="194.4" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 15 個 epoch：FID64 105.0</title><circle cx="184.5" cy="202.3" r="9" fill="#000" fill-opacity="0"/><circle cx="184.5" cy="202.3" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 20 個 epoch：FID64 347.1</title><circle cx="225.5" cy="69.1" r="9" fill="#000" fill-opacity="0"/><circle cx="225.5" cy="69.1" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 25 個 epoch：FID64 276.6</title><circle cx="266.4" cy="107.9" r="9" fill="#000" fill-opacity="0"/><circle cx="266.4" cy="107.9" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 30 個 epoch：FID64 284.9</title><circle cx="307.3" cy="103.3" r="9" fill="#000" fill-opacity="0"/><circle cx="307.3" cy="103.3" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 35 個 epoch：FID64 278.8</title><circle cx="348.2" cy="106.6" r="9" fill="#000" fill-opacity="0"/><circle cx="348.2" cy="106.6" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 40 個 epoch：FID64 226.5</title><circle cx="389.1" cy="135.4" r="9" fill="#000" fill-opacity="0"/><circle cx="389.1" cy="135.4" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 45 個 epoch：FID64 178.3</title><circle cx="430.0" cy="162.0" r="9" fill="#000" fill-opacity="0"/><circle cx="430.0" cy="162.0" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 50 個 epoch：FID64 205.0</title><circle cx="470.9" cy="147.2" r="9" fill="#000" fill-opacity="0"/><circle cx="470.9" cy="147.2" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 55 個 epoch：FID64 218.0</title><circle cx="511.8" cy="140.1" r="9" fill="#000" fill-opacity="0"/><circle cx="511.8" cy="140.1" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 60 個 epoch：FID64 199.5</title><circle cx="552.7" cy="150.3" r="9" fill="#000" fill-opacity="0"/><circle cx="552.7" cy="150.3" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 65 個 epoch：FID64 230.4</title><circle cx="593.6" cy="133.3" r="9" fill="#000" fill-opacity="0"/><circle cx="593.6" cy="133.3" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 70 個 epoch：FID64 241.8</title><circle cx="634.5" cy="127.0" r="9" fill="#000" fill-opacity="0"/><circle cx="634.5" cy="127.0" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 75 個 epoch：FID64 246.4</title><circle cx="675.5" cy="124.5" r="9" fill="#000" fill-opacity="0"/><circle cx="675.5" cy="124.5" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 80 個 epoch：FID64 218.9</title><circle cx="716.4" cy="139.6" r="9" fill="#000" fill-opacity="0"/><circle cx="716.4" cy="139.6" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 85 個 epoch：FID64 185.6</title><circle cx="757.3" cy="157.9" r="9" fill="#000" fill-opacity="0"/><circle cx="757.3" cy="157.9" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 90 個 epoch：FID64 211.6</title><circle cx="798.2" cy="143.6" r="9" fill="#000" fill-opacity="0"/><circle cx="798.2" cy="143.6" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 95 個 epoch：FID64 216.9</title><circle cx="839.1" cy="140.7" r="9" fill="#000" fill-opacity="0"/><circle cx="839.1" cy="140.7" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN 第 100 個 epoch：FID64 211.9</title><circle cx="880.0" cy="143.4" r="9" fill="#000" fill-opacity="0"/><circle cx="880.0" cy="143.4" r="3" fill="#3987e5"/></g>
+<polyline points="70.0,49.6 102.7,83.3 143.6,130.9 184.5,157.1 225.5,174.5 266.4,184.8 307.3,186.9 348.2,191.0 389.1,192.7 430.0,197.9 470.9,198.7 511.8,203.0 552.7,204.7 593.6,204.4 634.5,206.5 675.5,206.9 716.4,207.9 757.3,208.1 798.2,209.6 839.1,210.0 880.0,210.3" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round"/>
+<g><title>WGAN 第 1 個 epoch：FID64 382.6</title><circle cx="70.0" cy="49.6" r="9" fill="#000" fill-opacity="0"/><circle cx="70.0" cy="49.6" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 5 個 epoch：FID64 321.2</title><circle cx="102.7" cy="83.3" r="9" fill="#000" fill-opacity="0"/><circle cx="102.7" cy="83.3" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 10 個 epoch：FID64 234.8</title><circle cx="143.6" cy="130.9" r="9" fill="#000" fill-opacity="0"/><circle cx="143.6" cy="130.9" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 15 個 epoch：FID64 187.0</title><circle cx="184.5" cy="157.1" r="9" fill="#000" fill-opacity="0"/><circle cx="184.5" cy="157.1" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 20 個 epoch：FID64 155.5</title><circle cx="225.5" cy="174.5" r="9" fill="#000" fill-opacity="0"/><circle cx="225.5" cy="174.5" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 25 個 epoch：FID64 136.7</title><circle cx="266.4" cy="184.8" r="9" fill="#000" fill-opacity="0"/><circle cx="266.4" cy="184.8" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 30 個 epoch：FID64 132.9</title><circle cx="307.3" cy="186.9" r="9" fill="#000" fill-opacity="0"/><circle cx="307.3" cy="186.9" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 35 個 epoch：FID64 125.5</title><circle cx="348.2" cy="191.0" r="9" fill="#000" fill-opacity="0"/><circle cx="348.2" cy="191.0" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 40 個 epoch：FID64 122.3</title><circle cx="389.1" cy="192.7" r="9" fill="#000" fill-opacity="0"/><circle cx="389.1" cy="192.7" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 45 個 epoch：FID64 113.0</title><circle cx="430.0" cy="197.9" r="9" fill="#000" fill-opacity="0"/><circle cx="430.0" cy="197.9" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 50 個 epoch：FID64 111.4</title><circle cx="470.9" cy="198.7" r="9" fill="#000" fill-opacity="0"/><circle cx="470.9" cy="198.7" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 55 個 epoch：FID64 103.7</title><circle cx="511.8" cy="203.0" r="9" fill="#000" fill-opacity="0"/><circle cx="511.8" cy="203.0" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 60 個 epoch：FID64 100.6</title><circle cx="552.7" cy="204.7" r="9" fill="#000" fill-opacity="0"/><circle cx="552.7" cy="204.7" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 65 個 epoch：FID64 101.1</title><circle cx="593.6" cy="204.4" r="9" fill="#000" fill-opacity="0"/><circle cx="593.6" cy="204.4" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 70 個 epoch：FID64 97.2</title><circle cx="634.5" cy="206.5" r="9" fill="#000" fill-opacity="0"/><circle cx="634.5" cy="206.5" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 75 個 epoch：FID64 96.5</title><circle cx="675.5" cy="206.9" r="9" fill="#000" fill-opacity="0"/><circle cx="675.5" cy="206.9" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 80 個 epoch：FID64 94.8</title><circle cx="716.4" cy="207.9" r="9" fill="#000" fill-opacity="0"/><circle cx="716.4" cy="207.9" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 85 個 epoch：FID64 94.3</title><circle cx="757.3" cy="208.1" r="9" fill="#000" fill-opacity="0"/><circle cx="757.3" cy="208.1" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 90 個 epoch：FID64 91.6</title><circle cx="798.2" cy="209.6" r="9" fill="#000" fill-opacity="0"/><circle cx="798.2" cy="209.6" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 95 個 epoch：FID64 90.8</title><circle cx="839.1" cy="210.0" r="9" fill="#000" fill-opacity="0"/><circle cx="839.1" cy="210.0" r="3" fill="#d95926"/></g>
+<g><title>WGAN 第 100 個 epoch：FID64 90.3</title><circle cx="880.0" cy="210.3" r="9" fill="#000" fill-opacity="0"/><circle cx="880.0" cy="210.3" r="3" fill="#d95926"/></g>
+<text class="s-sm" x="876.0" y="133.5" text-anchor="end">DCGAN 211.9</text>
+<text class="s-sm" x="876.0" y="228.3" text-anchor="end">WGAN 90.3</text>
+<line x1="70" y1="500.0" x2="880" y2="500.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="504.0" text-anchor="end">0</text>
+<line x1="70" y1="443.3" x2="880" y2="443.3" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="447.3" text-anchor="end">0.5</text>
+<line x1="70" y1="386.7" x2="880" y2="386.7" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="390.7" text-anchor="end">1</text>
+<line x1="70" y1="330.0" x2="880" y2="330.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="334.0" text-anchor="end">1.5</text>
+<text class="s-sm" x="62" y="320">WGAN critic 的距離估計：−loss_D（每個 epoch 的中位數）</text>
+<polyline points="70.0,382.8 78.2,350.8 86.4,349.1 94.5,347.4 102.7,351.5 110.9,352.9 119.1,355.8 127.3,356.6 135.5,357.5 143.6,358.3 151.8,359.4 160.0,361.0 168.2,362.3 176.4,362.8 184.5,364.9 192.7,366.0 200.9,367.9 209.1,369.5 217.3,372.1 225.5,372.9 233.6,377.9 241.8,379.1 250.0,381.8 258.2,382.7 266.4,384.3 274.5,388.3 282.7,389.3 290.9,393.1 299.1,396.9 307.3,398.6 315.5,398.7 323.6,399.6 331.8,402.9 340.0,405.2 348.2,404.4 356.4,404.2 364.5,406.5 372.7,409.1 380.9,410.0 389.1,410.8 397.3,412.4 405.5,413.3 413.6,416.0 421.8,416.0 430.0,417.3 438.2,419.1 446.4,420.0 454.5,421.0 462.7,420.7 470.9,419.2 479.1,421.6 487.3,421.6 495.5,423.0 503.6,424.9 511.8,425.2 520.0,425.6 528.2,425.5 536.4,424.7 544.5,425.7 552.7,427.1 560.9,427.8 569.1,427.6 577.3,426.9 585.5,429.1 593.6,428.5 601.8,428.4 610.0,430.4 618.2,429.7 626.4,431.1 634.5,430.4 642.7,431.6 650.9,432.1 659.1,432.1 667.3,432.4 675.5,432.7 683.6,432.4 691.8,433.3 700.0,432.9 708.2,433.7 716.4,433.9 724.5,434.0 732.7,434.0 740.9,434.7 749.1,435.3 757.3,435.5 765.5,434.5 773.6,435.4 781.8,435.7 790.0,436.1 798.2,436.8 806.4,439.6 814.5,440.0 822.7,440.1 830.9,440.4 839.1,440.3 847.3,441.2 855.5,439.7 863.6,441.1 871.8,441.0 880.0,440.6" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round"/>
+<g><title>WGAN 第 1 個 epoch：−loss_D 中位數 1.0338</title><rect x="66.0" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 2 個 epoch：−loss_D 中位數 1.3165</title><rect x="74.2" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 3 個 epoch：−loss_D 中位數 1.3312</title><rect x="82.4" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 4 個 epoch：−loss_D 中位數 1.3463</title><rect x="90.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 5 個 epoch：−loss_D 中位數 1.3102</title><rect x="98.7" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 6 個 epoch：−loss_D 中位數 1.2983</title><rect x="106.9" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 7 個 epoch：−loss_D 中位數 1.2723</title><rect x="115.1" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 8 個 epoch：−loss_D 中位數 1.2649</title><rect x="123.3" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 9 個 epoch：−loss_D 中位數 1.2569</title><rect x="131.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 10 個 epoch：−loss_D 中位數 1.2499</title><rect x="139.6" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 11 個 epoch：−loss_D 中位數 1.2402</title><rect x="147.8" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 12 個 epoch：−loss_D 中位數 1.2269</title><rect x="156.0" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 13 個 epoch：−loss_D 中位數 1.2150</title><rect x="164.2" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 14 個 epoch：−loss_D 中位數 1.2110</title><rect x="172.4" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 15 個 epoch：−loss_D 中位數 1.1924</title><rect x="180.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 16 個 epoch：−loss_D 中位數 1.1823</title><rect x="188.7" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 17 個 epoch：−loss_D 中位數 1.1659</title><rect x="196.9" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 18 個 epoch：−loss_D 中位數 1.1513</title><rect x="205.1" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 19 個 epoch：−loss_D 中位數 1.1287</title><rect x="213.3" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 20 個 epoch：−loss_D 中位數 1.1213</title><rect x="221.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 21 個 epoch：−loss_D 中位數 1.0773</title><rect x="229.6" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 22 個 epoch：−loss_D 中位數 1.0668</title><rect x="237.8" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 23 個 epoch：−loss_D 中位數 1.0426</title><rect x="246.0" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 24 個 epoch：−loss_D 中位數 1.0352</title><rect x="254.2" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 25 個 epoch：−loss_D 中位數 1.0209</title><rect x="262.4" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 26 個 epoch：−loss_D 中位數 0.9857</title><rect x="270.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 27 個 epoch：−loss_D 中位數 0.9772</title><rect x="278.7" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 28 個 epoch：−loss_D 中位數 0.9436</title><rect x="286.9" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 29 個 epoch：−loss_D 中位數 0.9098</title><rect x="295.1" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 30 個 epoch：−loss_D 中位數 0.8949</title><rect x="303.3" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 31 個 epoch：−loss_D 中位數 0.8935</title><rect x="311.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 32 個 epoch：−loss_D 中位數 0.8860</title><rect x="319.6" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 33 個 epoch：−loss_D 中位數 0.8565</title><rect x="327.8" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 34 個 epoch：−loss_D 中位數 0.8365</title><rect x="336.0" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 35 個 epoch：−loss_D 中位數 0.8432</title><rect x="344.2" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 36 個 epoch：−loss_D 中位數 0.8451</title><rect x="352.4" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 37 個 epoch：−loss_D 中位數 0.8248</title><rect x="360.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 38 個 epoch：−loss_D 中位數 0.8019</title><rect x="368.7" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 39 個 epoch：−loss_D 中位數 0.7939</title><rect x="376.9" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 40 個 epoch：−loss_D 中位數 0.7868</title><rect x="385.1" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 41 個 epoch：−loss_D 中位數 0.7726</title><rect x="393.3" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 42 個 epoch：−loss_D 中位數 0.7647</title><rect x="401.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 43 個 epoch：−loss_D 中位數 0.7408</title><rect x="409.6" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 44 個 epoch：−loss_D 中位數 0.7414</title><rect x="417.8" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 45 個 epoch：−loss_D 中位數 0.7295</title><rect x="426.0" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 46 個 epoch：−loss_D 中位數 0.7139</title><rect x="434.2" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 47 個 epoch：−loss_D 中位數 0.7054</title><rect x="442.4" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 48 個 epoch：−loss_D 中位數 0.6972</title><rect x="450.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 49 個 epoch：−loss_D 中位數 0.6996</title><rect x="458.7" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 50 個 epoch：−loss_D 中位數 0.7132</title><rect x="466.9" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 51 個 epoch：−loss_D 中位數 0.6918</title><rect x="475.1" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 52 個 epoch：−loss_D 中位數 0.6918</title><rect x="483.3" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 53 個 epoch：−loss_D 中位數 0.6791</title><rect x="491.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 54 個 epoch：−loss_D 中位數 0.6623</title><rect x="499.6" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 55 個 epoch：−loss_D 中位數 0.6597</title><rect x="507.8" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 56 個 epoch：−loss_D 中位數 0.6565</title><rect x="516.0" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 57 個 epoch：−loss_D 中位數 0.6572</title><rect x="524.2" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 58 個 epoch：−loss_D 中位數 0.6641</title><rect x="532.4" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 59 個 epoch：−loss_D 中位數 0.6555</title><rect x="540.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 60 個 epoch：−loss_D 中位數 0.6428</title><rect x="548.7" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 61 個 epoch：−loss_D 中位數 0.6372</title><rect x="556.9" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 62 個 epoch：−loss_D 中位數 0.6387</title><rect x="565.1" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 63 個 epoch：−loss_D 中位數 0.6453</title><rect x="573.3" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 64 個 epoch：−loss_D 中位數 0.6256</title><rect x="581.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 65 個 epoch：−loss_D 中位數 0.6305</title><rect x="589.6" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 66 個 epoch：−loss_D 中位數 0.6314</title><rect x="597.8" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 67 個 epoch：−loss_D 中位數 0.6140</title><rect x="606.0" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 68 個 epoch：−loss_D 中位數 0.6207</title><rect x="614.2" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 69 個 epoch：−loss_D 中位數 0.6084</title><rect x="622.4" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 70 個 epoch：−loss_D 中位數 0.6139</title><rect x="630.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 71 個 epoch：−loss_D 中位數 0.6039</title><rect x="638.7" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 72 個 epoch：−loss_D 中位數 0.5994</title><rect x="646.9" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 73 個 epoch：−loss_D 中位數 0.5989</title><rect x="655.1" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 74 個 epoch：−loss_D 中位數 0.5964</title><rect x="663.3" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 75 個 epoch：−loss_D 中位數 0.5936</title><rect x="671.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 76 個 epoch：−loss_D 中位數 0.5967</title><rect x="679.6" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 77 個 epoch：−loss_D 中位數 0.5885</title><rect x="687.8" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 78 個 epoch：−loss_D 中位數 0.5920</title><rect x="696.0" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 79 個 epoch：−loss_D 中位數 0.5854</title><rect x="704.2" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 80 個 epoch：−loss_D 中位數 0.5834</title><rect x="712.4" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 81 個 epoch：−loss_D 中位數 0.5824</title><rect x="720.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 82 個 epoch：−loss_D 中位數 0.5822</title><rect x="728.7" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 83 個 epoch：−loss_D 中位數 0.5764</title><rect x="736.9" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 84 個 epoch：−loss_D 中位數 0.5710</title><rect x="745.1" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 85 個 epoch：−loss_D 中位數 0.5690</title><rect x="753.3" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 86 個 epoch：−loss_D 中位數 0.5778</title><rect x="761.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 87 個 epoch：−loss_D 中位數 0.5696</title><rect x="769.6" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 88 個 epoch：−loss_D 中位數 0.5676</title><rect x="777.8" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 89 個 epoch：−loss_D 中位數 0.5640</title><rect x="786.0" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 90 個 epoch：−loss_D 中位數 0.5578</title><rect x="794.2" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 91 個 epoch：−loss_D 中位數 0.5327</title><rect x="802.4" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 92 個 epoch：−loss_D 中位數 0.5295</title><rect x="810.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 93 個 epoch：−loss_D 中位數 0.5283</title><rect x="818.7" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 94 個 epoch：−loss_D 中位數 0.5261</title><rect x="826.9" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 95 個 epoch：−loss_D 中位數 0.5271</title><rect x="835.1" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 96 個 epoch：−loss_D 中位數 0.5185</title><rect x="843.3" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 97 個 epoch：−loss_D 中位數 0.5317</title><rect x="851.5" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 98 個 epoch：−loss_D 中位數 0.5195</title><rect x="859.6" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 99 個 epoch：−loss_D 中位數 0.5206</title><rect x="867.8" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>WGAN 第 100 個 epoch：−loss_D 中位數 0.5241</title><rect x="876.0" y="330" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<text class="s-sm" x="70.0" y="518" text-anchor="middle">1</text>
+<text class="s-sm" x="143.6" y="518" text-anchor="middle">10</text>
+<text class="s-sm" x="225.5" y="518" text-anchor="middle">20</text>
+<text class="s-sm" x="307.3" y="518" text-anchor="middle">30</text>
+<text class="s-sm" x="389.1" y="518" text-anchor="middle">40</text>
+<text class="s-sm" x="470.9" y="518" text-anchor="middle">50</text>
+<text class="s-sm" x="552.7" y="518" text-anchor="middle">60</text>
+<text class="s-sm" x="634.5" y="518" text-anchor="middle">70</text>
+<text class="s-sm" x="716.4" y="518" text-anchor="middle">80</text>
+<text class="s-sm" x="798.2" y="518" text-anchor="middle">90</text>
+<text class="s-sm" x="880.0" y="518" text-anchor="middle">100</text>
+<text class="s-sm" x="475.0" y="545" text-anchor="middle">epoch</text>
+</svg>
+<figcaption>圖 6.3　上：DCGAN 與 WGAN 每個存檔的 FID64（兩者從同一組初始權重出發，第 1 章）。下：WGAN 的 critic 對 Wasserstein 距離的估計（每個 epoch 約 112 個紀錄點的中位數）。滑鼠移到點上可看數值。</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>DCGAN</th><th>WGAN</th></tr></thead>
+<tbody>
+<tr><td>最好的存檔</td><td>第 15 個 epoch，FID64 105.0</td><td>第 100 個 epoch，FID64 <strong>90.3</strong>（FID96 120.7、AFD 0.364）</td></tr>
+<tr><td>最後一個存檔</td><td>211.9</td><td>90.3</td></tr>
+<tr><td>FID 曲線</td><td>崩潰、震盪</td><td>21 個存檔裡只有一次些微回升（第 60 → 65 個 epoch，100.6 → 101.1）</td></tr>
+<tr><td>樣本格多樣性（第 5 章）</td><td>多次掉到 30 以下，最低 17.8</td><td>全程 51.8 以上</td></tr>
+<tr><td>換 z 種子（第 4 章）</td><td>第 15 個 epoch：105.0–107.5</td><td>第 100 個 epoch：86.9–90.7</td></tr>
+<tr><td>生成器更新次數</td><td>111,500</td><td>22,300</td></tr>
+<tr><td>100 個 epoch 的時間</td><td>1,732 秒（每 epoch 17.3 秒）</td><td><strong>1,181 秒</strong>（每 epoch 11.9 秒）</td></tr>
+</tbody>
+</table></div>
+<p>WGAN 的生成器只更新了 DCGAN 的五分之一，FID 卻比 DCGAN 最好的時候還低 15，而且沒有一次崩潰——最好的存檔就是最後一個，「挑存檔」的問題（第 5 章）在這裡不存在。它也比較快：生成器那一步每 5 步才做一次，省下的時間比 RMSProp 與 clipping 多花的還多。</p>
+
+<h3 id="wgan-loss">loss 終於有意義了</h3>
+<p>圖 6.3 的下圖是 WGAN 最重要的性質：−loss_D（critic 對 Wasserstein 距離的估計）從第 4 個 epoch 的 1.35 一路降到第 100 個 epoch 的 0.52，和上圖的 FID 一起往下走。拿 21 個存檔的 FID 和同一個 epoch 的 −loss_D 中位數算 Spearman 等級相關係數（只看排名、不看數值大小的相關，1 是完全同序）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>訓練</th><th>拿來比的 loss</th><th>與 FID64 的 Spearman 相關</th></tr></thead>
+<tbody>
+<tr><td>WGAN</td><td>−loss_D（距離估計）</td><td><strong>0.986</strong></td></tr>
+<tr><td>DCGAN</td><td>loss_D</td><td>−0.223</td></tr>
+<tr><td>DCGAN</td><td>loss_G</td><td>0.442</td></tr>
+</tbody>
+</table></div>
+<p>WGAN 的距離估計幾乎和 FID 完全同步：距離估計越小，圖越好。DCGAN 的兩個 loss 和 FID 只有很弱、甚至方向相反的關係（第 3 章「loss 是比賽的比分」）。這正是 WGAN 論文強調的優點：它的 loss 可以當成訓練進度的指標。要注意的是，這個估計值的<strong>大小</strong>只在同一次訓練裡有意義——它的單位取決於 clipping 的 c 與網路結構，0.52 不能拿去和別的設定比。</p>
+
+<h3 id="clip-state">clipping 實際做了什麼</h3>
+<p>訓練完的 critic 有多少參數卡在 ±0.01 的邊界上？本書讀了第 1、50、100 個 epoch 的存檔：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>存檔</th><th>全部參數卡在 ±0.01 的比例</th><th>conv 權重（l1.0／l1.2.0／l1.3.0／l1.4.0）</th><th>BatchNorm 的縮放（l1.2.1／l1.3.1／l1.4.1）</th><th>最後一層 l1.5</th></tr></thead>
+<tbody>
+<tr><td><code>D_0</code></td><td>11.4%</td><td>4%／4%／5%／13%</td><td>60%／95%／100%</td><td>99%</td></tr>
+<tr><td><code>D_49</code></td><td>22.3%</td><td>4%／3%／6%／27%</td><td>45%／59%／100%</td><td>100%</td></tr>
+<tr><td><code>D_99</code></td><td>22.0%</td><td>4%／2%／5%／27%</td><td>26%／52%／100%</td><td>99%</td></tr>
+</tbody>
+</table></div>
+<p>兩個值得注意的地方。第一，最後一層與最深的 BatchNorm 幾乎所有參數都貼在邊界上：critic 想要更大的斜率，被 clipping 擋住了——這正是「c 太小」的症狀，第 7 章會看到它造成各層梯度大小嚴重失衡。第二，<code>p.data.clamp_</code> 作用在 <code>self.D.parameters()</code> 的<strong>每一個</strong>參數上，包括 BatchNorm 的縮放參數：它們初始化在 1 附近（第 2 章），第一次 clipping 就被壓到 0.01，等於把每一層正規化後的輸出縮小 100 倍。WGAN 論文的程式也是這樣做的；這是 weight clipping「粗暴」的另一面。</p>
+
+<h2 id="answer">6.6　報告第 1 題的參考答案</h2>
+<p>列出至少兩點即可，以下按「理論 → 實作 → 實際表現」排列：</p>
+<ol>
+  <li><strong>最小化的距離不同</strong>：GAN（判別器最佳時）最小化 JS 散度，兩個分布不重疊時它是常數 log 2，梯度消失；WGAN 最小化 Wasserstein-1（Earth Mover's）距離，分布不重疊時仍然連續、有梯度。</li>
+  <li><strong>判別器的角色不同</strong>：GAN 的判別器是分類器，最後接 Sigmoid 輸出「是真圖的機率」；WGAN 的 critic 輸出任意實數分數，拿掉 Sigmoid。</li>
+  <li><strong>loss 不同</strong>：GAN 用 binary cross entropy（有 log）；WGAN 的 critic loss 是 −𝔼[D(真)] + 𝔼[D(假)]、生成器 loss 是 −𝔼[D(假)]，沒有 log。</li>
+  <li><strong>WGAN 要求 critic 是 Lipschitz 函數</strong>：原始 WGAN 用 weight clipping（每次更新後把參數截到 [−c, c]，論文 c = 0.01）；GAN 沒有這個限制。</li>
+  <li><strong>訓練設定不同</strong>：WGAN 建議 RMSProp（不用動量）、較小的學習率（5×10<sup>−5</sup>），並讓 critic 每更新 <code>n_critic</code> = 5 次、生成器才更新 1 次。</li>
+  <li><strong>loss 的意義不同</strong>：WGAN 的 −loss_D 是距離的估計，和生成品質同步（本書 Spearman 0.986）；GAN 的 loss 和品質幾乎無關（−0.22）。</li>
+  <li><strong>穩定性</strong>（本書的實測）：同樣 100 個 epoch，DCGAN 在第 19–35 個 epoch 之間多次 mode collapse，最好的 FID64 105.0 出現在第 15 個 epoch；WGAN 沒有崩潰，FID64 一路降到 90.3。</li>
+</ol>
+<div class="note"><h4>現在的做法：Lipschitz 限制的後續發展</h4>
+<p>weight clipping 很快就被取代了：WGAN-GP（2017）改用梯度懲罰（第 7 章）；spectral normalization（Miyato 等，2018）把每一層權重矩陣除以它的最大奇異值，直接控制每一層的 Lipschitz 常數，成本很低，被 SAGAN、BigGAN 採用；StyleGAN 系列則用原始 GAN 的 non-saturating loss 加上只對真圖算的 R1 梯度懲罰。Wasserstein 距離本身在 GAN 之外仍常被使用（例如比較兩個分布、最佳傳輸），但在圖像生成上，2022 年之後的主流已經是 diffusion 模型。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>原始 GAN（判別器最佳時）最小化 JS 散度；兩個分布不重疊時 JS 是常數，生成器拿不到梯度。WGAN 改用 Wasserstein-1 距離，透過對偶寫成「1-Lipschitz 的 critic 給真圖與假圖的平均分數差」。</li>
+  <li>五個改動，範例程式都留了註解：拿掉 Sigmoid、loss 不取 log（<code>-mean(D(真)) + mean(D(假))</code>、<code>-mean(D(假))</code>）、weight clipping（論文 0.01，投影片寫 1）、RMSProp 5e-5、<code>n_critic</code> 5。</li>
+  <li>照註解字面改：打開 clipping → <code>KeyError: 'clip_value'</code>；只換 loss_G → 第 1 個 epoch 是雜訊（飽和的梯度），之後恢復到 FID 122.9；WGAN loss 但保留 Sigmoid、不 clip → 判別器對所有圖都輸出 1、梯度全是 0、FID 一直 337。</li>
+  <li>正確的 WGAN：FID64 一路降到 90.3（DCGAN 最好 105.0）、全程不崩潰、生成器只更新五分之一、每 epoch 11.9 秒。−loss_D 與 FID 的 Spearman 相關 0.986。</li>
+  <li>clipping 讓最後一層與最深的 BatchNorm 幾乎所有參數都卡在邊界，也把 BatchNorm 的縮放從 1 壓到 0.01。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 為什麼 WGAN 一定要拿掉判別器的 Sigmoid？只要 loss 改對了不行嗎？</summary>
+<p>不行。WGAN 的 loss 沒有 log，Sigmoid 又把分數限制在 0–1：critic 要拉開真假分數、生成器要拉高假圖分數，兩邊一起把輸出推到 Sigmoid 的飽和區。本書實測（6.4 節下場 3）：第 5 個 epoch 起判別器對所有圖都輸出 1.0000，梯度全是 0，之後 95 個 epoch 什麼都沒學到，FID 一直是 336–338。critic 必須能輸出任意實數，「分數差」才能代表距離。</p></details>
+<details class="quiz"><summary>2. WGAN 的 −loss_D 從 1.35 降到 0.52。能不能說「另一個設定的 −loss_D 是 0.3，所以那個比較好」？</summary>
+<p>不能。−loss_D 是在「權重被截到 ±0.01 的這個 critic」所能表示的函數裡估出來的距離，單位取決於 c、網路的層數與寬度。同一次訓練裡它的升降有意義（和 FID 的 Spearman 相關 0.986），跨設定比較就沒有意義了。要比較不同設定，還是要用同一把外部的尺（FID）。</p></details>
+<details class="quiz"><summary>3. WGAN 的生成器只更新了 22,300 次，DCGAN 是 111,500 次。這樣比較公平嗎？</summary>
+<p>本書比的是「同樣 100 個 epoch、同樣的資料量」，這也是作業的情境：每一張真圖都被判別器看過 100 次。在這個條件下，WGAN 的生成器更新次數少，花的時間也少（1,181 秒對 1,732 秒），FID 卻比較好。如果改成「同樣的生成器更新次數」，WGAN 要跑 500 個 epoch，那是另一個問題；本書沒有跑。</p></details>
+<details class="quiz"><summary>4. 下場 3 裡，判別器的梯度為什麼會「剛好」是 0，而不是很小的數？</summary>
+<p>Sigmoid 的導數是 σ(1 − σ)。當 Sigmoid 的輸入大到一定程度（float32 下約 17 以上），σ 在電腦裡算出來就是精確的 1.0，1 − σ = 0，導數也就精確是 0。反向傳播的鏈鎖律一乘上 0，整條路上的梯度都是 0。實驗工具記下的判別器 5 層梯度範數，在第 91–100 個 epoch 全部是 0。</p></details>
+<details class="quiz"><summary>5. 投影片第 24 頁寫「clip the weights to a constant (1 ~ -1)」。如果照這個用 c = 1，會發生什麼事？</summary>
+<p>對這個判別器幾乎等於沒有 clipping：卷積權重初始化在 ±0.02 附近（第 2 章），訓練中很少長到 1；BatchNorm 的縮放參數初始化在 1 附近，也只有一部分會被截到。critic 就沒有 Lipschitz 限制，Wasserstein 距離的估計會失去意義，訓練可能不穩定。這題是推論，本書沒有實際跑 c = 1；論文用的是 0.01，WGAN-GP 論文則指出 clipping 對 c 的選擇很敏感（第 7 章）。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+  <li>Arjovsky、Chintala、Bottou，〈Wasserstein GAN〉（ICML 2017）：Example 1 的一維例子、Algorithm 1（RMSProp、c = 0.01、n_critic 5），以及「weight clipping is a clearly terrible way to enforce a Lipschitz constraint」那段，<a href="https://arxiv.org/abs/1701.07875">arXiv:1701.07875</a>。</li>
+  <li>Goodfellow 等，〈Generative Adversarial Nets〉（NeurIPS 2014）：第 4 節證明判別器最佳時的目標是 JS 散度，<a href="https://arxiv.org/abs/1406.2661">arXiv:1406.2661</a>。</li>
+  <li>Miyato 等，〈Spectral Normalization for Generative Adversarial Networks〉（ICLR 2018）：另一種讓判別器 Lipschitz 的方法，<a href="https://arxiv.org/abs/1802.05957">arXiv:1802.05957</a>。</li>
+  <li>李宏毅老師 2021 Spring〈GAN〉系列課程的 WGAN 一講：JS 散度的問題與 Wasserstein 距離的直觀說明。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch05.html">← 第 5 章</a><a href="ch07.html">第 7 章 →</a></nav>
+<footer class="chap-footer">本教材根據 lordleeber/ML2022-Spring-pytorch 的 HW06 程式碼與 ML2022 Spring 作業投影片撰寫。</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>

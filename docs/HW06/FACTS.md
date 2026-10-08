@@ -338,3 +338,12 @@ FID64（n = 1000、z 種子 0；FID96 與 AFD 見 jsonl）：
 - 21 個存檔依 FID64 排序，G_99（211.9）是第 9 名；G_44 178.3 是第 40 epoch 之後最低。
 - 樣本格前 2 列（20 個 z）：`docs/HW06/img/ch05_epoch{015,020,024,026,035,100}.png`（662×134）。目視：ep20 花掉的同一張；**ep24 恢復且同位置與 ep15 相像**；ep26 幾乎同一張棕髮瞇眼微笑臉；ep35 同一種模糊臉；ep100 較糊、偏淡。
 - 四色配色（DCGAN #3987e5、WGAN #d95926、WGAN-GP #199e70、StyleGAN2 #c98500）以 validate_palette.js 在 #161c24 上全部通過（最差相鄰 CVD ΔE 8.4、normal 19.8）。圖由 scratchpad 的 `ch05_chart.py` 產生。
+
+## ch06 實測（2026-10-08）
+- WGAN log（`hw06_logs/wgan.jsonl`）：第 0 步 loss_D 0.4686、loss_G 0.0034、d_real 0.0655、d_fake −0.0034。−loss_D 每 epoch 中位數：ep1 1.034、ep2 1.317、ep3 1.331、**ep4 1.346（最高）**、ep5 1.310、ep10 1.250、ep15 1.192、ep20 1.121、ep30 0.895、ep50 0.713、ep70 0.614、ep100 0.524（最低 0.519）。
+- **Spearman（21 個存檔的 FID64 vs 同 epoch 的 loss 中位數）**：WGAN −loss_D **0.986**；DCGAN loss_D −0.223、loss_G 0.442。
+- WGAN FID64 只有一次回升：ep60 100.6 → ep65 101.1。
+- wgan_sigmoid：ep1 D(real) 0.7623、D(fake) 0.0010、loss_D 中位數 −0.9998；ep2 1.0000／0.4234／−1.0000；**ep5 起 D(real)、D(fake) 都 1.0000、loss_D −0.0000、loss_G −1.0000**。梯度範數第一次全為 0 在 step 7,400（ep7），之後到 ep≈8 仍有 37 筆非零，ep91–100 的 111 筆全部是 0。float32 `torch.sigmoid(17.)` == 1.0（16.5 不等於）。
+- WGAN 判別器卡在 ±0.01 的比例（不含 running stats）：D_0 11.4%、D_49 22.3%、D_99 22.0%；各層 weight：D_0 l1.0 .04／l1.2.0 .04／l1.2.1(BN) .60／l1.3.0 .05／l1.3.1 .95／l1.4.0 .13／l1.4.1 1.00／l1.5 .99；D_49 .04／.03／.45／.06／.59／.27／1.00／1.00；D_99 .04／.02／.26／.05／.52／.27／1.00／.99。max |w| 全部 0.0100。
+- 只換 loss_G（lit_lossg）每 epoch 結束：ep1 `45.03it/s, loss_D=6.96e-7, loss_G=-3.85e-7`；ep2 `62.17it/s, loss_D=0.133, loss_G=-7.75e-5`；ep3 `63.99it/s, loss_D=0.266, loss_G=-0.00744`；ep4 `63.52it/s, loss_D=0.193, loss_G=-0.0681`；ep5 `62.48it/s, loss_D=0.0542, loss_G=-0.0168`；ep10 `62.26it/s, loss_D=0.0777, loss_G=-0.0179`；ep20 `61.88it/s, loss_D=1.51e-5, loss_G=-6.74e-6`。圖 `docs/HW06/img/ch06_lossg_epoch{001,020}.png`（樣本格第一列）。
+- 圖 6.3 由 scratchpad 的 `ch06_chart.py` 產生。
