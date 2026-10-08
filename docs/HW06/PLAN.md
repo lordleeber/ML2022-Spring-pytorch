@@ -11,7 +11,7 @@ HW06（Anime Face Generation，用 GAN 從 100 維雜訊產生 64×64 的動漫�
   - FID 用 **pytorch-fid 0.3.0**（Inception 權重 `pt_inception-2015-12-05-6726825d.pth`，sha256 `6726825d0af5…`），裝在 .venv 之外。
   - AFD 用 **nagadomi/lbpcascade_animeface**（OpenCV cascade，sha256 `9376d30a…`）近似；JudgeBoi 的偵測器沒有公開，教材要註明只能比相對高低。
   - 實驗：DCGAN／WGAN／WGAN-GP 各跑原規格 100 epoch、報告第 2 題的「各層梯度範數」（clipping vs GP），**再加 StyleGAN2**（lucidrains `stylegan2-pytorch` 1.9.0）。
-- **大綱核可**（2026-10-08）：index、ch00–ch08、appendix（`outline.html`）；要介紹 Crypko 是什麼（ch01）；**不冷讀**；Crypko 原圖也放一些（PNG，`docs/HW06/img/`）。下一步：寫 index、ch00，一章一停。
+- **大綱核可**（2026-10-08）：index、ch00–ch08（`outline.html`）。原本照 HW04 列了 appendix，2026-10-08 依 completed-repo-to-html-textbook 的規定（「不寫附錄」）改成：名詞對照與速查併入 ch08（8.8、8.9），不產出 appendix.html；要介紹 Crypko 是什麼（ch01）；**不冷讀**；Crypko 原圖也放一些（PNG，`docs/HW06/img/`）。下一步：寫 index、ch00，一章一停。
 - 工具：`docs/tools/hw06_exp.py`（train.py 的複製＋變體）、`hw06_eval.py`（FID／AFD）、`hw06_run_grid.sh`。
 
 ## 投影片重點（`HW06/Machine Learning HW6.pdf`，26 頁，只讀了文字）

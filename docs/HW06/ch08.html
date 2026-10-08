@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>第 8 章　往上爬：StyleGAN2 與三級題庫 — HW06 動漫臉生成</title>
+<title>第 8 章　往上爬：StyleGAN2、三級題庫與速查 — HW06 動漫臉生成</title>
 <style id="inline-style">
 /* ============================================================
    repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
@@ -581,11 +581,11 @@ footer.chap-footer {
 </style>
 </head>
 <body>
-<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a><a href="appendix.html">附錄 →</a></nav>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a></nav>
 <header class="chap-header">
   <p class="book-title">ML2022 Spring · HW06 讀碼教材</p>
-  <h1>第 8 章　往上爬：StyleGAN2 與三級題庫</h1>
-  <p class="chap-lead">投影片給 Boss 基準線的建議是 StyleGAN。這一章先講 StyleGAN 和前面的 DCGAN 差在哪裡——不只是換一個 loss，而是生成器的整個結構都變了；接著用一個開源套件從零訓練 50,000 步（本機 4 小時 18 分），看它的 FID 降到 66.3、到最後都還在進步，以及 truncation ψ 怎麼在「像」與「多樣」之間取捨；然後把全書所有實驗放進同一張表，整理「如果只能挑幾件事做」；最後是入門、進階、挑戰三級題庫。</p>
+  <h1>第 8 章　往上爬：StyleGAN2、三級題庫與速查</h1>
+  <p class="chap-lead">投影片給 Boss 基準線的建議是 StyleGAN。這一章先講 StyleGAN 和前面的 DCGAN 差在哪裡——不只是換一個 loss，而是生成器的整個結構都變了；接著用一個開源套件從零訓練 50,000 步（本機 4 小時 18 分），看它的 FID 降到 66.3、到最後都還在進步，以及 truncation ψ 怎麼在「像」與「多樣」之間取捨；然後把全書所有實驗放進同一張表，整理「如果只能挑幾件事做」；最後是入門、進階、挑戰三級題庫，以及全書的名詞對照與速查表。</p>
 </header>
 <main>
 
@@ -876,6 +876,129 @@ footer.chap-footer {
 <details class="quiz"><summary>挑戰 5（沒跑過）：StyleGAN2 到第 50,000 步還在進步。如果有一整天，你會怎麼安排？</summary>
 <p>先延長同一次訓練（lucidrains 的套件會從最新的存檔接著跑，<code>--num_train_steps</code> 設大一點），每 2,500 步用 ψ 1.0 量 FID，直到曲線變平；本書的速度約每小時 11,700 步。其次試套件的資料增強（<code>--aug_prob</code>，StyleGAN2-ADA 的想法，資料少時能防止判別器過擬合），以及更大的 <code>network_capacity</code>。每一個改動都只改一個變數，用同一把尺（1000 張、同一組 z、同一份參考統計量）比較。</p></details>
 
+<h2 id="glossary">8.8　名詞對照</h2>
+<p>依首次出現的章節排列；連結指向那一章。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>英文</th><th>本書用語</th><th>一句話</th><th>首見</th></tr></thead>
+<tbody>
+<tr><td>generative adversarial network（GAN）</td><td>生成對抗網路</td><td>生成器與判別器輪流訓練、互相對抗的生成模型</td><td><a href="ch00.html#task">第 0 章</a></td></tr>
+<tr><td>generator／discriminator</td><td>生成器（G）／判別器（D）</td><td>G 把亂數畫成圖；D 判斷一張圖是真的還是 G 畫的</td><td><a href="ch00.html#task">第 0 章</a></td></tr>
+<tr><td>latent vector z</td><td>亂數 z</td><td>生成器的輸入，本作業是 100 個標準常態分布的數</td><td><a href="ch00.html#model">第 0 章</a></td></tr>
+<tr><td>DCGAN</td><td>DCGAN</td><td>用（轉置）卷積加 BatchNorm 組成 G 與 D 的 GAN，本作業的範例模型</td><td><a href="ch00.html#model">第 0 章</a></td></tr>
+<tr><td>FID（Fréchet Inception Distance）</td><td>FID</td><td>真圖與生成圖在 Inception 特徵上的分布距離，越小越好</td><td><a href="ch00.html#metrics">第 0 章</a></td></tr>
+<tr><td>AFD（anime face detection rate）</td><td>AFD</td><td>動漫臉偵測器認得出的比例，越大越好</td><td><a href="ch00.html#metrics">第 0 章</a></td></tr>
+<tr><td>checkpoint</td><td>存檔</td><td><code>G_{e}.pth</code>、<code>D_{e}.pth</code>，第 1 個與每 5 個 epoch 一對</td><td><a href="ch00.html#data">第 0 章</a></td></tr>
+<tr><td>Crypko</td><td>Crypko</td><td>Preferred Networks 的 GAN 動漫角色生成服務，本作業資料的來源</td><td><a href="ch01.html#crypko">第 1 章</a></td></tr>
+<tr><td>normalize to [-1, 1]</td><td>正規化到 [-1, 1]</td><td><code>Normalize(0.5, 0.5)</code>：2x − 1，配合 G 最後的 Tanh</td><td><a href="ch01.html#why-pm1">第 1 章</a></td></tr>
+<tr><td>num_workers</td><td>背景讀圖行程</td><td>DataLoader 讀檔與轉換的子行程數；本作業 2 個就夠</td><td><a href="ch01.html#workers">第 1 章</a></td></tr>
+<tr><td>deterministic cuDNN</td><td>確定性的 cuDNN</td><td><code>cudnn.deterministic = True</code>、<code>benchmark = False</code>，讓結果逐位元可重現</td><td><a href="ch01.html#seed">第 1 章</a></td></tr>
+<tr><td>transposed convolution</td><td>轉置卷積</td><td>卷積矩陣的轉置（＝卷積的反向傳播），用來放大特徵圖</td><td><a href="ch02.html#tconv">第 2 章</a></td></tr>
+<tr><td>output_padding</td><td>output_padding</td><td>轉置卷積在輸出右下多留的格數，決定放大後是 2n 還是 2n − 1</td><td><a href="ch02.html#output-padding">第 2 章</a></td></tr>
+<tr><td>checkerboard artifact</td><td>棋盤格紋</td><td>kernel 不是 stride 的倍數時，重疊次數不均造成的格紋</td><td><a href="ch02.html#output-padding">第 2 章</a></td></tr>
+<tr><td>LeakyReLU</td><td>LeakyReLU</td><td>負數乘 0.2 而不歸零，判別器用它讓梯度不中斷</td><td><a href="ch02.html#discriminator">第 2 章</a></td></tr>
+<tr><td>binary cross entropy（BCE）</td><td>BCE loss</td><td>−[y log p + (1 − y) log(1 − p)]，PyTorch 把 log 截在 −100</td><td><a href="ch03.html#init">第 3 章</a></td></tr>
+<tr><td>non-saturating loss</td><td>non-saturating loss</td><td>生成器最小化 −log D(G(z))，而不是 log(1 − D(G(z)))</td><td><a href="ch03.html#nonsat">第 3 章</a></td></tr>
+<tr><td>detach()</td><td>detach()</td><td>切斷計算圖；判別器那一步加上它，快 15%、結果不變</td><td><a href="ch03.html#detach">第 3 章</a></td></tr>
+<tr><td>n_critic</td><td>n_critic</td><td>判別器更新幾次，生成器才更新一次</td><td><a href="ch03.html#train-g">第 3 章</a></td></tr>
+<tr><td>Inception v3（pool3）</td><td>Inception 特徵</td><td>FID 用的 2048 維特徵，輸入先放大到 299×299</td><td><a href="ch04.html#fid">第 4 章</a></td></tr>
+<tr><td>Fréchet distance</td><td>Fréchet 距離</td><td>‖μ<sub>r</sub> − μ<sub>g</sub>‖² + Tr(Σ<sub>r</sub> + Σ<sub>g</sub> − 2(Σ<sub>r</sub>Σ<sub>g</sub>)<sup>1/2</sup>)</td><td><a href="ch04.html#fid">第 4 章</a></td></tr>
+<tr><td>mode／mode collapse</td><td>模式／模式崩潰</td><td>生成器把不同的 z 畫成同一張或少數幾張圖</td><td><a href="ch05.html#what">第 5 章</a></td></tr>
+<tr><td>Jensen–Shannon divergence</td><td>JS 散度</td><td>原始 GAN 在判別器最佳時最小化的量；分布不重疊時是常數</td><td><a href="ch06.html#js">第 6 章</a></td></tr>
+<tr><td>Wasserstein-1 distance／Earth Mover's Distance</td><td>Wasserstein 距離／推土機距離</td><td>把一個分布搬成另一個的最小成本；分布不重疊時仍有梯度</td><td><a href="ch06.html#js">第 6 章</a></td></tr>
+<tr><td>Lipschitz</td><td>Lipschitz 限制</td><td>輸出的變化不超過輸入變化的 K 倍；WGAN 的 critic 必須滿足</td><td><a href="ch06.html#js">第 6 章</a></td></tr>
+<tr><td>critic</td><td>critic</td><td>WGAN 的判別器：不接 Sigmoid、輸出任意實數分數</td><td><a href="ch06.html#js">第 6 章</a></td></tr>
+<tr><td>weight clipping</td><td>權重截斷</td><td>每次更新後把判別器的每個參數截到 [−c, c]（論文 c = 0.01）</td><td><a href="ch06.html#c3">第 6 章</a></td></tr>
+<tr><td>RMSProp</td><td>RMSProp</td><td>沒有動量的自適應優化器，WGAN 論文的建議</td><td><a href="ch06.html#c4">第 6 章</a></td></tr>
+<tr><td>gradient penalty（GP）</td><td>梯度懲罰</td><td>λ(‖∇<sub>x̂</sub>D(x̂)‖ − 1)²，在真假內插點上算</td><td><a href="ch07.html#idea">第 7 章</a></td></tr>
+<tr><td>double backpropagation</td><td>二次反向傳播</td><td>對「梯度」再微分；<code>create_graph=True</code>，WGAN-GP 變慢的主因</td><td><a href="ch07.html#gp">第 7 章</a></td></tr>
+<tr><td>InstanceNorm</td><td>InstanceNorm</td><td>每張圖、每個 channel 各自正規化；WGAN-GP 用它取代 BatchNorm</td><td><a href="ch07.html#norm">第 7 章</a></td></tr>
+<tr><td>R1 regularization</td><td>R1 正則化</td><td>只在真圖上懲罰判別器梯度（目標 0），StyleGAN2 用它</td><td><a href="ch07.html#answer">第 7 章</a></td></tr>
+<tr><td>mapping network／w</td><td>mapping 網路／w</td><td>StyleGAN 把 z 經 8 層全連接轉成 w，再注入每個解析度</td><td><a href="ch08.html#stylegan">第 8 章</a></td></tr>
+<tr><td>modulated convolution</td><td>調變卷積</td><td>依 w 縮放卷積權重，讓 w 控制每一層的「風格」</td><td><a href="ch08.html#stylegan">第 8 章</a></td></tr>
+<tr><td>style mixing</td><td>style 混合</td><td>粗、細解析度用不同的 w</td><td><a href="ch08.html#stylegan">第 8 章</a></td></tr>
+<tr><td>EMA（exponential moving average）</td><td>指數移動平均</td><td>生成器權重的平滑版本，畫圖與評估用它</td><td><a href="ch03.html#losses">第 3 章</a></td></tr>
+<tr><td>truncation（ψ）</td><td>截斷</td><td>w′ = w̄ + ψ(w − w̄)，越小越像平均臉</td><td><a href="ch08.html#psi">第 8 章</a></td></tr>
+<tr><td>hinge loss</td><td>hinge loss</td><td>lucidrains StyleGAN2 用的判別器 loss</td><td><a href="ch08.html#lucidrains">第 8 章</a></td></tr>
+</tbody>
+</table></div>
+
+<h2 id="cheatsheet">8.9　速查表</h2>
+
+<h3 id="cs-commands">指令</h3>
+<p>都在 repo 根目錄或 <code>HW06/</code> 底下執行；<code>&lt;pylib&gt;</code>、<code>&lt;sg2lib&gt;</code> 是 .venv 之外裝評估套件與 StyleGAN2 的資料夾，<code>&lt;stats&gt;</code> 是真圖統計量的資料夾。</p>
+<pre class="shell cmd"><code>$ cd HW06
+$ ../.venv/bin/python train.py                     # 100 個 epoch，約 29 分鐘
+$ ../.venv/bin/python test.py                      # 最新存檔 → output/1.jpg … 100.jpg
+$ PYTHONPATH=. ../.venv/bin/python ../docs/tools/hw06_exp.py --name gan --out &lt;dir&gt;           # 與 train.py 逐位元相同
+$ PYTHONPATH=. ../.venv/bin/python ../docs/tools/hw06_exp.py --name wgan --out &lt;dir&gt; \
+      --model_type WGAN --opt rmsprop --lr 5e-5 --clip 0.01 --n_critic 5
+$ PYTHONPATH=. ../.venv/bin/python ../docs/tools/hw06_exp.py --name wgangp --out &lt;dir&gt; \
+      --model_type WGANGP --norm in --lr 1e-4 --beta1 0 --beta2 0.9 --gp_lambda 10 --n_critic 5
+$ PYTHONPATH=.:&lt;pylib&gt; ../.venv/bin/python ../docs/tools/hw06_eval.py real --stats &lt;stats&gt; --cascade &lt;xml&gt;
+$ PYTHONPATH=.:&lt;pylib&gt; ../.venv/bin/python ../docs/tools/hw06_eval.py gen --stats &lt;stats&gt; --cascade &lt;xml&gt; G_14.pth …
+$ cd output &amp;&amp; tar -zcf ../submission.tgz *.jpg &amp;&amp; cd ..</code></pre>
+<p>批次跑實驗與 StyleGAN2：在 repo 根目錄 <code>bash docs/tools/hw06_run_grid.sh &lt;out&gt; &lt;pylib&gt; &lt;xml&gt; [name …]</code>、<code>bash docs/tools/hw06_sg2_train.sh &lt;work&gt; &lt;sg2lib&gt;</code>；StyleGAN2 的評分用 <code>hw06_eval.py sg2 --sg2_dir &lt;work&gt; --psi 1.0 20</code>。</p>
+
+<h3 id="cs-shapes">形狀</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>生成器（B 張）</th><th>判別器（B 張）</th></tr></thead>
+<tbody>
+<tr><td><code>(B, 100)</code> → Linear+BN1d+ReLU → <code>(B, 8192)</code> → view <code>(B, 512, 4, 4)</code></td><td><code>(B, 3, 64, 64)</code> → 卷積+LeakyReLU → <code>(B, 64, 32, 32)</code></td></tr>
+<tr><td>→ 轉置卷積+BN+ReLU <code>(B, 256, 8, 8)</code> → <code>(B, 128, 16, 16)</code> → <code>(B, 64, 32, 32)</code></td><td>→ 卷積+BN+LeakyReLU <code>(B, 128, 16, 16)</code> → <code>(B, 256, 8, 8)</code> → <code>(B, 512, 4, 4)</code></td></tr>
+<tr><td>→ 轉置卷積+Tanh <code>(B, 3, 64, 64)</code>，值域 (−1, 1)</td><td>→ 4×4 卷積 <code>(B, 1, 1, 1)</code> → Sigmoid → view <code>(B,)</code></td></tr>
+<tr><td>參數 5,142,080</td><td>參數 2,766,529</td></tr>
+</tbody>
+</table></div>
+<p>卷積輸出 ⌊(n + 2p − k)/s⌋ + 1；轉置卷積輸出 (n − 1)s − 2p + k + output_padding（第 2 章）。</p>
+
+<h3 id="cs-numbers">關鍵數字</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>項目</th><th>數字</th><th>章</th></tr></thead>
+<tbody>
+<tr><td>資料</td><td>71,314 張 96×96 RGB JPEG；一個 epoch 1,115 步（最後一批 18 張）</td><td>1</td></tr>
+<tr><td>照跑 <code>train.py</code></td><td>100 個 epoch，29 分 01 秒；兩次逐位元相同</td><td>0</td></tr>
+<tr><td>DCGAN 最好／最後</td><td>第 15 個 epoch 105.0／第 100 個 epoch 211.9（FID64，1000 張）</td><td>5</td></tr>
+<tr><td>崩潰的 epoch</td><td>19–22、25–27、31、34–35</td><td>5</td></tr>
+<tr><td>WGAN／WGAN-GP／StyleGAN2</td><td>90.3（20 分）／94.1（44 分）／66.3（4 時 18 分）</td><td>6、7、8</td></tr>
+<tr><td>FID 的誤差</td><td>換 z 種子 ±1.5；10,000 張比 1000 張多半低 14–16；1000 張真圖的底線約 32</td><td>4</td></tr>
+<tr><td>AFD（本書偵測器）</td><td>真圖只有 0.54；G_99 0.666；StyleGAN2 ψ 0.5 0.656</td><td>4、8</td></tr>
+<tr><td>梯度範數 conv1 ÷ conv4</td><td>clipping 157、GP 2.4、DCGAN 14</td><td>7</td></tr>
+<tr><td>WGAN 的 −loss_D 與 FID</td><td>Spearman 0.986（DCGAN 的 loss_D −0.22）</td><td>6</td></tr>
+<tr><td>加 <code>detach()</code></td><td>每 epoch 17.2 → 14.7 秒，結果不變</td><td>3</td></tr>
+<tr><td>1000 張提交檔</td><td>JPEG 品質 75，每張約 1.7 KB；tgz 約 1.1–1.2 MB（限制 2 MB）</td><td>4</td></tr>
+</tbody>
+</table></div>
+
+<h3 id="cs-issues">repo 問題清單</h3>
+<ol>
+  <li><code>test.py</code> 挑「最新」而不是「最好」的存檔：<code>G_99</code> 211.9，最好的 <code>G_14</code> 105.0。→ <a href="ch05.html#curve">第 5 章</a></li>
+  <li><code>inference</code> 的 <code>n_generate</code> 是 100（作業要 1000）、沒有設種子、不清空 <code>output/</code>。→ <a href="ch04.html#inference">第 4 章</a></li>
+  <li><code>gp()</code> 是空的，簽名又和註解的呼叫方式不合：<code>TypeError</code>。→ <a href="ch07.html#gp">第 7 章</a></li>
+  <li>打開 clipping 的註解：<code>KeyError: 'clip_value'</code>。→ <a href="ch06.html#lit-clip">第 6 章</a></li>
+  <li>判別器那一步沒有 <code>detach()</code>，白算生成器的梯度。→ <a href="ch03.html#detach">第 3 章</a></li>
+  <li>生成器與判別器的形狀註解是錯的。→ <a href="ch02.html#generator">第 2 章</a></li>
+  <li>存檔編號從 0 起算（<code>G_14</code> 是第 15 個 epoch），樣本格從 1 起算。→ <a href="ch03.html#epoch-end">第 3 章</a></li>
+  <li><code>n_critic</code> 不整除 10 時，進度條印的是舊的 <code>loss_G</code>（推論）。→ <a href="ch03.html#progress">第 3 章</a></li>
+  <li><code>glob</code> 沒排序，換機器就不保證逐位元重現。→ <a href="ch01.html#glob">第 1 章</a></li>
+  <li>投影片的 FID 基準線是上萬、AFD 偵測器沒公開、額外資料的規定前後不一致。→ <a href="ch00.html#baselines">第 0 章</a></li>
+  <li><code>筆記.txt</code>「只替換 loss_G 是不能使用的」：其實只有第 1 個 epoch 是雜訊；真正卡死的是保留 Sigmoid 的 WGAN loss。→ <a href="ch06.html#lit-lossg">第 6 章</a></li>
+</ol>
+
+<h3 id="cs-versions">套件版本</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>套件</th><th>版本</th><th>備註</th></tr></thead>
+<tbody>
+<tr><td>Python／PyTorch／torchvision</td><td>3.12.3／2.11.0+cu128／0.26.0+cu128</td><td>repo 的共用 <code>.venv</code></td></tr>
+<tr><td>NumPy／SciPy／tqdm</td><td>2.5.3／1.18.1／4.70.1</td><td>SciPy 1.18 的 <code>sqrtm</code> 沒有 <code>disp</code>，pytorch-fid 0.3.0 的 FID 函式會壞（第 4 章）</td></tr>
+<tr><td>pytorch-fid</td><td>0.3.0</td><td>.venv 之外；Inception 權重 <code>pt_inception-2015-12-05-6726825d.pth</code></td></tr>
+<tr><td>opencv-python-headless</td><td>4.14.0.94</td><td>.venv 之外；5.x 沒有 <code>cv2.CascadeClassifier</code></td></tr>
+<tr><td>lbpcascade_animeface.xml</td><td>nagadomi 的 GitHub 版本</td><td>AFD 的偵測器</td></tr>
+<tr><td>stylegan2-pytorch</td><td>1.9.0</td><td>.venv 之外、<code>--no-deps</code>；要放一個空的 <code>aim</code> 模組</td></tr>
+<tr><td>GPU</td><td>NVIDIA RTX PRO 4000 Blackwell（24 GB），WSL2</td><td>本書所有時間都在這張卡上量</td></tr>
+</tbody>
+</table></div>
+<p>.venv 之外的套件用 <code>uv pip install --no-cache --target &lt;資料夾&gt; --no-deps …</code> 安裝，執行時加到 <code>PYTHONPATH</code>；本書的環境裡不加 <code>--no-cache</code> 時 uv 會卡在快取鎖上。</p>
+
 <h2 id="reading">延伸閱讀</h2>
 <ul>
   <li>Karras、Laine、Aila，〈A Style-Based Generator Architecture for Generative Adversarial Networks〉（CVPR 2019）：StyleGAN，mapping 網路、style 注入、雜訊、style mixing、truncation，<a href="https://arxiv.org/abs/1812.04948">arXiv:1812.04948</a>。</li>
@@ -885,7 +1008,7 @@ footer.chap-footer {
 </ul>
 
 </main>
-<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a><a href="appendix.html">附錄 →</a></nav>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a></nav>
 <footer class="chap-footer">本教材根據 lordleeber/ML2022-Spring-pytorch 的 HW06 程式碼與 ML2022 Spring 作業投影片撰寫。</footer>
 <script id="inline-js">
 /* repo → HTML 教材 — 頁面強化腳本

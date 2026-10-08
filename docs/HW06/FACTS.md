@@ -2,7 +2,7 @@
 
 > **這是什麼**：docs/HW06/ 這本教材背後的事實清單。教材裡的每一個數字、每一段逐字輸出，都要能在這裡或 repo 原始碼找到出處。這份檔案本身不是教材，HTML 裡不會連到它。
 >
-> **狀態（2026-10-07 19:12）**：實驗全部跑完並評估（baseline、grid 四組、StyleGAN2）。大綱還沒寫。
+> **狀態（2026-10-08）**：全書寫完：index、outline、ch00–ch08（ch08 是總結章，含題庫、名詞對照與速查；依 skill 規定不寫附錄）。
 >
 > **重現方法**（需要 GPU 與 `HW06/faces/`；評估另需 .venv 外的 pylib，見「評估工具」）：
 > - `cd HW06 && PYTHONPATH=. ../.venv/bin/python ../docs/tools/hw06_exp.py --name X --out DIR [選項]`：訓練實驗，預設參數就是 train.py。

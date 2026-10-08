@@ -585,7 +585,7 @@ footer.chap-footer {
 <header class="chap-header">
   <p class="book-title">ML2022 Spring · HW06 讀碼教材</p>
   <h1>教學大綱</h1>
-  <p class="chap-lead">每一章都對應 repo 裡真實存在的檔案與行號，也對應作業投影片 <code>HW06/Machine Learning HW6.pdf</code>（共 26 頁）的頁碼。順序跟著一張圖走：先看 71,314 張動漫臉被縮成什麼樣子，再看 100 個亂數怎麼被生成器放大成一張 64×64 的臉、判別器怎麼把它壓回一個分數、兩者怎麼輪流更新；程式本身沒有任何評分，所以第 4 章先把「怎麼量一個 GAN 的好壞」講清楚，之後每一章的結論都用同一把尺（FID、AFD）量。報告兩題（WGAN 與 GAN 的差別、clipping 與 GP 的梯度範數）各占一章，StyleGAN2 與題庫放在最後一章。</p>
+  <p class="chap-lead">每一章都對應 repo 裡真實存在的檔案與行號，也對應作業投影片 <code>HW06/Machine Learning HW6.pdf</code>（共 26 頁）的頁碼。順序跟著一張圖走：先看 71,314 張動漫臉被縮成什麼樣子，再看 100 個亂數怎麼被生成器放大成一張 64×64 的臉、判別器怎麼把它壓回一個分數、兩者怎麼輪流更新；程式本身沒有任何評分，所以第 4 章先把「怎麼量一個 GAN 的好壞」講清楚，之後每一章的結論都用同一把尺（FID、AFD）量。報告兩題（WGAN 與 GAN 的差別、clipping 與 GP 的梯度範數）各占一章，StyleGAN2、題庫與速查放在最後一章（不另寫附錄）。</p>
 </header>
 <main>
 
@@ -603,8 +603,8 @@ footer.chap-footer {
 <tr><td><a href="ch05.html">ch05</a></td><td>DCGAN 的訓練動態：mode collapse</td><td><code>trainer_gan.py:90-194</code>、<code>config.py</code></td><td>p.17</td><td>baseline 每 5 個 epoch 的 FID／AFD 曲線：第 15 個 epoch 最好（105.0），第 20 個 epoch 崩到 347.1（100 張樣本幾乎一樣，像素標準差從 55 掉到 16），之後在 180–280 之間震盪；<strong>「多跑 epoch 就會變好」不成立</strong>，test.py 用的 G_99 是 211.9；AFD 和 FID 不同步（崩成同一張臉時，AFD 是全有或全無）；loss 曲線看得出崩潰嗎；投影片 Medium 建議「多跑 epoch」該怎麼解讀</td></tr>
 <tr><td><a href="ch06.html">ch06</a></td><td>報告題 Q1：從 GAN 到 WGAN</td><td><code>trainer_gan.py:39-46</code>、<code>trainer_gan.py:107-169</code>、<code>discriminator.py:15-29</code></td><td>p.19、p.24</td><td>WGAN 和 GAN 的差別（JS 散度 vs Wasserstein 距離、判別器變成不加 Sigmoid 的 critic、loss 不取 log、權重 clipping 維持 Lipschitz、RMSProp、n_critic 5）；<strong>照註解字面改會怎樣</strong>：打開 clipping → <code>KeyError: 'clip_value'</code>；「只換 loss_G」→ 第 1 個 epoch 全是雜訊，但會恢復，第 20 個 epoch FID 122.9；保留 Sigmoid 又不 clip → D 對所有圖都輸出 1、梯度全是 0、FID 一直 337；正確的 WGAN 實測：FID 一路降到 90.3、沒有崩潰、每 epoch 只要 11.9 秒</td></tr>
 <tr><td><a href="ch07.html">ch07</a></td><td>報告題 Q2：WGAN-GP 與梯度範數</td><td><code>trainer_gan.py:84-88</code>、<code>discriminator.py:32-44</code>、<code>docs/tools/hw06_exp.py</code> 的 <code>gradient_penalty</code></td><td>p.19、p.24</td><td><code>gp()</code> 沒實作而且簽名對不上：照註解寫會 <code>TypeError</code>；gradient penalty 的寫法（真假圖內插、<code>autograd.grad</code>、<code>create_graph=True</code>、(‖∇‖−1)²、λ 10）；為什麼要把 BatchNorm 換成 InstanceNorm；<strong>報告要的圖</strong>：5 個卷積層的梯度範數（log 尺度），clipping 從輸出往輸入放大到 157 倍、GP 各層差不到 2.5 倍；WGAN-GP 的結果（最佳 94.1）和代價（每 epoch 26.5 秒，是 WGAN 的 2.2 倍）；為什麼這裡 GP 沒有贏過 clipping</td></tr>
-<tr><td><a href="ch08.html">ch08</a></td><td>往上爬：StyleGAN2 與三級題庫</td><td><code>docs/tools/hw06_sg2_train.sh</code>、<code>docs/tools/hw06_eval.py</code></td><td>p.17、p.25</td><td>StyleGAN 的構想（mapping 網路 z → w、每個解析度注入 w、per-pixel noise、EMA 生成器）；用 lucidrains 的套件從零訓練 50,000 步（4 時 18 分、約 22 個 epoch）；FID 一路降到 66.3、到最後還沒收斂；<strong>truncation ψ 的取捨</strong>（ψ 0.75：AFD 高約 0.1、FID 差約 10）；全部實驗的總表（n 1000 與 n 10000）；入門／進階／挑戰三級題庫</td></tr>
-<tr><td><a href="appendix.html">appendix</a></td><td>附錄：名詞對照與速查</td><td>—</td><td>—</td><td>中英名詞對照、指令速查、形狀速查、關鍵數字一覽、repo 問題清單、套件版本（含 .venv 之外的評估套件）</td></tr>
+<tr><td><a href="ch08.html">ch08</a></td><td>往上爬：StyleGAN2、三級題庫與速查（總結章）</td><td><code>docs/tools/hw06_sg2_train.sh</code>、<code>docs/tools/hw06_eval.py</code></td><td>p.17、p.25</td><td>StyleGAN 的構想（mapping 網路 z → w、每個解析度注入 w、per-pixel noise、EMA 生成器）；用 lucidrains 的套件從零訓練 50,000 步（4 時 18 分、約 22 個 epoch）；FID 一路降到 66.3、到最後還沒收斂；<strong>truncation ψ 的取捨</strong>（ψ 0.75：AFD 高約 0.1、FID 差約 10）；全部實驗的總表（n 1000 與 n 10000）；入門／進階／挑戰三級題庫；名詞對照與速查表（指令、形狀、關鍵數字、repo 問題清單、套件版本）。依 skill 的規定不另寫附錄（2026-10-08 改）</td></tr>
+
 </tbody>
 </table></div>
 
