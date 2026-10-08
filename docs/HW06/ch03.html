@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 3 章　對抗訓練迴圈 — HW06 動漫臉生成</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch02.html">← 第 2 章</a><a href="ch04.html">第 4 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW06 讀碼教材</p>
+  <h1>第 3 章　對抗訓練迴圈</h1>
+  <p class="chap-lead">GAN 的核心不在模型，而在訓練迴圈：同一批資料，先拿來訓練判別器分辨真假，再拿新的亂數訓練生成器騙過判別器，兩者輪流、互相牽制。這一章逐行讀 <code>TrainerGAN</code> 的 <code>__init__</code> 與 <code>train</code>：兩個優化器、BCE loss、為什麼生成器的標籤是「1」、一個少了的 <code>detach()</code> 讓每個 epoch 慢了 15%、每個 epoch 結束時的樣本格與存檔；最後把 100 個 epoch 的 loss 畫出來，看懂它說了什麼、又沒說什麼。</p>
+</header>
+<main>
+
+<h2 id="init">3.1　TrainerGAN.__init__：兩個網路、一個 loss、兩個優化器</h2>
+<figure class="listing"><figcaption>trainer_gan.py:29–58 — TrainerGAN.__init__</figcaption>
+<pre class="py" data-hot="33,34,36,45,46,58"><code>class TrainerGAN():
+    def __init__(self, config):
+        self.config = config
+
+        self.G = Generator(100)
+        self.D = Discriminator(3)
+
+        self.loss = nn.BCELoss()
+
+        """
+        NOTE FOR SETTING OPTIMIZER:
+
+        GAN: use Adam optimizer
+        WGAN: use RMSprop optimizer
+        WGAN-GP: use Adam optimizer 
+        """
+        self.opt_D = torch.optim.Adam(self.D.parameters(), lr=self.config["lr"], betas=(0.5, 0.999))
+        self.opt_G = torch.optim.Adam(self.G.parameters(), lr=self.config["lr"], betas=(0.5, 0.999))
+
+        self.dataloader = None
+        self.log_dir = os.path.join(self.config["workspace_dir"], 'logs')
+        self.ckpt_dir = os.path.join(self.config["workspace_dir"], 'checkpoints')
+
+        FORMAT = '%(asctime)s - %(levelname)s: %(message)s'
+        logging.basicConfig(level=logging.INFO,
+                            format=FORMAT,
+                            datefmt='%Y-%m-%d %H:%M')
+
+        self.steps = 0
+        self.z_samples = Variable(torch.randn(100, self.config["z_dim"])).cuda()</code></pre></figure>
+<ul>
+  <li><strong>第 33–34 行</strong>：先建生成器、再建判別器。第 2 章說過，兩者的初始化都會消耗全域亂數，這個順序是逐位元重現的一部分。注意 <code>Generator(100)</code> 的 100 是寫死的，沒有讀 <code>config["z_dim"]</code>；兩者剛好相同，改 <code>z_dim</code> 時要記得兩處一起改。</li>
+  <li><strong>第 36 行，<code>nn.BCELoss()</code></strong>：binary cross entropy，二元分類的 loss。對一個機率 <em>p</em>（判別器的輸出）和標籤 <em>y</em>（1 或 0）：</li>
+</ul>
+<div class="eq">BCE(<em>p</em>, <em>y</em>) = −[ <em>y</em> · log <em>p</em> + (1 − <em>y</em>) · log(1 − <em>p</em>) ]，一批取平均</div>
+<p>標籤是 1 時只剩 −log <em>p</em>：<em>p</em> 越接近 1，loss 越接近 0；<em>p</em> 越接近 0，loss 越大，而且沒有上限。PyTorch 的 <code>BCELoss</code> 會把 log 的值截在 −100 以上，所以單一樣本的 loss 最大是 100。標籤是 0 時則反過來，只剩 −log(1 − <em>p</em>)。</p>
+<ul>
+  <li><strong>第 45–46 行，兩個 Adam</strong>：判別器與生成器各有一個優化器，各自只管自己的參數（<code>self.D.parameters()</code>、<code>self.G.parameters()</code>）。這一點很重要：等一下會看到，計算 loss 時梯度會流進兩個網路，但哪一個網路被更新，由呼叫哪一個優化器的 <code>step()</code> 決定。學習率是 <code>config</code> 的 1e-4；<code>betas=(0.5, 0.999)</code> 的第一個數（動量）比 Adam 預設的 0.9 小，這是 DCGAN 論文的建議——論文發現 0.9 會讓訓練震盪、不穩定（論文用的學習率是 2e-4，範例程式用了一半）。第 38–44 行的註解提示：WGAN 要換成 RMSprop（第 6 章）。</li>
+  <li><strong>第 52–55 行</strong>：設定 <code>logging</code> 的格式，第 0 章看到的 <code>2026-10-07 11:00 - INFO: …</code> 就是這個格式（<code>datefmt</code> 只到分鐘）。</li>
+  <li><strong>第 58 行，<code>z_samples</code></strong>：一組固定的 100 個亂數 z，形狀 <code>(100, 100)</code>，整個訓練過程都不變。每個 epoch 結束時都用它畫樣本格（3.5 節），所以樣本格上同一個位置永遠是同一個 z——第 0 章能把第 15 與第 100 個 epoch 的圖逐格比較，靠的就是這一行。<code>Variable(...)</code> 是舊寫法（index 第一層），等於什麼都沒做。</li>
+</ul>
+
+<h2 id="loop">3.2　train()：外層是 epoch，內層是 batch</h2>
+<figure class="listing"><figcaption>trainer_gan.py:90–101 — train 的開頭</figcaption>
+<pre class="py" data-hot="94,96,97,99,100,101"><code>    def train(self):
+        """
+        Use this function to train generator and discriminator
+        """
+        self.prepare_environment()
+
+        for e, epoch in enumerate(range(self.config["n_epoch"])):
+            progress_bar = tqdm(self.dataloader)
+            progress_bar.set_description(f"Epoch {e + 1}")
+            for i, data in enumerate(progress_bar):
+                imgs = data.cuda()
+                bs = imgs.size(0)</code></pre></figure>
+<p>第 94 行呼叫第 1 章讀過的 <code>prepare_environment</code>：建資料夾、DataLoader、把模型搬上 GPU。第 96 行 <code>enumerate(range(...))</code> 讓 <code>e</code> 和 <code>epoch</code> 永遠相等（都是 0 到 99），兩個名字指同一件事，後面的程式兩個都用。第 97–98 行每個 epoch 包一條新的進度條，描述是從 1 起算的 <code>Epoch {e + 1}</code>。第 100–101 行把這一批真圖搬上 GPU，記下張數 <code>bs</code>——通常是 64，每個 epoch 最後一批是 18（第 1 章）。接下來的每一步都用 <code>bs</code>，而不是寫死 64，所以最後那一批也能正常運作。</p>
+
+<h2 id="train-d">3.3　訓練判別器：真圖標 1、假圖標 0</h2>
+<figure class="listing"><figcaption>trainer_gan.py:106–135 — 判別器的一步</figcaption>
+<pre class="py" data-hot="106,108,109,110,113,114,128,129,130,133,134,135"><code>                z = Variable(torch.randn(bs, self.config["z_dim"])).cuda()
+                r_imgs = Variable(imgs).cuda()
+                f_imgs = self.G(z)
+                r_label = torch.ones((bs)).cuda()
+                f_label = torch.zeros((bs)).cuda()
+
+                # Discriminator forwarding
+                r_logit = self.D(r_imgs)
+                f_logit = self.D(f_imgs)
+
+                """
+                NOTE FOR SETTING DISCRIMINATOR LOSS:
+
+                GAN: 
+                    loss_D = (r_loss + f_loss)/2
+                WGAN: 
+                    loss_D = -torch.mean(r_logit) + torch.mean(f_logit)
+                WGAN-GP: 
+                    gradient_penalty = self.gp(r_imgs, f_imgs)
+                    loss_D = -torch.mean(r_logit) + torch.mean(f_logit) + gradient_penalty
+                """
+                # Loss for discriminator
+                r_loss = self.loss(r_logit, r_label)
+                f_loss = self.loss(f_logit, f_label)
+                loss_D = (r_loss + f_loss) / 2
+
+                # Discriminator backwarding
+                self.D.zero_grad()
+                loss_D.backward()
+                self.opt_D.step()</code></pre></figure>
+<ol>
+  <li><strong>第 106、108 行，畫一批假圖</strong>：取 <code>bs</code> 個亂數 z（在 CPU 上用 <code>torch.randn</code> 產生，再 <code>.cuda()</code>），送進生成器得到 <code>bs</code> 張假圖。</li>
+  <li><strong>第 109–110 行，臨時貼的標籤</strong>：真圖全部標 1、假圖全部標 0。第 1 章說過，資料本身沒有標籤，這兩行就是 GAN 的「標籤」——它只描述圖是從哪裡來的。</li>
+  <li><strong>第 113–114 行，判別器看兩批</strong>：真圖一批、假圖一批，<strong>分開</strong>送進判別器，各得到 <code>bs</code> 個機率。變數名稱叫 <code>logit</code>，但因為判別器最後有 Sigmoid，它其實是機率，不是 logit（logit 是 Sigmoid 之前的值）。分開送有一個副作用：判別器的 BatchNorm 在訓練模式下用「這一批」的平均與變異數，所以一批全是真圖、一批全是假圖，各自用自己的統計量正規化；DCGAN 論文就是這樣做的。</li>
+  <li><strong>第 128–130 行，loss</strong>：真圖的 BCE（希望 D 輸出 1）加假圖的 BCE（希望 D 輸出 0），取平均。判別器完全分不出來、每張都給 0.5 時，兩項都是 ln 2，loss_D = 0.693；判別器分得越清楚，loss_D 越接近 0。第 116–126 行的註解列出 WGAN 與 WGAN-GP 要換的寫法（第 6、7 章）。</li>
+  <li><strong>第 133–135 行，更新判別器</strong>：清掉舊的梯度、反向傳播、<code>opt_D.step()</code> 只更新判別器的參數。</li>
+</ol>
+
+<h3 id="detach">少了一個 detach()</h3>
+<p>第 134 行的 <code>loss_D.backward()</code> 會沿著計算圖一路往回算梯度。<code>f_loss</code> 是從 <code>f_imgs</code> 算出來的，而 <code>f_imgs = self.G(z)</code> 是生成器的輸出，所以梯度會<strong>穿過判別器、再穿過整個生成器</strong>，算出生成器每一個參數的梯度。但這些梯度沒有人用：<code>opt_D.step()</code> 只更新判別器；等到下一節訓練生成器時，第 167 行的 <code>self.G.zero_grad()</code> 會先把它們清掉。白算了一次生成器的反向傳播。</p>
+<p>正確的寫法是把第 114 行改成 <code>f_logit = self.D(f_imgs.detach())</code>：<code>detach()</code> 傳回一個不連著計算圖的 tensor，反向傳播到這裡就停。本書的實驗工具 <code>hw06_exp.py</code> 加了一個 <code>--detach 1</code> 選項做這件事，實測 5 個 epoch：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th>5 個 epoch</th><th>每個 epoch</th><th>第 5 個 epoch 的 G、D 權重</th></tr></thead>
+<tbody>
+<tr><td>範例程式（沒有 detach）</td><td>86.1 秒</td><td>17.0–17.6 秒</td><td>——</td></tr>
+<tr><td>加上 <code>detach()</code></td><td><strong>73.8 秒</strong></td><td>14.7–15.1 秒</td><td><strong>逐位元相同</strong></td></tr>
+</tbody>
+</table></div>
+<p>快了約 15%，訓練出來的權重一個位元都不差。為什麼完全相同？因為被省掉的只有「生成器的梯度」，而那些梯度本來就會在用到之前被清掉；判別器的梯度、生成器的 forward（包括 BatchNorm 的統計量更新）都沒有改變。這是一個純粹的效能問題，不是正確性問題——但 100 個 epoch 下來，等於多花了 4 分鐘做沒有用的計算。</p>
+
+<h2 id="train-g">3.4　訓練生成器：讓判別器把假圖判成「1」</h2>
+<figure class="listing"><figcaption>trainer_gan.py:148–173 — 生成器的一步與進度條</figcaption>
+<pre class="py" data-hot="148,150,151,154,164,167,168,169,171,172,173"><code>                if self.steps % self.config["n_critic"] == 0:
+                    # Generate some fake images.
+                    z = Variable(torch.randn(bs, self.config["z_dim"])).cuda()
+                    f_imgs = self.G(z)
+
+                    # Generator forwarding
+                    f_logit = self.D(f_imgs)
+
+                    """
+                    NOTE FOR SETTING LOSS FOR GENERATOR:
+
+                    GAN: loss_G = self.loss(f_logit, r_label)
+                    WGAN: loss_G = -torch.mean(self.D(f_imgs))
+                    WGAN-GP: loss_G = -torch.mean(self.D(f_imgs))
+                    """
+                    # Loss for the generator.
+                    loss_G = self.loss(f_logit, r_label)
+
+                    # Generator backwarding
+                    self.G.zero_grad()
+                    loss_G.backward()
+                    self.opt_G.step()
+
+                if self.steps % 10 == 0:
+                    progress_bar.set_postfix(loss_G=loss_G.item(), loss_D=loss_D.item())
+                self.steps += 1</code></pre></figure>
+<ul>
+  <li><strong>第 148 行，<code>n_critic</code></strong>：<code>self.steps</code> 是從訓練開始累計的步數。<code>n_critic</code> 是 1 時每一步都訓練生成器；WGAN 會設成 5，判別器每更新 5 次，生成器才更新 1 次（第 6 章）。</li>
+  <li><strong>第 150–151 行，重新畫一批</strong>：取一組<strong>新的</strong>亂數、畫一批新的假圖，不重用判別器那一步的假圖。這一批是給<strong>剛更新過的</strong>判別器看的。</li>
+  <li><strong>第 154、164 行，標籤是 1</strong>：<code>loss_G = BCE(D(G(z)), r_label)</code>，用的是真圖的標籤。生成器的目標是讓判別器把它的假圖判成真的，所以「正確答案」是 1；loss 是 −log D(G(z))，判別器越相信假圖是真的，loss 越小。</li>
+  <li><strong>第 167–169 行，只更新生成器</strong>：梯度同樣會流過判別器（不流過判別器就算不到生成器的梯度），判別器的參數也會因此得到梯度，但這一步只呼叫 <code>opt_G.step()</code>；判別器拿到的梯度會在下一步第 133 行被 <code>D.zero_grad()</code> 清掉。這裡的「多算」是必要的，和上一節的 detach 不同。</li>
+</ul>
+<p>第 0 章與第 2 章都看過訓練第一步印出的 <code>loss_G=3.43</code>：那是判別器更新過一步之後，對這一批新的假圖算出來的。判別器只更新一步，假圖的平均分數就從 0.613 掉到 0.052，所以生成器一開始就面對一個佔上風的對手。</p>
+
+<h3 id="nonsat">為什麼是 −log D(G(z))，而不是 log(1 − D(G(z)))</h3>
+<p>GAN 原始論文寫的目標是一場「minimax」遊戲：判別器想讓 log D(真圖) + log(1 − D(假圖)) 越大越好，生成器想讓同一個式子越小越好——生成器只能影響第二項，所以它的 loss 應該是 <strong>log(1 − D(G(z)))</strong>。但同一篇論文接著指出：訓練初期判別器很容易就把假圖判成接近 0，這時 log(1 − D) 對生成器的梯度非常小，生成器學不動；改成最小化 <strong>−log D(G(z))</strong>，目標方向一樣（都是讓 D(G(z)) 變大），但在 D(G(z)) 接近 0 時梯度大得多。這個版本叫 <strong>non-saturating loss</strong>，範例程式第 164 行用 <code>r_label</code> 就是在做它。</p>
+<p>用訓練第一步的數字算一次：判別器給新假圖的平均分數是 0.052。對判別器 Sigmoid 之前的值 <em>a</em> 微分，log(1 − σ(<em>a</em>)) 的梯度是 −σ(<em>a</em>) ≈ −0.052；−log σ(<em>a</em>) 的梯度是 −(1 − σ(<em>a</em>)) ≈ −0.948。同樣的處境下，non-saturating 版本給生成器的訊號大了約 18 倍。第 6 章會看到，repo 裡的 <code>筆記.txt</code> 說「只替換 loss_G 是不能使用的」——把第 164 行換成另一種寫法時，第一個 epoch 發生的事和這裡講的梯度大小有關。</p>
+
+<h3 id="progress">進度條上的數字</h3>
+<p>第 171–172 行每 10 步更新一次進度條，顯示<strong>那一步</strong>的 <code>loss_G</code> 與 <code>loss_D</code>，所以第 0 章看到的數字只是每 10 步的一個抽樣，不是平均。還有一個邊界情況：<code>loss_G</code> 只在 <code>steps % n_critic == 0</code> 的那步才重新計算。<code>n_critic</code> 是 1、2、5、10 時，10 的倍數一定也是 <code>n_critic</code> 的倍數，印出的永遠是當步的值；但如果 <code>n_critic</code> 是 3，第 10 步印的 <code>loss_G</code> 其實是第 9 步算的。這是推論，本書沒有實際跑 <code>n_critic=3</code>；作業會用到的 1 和 5 都不受影響。</p>
+
+<h2 id="epoch-end">3.5　每個 epoch 結束：樣本格與存檔</h2>
+<figure class="listing"><figcaption>trainer_gan.py:175–194 — 樣本格、存檔</figcaption>
+<pre class="py" data-hot="175,176,178,187,189,191,192"><code>            self.G.eval()
+            f_imgs_sample = (self.G(self.z_samples).data + 1) / 2.0
+            filename = os.path.join(self.log_dir, f'Epoch_{epoch + 1:03d}.jpg')
+            torchvision.utils.save_image(f_imgs_sample, filename, nrow=10)
+            logging.info(f'Save some samples to {filename}.')
+
+            # Show some images during training.
+            # grid_img = torchvision.utils.make_grid(f_imgs_sample.cpu(), nrow=10)
+            # plt.figure(figsize=(10, 10))
+            # plt.imshow(grid_img.permute(1, 2, 0))
+            # plt.show()
+
+            self.G.train()
+
+            if (e + 1) % 5 == 0 or e == 0:
+                # Save the checkpoints.
+                torch.save(self.G.state_dict(), os.path.join(self.ckpt_dir, f'G_{e}.pth'))
+                torch.save(self.D.state_dict(), os.path.join(self.ckpt_dir, f'D_{e}.pth'))
+
+        logging.info('Finish training')</code></pre></figure>
+<ul>
+  <li><strong>第 175、187 行，<code>G.eval()</code> 與 <code>G.train()</code></strong>：畫樣本格前切到評估模式，畫完切回訓練模式。差別在 BatchNorm：訓練模式用「當下這一批」的平均與變異數，評估模式用訓練期間累積的平均（<code>running_mean</code>、<code>running_var</code>）。兩種模式畫出來的圖不一樣：本書拿同樣 100 個 z 實測，<code>G_14</code> 的兩種輸出平均每個像素差 7.1（0–255 的尺度），<code>G_99</code> 差 14.7、最大差到 190。樣本格、<code>test.py</code> 的推論（第 4 章）和本書的 FID 評估都用評估模式，所以三者一致。如果忘了第 187 行的 <code>G.train()</code>，之後的訓練會一直用累積的統計量，訓練行為就變了。</li>
+  <li><strong>第 176 行</strong>：<code>(x + 1) / 2</code> 把 Tanh 的 [-1, 1] 換回 [0, 1]（第 1 章）。這一行沒有包在 <code>torch.no_grad()</code> 裡，PyTorch 會為這 100 張圖建一份用不到的計算圖；<code>.data</code> 取出不帶計算圖的值，所以不影響結果，只是多用一點記憶體。</li>
+  <li><strong>第 177–178 行</strong>：存成 <code>Epoch_001.jpg</code> 這樣的檔名（<code>epoch + 1</code>、補零到三位），<code>save_image</code> 的 <code>nrow=10</code> 排成 10×10 的格子。第 181–185 行原本在 notebook 裡把它畫出來，本 repo 註解掉了。</li>
+  <li><strong>第 189–192 行，存檔</strong>：條件是 <code>(e + 1) % 5 == 0 or e == 0</code>：第 1 個 epoch 存一次，之後每 5 個 epoch 存一次，共 21 次。檔名用的是 <code>e</code>（從 0 起算），所以是 <code>G_0</code>、<code>G_4</code>、<code>G_9</code>…<code>G_99</code>；樣本格用的卻是 <code>epoch + 1</code>（從 1 起算）。<code>G_14.pth</code> 對應的是 <code>Epoch_015.jpg</code>——第 0 章「第 15 個 epoch 最好」說的就是 <code>G_14</code>。</li>
+</ul>
+<p><code>state_dict()</code> 除了權重，還包含 BatchNorm 的三個統計量。<code>G_99.pth</code> 裡 <code>l1.1.num_batches_tracked</code> 的值是 <strong>223,000</strong>，剛好是 111,500 步的兩倍：生成器每一步做了兩次訓練模式的 forward（判別器那一步畫一批、生成器那一步再畫一批），每次都更新一次統計量。存檔沒有存優化器的狀態（Adam 的動量），所以從存檔接著訓練，和不中斷地訓練不會完全一樣。</p>
+
+<h2 id="losses">3.6　讀 loss：它說了什麼，又沒說什麼</h2>
+<p>本書的實驗工具在照跑 <code>train.py</code> 的同時（逐位元相同，第 0 章），每 10 步記下 <code>loss_D</code>、<code>loss_G</code>，以及判別器給真圖、假圖的平均分數（記錄在 <code>docs/tools/hw06_logs/gan.jsonl</code>，共 11,150 筆）。其中「D(假圖)」記的是生成器那一步、判別器更新後對新一批假圖的分數，也就是用來算 <code>loss_G</code> 的那個。下圖把它們依 epoch 彙整：</p>
+<div class="legend">
+  <span><i style="background:#3987e5"></i>D(真圖)：判別器給真圖的平均分數；下圖則是 loss_G</span>
+  <span><i style="background:#d95926"></i>D(假圖)：判別器給新一批假圖的平均分數</span>
+</div>
+<figure class="fig">
+<svg viewBox="0 0 900 520" role="img" aria-label="DCGAN 訓練 100 個 epoch 的判別器分數與生成器 loss。上圖：判別器對真圖的平均分數大多在 0.83 到 0.99，對假圖大多在 0.002 到 0.06；第 19 到 23 個 epoch 真圖 1.000、假圖 0.000。下圖：生成器 loss 的中位數大多在 4 到 8，第 20 到 22 個 epoch 跳到 40 到 50。第 15 個 epoch 有一條虛線標出 FID 最好的地方">
+<rect x="213.2" y="40" width="40.9" height="170" fill="#e3b341" fill-opacity="0.12"/>
+<line x1="70" y1="210.0" x2="880" y2="210.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="214.0" text-anchor="end">0</text>
+<line x1="70" y1="167.5" x2="880" y2="167.5" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="171.5" text-anchor="end">0.25</text>
+<line x1="70" y1="125.0" x2="880" y2="125.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="129.0" text-anchor="end">0.5</text>
+<line x1="70" y1="82.5" x2="880" y2="82.5" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="86.5" text-anchor="end">0.75</text>
+<line x1="70" y1="40.0" x2="880" y2="40.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="44.0" text-anchor="end">1</text>
+<line x1="184.5" y1="40" x2="184.5" y2="210" stroke="#93a1af" stroke-width="1" stroke-dasharray="4 3"/>
+<text class="s-sm" x="62" y="32" text-anchor="start">判別器給的平均分數（每個 epoch 的平均）</text>
+<polyline points="70.0,61.2 78.2,68.2 86.4,63.7 94.5,62.4 102.7,62.9 110.9,61.5 119.1,57.1 127.3,58.0 135.5,59.9 143.6,60.6 151.8,60.7 160.0,59.3 168.2,58.8 176.4,57.4 184.5,55.3 192.7,56.9 200.9,58.4 209.1,57.7 217.3,48.7 225.5,40.0 233.6,40.1 241.8,40.0 250.0,50.8 258.2,67.0 266.4,49.8 274.5,42.6 282.7,42.1 290.9,44.1 299.1,41.8 307.3,43.0 315.5,42.1 323.6,42.0 331.8,43.8 340.0,43.4 348.2,44.5 356.4,44.2 364.5,44.8 372.7,44.2 380.9,44.8 389.1,44.7 397.3,44.6 405.5,43.2 413.6,43.5 421.8,46.2 430.0,45.5 438.2,44.6 446.4,44.3 454.5,43.4 462.7,44.7 470.9,43.6 479.1,44.8 487.3,43.4 495.5,44.3 503.6,43.9 511.8,43.4 520.0,44.1 528.2,48.4 536.4,43.2 544.5,42.8 552.7,43.4 560.9,45.4 569.1,42.6 577.3,43.2 585.5,44.8 593.6,43.6 601.8,44.0 610.0,44.0 618.2,42.7 626.4,42.0 634.5,43.2 642.7,42.6 650.9,45.2 659.1,42.3 667.3,42.7 675.5,43.0 683.6,42.1 691.8,43.0 700.0,42.2 708.2,42.6 716.4,44.7 724.5,42.7 732.7,42.7 740.9,44.0 749.1,43.1 757.3,43.6 765.5,41.4 773.6,42.3 781.8,43.7 790.0,41.9 798.2,43.7 806.4,42.9 814.5,43.7 822.7,42.1 830.9,44.6 839.1,42.7 847.3,41.3 855.5,41.8 863.6,41.3 871.8,41.9 880.0,41.9" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="70.0,207.3 78.2,205.2 86.4,205.5 94.5,206.0 102.7,203.6 110.9,202.5 119.1,202.4 127.3,202.4 135.5,201.8 143.6,203.1 151.8,195.5 160.0,203.1 168.2,201.8 176.4,203.4 184.5,201.8 192.7,199.8 200.9,200.8 209.1,202.3 217.3,205.4 225.5,210.0 233.6,210.0 241.8,210.0 250.0,207.7 258.2,198.2 266.4,204.7 274.5,209.7 282.7,209.8 290.9,209.8 299.1,209.7 307.3,209.7 315.5,209.8 323.6,209.8 331.8,209.6 340.0,209.5 348.2,209.6 356.4,209.1 364.5,209.3 372.7,209.2 380.9,209.1 389.1,209.2 397.3,209.1 405.5,209.1 413.6,208.9 421.8,209.2 430.0,208.8 438.2,209.3 446.4,208.2 454.5,208.8 462.7,208.9 470.9,209.4 479.1,208.5 487.3,208.8 495.5,209.4 503.6,209.1 511.8,208.6 520.0,208.9 528.2,209.1 536.4,209.2 544.5,209.1 552.7,208.7 560.9,209.1 569.1,208.9 577.3,209.1 585.5,208.1 593.6,209.5 601.8,209.3 610.0,209.0 618.2,208.9 626.4,209.2 634.5,209.2 642.7,209.3 650.9,209.1 659.1,209.3 667.3,209.2 675.5,209.2 683.6,209.4 691.8,208.2 700.0,209.4 708.2,209.3 716.4,208.8 724.5,208.9 732.7,208.9 740.9,208.9 749.1,208.6 757.3,209.2 765.5,209.3 773.6,208.8 781.8,209.2 790.0,209.1 798.2,209.1 806.4,208.9 814.5,208.9 822.7,208.6 830.9,209.3 839.1,209.2 847.3,209.5 855.5,209.2 863.6,209.5 871.8,209.4 880.0,209.2" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round"/>
+<g><title>第 1 個 epoch：D(真圖) 0.875、D(假圖) 0.016</title><rect x="66.0" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="70.0" cy="61.2" r="2.2" fill="#3987e5"/><circle cx="70.0" cy="207.3" r="2.2" fill="#d95926"/></g>
+<g><title>第 2 個 epoch：D(真圖) 0.834、D(假圖) 0.028</title><rect x="74.2" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 3 個 epoch：D(真圖) 0.861、D(假圖) 0.026</title><rect x="82.4" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 4 個 epoch：D(真圖) 0.868、D(假圖) 0.024</title><rect x="90.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 5 個 epoch：D(真圖) 0.865、D(假圖) 0.038</title><rect x="98.7" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="102.7" cy="62.9" r="2.2" fill="#3987e5"/><circle cx="102.7" cy="203.6" r="2.2" fill="#d95926"/></g>
+<g><title>第 6 個 epoch：D(真圖) 0.873、D(假圖) 0.044</title><rect x="106.9" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 7 個 epoch：D(真圖) 0.899、D(假圖) 0.045</title><rect x="115.1" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 8 個 epoch：D(真圖) 0.894、D(假圖) 0.045</title><rect x="123.3" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 9 個 epoch：D(真圖) 0.883、D(假圖) 0.048</title><rect x="131.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 10 個 epoch：D(真圖) 0.879、D(假圖) 0.041</title><rect x="139.6" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="143.6" cy="60.6" r="2.2" fill="#3987e5"/><circle cx="143.6" cy="203.1" r="2.2" fill="#d95926"/></g>
+<g><title>第 11 個 epoch：D(真圖) 0.878、D(假圖) 0.085</title><rect x="147.8" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 12 個 epoch：D(真圖) 0.886、D(假圖) 0.040</title><rect x="156.0" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 13 個 epoch：D(真圖) 0.890、D(假圖) 0.049</title><rect x="164.2" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 14 個 epoch：D(真圖) 0.898、D(假圖) 0.039</title><rect x="172.4" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 15 個 epoch：D(真圖) 0.910、D(假圖) 0.048</title><rect x="180.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="184.5" cy="55.3" r="2.2" fill="#3987e5"/><circle cx="184.5" cy="201.8" r="2.2" fill="#d95926"/></g>
+<g><title>第 16 個 epoch：D(真圖) 0.900、D(假圖) 0.060</title><rect x="188.7" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 17 個 epoch：D(真圖) 0.892、D(假圖) 0.054</title><rect x="196.9" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 18 個 epoch：D(真圖) 0.896、D(假圖) 0.045</title><rect x="205.1" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 19 個 epoch：D(真圖) 0.949、D(假圖) 0.027</title><rect x="213.3" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 20 個 epoch：D(真圖) 1.000、D(假圖) 0.000</title><rect x="221.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="225.5" cy="40.0" r="2.2" fill="#3987e5"/><circle cx="225.5" cy="210.0" r="2.2" fill="#d95926"/></g>
+<g><title>第 21 個 epoch：D(真圖) 1.000、D(假圖) 0.000</title><rect x="229.6" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 22 個 epoch：D(真圖) 1.000、D(假圖) 0.000</title><rect x="237.8" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 23 個 epoch：D(真圖) 0.936、D(假圖) 0.014</title><rect x="246.0" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 24 個 epoch：D(真圖) 0.841、D(假圖) 0.069</title><rect x="254.2" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 25 個 epoch：D(真圖) 0.942、D(假圖) 0.031</title><rect x="262.4" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="266.4" cy="49.8" r="2.2" fill="#3987e5"/><circle cx="266.4" cy="204.7" r="2.2" fill="#d95926"/></g>
+<g><title>第 26 個 epoch：D(真圖) 0.984、D(假圖) 0.002</title><rect x="270.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 27 個 epoch：D(真圖) 0.987、D(假圖) 0.001</title><rect x="278.7" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 28 個 epoch：D(真圖) 0.976、D(假圖) 0.001</title><rect x="286.9" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 29 個 epoch：D(真圖) 0.990、D(假圖) 0.002</title><rect x="295.1" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 30 個 epoch：D(真圖) 0.982、D(假圖) 0.002</title><rect x="303.3" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="307.3" cy="43.0" r="2.2" fill="#3987e5"/><circle cx="307.3" cy="209.7" r="2.2" fill="#d95926"/></g>
+<g><title>第 31 個 epoch：D(真圖) 0.987、D(假圖) 0.001</title><rect x="311.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 32 個 epoch：D(真圖) 0.988、D(假圖) 0.001</title><rect x="319.6" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 33 個 epoch：D(真圖) 0.978、D(假圖) 0.002</title><rect x="327.8" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 34 個 epoch：D(真圖) 0.980、D(假圖) 0.003</title><rect x="336.0" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 35 個 epoch：D(真圖) 0.974、D(假圖) 0.002</title><rect x="344.2" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="348.2" cy="44.5" r="2.2" fill="#3987e5"/><circle cx="348.2" cy="209.6" r="2.2" fill="#d95926"/></g>
+<g><title>第 36 個 epoch：D(真圖) 0.975、D(假圖) 0.005</title><rect x="352.4" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 37 個 epoch：D(真圖) 0.972、D(假圖) 0.004</title><rect x="360.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 38 個 epoch：D(真圖) 0.975、D(假圖) 0.005</title><rect x="368.7" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 39 個 epoch：D(真圖) 0.972、D(假圖) 0.006</title><rect x="376.9" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 40 個 epoch：D(真圖) 0.973、D(假圖) 0.005</title><rect x="385.1" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="389.1" cy="44.7" r="2.2" fill="#3987e5"/><circle cx="389.1" cy="209.2" r="2.2" fill="#d95926"/></g>
+<g><title>第 41 個 epoch：D(真圖) 0.973、D(假圖) 0.005</title><rect x="393.3" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 42 個 epoch：D(真圖) 0.981、D(假圖) 0.005</title><rect x="401.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 43 個 epoch：D(真圖) 0.979、D(假圖) 0.007</title><rect x="409.6" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 44 個 epoch：D(真圖) 0.964、D(假圖) 0.005</title><rect x="417.8" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 45 個 epoch：D(真圖) 0.968、D(假圖) 0.007</title><rect x="426.0" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="430.0" cy="45.5" r="2.2" fill="#3987e5"/><circle cx="430.0" cy="208.8" r="2.2" fill="#d95926"/></g>
+<g><title>第 46 個 epoch：D(真圖) 0.973、D(假圖) 0.004</title><rect x="434.2" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 47 個 epoch：D(真圖) 0.975、D(假圖) 0.011</title><rect x="442.4" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 48 個 epoch：D(真圖) 0.980、D(假圖) 0.007</title><rect x="450.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 49 個 epoch：D(真圖) 0.973、D(假圖) 0.006</title><rect x="458.7" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 50 個 epoch：D(真圖) 0.979、D(假圖) 0.004</title><rect x="466.9" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="470.9" cy="43.6" r="2.2" fill="#3987e5"/><circle cx="470.9" cy="209.4" r="2.2" fill="#d95926"/></g>
+<g><title>第 51 個 epoch：D(真圖) 0.972、D(假圖) 0.009</title><rect x="475.1" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 52 個 epoch：D(真圖) 0.980、D(假圖) 0.007</title><rect x="483.3" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 53 個 epoch：D(真圖) 0.975、D(假圖) 0.004</title><rect x="491.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 54 個 epoch：D(真圖) 0.977、D(假圖) 0.005</title><rect x="499.6" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 55 個 epoch：D(真圖) 0.980、D(假圖) 0.008</title><rect x="507.8" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="511.8" cy="43.4" r="2.2" fill="#3987e5"/><circle cx="511.8" cy="208.6" r="2.2" fill="#d95926"/></g>
+<g><title>第 56 個 epoch：D(真圖) 0.976、D(假圖) 0.007</title><rect x="516.0" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 57 個 epoch：D(真圖) 0.951、D(假圖) 0.005</title><rect x="524.2" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 58 個 epoch：D(真圖) 0.981、D(假圖) 0.005</title><rect x="532.4" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 59 個 epoch：D(真圖) 0.984、D(假圖) 0.005</title><rect x="540.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 60 個 epoch：D(真圖) 0.980、D(假圖) 0.008</title><rect x="548.7" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="552.7" cy="43.4" r="2.2" fill="#3987e5"/><circle cx="552.7" cy="208.7" r="2.2" fill="#d95926"/></g>
+<g><title>第 61 個 epoch：D(真圖) 0.968、D(假圖) 0.005</title><rect x="556.9" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 62 個 epoch：D(真圖) 0.985、D(假圖) 0.006</title><rect x="565.1" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 63 個 epoch：D(真圖) 0.981、D(假圖) 0.005</title><rect x="573.3" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 64 個 epoch：D(真圖) 0.972、D(假圖) 0.011</title><rect x="581.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 65 個 epoch：D(真圖) 0.979、D(假圖) 0.003</title><rect x="589.6" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="593.6" cy="43.6" r="2.2" fill="#3987e5"/><circle cx="593.6" cy="209.5" r="2.2" fill="#d95926"/></g>
+<g><title>第 66 個 epoch：D(真圖) 0.977、D(假圖) 0.004</title><rect x="597.8" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 67 個 epoch：D(真圖) 0.976、D(假圖) 0.006</title><rect x="606.0" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 68 個 epoch：D(真圖) 0.984、D(假圖) 0.006</title><rect x="614.2" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 69 個 epoch：D(真圖) 0.988、D(假圖) 0.005</title><rect x="622.4" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 70 個 epoch：D(真圖) 0.981、D(假圖) 0.005</title><rect x="630.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="634.5" cy="43.2" r="2.2" fill="#3987e5"/><circle cx="634.5" cy="209.2" r="2.2" fill="#d95926"/></g>
+<g><title>第 71 個 epoch：D(真圖) 0.985、D(假圖) 0.004</title><rect x="638.7" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 72 個 epoch：D(真圖) 0.969、D(假圖) 0.005</title><rect x="646.9" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 73 個 epoch：D(真圖) 0.987、D(假圖) 0.004</title><rect x="655.1" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 74 個 epoch：D(真圖) 0.984、D(假圖) 0.005</title><rect x="663.3" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 75 個 epoch：D(真圖) 0.982、D(假圖) 0.005</title><rect x="671.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="675.5" cy="43.0" r="2.2" fill="#3987e5"/><circle cx="675.5" cy="209.2" r="2.2" fill="#d95926"/></g>
+<g><title>第 76 個 epoch：D(真圖) 0.988、D(假圖) 0.004</title><rect x="679.6" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 77 個 epoch：D(真圖) 0.982、D(假圖) 0.011</title><rect x="687.8" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 78 個 epoch：D(真圖) 0.987、D(假圖) 0.004</title><rect x="696.0" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 79 個 epoch：D(真圖) 0.985、D(假圖) 0.004</title><rect x="704.2" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 80 個 epoch：D(真圖) 0.972、D(假圖) 0.007</title><rect x="712.4" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="716.4" cy="44.7" r="2.2" fill="#3987e5"/><circle cx="716.4" cy="208.8" r="2.2" fill="#d95926"/></g>
+<g><title>第 81 個 epoch：D(真圖) 0.984、D(假圖) 0.006</title><rect x="720.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 82 個 epoch：D(真圖) 0.984、D(假圖) 0.006</title><rect x="728.7" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 83 個 epoch：D(真圖) 0.977、D(假圖) 0.007</title><rect x="736.9" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 84 個 epoch：D(真圖) 0.982、D(假圖) 0.008</title><rect x="745.1" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 85 個 epoch：D(真圖) 0.979、D(假圖) 0.004</title><rect x="753.3" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="757.3" cy="43.6" r="2.2" fill="#3987e5"/><circle cx="757.3" cy="209.2" r="2.2" fill="#d95926"/></g>
+<g><title>第 86 個 epoch：D(真圖) 0.992、D(假圖) 0.004</title><rect x="761.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 87 個 epoch：D(真圖) 0.987、D(假圖) 0.007</title><rect x="769.6" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 88 個 epoch：D(真圖) 0.979、D(假圖) 0.005</title><rect x="777.8" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 89 個 epoch：D(真圖) 0.989、D(假圖) 0.005</title><rect x="786.0" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 90 個 epoch：D(真圖) 0.978、D(假圖) 0.005</title><rect x="794.2" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="798.2" cy="43.7" r="2.2" fill="#3987e5"/><circle cx="798.2" cy="209.1" r="2.2" fill="#d95926"/></g>
+<g><title>第 91 個 epoch：D(真圖) 0.983、D(假圖) 0.006</title><rect x="802.4" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 92 個 epoch：D(真圖) 0.978、D(假圖) 0.006</title><rect x="810.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 93 個 epoch：D(真圖) 0.988、D(假圖) 0.008</title><rect x="818.7" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 94 個 epoch：D(真圖) 0.973、D(假圖) 0.004</title><rect x="826.9" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 95 個 epoch：D(真圖) 0.984、D(假圖) 0.005</title><rect x="835.1" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="839.1" cy="42.7" r="2.2" fill="#3987e5"/><circle cx="839.1" cy="209.2" r="2.2" fill="#d95926"/></g>
+<g><title>第 96 個 epoch：D(真圖) 0.992、D(假圖) 0.003</title><rect x="843.3" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 97 個 epoch：D(真圖) 0.990、D(假圖) 0.005</title><rect x="851.5" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 98 個 epoch：D(真圖) 0.992、D(假圖) 0.003</title><rect x="859.6" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 99 個 epoch：D(真圖) 0.989、D(假圖) 0.004</title><rect x="867.8" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 100 個 epoch：D(真圖) 0.989、D(假圖) 0.004</title><rect x="876.0" y="40" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="880.0" cy="41.9" r="2.2" fill="#3987e5"/><circle cx="880.0" cy="209.2" r="2.2" fill="#d95926"/></g>
+<rect x="213.2" y="300" width="40.9" height="170" fill="#e3b341" fill-opacity="0.12"/>
+<line x1="70" y1="470.0" x2="880" y2="470.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="474.0" text-anchor="end">0</text>
+<line x1="70" y1="436.0" x2="880" y2="436.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="440.0" text-anchor="end">10</text>
+<line x1="70" y1="402.0" x2="880" y2="402.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="406.0" text-anchor="end">20</text>
+<line x1="70" y1="368.0" x2="880" y2="368.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="372.0" text-anchor="end">30</text>
+<line x1="70" y1="334.0" x2="880" y2="334.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="338.0" text-anchor="end">40</text>
+<line x1="70" y1="300.0" x2="880" y2="300.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="62" y="304.0" text-anchor="end">50</text>
+<line x1="184.5" y1="300" x2="184.5" y2="470" stroke="#93a1af" stroke-width="1" stroke-dasharray="4 3"/>
+<text class="s-sm" x="62" y="292" text-anchor="start">生成器的 loss（每個 epoch 的中位數）</text>
+<polyline points="70.0,451.0 78.2,453.1 86.4,453.5 94.5,452.3 102.7,454.8 110.9,454.8 119.1,455.4 127.3,455.8 135.5,455.7 143.6,454.8 151.8,456.7 160.0,455.1 168.2,455.1 176.4,454.4 184.5,455.1 192.7,455.2 200.9,455.9 209.1,454.8 217.3,448.9 225.5,301.6 233.6,304.5 241.8,334.5 250.0,338.9 258.2,456.8 266.4,452.8 274.5,446.2 282.7,445.1 290.9,444.2 299.1,444.4 307.3,442.6 315.5,443.9 323.6,444.6 331.8,444.4 340.0,446.4 348.2,446.1 356.4,445.8 364.5,445.4 372.7,445.2 380.9,446.3 389.1,447.8 397.3,445.9 405.5,447.5 413.6,445.7 421.8,445.2 430.0,446.7 438.2,445.7 446.4,446.3 454.5,446.2 462.7,446.4 470.9,447.1 479.1,445.5 487.3,446.1 495.5,447.0 503.6,447.0 511.8,446.5 520.0,447.3 528.2,447.9 536.4,445.5 544.5,447.9 552.7,446.2 560.9,446.6 569.1,447.6 577.3,446.7 585.5,446.8 593.6,446.8 601.8,446.9 610.0,444.2 618.2,446.8 626.4,447.9 634.5,445.9 642.7,444.5 650.9,444.1 659.1,448.9 667.3,444.5 675.5,446.1 683.6,446.8 691.8,447.4 700.0,447.6 708.2,447.2 716.4,445.5 724.5,446.2 732.7,446.4 740.9,447.0 749.1,446.2 757.3,447.2 765.5,444.1 773.6,447.9 781.8,448.1 790.0,445.5 798.2,446.9 806.4,446.9 814.5,446.2 822.7,446.6 830.9,447.3 839.1,447.6 847.3,446.3 855.5,446.0 863.6,444.7 871.8,445.2 880.0,443.1" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+<g><title>第 1 個 epoch：loss_G 5.58</title><rect x="66.0" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="70.0" cy="451.0" r="2.2" fill="#3987e5"/></g>
+<g><title>第 2 個 epoch：loss_G 4.98</title><rect x="74.2" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 3 個 epoch：loss_G 4.85</title><rect x="82.4" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 4 個 epoch：loss_G 5.20</title><rect x="90.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 5 個 epoch：loss_G 4.47</title><rect x="98.7" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="102.7" cy="454.8" r="2.2" fill="#3987e5"/></g>
+<g><title>第 6 個 epoch：loss_G 4.46</title><rect x="106.9" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 7 個 epoch：loss_G 4.29</title><rect x="115.1" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 8 個 epoch：loss_G 4.17</title><rect x="123.3" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 9 個 epoch：loss_G 4.20</title><rect x="131.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 10 個 epoch：loss_G 4.48</title><rect x="139.6" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="143.6" cy="454.8" r="2.2" fill="#3987e5"/></g>
+<g><title>第 11 個 epoch：loss_G 3.91</title><rect x="147.8" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 12 個 epoch：loss_G 4.38</title><rect x="156.0" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 13 個 epoch：loss_G 4.39</title><rect x="164.2" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 14 個 epoch：loss_G 4.59</title><rect x="172.4" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 15 個 epoch：loss_G 4.38</title><rect x="180.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="184.5" cy="455.1" r="2.2" fill="#3987e5"/></g>
+<g><title>第 16 個 epoch：loss_G 4.34</title><rect x="188.7" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 17 個 epoch：loss_G 4.15</title><rect x="196.9" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 18 個 epoch：loss_G 4.46</title><rect x="205.1" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 19 個 epoch：loss_G 6.21</title><rect x="213.3" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 20 個 epoch：loss_G 49.53</title><rect x="221.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="225.5" cy="301.6" r="2.2" fill="#3987e5"/></g>
+<g><title>第 21 個 epoch：loss_G 48.67</title><rect x="229.6" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 22 個 epoch：loss_G 39.86</title><rect x="237.8" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 23 個 epoch：loss_G 38.56</title><rect x="246.0" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 24 個 epoch：loss_G 3.90</title><rect x="254.2" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 25 個 epoch：loss_G 5.06</title><rect x="262.4" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="266.4" cy="452.8" r="2.2" fill="#3987e5"/></g>
+<g><title>第 26 個 epoch：loss_G 7.00</title><rect x="270.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 27 個 epoch：loss_G 7.33</title><rect x="278.7" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 28 個 epoch：loss_G 7.57</title><rect x="286.9" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 29 個 epoch：loss_G 7.54</title><rect x="295.1" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 30 個 epoch：loss_G 8.06</title><rect x="303.3" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="307.3" cy="442.6" r="2.2" fill="#3987e5"/></g>
+<g><title>第 31 個 epoch：loss_G 7.69</title><rect x="311.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 32 個 epoch：loss_G 7.46</title><rect x="319.6" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 33 個 epoch：loss_G 7.53</title><rect x="327.8" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 34 個 epoch：loss_G 6.93</title><rect x="336.0" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 35 個 epoch：loss_G 7.04</title><rect x="344.2" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="348.2" cy="446.1" r="2.2" fill="#3987e5"/></g>
+<g><title>第 36 個 epoch：loss_G 7.12</title><rect x="352.4" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 37 個 epoch：loss_G 7.24</title><rect x="360.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 38 個 epoch：loss_G 7.31</title><rect x="368.7" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 39 個 epoch：loss_G 6.96</title><rect x="376.9" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 40 個 epoch：loss_G 6.52</title><rect x="385.1" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="389.1" cy="447.8" r="2.2" fill="#3987e5"/></g>
+<g><title>第 41 個 epoch：loss_G 7.10</title><rect x="393.3" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 42 個 epoch：loss_G 6.61</title><rect x="401.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 43 個 epoch：loss_G 7.16</title><rect x="409.6" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 44 個 epoch：loss_G 7.28</title><rect x="417.8" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 45 個 epoch：loss_G 6.84</title><rect x="426.0" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="430.0" cy="446.7" r="2.2" fill="#3987e5"/></g>
+<g><title>第 46 個 epoch：loss_G 7.14</title><rect x="434.2" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 47 個 epoch：loss_G 6.98</title><rect x="442.4" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 48 個 epoch：loss_G 7.00</title><rect x="450.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 49 個 epoch：loss_G 6.94</title><rect x="458.7" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 50 個 epoch：loss_G 6.75</title><rect x="466.9" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="470.9" cy="447.1" r="2.2" fill="#3987e5"/></g>
+<g><title>第 51 個 epoch：loss_G 7.20</title><rect x="475.1" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 52 個 epoch：loss_G 7.02</title><rect x="483.3" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 53 個 epoch：loss_G 6.76</title><rect x="491.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 54 個 epoch：loss_G 6.78</title><rect x="499.6" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 55 個 epoch：loss_G 6.90</title><rect x="507.8" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="511.8" cy="446.5" r="2.2" fill="#3987e5"/></g>
+<g><title>第 56 個 epoch：loss_G 6.68</title><rect x="516.0" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 57 個 epoch：loss_G 6.50</title><rect x="524.2" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 58 個 epoch：loss_G 7.21</title><rect x="532.4" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 59 個 epoch：loss_G 6.49</title><rect x="540.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 60 個 epoch：loss_G 7.01</title><rect x="548.7" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="552.7" cy="446.2" r="2.2" fill="#3987e5"/></g>
+<g><title>第 61 個 epoch：loss_G 6.88</title><rect x="556.9" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 62 個 epoch：loss_G 6.60</title><rect x="565.1" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 63 個 epoch：loss_G 6.84</title><rect x="573.3" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 64 個 epoch：loss_G 6.83</title><rect x="581.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 65 個 epoch：loss_G 6.82</title><rect x="589.6" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="593.6" cy="446.8" r="2.2" fill="#3987e5"/></g>
+<g><title>第 66 個 epoch：loss_G 6.80</title><rect x="597.8" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 67 個 epoch：loss_G 7.60</title><rect x="606.0" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 68 個 epoch：loss_G 6.82</title><rect x="614.2" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 69 個 epoch：loss_G 6.50</title><rect x="622.4" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 70 個 epoch：loss_G 7.08</title><rect x="630.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="634.5" cy="445.9" r="2.2" fill="#3987e5"/></g>
+<g><title>第 71 個 epoch：loss_G 7.49</title><rect x="638.7" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 72 個 epoch：loss_G 7.61</title><rect x="646.9" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 73 個 epoch：loss_G 6.20</title><rect x="655.1" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 74 個 epoch：loss_G 7.50</title><rect x="663.3" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 75 個 epoch：loss_G 7.03</title><rect x="671.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="675.5" cy="446.1" r="2.2" fill="#3987e5"/></g>
+<g><title>第 76 個 epoch：loss_G 6.82</title><rect x="679.6" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 77 個 epoch：loss_G 6.65</title><rect x="687.8" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 78 個 epoch：loss_G 6.57</title><rect x="696.0" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 79 個 epoch：loss_G 6.72</title><rect x="704.2" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 80 個 epoch：loss_G 7.22</title><rect x="712.4" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="716.4" cy="445.5" r="2.2" fill="#3987e5"/></g>
+<g><title>第 81 個 epoch：loss_G 7.01</title><rect x="720.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 82 個 epoch：loss_G 6.94</title><rect x="728.7" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 83 個 epoch：loss_G 6.77</title><rect x="736.9" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 84 個 epoch：loss_G 7.00</title><rect x="745.1" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 85 個 epoch：loss_G 6.70</title><rect x="753.3" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="757.3" cy="447.2" r="2.2" fill="#3987e5"/></g>
+<g><title>第 86 個 epoch：loss_G 7.62</title><rect x="761.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 87 個 epoch：loss_G 6.49</title><rect x="769.6" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 88 個 epoch：loss_G 6.45</title><rect x="777.8" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 89 個 epoch：loss_G 7.20</title><rect x="786.0" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 90 個 epoch：loss_G 6.78</title><rect x="794.2" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="798.2" cy="446.9" r="2.2" fill="#3987e5"/></g>
+<g><title>第 91 個 epoch：loss_G 6.81</title><rect x="802.4" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 92 個 epoch：loss_G 6.99</title><rect x="810.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 93 個 epoch：loss_G 6.88</title><rect x="818.7" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 94 個 epoch：loss_G 6.67</title><rect x="826.9" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 95 個 epoch：loss_G 6.58</title><rect x="835.1" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="839.1" cy="447.6" r="2.2" fill="#3987e5"/></g>
+<g><title>第 96 個 epoch：loss_G 6.97</title><rect x="843.3" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 97 個 epoch：loss_G 7.05</title><rect x="851.5" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 98 個 epoch：loss_G 7.45</title><rect x="859.6" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 99 個 epoch：loss_G 7.29</title><rect x="867.8" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/></g>
+<g><title>第 100 個 epoch：loss_G 7.92</title><rect x="876.0" y="300" width="8.2" height="170" fill="#000" fill-opacity="0"/><circle cx="880.0" cy="443.1" r="2.2" fill="#3987e5"/></g>
+<text class="s-sm" x="70.0" y="490" text-anchor="middle">1</text>
+<text class="s-sm" x="143.6" y="490" text-anchor="middle">10</text>
+<text class="s-sm" x="225.5" y="490" text-anchor="middle">20</text>
+<text class="s-sm" x="307.3" y="490" text-anchor="middle">30</text>
+<text class="s-sm" x="389.1" y="490" text-anchor="middle">40</text>
+<text class="s-sm" x="470.9" y="490" text-anchor="middle">50</text>
+<text class="s-sm" x="552.7" y="490" text-anchor="middle">60</text>
+<text class="s-sm" x="634.5" y="490" text-anchor="middle">70</text>
+<text class="s-sm" x="716.4" y="490" text-anchor="middle">80</text>
+<text class="s-sm" x="798.2" y="490" text-anchor="middle">90</text>
+<text class="s-sm" x="880.0" y="490" text-anchor="middle">100</text>
+<text class="s-sm" x="475.0" y="512" text-anchor="middle">epoch</text>
+<text class="s-sm" x="876.0" y="33.9" text-anchor="end">D(真圖)</text>
+<text class="s-sm" x="876.0" y="201.2" text-anchor="end">D(假圖)</text>
+<text class="s-sm" x="180.5" y="360" text-anchor="end">FID 最好</text>
+<text class="s-sm" x="180.5" y="376" text-anchor="end">（第 15 個 epoch）</text>
+<text class="s-sm" x="258.1" y="396">判別器完全壓制</text>
+<text class="s-sm" x="258.1" y="412">（第 19–23 個 epoch）</text>
+</svg>
+<figcaption>圖 3.1　照跑 <code>train.py</code> 的 100 個 epoch。上圖：判別器的平均分數（每個 epoch 約 112 個紀錄點的平均）；下圖：生成器的 loss（每個 epoch 的中位數）。黃色區塊是第 19–23 個 epoch，判別器完全壓制；虛線是 FID 最好的第 15 個 epoch。滑鼠移到圖上可看每個 epoch 的數值，完整數字見下表。</figcaption>
+</figure>
+<details><summary>圖 3.1 的數字（節錄）</summary>
+<div class="tablewrap"><table>
+<thead><tr><th>epoch</th><th>D(真圖) 平均</th><th>D(假圖) 平均</th><th>loss_G 中位數</th><th>FID64（第 4、5 章）</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>0.875</td><td>0.016</td><td>5.58</td><td>363.2</td></tr>
+<tr><td>5</td><td>0.865</td><td>0.038</td><td>4.47</td><td>207.6</td></tr>
+<tr><td>10</td><td>0.879</td><td>0.041</td><td>4.48</td><td>119.3</td></tr>
+<tr><td>15</td><td>0.910</td><td>0.048</td><td>4.38</td><td><strong>105.0</strong></td></tr>
+<tr><td>18</td><td>0.896</td><td>0.045</td><td>4.46</td><td>—</td></tr>
+<tr><td>19</td><td>0.949</td><td>0.027</td><td>6.21</td><td>—</td></tr>
+<tr><td>20</td><td>1.000</td><td>0.000</td><td>49.53</td><td>347.1</td></tr>
+<tr><td>21</td><td>1.000</td><td>0.000</td><td>48.67</td><td>—</td></tr>
+<tr><td>22</td><td>1.000</td><td>0.000</td><td>39.86</td><td>—</td></tr>
+<tr><td>23</td><td>0.936</td><td>0.014</td><td>38.56</td><td>—</td></tr>
+<tr><td>24</td><td>0.841</td><td>0.069</td><td>3.90</td><td>—</td></tr>
+<tr><td>25</td><td>0.942</td><td>0.031</td><td>5.06</td><td>276.6</td></tr>
+<tr><td>30</td><td>0.982</td><td>0.002</td><td>8.06</td><td>284.9</td></tr>
+<tr><td>50</td><td>0.979</td><td>0.004</td><td>6.75</td><td>205.0</td></tr>
+<tr><td>70</td><td>0.981</td><td>0.005</td><td>7.08</td><td>241.8</td></tr>
+<tr><td>90</td><td>0.978</td><td>0.005</td><td>6.78</td><td>211.6</td></tr>
+<tr><td>100</td><td>0.989</td><td>0.004</td><td>7.92</td><td>211.9</td></tr>
+</tbody>
+</table></div></details>
+<p>這張圖說了三件事：</p>
+<ul>
+  <li><strong>判別器幾乎一直贏</strong>。除了崩潰的那幾個 epoch，真圖的平均分數一直在 0.83–0.99、假圖在 0.09 以下；第 30 個 epoch 之後，假圖的平均分數只剩 0.001–0.011。每個 epoch 的 loss_D 中位數在 0.004–0.23 之間，對照「分不出來」時的 0.693，判別器始終分得很清楚。生成器的 loss 中位數在 3.9–8.1，換算回去，判別器給它的假圖分數大約是 e<sup>−4</sup> ≈ 0.02 到 e<sup>−8</sup> ≈ 0.0003。在 DCGAN 裡這是常態：只要判別器沒有贏到「完全不給梯度」，生成器仍然在學。</li>
+  <li><strong>第 19–23 個 epoch，判別器贏到極限</strong>。從第 21,080 步（第 19 個 epoch 中段）開始，判別器給真圖 1.000、給假圖 0.000，<code>loss_G</code> 的中位數跳到 40–50（判別器給假圖的分數約 e<sup>−50</sup>，第 0 章印出的 <code>loss_D=3.03e-7, loss_G=49.9</code> 就在這一段）；直到第 25,370 步（第 23 個 epoch）才鬆開，前後約 4,300 步。在這之前，第 18 個 epoch 的第 18,970 步有一次 <code>loss_D</code> 衝到 11.28 的尖峰（整個訓練最大的一次）——判別器突然判錯得一塌糊塗，接著反彈成完全壓制。第 20 個 epoch 的樣本格就是第 0 章說的「幾乎同一張圖」，第 5 章會仔細看。</li>
+  <li><strong>loss 沒有告訴你哪一個 epoch 最好</strong>。FID 最好的第 15 個 epoch，在圖上和第 10、18 個 epoch 幾乎看不出差別（D(假圖) 0.041–0.048、loss_G 4.4–4.5）；第 10 個 epoch 的 FID 是 119.3，第 18 個 epoch 沒有存檔，但再過一個 epoch 就崩潰了。第 30 個 epoch 之後 loss_G 比前期高（中位數 6.2–8.1，前 18 個 epoch 是 3.9–5.6），FID 也比較差，但第 50 與第 100 個 epoch 的 loss 差不多，FID 也差不多（205.0、211.9）——兩者只有很粗的關係。</li>
+</ul>
+<p>為什麼 GAN 的 loss 不能當成品質指標？在分類問題裡，loss 是「模型和固定答案的距離」，越小越好；GAN 的 loss 是「兩個網路互相比賽的比分」，對手一直在變。<code>loss_G</code> 變大，可能是生成器變差了，也可能是判別器變強了；<code>loss_D</code> 接近 0，可能是判別器很強，也可能是生成器崩潰到只會畫一種很好認的圖。要知道圖畫得好不好，只能另外量——這就是第 4 章的 FID。</p>
+<div class="note"><h4>現在的做法：幾個 2022 年範例程式之後的習慣</h4>
+<ul>
+  <li><strong><code>BCEWithLogitsLoss</code></strong>：判別器最後不接 Sigmoid，直接輸出 logit，loss 改用 <code>nn.BCEWithLogitsLoss</code>。它把 Sigmoid 和 log 合在一起算，數值上更穩定，不需要把 log 截在 −100——第 19–23 個 epoch 那種 <code>loss_G</code> 40–50 的情況，正是 Sigmoid 的輸出極接近 0 的區域。</li>
+  <li><strong>判別器那一步用 <code>detach()</code>、畫樣本格用 <code>torch.no_grad()</code></strong>：都是省計算、省記憶體，不改變結果（本章已實測前者）。</li>
+  <li><strong>生成器的 EMA</strong>：另外保留一份「生成器權重的指數移動平均」，畫圖與評估都用它，比單一步的權重穩定。第 8 章的 StyleGAN2 就是這樣做（它的存檔裡有 <code>GE</code>、<code>SE</code> 兩個 EMA 網路）。</li>
+  <li><strong>存優化器狀態</strong>：<code>torch.save</code> 時把 <code>opt_G.state_dict()</code>、<code>opt_D.state_dict()</code> 一起存，才能從中斷的地方原樣接著訓練。</li>
+</ul>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li><code>TrainerGAN.__init__</code>：先建 G 再建 D；<code>BCELoss</code>（log 截在 −100）；兩個 Adam，lr 1e-4、<code>betas=(0.5, 0.999)</code>，各管各的參數；<code>z_samples</code> 是整個訓練共用的 100 個固定亂數。</li>
+  <li>每一步：判別器看一批真圖（標 1）、一批假圖（標 0），<code>loss_D</code> 是兩個 BCE 的平均，<code>opt_D.step()</code> 只更新 D；接著用新的亂數畫新的假圖，<code>loss_G = BCE(D(G(z)), 1)</code>（non-saturating：D(G(z)) 接近 0 時梯度比 log(1 − D) 大很多，第一步約 18 倍），<code>opt_G.step()</code> 只更新 G。</li>
+  <li>判別器那一步沒有 <code>detach()</code>：多算了一次生成器的反向傳播。加上之後每個 epoch 17.2 → 14.7 秒，權重逐位元相同。</li>
+  <li>每個 epoch 結束用 <code>G.eval()</code> 畫樣本格（BatchNorm 用累積的統計量，和訓練模式的輸出平均差 7–15 個灰階），第 1 個與每 5 個 epoch 存一對存檔；存檔編號從 0 起算，<code>G_14</code> 是第 15 個 epoch。</li>
+  <li>loss 曲線：判別器幾乎一直贏；第 19–23 個 epoch 判別器完全壓制（loss_G 40–50），前面有一次 loss_D 11.28 的尖峰。loss 是比賽的比分，不是品質指標：最好的第 15 個 epoch 在 loss 上看不出來。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 第 164 行算生成器的 loss 時，用的是 <code>r_label</code>（全是 1）。如果改成 <code>f_label</code>（全是 0），會發生什麼事？</summary>
+<p>生成器的目標就變成「讓判別器把假圖判成假的」——和判別器同一邊。生成器會學著畫出判別器一眼就認得出是假的圖，越來越不像臉。GAN 的「對抗」靠的就是這一個標籤：判別器希望假圖得 0，生成器希望假圖得 1。這題是推論，本書沒有實際跑。</p></details>
+<details class="quiz"><summary>2. 在判別器那一步加上 <code>detach()</code>，訓練快了 15%。為什麼訓練出來的權重一個位元都沒變？</summary>
+<p>被省掉的只有「loss_D 對生成器參數的梯度」。那些梯度原本會被存進生成器參數的 <code>.grad</code>，但在下一次用到之前——生成器那一步第 167 行的 <code>self.G.zero_grad()</code>——就被清掉了，從來沒有影響任何一次更新。判別器的梯度、生成器的 forward、BatchNorm 統計量的更新、亂數的取用順序都沒有改變，所以每一步的計算結果完全相同。本書實測 5 個 epoch 後 <code>G_4.pth</code>、<code>D_4.pth</code> 逐位元相同。</p></details>
+<details class="quiz"><summary>3. 第 20 個 epoch 結束時進度條印 <code>loss_G=49.9</code>。判別器給那一批假圖的平均分數大約是多少？</summary>
+<p><code>loss_G</code> 是 −log D(G(z)) 的平均，49.9 對應的分數大約是 e<sup>−49.9</sup> ≈ 2 × 10<sup>−22</sup>（嚴格說，平均 loss 對應的是分數的幾何平均）。判別器對假圖幾乎百分之百確定是假的。如果分數再小到 e<sup>−100</sup> 以下，<code>BCELoss</code> 會把 log 截在 −100，那張圖的 loss 就停在 100。</p></details>
+<details class="quiz"><summary>4. <code>z_samples</code> 在 <code>__init__</code> 裡只產生一次。如果把它改成在每個 epoch 結束時才用 <code>torch.randn</code> 產生，樣本格和訓練結果會有什麼不同？</summary>
+<p>樣本格每個 epoch 用的是不同的 z，同一個位置不再是同一張臉的演變，就沒辦法逐格比較不同 epoch 的生成器（第 0 章的圖 0.2、0.3 就做不到了）。訓練結果也會改變：每次多呼叫一次 <code>torch.randn</code> 會消耗全域亂數，之後每一步的 z 和 DataLoader 的打亂順序都會跟著位移，訓練出來的權重就和本書不同了。這題是推論，本書沒有實際跑。</p></details>
+<details class="quiz"><summary>5. 想從 <code>G_49.pth</code>、<code>D_49.pth</code> 接著訓練到第 100 個 epoch，結果會和一路訓練到底的 <code>G_99.pth</code> 一樣嗎？</summary>
+<p>不會。存檔只有權重與 BatchNorm 統計量，沒有 Adam 的動量與二階動量估計（<code>opt_G</code>、<code>opt_D</code> 的狀態），重新建立的優化器會從零開始累積；亂數產生器的狀態、DataLoader 的打亂順序也都要重新設定才接得上。要能原樣接續，存檔時要一起存兩個優化器的 <code>state_dict()</code> 和亂數狀態。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+  <li>Goodfellow 等，〈Generative Adversarial Nets〉（NeurIPS 2014）：第 3 節的 minimax 目標，以及「訓練初期改用 log D(G(z))」的那段說明（non-saturating loss 的出處），<a href="https://arxiv.org/abs/1406.2661">arXiv:1406.2661</a>。</li>
+  <li>Radford 等，DCGAN 論文第 4 節：Adam lr 0.0002、β<sub>1</sub> 0.5 的理由，<a href="https://arxiv.org/abs/1511.06434">arXiv:1511.06434</a>。</li>
+  <li>Soumith Chintala 等整理的〈<a href="https://github.com/soumith/ganhacks">How to Train a GAN? Tips and tricks to make GANs work</a>〉：2016 年的經驗清單，包括「真圖與假圖分開成兩個 mini-batch」「生成器用 max log D」「監看 loss 的異常」。</li>
+  <li>PyTorch 文件 <a href="https://pytorch.org/docs/stable/generated/torch.nn.BCELoss.html"><code>torch.nn.BCELoss</code></a>（log 截在 −100 的說明）與 <a href="https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html"><code>BCEWithLogitsLoss</code></a>。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch02.html">← 第 2 章</a><a href="ch04.html">第 4 章 →</a></nav>
+<footer class="chap-footer">本教材根據 lordleeber/ML2022-Spring-pytorch 的 HW06 程式碼與 ML2022 Spring 作業投影片撰寫。</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>

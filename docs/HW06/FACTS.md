@@ -302,3 +302,14 @@ FID64（n = 1000、z 種子 0；FID96 與 AFD 見 jsonl）：
 - G 四層 output_padding 全改 0：輸出 (2, 3, 49, 49)；送進 D：`RuntimeError: Calculated padded input size per channel: (3 x 3). Kernel size: (4 x 4). Kernel size can't be greater than actual input size`。
 - 自訂 `class ConvBlock(nn.Module)`（只包一層 Conv2d）`.apply(utils.weights_init)`：`AttributeError: 'ConvBlock' object has no attribute 'weight'`。
 - `Epoch_020.jpg` 放大：有規則重複的格狀紋路（週期大於 2 px），**未驗證**是否為 checkerboard artifact。
+
+## ch03 實測（2026-10-08）
+- `hw06_logs/gan.jsonl` 的欄位：`d_real` = 判別器那一步（更新前）對真圖的平均；`d_fake` = **生成器那一步、D 更新後**對新一批假圖的平均（第 0 步 0.0520 即此）。每 epoch 112 筆（最後一個 111 筆）。
+- 每 epoch 彙整（D 分數取平均、loss 取中位數）：ep1 0.875／0.016／loss_G 5.58；ep5 0.865／0.038／4.47；ep10 0.879／0.041／4.48；ep15 0.910／0.048／4.38；ep18 0.896／0.045／4.46；ep19 0.949／0.027／6.21；**ep20 1.000／0.000／49.53**；ep21 1.000／0.000／48.67；ep22 1.000／0.000／39.86；ep23 0.936／0.014／38.56；ep24 0.841／0.069／3.90；ep25 0.942／0.031／5.06；ep30 0.982／0.002／8.06；ep50 0.979／0.004／6.75；ep70 0.981／0.005／7.08；ep90 0.978／0.005／6.78；ep100 0.989／0.004／7.92。
+- 非崩潰 epoch（排除 19–23）：D(real) 0.834–0.992、D(fake) 0.0012–0.0852；ep≥30 D(fake) 0.0012–0.0110；loss_G 中位數 3.90–8.06（ep<19：3.91–5.58；ep≥30：6.20–8.06）；loss_D 中位數 0.0043–0.2337。
+- 崩潰區間：logged step 21,080（ep19）起 loss_G > 20 持續，到 25,370（ep23）結束（約 4,300 步）；之後 ep25–26 有零星 loss_G > 30 的單點。**最大 loss_D 11.2757 在 step 18,970（ep18）**。
+- `G.eval()` vs `G.train()`（同 100 個 z，種子 0）：G_14 平均 |差| 7.09／255（最大 103.9）、G_19 1.49（23.3）、G_99 14.69（190.2）。
+- `G_99.pth` 的 `l1.1.num_batches_tracked` = **223,000** = 2 × 111,500。
+- non-saturating vs minimax 梯度（對 Sigmoid 前的 a）：D(G(z)) = 0.052 時 −σ = −0.052、−(1−σ) = −0.948，約 18.2 倍。
+- 圖 3.1 由 scratchpad 的 `ch03_chart.py` 產生（讀 gan.jsonl），配色 #3987e5／#d95926 以 validate_palette.js 在 #161c24 上驗證通過（CVD ΔE 26.8、normal 31.8）。
+- 原始碼行尾空白：trainer_gan.py 第 43、119、121、123 行行尾有一個空白，引用時要保留。
