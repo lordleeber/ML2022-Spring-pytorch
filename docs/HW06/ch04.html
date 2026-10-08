@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 4 章　怎麼評估一個 GAN：FID、AFD 與提交檔 — HW06 動漫臉生成</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW06 讀碼教材</p>
+  <h1>第 4 章　怎麼評估一個 GAN：FID、AFD 與提交檔</h1>
+  <p class="chap-lead">第 3 章的結論是：GAN 的 loss 不能告訴你圖畫得好不好。這一章把評分的尺準備好：FID 怎麼算、它的兩個組成各代表什麼、本書怎麼在本機量它；接著量這把尺的誤差——換一組亂數差多少、取 1000 張和 1 萬張差多少、連真圖自己能拿到幾分、存成 JPEG 又差多少；然後是 AFD，以及它為什麼只能參考；最後讀 <code>inference</code> 與 <code>test.py</code>，把它們改成交得出 1000 張、每次都一樣的版本。後面每一章的比較，都用這一章的量法。</p>
+</header>
+<main>
+
+<h2 id="no-metric">4.1　程式裡沒有分數</h2>
+<p>HW06 的範例程式從頭到尾沒有算過任何評分：<code>train.py</code> 只印 loss、每個 epoch 存一張樣本格；<code>test.py</code> 只把圖存下來。投影片第 6–7 頁說的兩個指標 FID 與 AFD，是助教的評分系統 JudgeBoi 在你上傳之後才算的，程式碼沒有公開。所以要比較「哪一個存檔比較好」「WGAN 有沒有比 DCGAN 好」，本書得自己準備評分工具：<code>docs/tools/hw06_eval.py</code>。它是本書寫的，不屬於範例程式；這一章逐段讀它。</p>
+<p>先講結論：<strong>本書的 FID、AFD 和投影片的基準線不是同一把尺</strong>（第 0 章）。投影片的 FID 門檻是上萬，本書量到的都在 15 到 400 之間；AFD 用的偵測器也不同。本書的數字只拿來在同一把尺下互相比較。</p>
+
+<h2 id="fid">4.2　FID：比較兩堆特徵的分布</h2>
+<p>FID（Fréchet Inception Distance，2017 年由 Heusel 等人提出）的想法是：與其直接比較像素，不如請一個看過大量照片的網路來描述每張圖。它用的是在 ImageNet 上訓練好的 <strong>Inception v3</strong>，取最後一個池化層（pool3）的輸出——每張圖變成一個 2048 維的向量，可以把它想成「這張圖的特徵摘要」。然後：</p>
+<ol>
+  <li>真圖算一次：71,314 張真圖得到 71,314 個 2048 維向量，算它們的平均 <strong>μ<sub>r</sub></strong>（2048 維）與共變異矩陣 <strong>Σ<sub>r</sub></strong>（2048 × 2048）。</li>
+  <li>生成圖算一次：1000 張生成圖得到 μ<sub>g</sub>、Σ<sub>g</sub>。</li>
+  <li>把兩堆向量各看成一個多維常態分布，算兩個常態分布之間的 Fréchet 距離：</li>
+</ol>
+<div class="eq">FID = ‖μ<sub>r</sub> − μ<sub>g</sub>‖² + Tr( Σ<sub>r</sub> + Σ<sub>g</sub> − 2 (Σ<sub>r</sub> Σ<sub>g</sub>)<sup>1/2</sup> )</div>
+<p>第一項是<strong>平均值差</strong>：生成圖的「典型樣子」離真圖多遠。第二項是<strong>共變異差</strong>：兩堆向量散開的範圍與形狀有多不同——生成器只會畫幾種臉時，它的向量擠成一小團，散布遠小於真圖，這一項就會變大。兩項都是 0 時 FID 是 0，代表兩個分布（在 Inception 的眼中）一模一樣。</p>
+<p>本書的實作在 <code>hw06_eval.py</code>：</p>
+<figure class="listing"><figcaption>docs/tools/hw06_eval.py:59–83 — 取特徵、算 Fréchet 距離、算平均與共變異</figcaption>
+<pre class="py" data-hot="63,68,69,79,83"><code>@torch.no_grad()
+def activations(batches):
+    out = []
+    for x in batches:  # float in [0, 1], N x 3 x H x W
+        out.append(inception(x.cuda())[0].squeeze(-1).squeeze(-1).double().cpu())
+    return torch.cat(out).numpy()
+
+
+def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
+    diff = mu1 - mu2
+    covmean = linalg.sqrtm(sigma1.dot(sigma2))
+    if not np.isfinite(covmean).all():
+        print('fid calculation produces singular product; adding %s to diagonal of cov estimates' % eps,
+              file=sys.stderr)
+        offset = np.eye(sigma1.shape[0]) * eps
+        covmean = linalg.sqrtm((sigma1 + offset).dot(sigma2 + offset))
+    if np.iscomplexobj(covmean):
+        if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3):
+            raise ValueError('Imaginary component {}'.format(np.max(np.abs(covmean.imag))))
+        covmean = covmean.real
+    return diff.dot(diff) + np.trace(sigma1) + np.trace(sigma2) - 2 * np.trace(covmean)
+
+
+def stats(act):
+    return act.mean(0), np.cov(act, rowvar=False)</code></pre></figure>
+<ul>
+  <li><strong>第 63 行</strong>：<code>inception</code> 是 pytorch-fid 套件（0.3.0）提供的 Inception v3，權重是 pytorch-fid 從原始 TensorFlow 版本移植過來的那一份（<code>pt_inception-2015-12-05</code>），這樣算出的 FID 才能和其他論文比較。它吃 0–1 的圖，內部先用雙線性內插<strong>放大到 299×299</strong>（Inception 的輸入大小）再正規化。所以我們 64×64 的圖會被放大將近 5 倍才送進去——Inception 看到的是一張很糊的大圖。</li>
+  <li><strong>第 68 行，<code>linalg.sqrtm</code></strong>：矩陣平方根，是整個公式裡最花時間的一步（2048 × 2048 的矩陣，在 CPU 上算，每次幾秒鐘）。數值誤差可能讓結果帶一點虛數，第 75–78 行檢查虛部夠小就丟掉。</li>
+  <li><strong>第 79 行</strong>：就是上面的公式，Tr((Σ<sub>r</sub>Σ<sub>g</sub>)<sup>1/2</sup>) 用 <code>np.trace(covmean)</code> 算。</li>
+</ul>
+<div class="warn"><h4>這段程式為什麼是「複製」的</h4>
+<p>這個函式原本在 pytorch-fid 的 <code>fid_score.py</code> 裡，本書直接呼叫時得到 <code>TypeError: sqrtm() got an unexpected keyword argument 'disp'</code>：SciPy 1.18 的 <code>sqrtm</code> 已經拿掉 <code>disp</code> 參數，而 pytorch-fid 0.3.0 還在用。所以 <code>hw06_eval.py</code> 照抄了同一段算式，只把 <code>disp=False</code> 拿掉。這也是「評分工具本身會隨套件版本壞掉」的例子：用別人的評分程式，要先確認它在你的環境裡真的跑得動、跑出來的數字和原版一致。</p>
+</div>
+
+<h3 id="parts">把 FID 拆開看</h3>
+<p>實驗工具加了一個 <code>--parts</code> 選項，把 FID 的兩項分開印出來，並印出生成圖特徵的總變異量 Tr(Σ<sub>g</sub>)（2048 個維度的變異數加總）——真圖的是 123.3，可以當成「多樣性」的粗略指標：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>對象（1000 張）</th><th>FID64</th><th>平均值差</th><th>共變異差</th><th>Tr(Σ<sub>g</sub>)（真圖 123.3）</th></tr></thead>
+<tbody>
+<tr><td>DCGAN 第 15 個 epoch（<code>G_14</code>，最好的存檔）</td><td>104.95</td><td>44.2</td><td>60.7</td><td>138.6</td></tr>
+<tr><td>DCGAN 第 20 個 epoch（<code>G_19</code>，崩潰）</td><td>347.12</td><td><strong>251.1</strong></td><td>96.0</td><td><strong>55.6</strong></td></tr>
+<tr><td>DCGAN 第 100 個 epoch（<code>G_99</code>，test.py 用的）</td><td>211.93</td><td>82.2</td><td>129.7</td><td>123.1</td></tr>
+<tr><td>StyleGAN2 50,000 步（第 8 章）</td><td>66.34</td><td>22.8</td><td>43.5</td><td>138.2</td></tr>
+<tr><td>隨機 1000 張<strong>真圖</strong></td><td>31.60</td><td>8.2</td><td>23.4</td><td>139.5</td></tr>
+</tbody>
+</table></div>
+<p>崩潰的 <code>G_19</code> 一看就知道哪裡出事：特徵的總變異量只剩 55.6，不到真圖的一半——一千個不同的亂數畫出來的東西，在 Inception 眼中擠成一小團；而且那一團的位置離真圖很遠（平均值差 251.1 占了 FID 的七成）。<code>G_99</code> 的總變異量 123.1 和真圖差不多，但共變異差 129.7 很大：它的變化「量」夠，「方向」不對——變化集中在少數幾種特徵上，和真圖的變化方式不一樣。最好的 <code>G_14</code> 與 StyleGAN2 兩項都小。這也說明了為什麼 FID 能抓到 mode collapse：只會畫一種臉的生成器，就算那張臉畫得再好，共變異差也很大。</p>
+
+<h2 id="method">4.3　本書的量法</h2>
+<p>同一個 FID 公式，量法的細節不同，數字就不同。本書的做法固定如下，後面每一章都照這個做：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>項目</th><th>本書的設定</th><th>為什麼</th></tr></thead>
+<tbody>
+<tr><td>真圖的參考分布</td><td>全部 71,314 張，兩種：<strong>real64</strong>＝經過 <code>get_dataset</code> 的轉換（64×64）；<strong>real96</strong>＝原始的 96×96 檔案</td><td>生成器學的是 64×64 的版本（第 1 章），FID64 是主要指標；FID96 只是參考——生成的 64×64 圖比 96×96 原圖少細節，本書的存檔 FID96 多半比 FID64 大 20–30（崩潰的 <code>G_19</code> 只差 8）</td></tr>
+<tr><td>生成幾張</td><td><strong>1000 張</strong></td><td>作業交的就是 1000 張</td></tr>
+<tr><td>亂數</td><td>固定的 z：<code>torch.Generator().manual_seed(0)</code></td><td>不同存檔用同一組 z，差異只來自生成器本身</td></tr>
+<tr><td>生成器模式</td><td><code>G.eval()</code></td><td>和樣本格、<code>inference</code> 一樣（第 3 章）</td></tr>
+<tr><td>存檔格式</td><td>用 <code>torchvision.utils.save_image</code> 存成 JPEG，再讀回來算</td><td>交出去的就是 JPEG。<code>save_image</code> 交給 PIL 存檔，用的是 PIL 預設的品質 75（本書比對過：和指定 <code>quality=75</code> 存出的檔案位元組相同）</td></tr>
+<tr><td>報到幾位</td><td>小數 1 位</td><td>同一個存檔評估兩次，FID 在小數第 3 位就不同（Inception 在 GPU 上的浮點運算不完全固定，第 0 章）</td></tr>
+</tbody>
+</table></div>
+<p>評估一個存檔約 12 秒，大部分花在 CPU 上的 <code>sqrtm</code>。指令長這樣（需要 .venv 之外的 pytorch-fid 與 OpenCV，版本見第 0 章）：</p>
+<pre class="shell cmd"><code>$ cd HW06
+$ PYTHONPATH=.:&lt;pylib&gt; ../.venv/bin/python ../docs/tools/hw06_eval.py gen --stats &lt;stats&gt; \
+      --cascade &lt;lbpcascade_animeface.xml&gt; checkpoints/2026-10-07_11-00-32_GAN/G_14.pth</code></pre>
+<pre class="shell"><code>{"G": "checkpoints/2026-10-07_11-00-32_GAN/G_14.pth", "n": 1000, "seed": 0, "fid64": 104.95177215079664, "fid96": 134.21059922524768, "afd": 0.366, "afd_count": 366}</code></pre>
+<p>（真圖的統計量要先用 <code>hw06_eval.py real</code> 算一次，71,314 張兩種解析度共 4 分 14 秒，存在 <code>&lt;stats&gt;</code> 底下。）</p>
+<div class="note"><h4>現在的做法：固定前處理的 FID 實作</h4>
+<p>2022 年 Parmar 等人的〈On Aliased Resizing and Surprising Subtleties in GAN Evaluation〉指出，FID 對「圖怎麼縮放成 299×299」「用哪個函式庫解 JPEG」都很敏感，不同實作量出的數字可能差好幾點，並發布了 <strong>clean-fid</strong> 套件，把這些細節固定下來。torchmetrics 也有 <code>FrechetInceptionDistance</code>，可以直接在 GPU 上吃 tensor。也有研究改用其他特徵網路（例如自監督的 DINOv2）算同樣的 Fréchet 距離。不管用哪一個，原則都一樣：<strong>同一份比較裡的每個數字，都要用同一個實作、同樣的張數、同樣的前處理</strong>。</p>
+</div>
+
+<h2 id="noise">4.4　這把尺有多準</h2>
+<p>一把尺在拿來比較之前，要先知道它自己的誤差。本書量了四件事。</p>
+
+<h3 id="noise-seed">換一組亂數：±1.5</h3>
+<p>同一個存檔，換一組 z（種子 0 到 4），各生成 1000 張：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>存檔</th><th>5 個種子的 FID64</th><th>平均</th><th>標準差</th><th>範圍</th></tr></thead>
+<tbody>
+<tr><td>DCGAN <code>G_14</code></td><td>105.0／107.5／107.2／105.8／106.9</td><td>106.48</td><td>1.05</td><td>105.0–107.5</td></tr>
+<tr><td>WGAN 第 100 個 epoch（第 6 章）</td><td>90.3／86.9／90.7／89.7／88.8</td><td>89.28</td><td>1.51</td><td>86.9–90.7</td></tr>
+<tr><td>WGAN-GP 第 95 個 epoch（第 7 章）</td><td>94.1／92.2／95.3／92.9／93.3</td><td>93.56</td><td>1.19</td><td>92.2–95.3</td></tr>
+<tr><td>StyleGAN2 ψ 1.0（第 8 章）</td><td>66.3／68.5／68.0／66.4／67.6</td><td>67.36</td><td>0.98</td><td>66.3–68.5</td></tr>
+</tbody>
+</table></div>
+<p>標準差 1–1.5。所以兩個存檔的 FID 差不到 3 時，不要太當真；本書比較 WGAN 與 WGAN-GP 時（差約 4，而且五個種子的範圍完全不重疊）才說前者比較好。AFD 隨種子的變動是 0.01–0.03。</p>
+
+<h3 id="noise-n">取 1000 張還是 10,000 張：差 14–16</h3>
+<p>共變異矩陣有 2048 × 2048 個數，只用 1000 個樣本去估它，估出來的矩陣會比真正的分布「更窄、更歪」，FID 因此<strong>系統性地偏高</strong>。同樣的存檔改成生成 10,000 張：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>存檔</th><th>FID64（1000 張）</th><th>FID64（10,000 張）</th><th>差</th></tr></thead>
+<tbody>
+<tr><td>DCGAN <code>G_14</code></td><td>105.0</td><td>90.8</td><td>−14.2</td></tr>
+<tr><td>DCGAN <code>G_99</code></td><td>211.9</td><td>205.9</td><td>−6.0</td></tr>
+<tr><td>WGAN 第 100 個 epoch</td><td>90.3</td><td>74.0</td><td>−16.3</td></tr>
+<tr><td>WGAN-GP 第 95 個 epoch</td><td>94.1</td><td>78.4</td><td>−15.7</td></tr>
+<tr><td>StyleGAN2 ψ 1.0</td><td>66.3</td><td>52.3</td><td>−14.0</td></tr>
+</tbody>
+</table></div>
+<p>多數下降 14–16，排名完全不變；崩過又沒完全恢復的 <code>G_99</code> 只降了 6（它的多樣性本來就低，多畫幾張也不會更多樣）。論文報 FID 通常用 50,000 張，數字會比本書的更小；所以<strong>只有張數相同的 FID 才能比較</strong>。本書一律用 1000 張，因為作業交的就是 1000 張。</p>
+
+<h3 id="noise-floor">連真圖自己都只有 32 分</h3>
+<p>最能說明 FID 尺度的一個實驗：把<strong>真圖</strong>當成生成圖來評分。從 71,314 張裡隨機抽 1000 張，經過同樣的轉換、同樣存成 JPEG 讀回，和全部真圖的分布比較（工具的 <code>realsub</code> 子命令）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>對象</th><th>FID64</th><th>FID96</th><th>AFD</th></tr></thead>
+<tbody>
+<tr><td>1000 張真圖，存成 JPEG（5 次抽樣）</td><td><strong>31.6–32.0</strong></td><td>59.9–60.6</td><td>0.40–0.46</td></tr>
+<tr><td>1000 張真圖，不存 JPEG</td><td><strong>16.05</strong></td><td>30.96</td><td>0.523</td></tr>
+<tr><td>10,000 張真圖，存成 JPEG</td><td>15.78</td><td>44.48</td><td>0.419</td></tr>
+</tbody>
+</table></div>
+<p>完美的生成器——畫出來的就是從資料集隨機抽的真圖——在本書的量法下也只能拿到 <strong>FID64 約 32</strong>。這是 1000 張樣本與 JPEG 存檔共同造成的底線：拿掉 JPEG 是 16，張數加到 1 萬也是 16 左右。所以 StyleGAN2 的 66.3 和完美之間的距離不是 66，而是約 34；DCGAN 最好的 105.0 距離完美約 73。</p>
+
+<h3 id="noise-jpeg">JPEG 對真圖、假圖的影響方向相反</h3>
+<p>上表顯示真圖存成 JPEG 後 FID 從 16 變成 32。那生成圖呢？同樣用工具的 <code>--nojpeg</code> 選項，直接用 tensor 算：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>對象（1000 張）</th><th>存成 JPEG 再讀回</th><th>直接用 tensor</th></tr></thead>
+<tbody>
+<tr><td>真圖</td><td>31.60</td><td>16.05</td></tr>
+<tr><td>DCGAN <code>G_14</code></td><td>104.95</td><td><strong>118.20</strong></td></tr>
+<tr><td>DCGAN <code>G_99</code></td><td>211.93</td><td><strong>232.89</strong></td></tr>
+</tbody>
+</table></div>
+<p>真圖存成 JPEG 後 FID 變差，生成圖存成 JPEG 後 FID 反而<strong>變好</strong> 13–21。本書沒有進一步拆解原因；一個合理的解釋是：參考分布 real64 是從原始 JPEG 縮小來的，本身就帶著某種壓縮過的質感，而 64×64、品質 75 的 JPEG 會抹掉生成圖上的一些細碎雜紋，讓它在 Inception 眼中更接近那種質感。不管原因是什麼，結論很實際：<strong>評分的流程要和交出去的東西一致</strong>。本書量的是 JPEG 讀回後的分數，就是因為交出去的是 JPEG。</p>
+
+<h2 id="afd">4.5　AFD：一個連真圖都只認得一半的偵測器</h2>
+<p>投影片第 7 頁的 AFD（anime face detection rate）是「1000 張裡有幾張偵測得到動漫臉」。助教用的偵測器沒有公開，本書用的是 nagadomi 的 <strong>lbpcascade_animeface</strong>：一個用 OpenCV 的 cascade classifier（LBP 特徵）訓練的動漫臉偵測器，只有一個 XML 檔，參數照它 README 的範例：</p>
+<figure class="listing"><figcaption>docs/tools/hw06_eval.py:86–88 — 一張圖偵測得到臉嗎</figcaption>
+<pre class="py" data-hot="87,88"><code>def has_face(rgb_uint8):  # H x W x 3, uint8
+    gray = cv2.equalizeHist(cv2.cvtColor(rgb_uint8, cv2.COLOR_RGB2GRAY))
+    return len(cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(24, 24))) &gt; 0</code></pre></figure>
+<p>轉灰階、做直方圖等化，然後用不同大小的視窗掃整張圖（每次放大 1.1 倍、至少 24×24），至少要有 5 個重疊的候選框才算數；偵測到 1 張以上的臉就算這張圖「有臉」。（安裝時還遇到一件事：OpenCV 5.x 已經沒有 <code>cv2.CascadeClassifier</code>，要裝 4.x，本書用 4.14.0.94。）</p>
+<p>拿它掃真圖的結果就很能說明問題：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>對象</th><th>AFD</th></tr></thead>
+<tbody>
+<tr><td>全部 71,314 張真圖，64×64（tensor）</td><td>0.5375（38,331 張）</td></tr>
+<tr><td>全部 71,314 張真圖，原始 96×96</td><td>0.4890（34,876 張）</td></tr>
+<tr><td>隨機 1000 張真圖，64×64 存成 JPEG（5 次抽樣）</td><td>0.40–0.46</td></tr>
+<tr><td>DCGAN <code>G_14</code>（FID 最好）</td><td>0.366</td></tr>
+<tr><td>DCGAN <code>G_99</code>（FID 211.9）</td><td><strong>0.666</strong></td></tr>
+<tr><td>DCGAN 第 75 個 epoch（FID 246.4）</td><td><strong>0.728</strong></td></tr>
+</tbody>
+</table></div>
+<p>這個偵測器只認得出<strong>一半左右的真圖</strong>，卻認得出 FID 很差的 <code>G_99</code> 三分之二的圖、第 75 個 epoch 的七成以上。換句話說，在本書的偵測器下，AFD 高不代表圖比較好：多樣性低的生成器如果剛好落在「偵測器喜歡的那種臉」上，AFD 就會很高；第 5 章還會看到，崩潰到只剩一種臉時，AFD 會是全有（1）或全無（0）。下面是 <code>G_99</code> 的 1000 張裡，偵測得到與偵測不到的前 10 張：</p>
+<figure class="fig">
+<img src="img/ch04_afd_yes.png" alt="G_99 生成的 10 張圖，偵測器在每張上都畫出一個臉的框" style="max-width:100%;image-rendering:pixelated">
+<figcaption>圖 4.1　偵測得到臉的前 10 張（第 2、4、6、7、9、10、11、12、13、16 張；黃框是偵測器找到的臉）。</figcaption>
+</figure>
+<figure class="fig">
+<img src="img/ch04_afd_no.png" alt="G_99 生成的另外 10 張圖，偵測器沒有找到臉，但看起來和上一排差不多" style="max-width:100%;image-rendering:pixelated">
+<figcaption>圖 4.2　偵測不到臉的前 10 張（第 1、3、5、8、14、15、20、22、23、28 張）。用眼睛看，和上一排沒有明顯差別。兩排都由本書照跑 <code>train.py</code> 得到的 <code>G_99</code> 產生（z 種子 0）。</figcaption>
+</figure>
+<p>兩排用眼睛看差不多：都是同幾種髮色、同樣偏糊的臉。偵測器的判斷在這個尺寸下很不穩定——64×64 只比它的最小視窗 24×24 大不到三倍。所以本書的 AFD 只做參考；投影片的 AFD 門檻（0.4、0.5、0.6）是針對助教的偵測器設的，在本書的偵測器下，連真圖都過不了 Strong 的 0.5。</p>
+
+<h2 id="inference">4.6　inference 與 test.py：交出 1000 張</h2>
+<figure class="listing"><figcaption>trainer_gan.py:196–217 — inference</figcaption>
+<pre class="py" data-hot="196,202,204,205,206,208,209,210,213,214"><code>    def inference(self, G_path, n_generate=100, n_output=30, show=False):
+        """
+        1. G_path is the path for Generator ckpt
+        2. You can use this function to generate final answer
+        """
+
+        self.G.load_state_dict(torch.load(G_path))
+        self.G.cuda()
+        self.G.eval()
+        z = Variable(torch.randn(n_generate, self.config["z_dim"])).cuda()
+        imgs = (self.G(z).data + 1) / 2.0
+
+        os.makedirs('output', exist_ok=True)
+        for i in range(n_generate):
+            torchvision.utils.save_image(imgs[i], f'output/{i + 1}.jpg')
+
+        if show:
+            row, col = n_output // 10 + 1, 10
+            grid_img = torchvision.utils.make_grid(imgs[:n_output].cpu(), nrow=row)
+            plt.figure(figsize=(row, col))
+            plt.imshow(grid_img.permute(1, 2, 0))
+            plt.show()</code></pre></figure>
+<ul>
+  <li><strong>第 196 行，<code>n_generate=100</code></strong>：原版 notebook 是 1000，本 repo 改成 100（index）。<code>test.py</code> 呼叫時沒有傳這個參數，所以只產生 100 張。</li>
+  <li><strong>第 202 行</strong>：載入存檔。<code>torch.load</code> 從 PyTorch 2.6 起預設 <code>weights_only=True</code>，只允許載入 tensor 之類的安全內容；存檔是 <code>state_dict()</code>（第 3 章），全部是 tensor，所以沒有問題。</li>
+  <li><strong>第 204 行</strong>：評估模式，和樣本格、本書的評分一致（第 3 章）。</li>
+  <li><strong>第 205 行，沒有設種子</strong>：<code>torch.randn</code> 用的是全域亂數，而 <code>test.py</code> 沒有呼叫 <code>same_seeds</code>，每次執行的 z 都不同。本書實測兩次 <code>test.py</code>，<code>output/1.jpg</code> 的內容不同。更麻煩的是：同一個存檔換一組 z，FID 就可能差 ±1.5（4.4 節），你交出去的分數有一部分是運氣。</li>
+  <li><strong>第 208–210 行</strong>：一張一張存成 <code>output/1.jpg</code>、<code>output/2.jpg</code>……，路徑相對於執行時的資料夾。<code>os.makedirs(..., exist_ok=True)</code> 不會清空舊的 <code>output/</code>：如果你先產生過 1000 張，之後改回 100 張再跑一次，<code>101.jpg</code> 到 <code>1000.jpg</code> 還留著舊的那一批，打包時就混在一起了。</li>
+  <li><strong>第 212–217 行，<code>show</code></strong>：預設不執行。讀起來有一個小錯：<code>row = n_output // 10 + 1</code> 是 4，卻被當成 <code>make_grid</code> 的 <code>nrow</code>（「每一列放幾張」），所以 30 張會排成每列 4 張；本書沒有實際跑這個分支。</li>
+</ul>
+<p>要交得出作業，至少要改三件事：產生 1000 張、設好種子、挑對存檔。最小的改法是改 <code>test.py</code>：</p>
+<pre class="py"><code>import torch, utils
+from trainer_gan import TrainerGAN
+from config import *
+
+utils.same_seeds(2022)                       # 每次都產生同樣的 1000 張
+trainer = TrainerGAN(config)
+G_path = 'checkpoints/2026-10-07_11-00-32_GAN/G_14.pth'   # 用 FID 挑出來的存檔，不是「最新的」
+trainer.inference(G_path, n_generate=1000)</code></pre>
+<p>（這是示意，不是 repo 裡的程式；路徑換成你自己那次訓練的資料夾。<code>same_seeds</code> 要在建 <code>TrainerGAN</code> 之前呼叫，因為建生成器與判別器也會消耗亂數。）跑之前先把舊的 <code>output/</code> 刪掉。然後照投影片第 12 頁打包：</p>
+<pre class="shell cmd"><code>$ cd output &amp;&amp; tar -zcf ../submission.tgz *.jpg &amp;&amp; cd ..</code></pre>
+<p>tar 裡的檔名是 <code>1.jpg</code>、<code>10.jpg</code>……，沒有資料夾，符合第 12 頁「解開後不能有資料夾」的要求。大小會不會超過第 14 頁的 2 MB？本書用三個不同的生成器各產生 1000 張實測：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>生成器</th><th>1000 張 JPEG 合計</th><th>tgz</th></tr></thead>
+<tbody>
+<tr><td>DCGAN <code>G_99</code></td><td>1,736,900 bytes</td><td>1,138,801 bytes</td></tr>
+<tr><td>WGAN 第 100 個 epoch</td><td>1,761,607 bytes</td><td>1,180,344 bytes</td></tr>
+<tr><td>StyleGAN2 ψ 1.0</td><td>1,747,508 bytes</td><td>1,167,445 bytes</td></tr>
+</tbody>
+</table></div>
+<p>一張 64×64、品質 75 的 JPEG 約 1.7 KB，壓縮後 1000 張約 1.1–1.2 MB，離 2 MB 還有空間。照跑 <code>test.py</code> 的 100 張打包是 116,043 bytes。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>範例程式不算分數；本書用自己寫的 <code>hw06_eval.py</code> 量 FID 與 AFD，和投影片的基準線不是同一把尺。</li>
+  <li>FID：Inception v3 的 2048 維特徵，FID = ‖μ<sub>r</sub> − μ<sub>g</sub>‖² + Tr(Σ<sub>r</sub> + Σ<sub>g</sub> − 2(Σ<sub>r</sub>Σ<sub>g</sub>)<sup>1/2</sup>)。崩潰的 <code>G_19</code> 特徵總變異量只有真圖的 45%，平均值差占 FID 的七成——FID 抓得到 mode collapse。</li>
+  <li>本書的量法：1000 張、z 種子 0、<code>G.eval()</code>、存成品質 75 的 JPEG 讀回、和 64×64 的真圖分布比（FID64）、報到小數 1 位。pytorch-fid 0.3.0 在 SciPy 1.18 上會壞，本書照抄了算式。</li>
+  <li>這把尺的誤差：換種子 ±1.5；1000 張比 10,000 張高 14–16（崩過的 <code>G_99</code> 只差 6，排名不變）；1000 張真圖自己的 FID 是 32（不存 JPEG 是 16）；JPEG 讓真圖變差、讓生成圖變好。</li>
+  <li>AFD：本書的偵測器只認得出約一半的真圖，卻認得出 FID 很差的 <code>G_99</code> 三分之二的圖。只做參考。</li>
+  <li><code>inference</code> 只產生 100 張、沒有設種子、不清空 <code>output/</code>；要交作業就改成 1000 張、設種子、指定 FID 挑出的存檔。1000 張打包約 1.1–1.2 MB，不超過 2 MB。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 一個生成器每次都畫出同一張和資料集某張真圖一模一樣的圖。它的 FID 會很好嗎？AFD 呢？</summary>
+<p>FID 會很差。1000 張圖的特徵完全相同，共變異矩陣 Σ<sub>g</sub> 是 0，Tr(Σ<sub>g</sub>) = 0；FID 的第二項變成 Tr(Σ<sub>r</sub>) = 123.3 左右（減去 0），加上那一張圖的特徵和真圖平均的距離。AFD 則是全有或全無：那張圖偵測得到臉就是 1.0，偵測不到就是 0。這就是 FID 比 AFD 更適合抓 mode collapse 的原因。這題是推論，本書沒有實際跑。</p></details>
+<details class="quiz"><summary>2. 同學 A 說他的模型 FID 是 45，同學 B 說他的是 70，都是用 FID 量的。可以說 A 比較好嗎？</summary>
+<p>不一定。要先問：各生成了幾張（1000 張與 10,000 張可以差 15）、和哪一份真圖比（64×64 還是 96×96，本書兩者多半差 20–30）、有沒有存成 JPEG（本書的生成圖差 13–21）、用哪一個 FID 實作（clean-fid 的作者指出不同實作可以差好幾點）、z 的種子（±1.5）。這些都一樣，45 和 70 的差距才有意義。</p></details>
+<details class="quiz"><summary>3. 本書說「完美的生成器在本書的量法下也只有 FID64 約 32」。這個 32 是怎麼量出來的？為什麼不是 0？</summary>
+<p>從 71,314 張真圖隨機抽 1000 張，經過和生成圖一樣的流程（轉成 64×64、存成 JPEG、讀回），和全部真圖的分布比較，五次抽樣得到 31.6–32.0。不是 0 有兩個原因：一、1000 個樣本估不準 2048 維的共變異矩陣（不存 JPEG、抽 1000 張是 16.05，抽 1 萬張存 JPEG 是 15.78）；二、JPEG 的壓縮讓這 1000 張和參考分布（沒有再壓縮過的）又差了一些。</p></details>
+<details class="quiz"><summary>4. <code>test.py</code> 跑了兩次，第一次 <code>n_generate=1000</code>，第二次忘了改、用預設的 100。<code>output/</code> 裡最後是什麼？</summary>
+<p>還是 1000 個檔：<code>1.jpg</code> 到 <code>100.jpg</code> 被第二次覆蓋，<code>101.jpg</code> 到 <code>1000.jpg</code> 是第一次留下的。<code>os.makedirs('output', exist_ok=True)</code> 只確保資料夾存在，不會清空。如果兩次用的存檔不同，打包出去的就是兩個生成器的混合；而且兩次的 z 也不同（沒有設種子）。這題是推論，本書沒有實際跑。</p></details>
+<details class="quiz"><summary>5. AFD 的偵測器要求偵測框至少 24×24。如果作業改成生成 32×32 的圖，用同一個偵測器，AFD 會怎樣？</summary>
+<p>多半會大幅下降：32×32 的圖裡，臉大約占滿整張，偵測器能掃的視窗只剩 24×24 到 32×32 之間很少的幾種大小，而且這麼小的圖細節太少，LBP 特徵很難判斷。本書在 64×64 下就已經只認得出一半的真圖。偵測器有它設計時假設的輸入大小，換了尺寸就要重新驗證它對真圖的偵測率。這題是推論，本書沒有實際跑。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+  <li>Heusel 等，〈GANs Trained by a Two Time-Scale Update Rule Converge to a Local Nash Equilibrium〉（NeurIPS 2017）：FID 的原始論文，<a href="https://arxiv.org/abs/1706.08500">arXiv:1706.08500</a>。</li>
+  <li>pytorch-fid：<a href="https://github.com/mseitzer/pytorch-fid">github.com/mseitzer/pytorch-fid</a>，本書用的 Inception 權重與 FID 算式的來源。</li>
+  <li>Parmar、Zhang、Zhu，〈On Aliased Resizing and Surprising Subtleties in GAN Evaluation〉（CVPR 2022）與 clean-fid 套件，<a href="https://arxiv.org/abs/2104.11222">arXiv:2104.11222</a>：縮放與 JPEG 對 FID 的影響。</li>
+  <li>nagadomi，<a href="https://github.com/nagadomi/lbpcascade_animeface">lbpcascade_animeface</a>：本書 AFD 用的偵測器與它的參數範例。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<footer class="chap-footer">本教材根據 lordleeber/ML2022-Spring-pytorch 的 HW06 程式碼與 ML2022 Spring 作業投影片撰寫。</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>

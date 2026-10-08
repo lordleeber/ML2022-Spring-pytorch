@@ -252,7 +252,7 @@ FID64（n = 1000、z 種子 0；FID96 與 AFD 見 jsonl）：
 | StyleGAN2 ψ1.0 | 66.3 → **52.3** | 79.3 | 0.4617 |
 | StyleGAN2 ψ0.75 | 76.7 → **64.1** | 89.9 | 0.5623 |
 
-- 樣本少 → FID 系統性偏高（共變異矩陣估不準）：n 從 1000 到 10000，多數下降 12–16；崩掉的 gan G_99 只降 6（本來就多樣性低）。**排名不變**。作業規定交 1000 張，所以本書的主表一律用 n = 1000。
+- 樣本少 → FID 系統性偏高（共變異矩陣估不準）：n 從 1000 到 10000，多數下降 14.0–16.3；崩掉的 gan G_99 只降 6（本來就多樣性低）。**排名不變**。作業規定交 1000 張，所以本書的主表一律用 n = 1000。
 
 ## test.py 與提交檔
 - 照跑 `test.py`（在 scratchpad 的複本裡，checkpoints 只連 2026-10-07 那次）：印 `Inference with ./checkpoints/2026-10-07_11-00-32_GAN/G_99.pth`，產生 **100 張**（`output/1.jpg`–`100.jpg`），不是作業要的 1000 張。
@@ -313,3 +313,19 @@ FID64（n = 1000、z 種子 0；FID96 與 AFD 見 jsonl）：
 - non-saturating vs minimax 梯度（對 Sigmoid 前的 a）：D(G(z)) = 0.052 時 −σ = −0.052、−(1−σ) = −0.948，約 18.2 倍。
 - 圖 3.1 由 scratchpad 的 `ch03_chart.py` 產生（讀 gan.jsonl），配色 #3987e5／#d95926 以 validate_palette.js 在 #161c24 上驗證通過（CVD ΔE 26.8、normal 31.8）。
 - 原始碼行尾空白：trainer_gan.py 第 43、119、121、123 行行尾有一個空白，引用時要保留。
+
+## ch04 實測（2026-10-08；`hw06_eval.py` 加了 `realsub`、`--parts`、`--nojpeg`，預設輸出不變：G_14 重跑 fid64 104.95、afd 0.366；逐行 `docs/tools/hw06_ch04_eval.jsonl`）
+- **FID64 的兩項**（`--parts`；mean term = ‖μ−μ_real‖²，cov term = FID − mean term；trace Σ_real64 = 123.3）：
+  | 對象 | FID64 | mean term | cov term | tr Σ |
+  |---|---|---|---|---|
+  | gan G_14 | 104.95 | 44.2 | 60.7 | 138.6 |
+  | gan G_19（崩潰） | 347.12 | **251.1** | 96.0 | **55.6** |
+  | gan G_99 | 211.93 | 82.2 | 129.7 | 123.1 |
+  | StyleGAN2 model_20 ψ1.0 | 66.34 | 22.8 | 43.5 | 138.2 |
+  | 真圖 1000 張（seed 0，JPEG） | 31.60 | 8.2 | 23.4 | 139.5 |
+- **真圖的 FID 底線**（`realsub`，get_dataset 轉換後當成生成圖，同樣存 JPEG 讀回）：n 1000 seed 0–4 → FID64 31.60／31.95／31.97／31.99／31.90，FID96 59.87–60.56，AFD 0.412／0.401／0.412／0.416／0.459；n 10000 seed 0 → FID64 **15.78**（mean 7.9、cov 7.9）、FID96 44.48、AFD 0.419。不經 JPEG（`--nojpeg`）n 1000 seed 0 → FID64 **16.05**、FID96 30.96、AFD 0.523。
+- **JPEG 的影響**（n 1000、種子 0）：G_14 JPEG 104.95 vs 不經 JPEG **118.20**（FID96 134.21 vs 133.96；AFD 0.366 vs 0.382）；G_99 211.93 vs **232.89**（FID96 233.24 vs 242.63；AFD 0.666 vs 0.656）。→ 生成圖存成 JPEG 後 FID64 變好，真圖存成 JPEG 後變差（16.05 → 31.60）。
+- `torchvision.utils.save_image` 存 JPEG：`ndarr = grid.mul(255).add_(0.5).clamp_(0, 255)…`、`im.save(fp, format=format)`；與 PIL `quality=75` 存出的檔案位元組相同（90、95 不同）→ **品質 75**。
+- pytorch-fid 的 InceptionV3 預設 `resize_input=True`（雙線性放大到 299×299）、`normalize_input=True`。
+- AFD 範例：G_99 的 1000 張（種子 0、`--keep`）偵測到 666 張、沒偵測到 334 張；前 10 張偵測到的是 2, 4, 6, 7, 9, 10, 11, 12, 13, 16，沒偵測到的是 1, 3, 5, 8, 14, 15, 20, 22, 23, 28。圖 `docs/HW06/img/ch04_afd_yes.png`（畫了偵測框）、`ch04_afd_no.png`。兩排目視差不多。
+- `inference` 的 `show=True` 分支：`row = n_output // 10 + 1` = 4 被當成 `make_grid` 的 `nrow`（每列張數），`figsize=(row, col)` = (4, 10)（推論，`show` 預設 False，沒有實際跑）。

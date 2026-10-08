@@ -19,6 +19,10 @@ face (the parameters of the lbpcascade_animeface README example).
                         from the EMA mapping/generator (SE, GE) with truncation --psi, the package's
                         own generate_truncated; global RNG seeded --seed (z, per-pixel noise and the
                         2000 z of the truncation mean all come from it). Needs <sg2lib> on PYTHONPATH.
+  realsub --stats DIR   --n real images drawn at random (seed --seed) from faces/, through get_dataset's
+                        transform, scored exactly like generated ones: the FID floor of a sample of n.
+  --parts               also report FID64's two terms: |mu1 - mu2|^2 and the covariance (trace) term.
+  --nojpeg              compute FID / AFD on the tensors, skipping the JPEG round trip.
 One JSON line per result on stdout.
 """
 import argparse, glob, json, os, sys, tempfile
@@ -31,7 +35,7 @@ from pytorch_fid.inception import InceptionV3
 from scipy import linalg
 
 ap = argparse.ArgumentParser()
-ap.add_argument('cmd', choices=['real', 'gen', 'sg2'])
+ap.add_argument('cmd', choices=['real', 'gen', 'sg2', 'realsub'])
 ap.add_argument('G', nargs='*')
 ap.add_argument('--stats', required=True)
 ap.add_argument('--cascade', required=True)
@@ -42,6 +46,8 @@ ap.add_argument('--bs', type=int, default=250)
 ap.add_argument('--sg2_dir', default='')       # sg2: the work dir of hw06_sg2_train.sh (holds models/<name>)
 ap.add_argument('--sg2_name', default='sg2')
 ap.add_argument('--sg2_every', type=int, default=2500)  # sg2: --save_every of hw06_sg2_train.sh
+ap.add_argument('--parts', action='store_true')  # also report the two terms of FID64
+ap.add_argument('--nojpeg', action='store_true')  # score the tensors directly instead of JPEG files
 ap.add_argument('--psi', type=float, default=0.75)  # sg2: truncation psi (0.75 = the package's CLI default)
 args = ap.parse_intermixed_args()
 
@@ -110,24 +116,47 @@ ref = {k: np.load(os.path.join(args.stats, f'{k}.npz')) for k in ('real64', 'rea
 
 
 def score(imgs, tag, **info):  # imgs: n x 3 x 64 x 64 in [0, 1] on the CPU
-    d = os.path.join(args.keep, tag) if args.keep else tempfile.mkdtemp()
-    os.makedirs(d, exist_ok=True)
-    paths = [os.path.join(d, f'{i + 1}.jpg') for i in range(args.n)]
-    for i, p in enumerate(paths):
-        torchvision.utils.save_image(imgs[i], p)
-    act = activations(file_batches(paths, lambda p: TF.to_tensor(Image.open(p).convert('RGB'))))
+    if args.nojpeg:
+        act = activations(imgs[i:i + args.bs] for i in range(0, args.n, args.bs))
+        u8 = (imgs * 255 + 0.5).clamp(0, 255).to(torch.uint8).permute(0, 2, 3, 1).numpy()   # save_image's rounding
+        faces = sum(has_face(np.ascontiguousarray(u8[i])) for i in range(args.n))
+        paths = []
+    else:
+        d = os.path.join(args.keep, tag) if args.keep else tempfile.mkdtemp()
+        os.makedirs(d, exist_ok=True)
+        paths = [os.path.join(d, f'{i + 1}.jpg') for i in range(args.n)]
+        for i, p in enumerate(paths):
+            torchvision.utils.save_image(imgs[i], p)
+        act = activations(file_batches(paths, lambda p: TF.to_tensor(Image.open(p).convert('RGB'))))
+        faces = sum(has_face(load(p)) for p in paths)
     mu, sigma = stats(act)
-    faces = sum(has_face(load(p)) for p in paths)
     rec = dict(info, n=args.n, seed=args.seed,
                fid64=float(calculate_frechet_distance(mu, sigma, ref['real64']['mu'], ref['real64']['sigma'])),
                fid96=float(calculate_frechet_distance(mu, sigma, ref['real96']['mu'], ref['real96']['sigma'])),
                afd=faces / args.n, afd_count=int(faces))
+    if args.nojpeg:
+        rec['nojpeg'] = True
+    if args.parts:
+        m = ref['real64']['mu']
+        rec['fid64_mean_term'] = float(((mu - m) ** 2).sum())
+        rec['fid64_cov_term'] = rec['fid64'] - rec['fid64_mean_term']
+        rec['trace_sigma'] = float(np.trace(sigma))
+        rec['trace_sigma_real64'] = float(np.trace(ref['real64']['sigma']))
     print(json.dumps(rec), flush=True)
-    if not args.keep:
+    if paths and not args.keep:
         for p in paths:
             os.remove(p)
         os.rmdir(d)
 
+
+if args.cmd == 'realsub':
+    import utils
+    ds = utils.get_dataset('faces')
+    paths = sorted(ds.fnames)
+    idx = torch.randperm(len(paths), generator=torch.Generator().manual_seed(args.seed))[:args.n].tolist()
+    imgs = torch.stack([ds.transform(torchvision.io.read_image(paths[i])) * 0.5 + 0.5 for i in idx])
+    score(imgs, f'realsub_{args.seed}', real_subset=True)
+    sys.exit()
 
 if args.cmd == 'sg2':
     from stylegan2_pytorch.stylegan2_pytorch import Trainer, noise_list, image_noise
