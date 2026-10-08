@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 1 章　資料 — HW14 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=LXGW+WenKai+TC:wght@400;700&amp;display=swap">
+<style id="book-style">
+/* HW14 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「記憶實驗紀錄本」——偏藍綠的石墨底、紙白的字、赭黃只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   方法色（圖表與標籤）：baseline 灰、EWC 藍、MAS 橘、SI 青、RWalk 黃、SCP 洋紅、joint 紫、replay 綠
+   （dataviz 參考色盤的暗色步階，2026-10-08 以 validate_palette.js 對 #181e25 驗證通過）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #12161b;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #d9a35b;      /* 赭黃：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(217, 163, 91, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #d9a35b;
+  /* 方法色 */
+  --m-baseline: #8b949e; --m-ewc: #3987e5; --m-mas: #d95926; --m-si: #199e70;
+  --m-rwalk: #c98500; --m-scp: #d55181; --m-joint: #9085e9; --m-replay: #008300;
+  /* type */
+  --font-display: "LXGW WenKai TC", "Kaiti TC", "BiauKai", "Noto Serif TC", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "任務 1 → 2 → 3 → 4 → 5　·　0° 20° 40° 60° 80°　·　784 → 1024 → 512 → 256 → 10";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fbf4e8; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #161d24; border-color: rgba(217, 163, 91, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #16120b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 方法標籤（色塊只標身分，文字一律用內文色） ---------- */
+.mth { white-space: nowrap; }
+.mth::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--mc, var(--muted)); }
+.mth.baseline { --mc: var(--m-baseline); } .mth.ewc { --mc: var(--m-ewc); } .mth.mas { --mc: var(--m-mas); }
+.mth.si { --mc: var(--m-si); } .mth.rwalk { --mc: var(--m-rwalk); } .mth.scp { --mc: var(--m-scp); }
+.mth.joint { --mc: var(--m-joint); } .mth.replay { --mc: var(--m-replay); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW14 讀碼教材</p>
+  <h1>第 1 章　資料：把 MNIST 轉成五個任務</h1>
+  <p class="chap-lead">五個任務用的是同一批 60,000 張手寫數字，只差在轉了幾度。這一章讀 <code>dataset.py</code> 與 <code>config.py</code>：一張圖從 MNIST 檔案到變成模型的輸入，經過了哪三步；其中一步其實什麼都沒做；說明文字一直說「10 個任務」，程式卻只有 5 個。最後量一件影響全書的事：對這個模型來說，轉 20° 和轉 80° 的同一張圖，到底還像不像同一張圖。</p>
+</header>
+<main>
+
+<h2 id="mnist">1.1　MNIST 與 <code>Data</code> 類別</h2>
+<p><strong>MNIST</strong> 是手寫數字 0–9 的資料集：訓練集 60,000 張、測試集 10,000 張，每張是 28×28 的灰階圖，像素值 0–255，數字大致置中、筆畫是白色、背景是黑色。它是深度學習最常用的入門資料集，四層全連接網路就能在測試集上拿到 98% 左右的準確率（第 0 章的成績表裡，每種方法學完任務 1 時都在 97.3–98.0 之間）。</p>
+<p>本 repo 用一個很薄的類別把 torchvision 內建的 MNIST 包起來：</p>
+<figure class="listing"><figcaption>dataset.py:38–41 — Data：每建一個就是一份套好轉換的 MNIST</figcaption>
+<pre class="py" data-hot="40-41"><code>class Data():
+  def __init__(self, path, train=True, angle=None):
+    transform = get_transform(angle)
+    self.dataset = datasets.MNIST(root=os.path.join(path, "MNIST"), transform=transform, train=train, download=True)</code></pre></figure>
+<p><code>Data</code> 本身不是 PyTorch 的 <code>Dataset</code>，它只是把一個 <code>datasets.MNIST</code> 存在 <code>self.dataset</code> 裡；之後交給 <code>DataLoader</code> 的是 <code>data.dataset</code>（第 0 章 <code>train.py</code> 第 245 行）。三個參數的意思：</p>
+<ul>
+<li><code>path</code>：資料放哪裡。<code>train.py</code> 傳的是 <code>'data'</code>，所以 <code>root</code> 是 <code>data/MNIST</code>。torchvision 的 MNIST 會在 <code>root</code> 底下再建一個以類別名稱命名的資料夾，原始檔實際放在 <code>data/MNIST/MNIST/raw/</code>（實測 <code>raw_folder</code> 就是這個路徑）。路徑看起來重複，但不影響使用。</li>
+<li><code>train</code>：<code>True</code> 取 60,000 張的訓練集，<code>False</code> 取 10,000 張的測試集。</li>
+<li><code>angle</code>：這份資料要轉幾度，交給 <code>get_transform</code>（1.2 節）。</li>
+</ul>
+<p><code>download=True</code> 的意思是「檔案不在就下載，在就直接讀」。<code>train.py</code> 建了 10 個 <code>Data</code>（五個角度 × 訓練／測試），只有第一個會真的下載，之後九個都是讀同一份檔案。每個 <code>datasets.MNIST</code> 會把整份圖片讀進記憶體成為一個 uint8 張量，60,000 張 28×28 約 47 MB；五份訓練集就是五份相同的副本，這在 MNIST 上無所謂，換成大資料集就不行了。</p>
+<p>這裡有一件讀程式時容易忽略、卻決定了整份作業性質的事：<strong>五個任務的訓練資料是同一批圖片、同一組 label</strong>，只有轉換不同。實測五份訓練集的前五個 label 都是 <code>[5, 0, 4, 1, 9]</code>。所以「任務 2」不是新的資料，是「任務 1 的每一張圖都轉 20°」。模型在五個任務裡要分的都是同樣的十個類別，變的只有輸入長什麼樣子。這種設定在持續學習的文獻裡叫 <strong>domain-incremental</strong>（領域遞增：類別不變、輸入的分布改變），第 8 章介紹「三種情境」時會再回來。</p>
+
+<h2 id="transform">1.2　一張圖經過的三步轉換</h2>
+<p><code>datasets.MNIST</code> 每取一張圖，都會先把它變成 PIL 影像，再交給 <code>transform</code>。這份作業的 <code>transform</code> 由三步組成：</p>
+<figure class="listing"><figcaption>dataset.py:16–21 — get_transform()：ToTensor → 旋轉 → Pad</figcaption>
+<pre class="py" data-hot="17-19"><code>def get_transform(angle=None):
+  transform = transforms.Compose([transforms.ToTensor(),
+                   transforms.Lambda(lambda x: _rotate_image(x, angle)),
+                   Pad(28)
+                   ])
+  return transform</code></pre></figure>
+<p><code>transforms.Compose</code> 把一串轉換串起來，依序執行。三步分別是：</p>
+<ol>
+<li><strong><code>ToTensor()</code></strong>：PIL 影像 → <code>torch.float32</code> 張量，形狀從 28×28 變成 <code>(1, 28, 28)</code>（多一個 channel 維），像素值從 0–255 除以 255 變成 0–1。實測第一張訓練圖：形狀 <code>torch.Size([1, 28, 28])</code>、最小值 0.0、最大值 1.0、label 5。這裡<strong>沒有</strong>做常見的「減平均、除標準差」正規化，模型看到的就是 0–1 的原始亮度。</li>
+<li><strong>旋轉</strong>：<code>transforms.Lambda</code> 把一個普通函式包成轉換，這裡包的是「呼叫 <code>_rotate_image(x, angle)</code>」。</li>
+<li><strong><code>Pad(28)</code></strong>：補邊到 28×28。1.3 節會看到，這一步對 28×28 的圖什麼都沒做。</li>
+</ol>
+<div class="note"><h4>lambda 裡的 <code>angle</code> 為什麼不會被後面的任務蓋掉</h4>
+<p>Python 的 lambda 不是在建立時記下 <code>angle</code> 的值，而是記下「去哪裡找 <code>angle</code> 這個名字」，執行時才去查。常見的陷阱是在 <code>for</code> 迴圈裡寫 lambda，最後每個 lambda 查到的都是迴圈跑完時的值。這裡沒有這個問題：<code>angle</code> 是 <code>get_transform</code> 的參數，每呼叫一次 <code>get_transform</code> 就有一個新的區域變數 <code>angle</code>，五個任務的 lambda 各自綁在不同的那一次呼叫上。第 1.5 節的樣本圖就是驗證：五列轉的角度確實不同。</p>
+</div>
+<p>真正做旋轉的是這個函式：</p>
+<figure class="listing"><figcaption>dataset.py:9–14 — _rotate_image()：angle 是 None 就原樣傳回</figcaption>
+<pre class="py" data-hot="13"><code>def _rotate_image(image, angle):
+  if angle is None:
+    return image
+
+  image = transforms.functional.rotate(image, angle=angle)
+  return image</code></pre></figure>
+<p><code>train.py</code> 傳進來的角度是 0、20、40、60、80，從來不是 <code>None</code>，所以任務 1 也會呼叫一次「轉 0°」。<code>transforms.functional.rotate</code> 只傳了 <code>angle</code>，其餘參數都用預設值。在 torchvision 0.26 實際查到的簽名是：</p>
+<pre class="shell"><code>(img: torch.Tensor, angle: float, interpolation: torchvision.transforms.functional.InterpolationMode = &lt;InterpolationMode.NEAREST: 'nearest'&gt;, expand: bool = False, center: Optional[list[int]] = None, fill: Optional[list[float]] = None) -&gt; torch.Tensor</code></pre>
+<p>這幾個預設值各自決定了圖長什麼樣子：</p>
+<ul>
+<li><strong>方向</strong>：正的角度是<strong>逆時針</strong>。實測把一張只有上方中央（第 2 列、第 14 行）一個亮點的圖轉 +90°，亮點跑到 <code>[13, 2]</code>，也就是左側中間。</li>
+<li><strong><code>interpolation=NEAREST</code></strong>：最近鄰插值。轉完之後每個新像素直接拿「最靠近的那個舊像素」的值，不做平均，所以筆畫邊緣會出現鋸齒（下面的圖可以看到）。換成 <code>BILINEAR</code> 會平滑一些，但這份作業沒有改。</li>
+<li><strong><code>expand=False</code></strong>：轉完之後畫布大小維持 28×28，轉出畫布的部分直接切掉。</li>
+<li><strong><code>center=None</code></strong>：繞著圖的中心轉。</li>
+<li><strong><code>fill=None</code></strong>：轉進來的空白角落補 0，也就是黑色，剛好和 MNIST 的背景一樣。</li>
+</ul>
+<p>切掉的部分會不會吃掉筆畫？MNIST 的數字本來就縮在中央約 20×20 的範圍裡，轉 80° 也幾乎不會碰到邊。實測測試集前 2,000 張，轉完之後的總亮度和原圖相比是 0.9995（20°）、0.9988（40°）、1.0000（60°）、1.0057（80°）。最近鄰插值會讓某些像素被複製兩次、某些被跳過，所以總亮度有時略增、有時略減，但差異都在 0.6% 以內：旋轉沒有丟掉資訊，只是把它搬了位置。</p>
+
+<h2 id="pad">1.3　什麼都沒做的 <code>Pad(28)</code></h2>
+<figure class="listing"><figcaption>dataset.py:23–36 — Pad：把圖的四邊補到 size×size</figcaption>
+<pre class="py" data-hot="32,34"><code>class Pad(object):
+  def __init__(self, size, fill=0, padding_mode='constant'):
+    self.size = size
+    self.fill = fill
+    self.padding_mode = padding_mode
+    
+  def __call__(self, img):
+    # If the H and W of img is not equal to desired size,
+    # then pad the channel of img to desired size.
+    img_size = img.size()[1]
+    assert ((self.size - img_size) % 2 == 0)
+    padding = (self.size - img_size) // 2
+    padding = (padding, padding, padding, padding)
+    return F.pad(img, padding, self.padding_mode, self.fill)</code></pre></figure>
+<p>一個有 <code>__call__</code> 方法的物件可以像函式一樣被呼叫，<code>transforms.Compose</code> 就是靠這個串起每一步。<code>Pad</code> 的邏輯是：讀出圖的高度（第 32 行，<code>img.size()</code> 是 <code>(1, 28, 28)</code>，<code>[1]</code> 取到的是 28），算出「離目標大小還差多少、每邊補一半」，再用 <code>torch.nn.functional.pad</code> 在左右上下各補那麼多格的 0。第 33 行的 <code>assert</code> 確保差距是偶數，才能平均分到兩邊。</p>
+<p>問題在於目標大小是 28，輸入也是 28：第 34 行算出來的 <code>padding</code> 是 <code>(28 − 28) // 2 = 0</code>，四邊各補 0 格。<code>expand=False</code> 的旋轉不會改變圖的大小，所以進到 <code>Pad</code> 的永遠是 28×28。實測 <code>torch.equal(Pad(28)(x), x)</code> 是 <code>True</code>：輸出和輸入一模一樣。</p>
+<p>它為什麼在這裡？程式裡沒有說明。一個線索是：<code>F.pad</code> 收到<strong>負的</strong> padding 時不會報錯，而是從邊緣<strong>裁掉</strong>那麼多格。實測把旋轉改成 <code>expand=True</code>（畫布放大到裝得下整張轉過的圖），五個角度的畫布分別是 28、36、40、40、34 格寬，差距都是偶數，<code>assert</code> 通過；<code>Pad(28)</code> 算出 −4、−6、−6、−3 格，把中央裁回 28×28，結果和 <code>expand=False</code> 的輸出 <code>torch.equal</code>。所以這個類別在「畫布會變大」或「圖比 28 小」的設定下才有作用，在這份作業的設定裡只是多算一次 <code>F.pad</code>。它多半是從別的版本的程式留下來的，本書無法確認。順帶一提，註解說「pad the channel of img」也不準確：它補的是高與寬，不是 channel。</p>
+<div class="warn"><h4>讀 code 不盡信文件：<code>Pad</code> 的名字和註解都暗示它有作用</h4>
+<p>看到 <code>Pad(28)</code>，很容易以為「圖被補成 28×28，所以原圖比較小」。實際上 MNIST 本來就是 28×28，<code>Pad</code> 在這裡是空操作。判斷一段前處理有沒有作用，最快的方法不是讀它的註解，而是拿一張真實的輸入跑一次、比對前後：<code>torch.equal</code> 一行就能回答。</p>
+</div>
+
+<h2 id="tasks">1.4　五個任務，不是十個</h2>
+<figure class="listing"><figcaption>config.py:1–15 — 訓練設定與旋轉角度</figcaption>
+<pre class="py" data-hot="3,15"><code># Training arguments (HW14.ipynb, "Dataloaders and Arguments")
+class Args:
+  task_number = 5
+  epochs_per_task = 10
+  lr = 1.0e-4
+  batch_size = 128
+  test_size=8192
+
+args=Args()
+
+# generate rotations for the tasks.
+
+# generate rotated MNIST data from 10 different rotations.
+
+angle_list = [20 * x for x in range(args.task_number)]</code></pre></figure>
+<p><code>Args</code> 是一個只用來放設定的類別，<code>args=Args()</code> 建一個實例，之後用 <code>args.lr</code> 這樣的寫法取值（這是 notebook 裡模仿 <code>argparse</code> 的常見寫法；第 9 行建實例其實不必要，直接用 <code>Args.lr</code> 也一樣）。第 15 行的 list comprehension 算出 <code>[0, 20, 40, 60, 80]</code>：<code>range(5)</code> 是 0–4，乘上 20。</p>
+<p>第 13 行的註解說「from 10 different rotations」，但程式只有 5 個角度。這不是唯一一處：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>位置</th><th>原文</th><th>實際</th></tr></thead>
+<tbody>
+<tr><td>notebook [9] 說明文字</td><td>we utilize 5 different rotations to generate 10 different rotated MNISTs as different tasks</td><td rowspan="4">5 個角度、5 個任務（<code>task_number = 5</code>），每個任務各有一份訓練集與一份測試集</td></tr>
+<tr><td>notebook [11]、<code>dataset.py:7</code> 註解</td><td><code># Rotate MNIST to generate 10 tasks</code></td></tr>
+<tr><td>notebook [13]、<code>config.py:13</code> 註解</td><td><code># generate rotated MNIST data from 10 different rotations.</code></td></tr>
+<tr><td>notebook [28] EWC 說明</td><td>In this assignment, we want to let our model learn 10 tasks successively.</td></tr>
+</tbody>
+</table></div>
+<p>投影片 p.10 寫的是「5 task / Each task has 10 epoches」，p.12 畫的也是 5 個任務、每個多轉 20°，和程式一致。最可能的解釋是前一年的版本用了 10 個任務，程式改成 5 個之後說明沒有跟著改；也可能是把「5 個訓練集＋5 個測試集＝10 份資料」寫成了「10 個任務」。不論原因，<strong>以程式為準：5 個任務</strong>。選擇題如果問「這份作業有幾個任務」，答案是 5。</p>
+<p>其餘四個設定在第 2 章讀訓練迴圈時會一一用到：每個任務 10 個 epoch、Adam 的學習率 1e-4、訓練 batch 128、測試 batch 8192。換算成 batch 數（實測 <code>len(DataLoader)</code>）：</p>
+<ul>
+<li>訓練：60,000 ÷ 128 = 468.75，所以一個 epoch 是 <strong>469 個 batch</strong>，最後一個只有 96 張（<code>DataLoader</code> 預設 <code>drop_last=False</code>）。一個任務 10 個 epoch 是 4,690 步，五個任務共 23,450 步。</li>
+<li>測試：10,000 ÷ 8192，所以是 <strong>2 個 batch</strong>（8,192 張與 1,808 張）。<code>test_size</code> 設這麼大只是為了評估時少跑幾次迴圈。</li>
+</ul>
+<p>回頭看第 0 章 <code>train.py</code> 第 244–248 行：五個角度各建一個訓練用 <code>DataLoader</code>（<code>shuffle=True</code>）和一個測試用 <code>DataLoader</code>（也是 <code>shuffle=True</code>）。測試資料要不要打亂，對準確率沒有影響（加總起來都是同樣 10,000 張），卻會用掉亂數，第 2 章會看到它怎麼影響訓練。</p>
+
+<h2 id="similar">1.5　任務之間有多像</h2>
+<p>先看圖。notebook 的 Visualization 一格會畫出「每個任務、每個 label 各取第一張」；本 repo 沒有把這格搬進 <code>train.py</code>（它不影響結果，也不用到亂數），下面是用同樣的取法（訓練集裡每個 label 第一次出現的那張，索引是 1、3、5、7、2、0、13、15、17、4）重新畫的：</p>
+<figure class="fig">
+<img src="img/tasks.png" width="1000" height="530" alt="5 列 10 行的手寫數字圖：每一列是一個任務，由上到下轉 0、20、40、60、80 度；每一行是 label 0 到 9。越往下數字越往逆時針方向傾倒，轉 80 度時 1 幾乎是橫的，9 像是躺著的 a，邊緣有明顯的鋸齒">
+<figcaption>圖 1.1　五個任務的樣本，每列一個任務、每行一個 label（同一行是同一張原圖）。逆時針旋轉；最近鄰插值造成的鋸齒在 40° 以後很明顯。</figcaption>
+</figure>
+<p>對人來說，轉 80° 的 1 還是 1：我們會在腦中把它轉回來。但第 0 章看過，這個模型的第一步是把圖攤平成 784 個數，它沒有「旋轉」這個概念，只看得到「第 i 個像素亮不亮」。轉了 20° 之後，原本亮的像素有很多變暗了、原本暗的變亮了，在模型眼裡這是一組不一樣的 784 個數。</p>
+<p>要把「在模型眼裡有多像」量成數字，一個簡單的方法是把兩張圖攤平成 784 維的向量，算 <strong>cosine similarity</strong>（餘弦相似度，兩個向量夾角的 cosine：方向完全相同是 1，完全無關是 0；像素都是非負的，所以這裡不會出現負值）。對測試集前 2,000 張，把每一張「轉過的版本」和「原圖」配對、取平均，並放上兩個參考值：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>比較的兩張圖</th><th class="num">平均 cosine similarity</th><th class="num">baseline 學完任務 1 時，在這個任務的準確率</th></tr></thead>
+<tbody>
+<tr><td>同一張圖，轉 0°（任務 1 自己）</td><td class="num">1.000</td><td class="num">98.03</td></tr>
+<tr><td>同一張圖，轉 20°（任務 2）</td><td class="num">0.604</td><td class="num">90.53</td></tr>
+<tr><td>同一張圖，轉 40°（任務 3）</td><td class="num">0.408</td><td class="num">55.66</td></tr>
+<tr><td>同一張圖，轉 60°（任務 4）</td><td class="num">0.323</td><td class="num">25.68</td></tr>
+<tr><td>同一張圖，轉 80°（任務 5）</td><td class="num">0.293</td><td class="num">14.02</td></tr>
+<tr><td><em>參考</em>：兩張不同的圖，label 相同（都不轉）</td><td class="num">0.520</td><td class="num">—</td></tr>
+<tr><td><em>參考</em>：兩張隨機的圖（都不轉）</td><td class="num">0.391</td><td class="num">—</td></tr>
+</tbody>
+</table></div>
+<p>右欄是第 0 章那次參照執行裡，baseline 剛學完任務 1（第 10 個 epoch 結束）時，在五個任務測試集上各自的準確率；它還沒看過任何一張轉過的圖。兩欄一起讀：</p>
+<ul>
+<li><strong>轉 20° 的圖，還比「另一個人寫的同一個數字」更像原圖</strong>（0.604 對 0.520）。所以只學過正放數字的模型，在任務 2 也有 90.53%：任務 2 對它來說大致是「換了一批寫法」。</li>
+<li><strong>轉 60° 以後，同一張圖比兩張隨機的圖還不像</strong>（0.323、0.293，都低於 0.391）。在像素空間裡，轉 60° 的 7 和原本的 7 之間的距離，比原本的 7 和隨便一個 3 之間還遠。模型在任務 4、5 上只剩 25.68% 與 14.02%，離亂猜的 10% 不遠。</li>
+<li>相似度和準確率一起單調下降。角度差越大，兩個任務對這個模型來說越是「不同的問題」。</li>
+</ul>
+<p>這張表預告了後面各章會一再看到的現象。學任務 2 時，模型要做的調整不大，因為任務 2 和任務 1 很像；學任務 5 時，模型要把權重往一個和任務 1 很不一樣的方向推。第 3 章會看到，baseline 忘得最多的是任務 1（98.0 → 35.4），也就是和最後一個任務角度差最大的那一個；正則化方法要保護的，正是這種「新任務要的改變」和「舊任務要的權重」衝突最大的地方。</p>
+<div class="note"><h4>現在的做法：旋轉 MNIST 只是教學用的基準</h4>
+<p>Rotated MNIST 和它的兄弟 Permuted MNIST（每個任務用一個固定的隨機排列打亂 784 個像素）是 2017–2019 年持續學習論文最常用的基準，因為它小、快、任務數可以任意調。後來的研究指出它們太簡單、太人工：任務之間的差異是人為設計的，類別完全不變，和真實世界的資料變化不像。現在的基準多半改用 Split CIFAR-100、CORe50、CLEAR 這類「類別或環境真的在變」的影像資料集；對大型語言模型，則是「先預訓練、再用某個領域的資料微調」，量它在原本的能力（知識問答、安全拒答等）上退步多少，ML2025 HW6 與 ML2026 HW5 就是這種設定。另一方面，對影像模型而言，「旋轉」現在通常被當成 data augmentation（資料增強）放進同一個訓練裡，或者用卷積網路與旋轉等變的架構處理，而不是拿來切成不同的任務。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li><code>Data</code> 包住 torchvision 的 MNIST；五個任務用的是<strong>同一批圖片與 label</strong>，只有旋轉角度不同：類別不變、輸入分布改變（domain-incremental）。</li>
+<li>一張圖經過 <code>ToTensor</code>（0–1、形狀 <code>(1, 28, 28)</code>、沒有減平均除標準差）→ <code>rotate</code>（逆時針、最近鄰插值、畫布不放大、角落補 0）→ <code>Pad(28)</code>。旋轉幾乎不丟亮度（差異在 0.6% 以內）。</li>
+<li><code>Pad(28)</code> 對 28×28 的圖補 0 格，<code>torch.equal</code> 實測輸出與輸入相同，是空操作；它只在畫布變大（例如 <code>expand=True</code>，這時負的 padding 會裁回 28×28）或圖比 28 小時才有作用。</li>
+<li>說明與註解四處寫「10 個任務」，程式與投影片都是 5 個：0°、20°、40°、60°、80°。訓練一個 epoch 469 個 batch（最後一個 96 張），測試 2 個 batch。</li>
+<li>攤平之後的 cosine similarity：轉 20° 是 0.604，比「同 label 的另一張圖」（0.520）還像；轉 60°、80° 只剩 0.323、0.293，比兩張隨機圖（0.391）還不像。只學過任務 1 的模型在五個任務上是 98.03／90.53／55.66／25.68／14.02，和相似度一起單調下降。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 如果把 <code>Pad(28)</code> 從 <code>get_transform</code> 裡拿掉，訓練結果會改變嗎？</summary>
+<p>不會。<code>Pad(28)</code> 對 28×28 的輸入四邊各補 0 格，實測輸出與輸入 <code>torch.equal</code>；它也不用亂數。拿掉它，模型看到的每一張圖都和原本相同，結果應該逐位元一樣。本書沒有實際重跑六種方法驗證這一點，但這一步沒有任何作用是實測過的。</p></details>
+<details class="quiz"><summary>2. 如果把 <code>dataset.py</code> 的 <code>rotate</code> 加上 <code>expand=True</code>，會發生什麼事？</summary>
+<p>畫布會放大到裝得下整張轉過的圖：實測任務 2–5 是 36×36、40×40、40×40、34×34。但結果<strong>不會</strong>改變：差距都是偶數，<code>Pad</code> 的 <code>assert</code> 通過，算出的 padding 是負數，<code>F.pad</code> 遇到負數會從四邊裁掉，剛好把中央裁回 28×28；五個角度的輸出都和原本的 <code>torch.equal</code>（1.3 節）。如果某個角度讓畫布大小和 28 差奇數格，<code>assert</code> 就會失敗；這五個角度沒有遇到。</p></details>
+<details class="quiz"><summary>3. 任務 2 的訓練集和任務 1 的訓練集，label 的分布一樣嗎？</summary>
+<p>完全一樣。五個任務是同一批 60,000 張圖、同一組 label，只是轉換不同；實測五份訓練集前五個 label 都是 <code>[5, 0, 4, 1, 9]</code>。所以每個任務都是同樣的十類分類問題，變的只有輸入。</p></details>
+<details class="quiz"><summary>4. 只學過任務 1 的模型，在任務 5 上有 14.02%。這比亂猜好多少？為什麼不是 0%？</summary>
+<p>十類亂猜的期望準確率是 10%，14.02% 只比亂猜好一點。不是 0% 是因為有些數字轉 80° 之後在像素上仍有部分重疊（例如 0 轉了還是一個圈），而且模型對任何輸入都會給出某個類別，就算全錯也會碰巧猜對一些。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>torchvision 文件：<a href="https://pytorch.org/vision/stable/generated/torchvision.transforms.functional.rotate.html">torchvision.transforms.functional.rotate</a>（本章用到的預設值都在這裡）。</li>
+<li>Yann LeCun 等，<a href="http://yann.lecun.com/exdb/mnist/">The MNIST database of handwritten digits</a>。</li>
+<li>David Lopez-Paz、Marc'Aurelio Ranzato，<a href="https://arxiv.org/abs/1706.08840">Gradient Episodic Memory for Continual Learning</a>（2017）：GEM 的論文，也是最早用 Rotated MNIST 當持續學習基準的論文之一；GEM 本身在第 8 章介紹。</li>
+<li>Sebastian Farquhar、Yarin Gal，<a href="https://arxiv.org/abs/1805.09733">Towards Robust Evaluations of Continual Learning</a>（2018）：檢討 Permuted MNIST 這類基準為什麼太簡單。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW14 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW14 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+</script>
+</body>
+</html>

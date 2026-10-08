@@ -90,3 +90,14 @@ Baseline 學完任務 1 時，各任務是 98.03 / 90.53 / 55.66 / 25.68 / 14.02
 | SCP | 16.0 / 35.9 / 71.2 / 141 / 282 | 0.0211 / 0.0427 / 0.0804 / 0.156 / 0.313 |
 
 觀察（待實驗確認）：EWC、MAS、SCP 的總和每個任務大約加倍，符合疑點 3 的「guard 重複累加」；EWC 的重要度只有 0.44，乘上 λ=100 仍很小，結果和 baseline 幾乎一樣；MAS 的重要度大 6 個數量級，λ=0.1 也壓不住，舊任務保住了，但新任務學不好（對角線 97.9 → 89.7）。各方法的 λ 與重要度量級沒有可比性。
+
+## ch01 實測（資料，2026-10-08）
+- `transforms.functional.rotate` 在 torchvision 0.26 的簽名：`interpolation=NEAREST, expand=False, center=None, fill=None`；正角度逆時針（第 2 列第 14 行的亮點轉 +90° 到 `[13, 2]`）。
+- `ToTensor` 後：`torch.Size([1, 28, 28])`、float32、min 0.0、max 1.0；第一張訓練圖 label 5；沒有 mean/std 正規化。
+- `torch.equal(Pad(28)(x), x)` 為 True。改成 `expand=True`：畫布 28/36/40/40/34，`Pad(28)` 的負 padding 裁回 28×28，五個角度都與 `expand=False` 的輸出 `torch.equal`。
+- 五份訓練集前五個 label 都是 `[5, 0, 4, 1, 9]`（同一批圖）；`raw_folder` = `data/MNIST/MNIST/raw`。
+- `len(DataLoader)`：訓練 469（最後一批 96 張）、測試 2（8192 + 1808）。
+- 測試集前 2,000 張，旋轉後總亮度 / 原圖：0.9995（20°）、0.9988（40°）、1.0000（60°）、1.0057（80°）。
+- 攤平 cosine similarity（同一張圖，轉 k° vs 0°）：1.000 / 0.604 / 0.408 / 0.323 / 0.293；參考：同 label 不同圖 0.520、隨機兩張 0.391（`torch.Generator().manual_seed(0)` 配對）。
+- 樣本圖 `docs/HW14/img/tasks.png`：訓練集每個 label 第一次出現的索引 label0..9 = 1, 3, 5, 7, 2, 0, 13, 15, 17, 4。
+- A 組 `A_baseline_s0` 最後 70.592，與參照版 baseline 完全相同（兩者都是種子 0 之後第一個跑的方法）。
