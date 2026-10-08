@@ -347,3 +347,18 @@ FID64（n = 1000、z 種子 0；FID96 與 AFD 見 jsonl）：
 - WGAN 判別器卡在 ±0.01 的比例（不含 running stats）：D_0 11.4%、D_49 22.3%、D_99 22.0%；各層 weight：D_0 l1.0 .04／l1.2.0 .04／l1.2.1(BN) .60／l1.3.0 .05／l1.3.1 .95／l1.4.0 .13／l1.4.1 1.00／l1.5 .99；D_49 .04／.03／.45／.06／.59／.27／1.00／1.00；D_99 .04／.02／.26／.05／.52／.27／1.00／.99。max |w| 全部 0.0100。
 - 只換 loss_G（lit_lossg）每 epoch 結束：ep1 `45.03it/s, loss_D=6.96e-7, loss_G=-3.85e-7`；ep2 `62.17it/s, loss_D=0.133, loss_G=-7.75e-5`；ep3 `63.99it/s, loss_D=0.266, loss_G=-0.00744`；ep4 `63.52it/s, loss_D=0.193, loss_G=-0.0681`；ep5 `62.48it/s, loss_D=0.0542, loss_G=-0.0168`；ep10 `62.26it/s, loss_D=0.0777, loss_G=-0.0179`；ep20 `61.88it/s, loss_D=1.51e-5, loss_G=-6.74e-6`。圖 `docs/HW06/img/ch06_lossg_epoch{001,020}.png`（樣本格第一列）。
 - 圖 6.3 由 scratchpad 的 `ch06_chart.py` 產生。
+
+## ch07 實測（2026-10-08）
+- 判別器 5 層權重梯度範數（訓練中每 100 步，`loss_D.backward()` 後；WGAN-GP 含 penalty），**ep91–100 的 111 筆，中位數 [四分位]**：
+  - clipping（wgan）：49.5 [41.6, 59.4]、18.2 [17.3, 19.1]、3.68 [3.44, 3.88]、0.316 [0.294, 0.331]、0.614 [0.575, 0.661]；conv1/conv4 = **156.7**；相鄰層比 2.72、4.95、11.6。
+  - GP（wgangp）：32.7 [28.0, 39.8]、13.8 [12.7, 15.6]、12.9 [12.2, 14.0]、13.9 [13.3, 14.9]、5.21 [4.92, 5.55]；conv1/conv4 = **2.4**（前 4 層最大/最小 2.55）。
+  - DCGAN：2.41 [1.04, 5.78]、0.457、0.243、0.170、0.237；conv1/conv4 = 14.2。
+  - 全程（1,115 筆）中位數：wgan 42.9、16.5、3.58、0.318、0.801；wgangp 40.6、16.0、14.3、14.0、5.34；gan 4.43、0.961、0.485、0.330、0.469。
+- **critic 對輸入的梯度 ‖∇ₓD(x)‖**（載入 D_e 與 G_e、critic 訓練模式、256 張真圖〔get_dataset 轉換，sorted 檔名 randperm 種子 0〕、256 張生成圖〔z 種子 1〕、內插 α 種子 2，每批 64；平均 ± 標準差）：
+  - wgan D_0 真 0.0375±0.0100、假 0.0619±0.0095、內插 0.2064±0.0318；D_49 0.5814±0.0401、0.2052±0.0405、0.3357±0.0932；D_99 0.5419±0.1240、1.4672±0.1200、1.3438±0.1949。
+  - wgangp D_0 2.7512±0.5986、2.1959±0.2491、1.7788±0.4937；D_49 1.7202±0.4498、1.5733±0.3969、1.1718±0.2999；D_99 1.7021±0.4476、1.6916±0.4316、**1.2015±0.2707**。
+- WGAN-GP 的 FID64 回升只有三次：ep40→45 125.5→129.3、ep80→85 98.8→101.1、ep95→100 94.1→96.7。
+- 時間比：wgangp 2,647.5 s ÷ wgan 1,180.8 = 2.24；÷ gan 1,732.3 = 1.53。
+- 照註解字面改 WGAN-GP 的 traceback（lit_gp）：`    gradient_penalty = self.gp(r_imgs, f_imgs)` / `                       ^^^^^^^^^^^^^^^^^^^^^^^` / `TypeError: TrainerGAN.gp() takes 1 positional argument but 3 were given`。
+- lucidrains stylegan2-pytorch 1.9.0 的 `gradient_penalty(images, output, weight = 10, center = 0.)`：以 0 為目標；`apply_gradient_penalty = self.steps % 4 == 0`；`gp = gradient_penalty(image_batch, real_output) + gradient_penalty(generated_images, fake_output)`（真圖與生成圖都算）。
+- 圖 7.1 由 scratchpad 的 `ch07_chart.py` 產生（WGAN 橘、WGAN-GP 青綠、DCGAN 藍虛線）。
