@@ -268,3 +268,17 @@ FID64（n = 1000、z 種子 0；FID96 與 AFD 見 jsonl）：
 - 查不到的：PFN 用的是哪一種 GAN 架構（公告沒寫 StyleGAN）、是哪一條鏈。教材不寫這兩點。
 - 投影片 p.9：「Website which can generate anime face by yourself」「Thanks Arvin Liu for collecting the dataset」。→ 作業的 71,314 張是 Crypko 生成的角色圖，即**訓練資料本身就是 GAN 的輸出**（由「Crypko 是 GAN 服務」推得；資料集何時、怎麼收集沒有公開來源）。
 - 使用者決定（2026-10-08）：書裡放少量 Crypko 原圖。
+
+## ch00 實測（2026-10-08）
+- baseline 進度條（`baseline_stderr`，\r 換行後取每個 epoch 最後一格）：
+  - `Epoch 1: 100%|██████████| 1115/1115 [00:20<00:00, 58.45it/s, loss_D=0.171, loss_G=5.12]`
+  - `Epoch 2: … [00:17<00:00, 64.78it/s, loss_D=0.175, loss_G=3.25]`；`Epoch 15: … 64.65it/s, loss_D=0.085, loss_G=4.37]`；**`Epoch 20: … 64.41it/s, loss_D=3.03e-7, loss_G=49.9]`**（崩潰的那個 epoch）；`Epoch 99: … 64.13it/s, loss_D=0.0833, loss_G=14]`；`Epoch 100: … 64.41it/s, loss_D=0.0402, loss_G=24.4]`。
+  - 第 1 個 epoch 第 0 步：`loss_D=0.929, loss_G=3.43`。每個 epoch 開頭先出現一格沒有描述的 `  0%|          | 0/1115`（tqdm 建好後才 `set_description`），在終端機上會被同一行覆蓋。
+  - logging 的 INFO（stderr，時間到分鐘）：`2026-10-07 11:00 - INFO: Save some samples to ./logs/2026-10-07_11-00-32_GAN/Epoch_001.jpg.`；Epoch_015 是 11:04、Epoch_020 是 11:06、Epoch_100 是 11:29；最後 `2026-10-07 11:29 - INFO: Finish training`。stdout 是空的。
+- 訓練時 GPU 記憶體約 760 MiB（nvidia-smi）。
+- 輸出大小：`logs/2026-10-07_11-00-32_GAN/` 100 張共 14 MB（Epoch_001.jpg 158,176 B、662×662）；`checkpoints/…` 21 對共 636 MB，G 每個 20,644,700 B，D 11,080,476（D_0）／11,080,507 B。
+- `test.py`（scratchpad 複本）：印 `Inference with ./checkpoints/2026-10-07_11-00-32_GAN/G_99.pth`，**7.59 s**，`output/1.jpg` 1,797 B。
+- 參數計數指令（ch00 的 shell cmd）輸出逐字已在 ch00；轉置卷積權重 (in, out, k, k)、卷積 (out, in, k, k)。
+- 判別器吃 128×128：輸出 `torch.Size([100])`（4 張 × 5×5），BCELoss 報 `ValueError: Using a target size (torch.Size([4])) that is different to the input size (torch.Size([100])) is deprecated. Please ensure they have the same size.`
+- `HW06/.gitignore`：`checkpoints/*`、`faces/*`、`logs/*`、`output/*`、`*.zip`。`HW06/筆記.txt` 日期 2022/10/01，三條（n_epoch 提升有效；WGAN/WGAN-GP 只換 loss_G 不能用；StyleGAN2 在 win10 + py3.8 裝不起來）。
+- 圖：`docs/HW06/img/ch00_epoch015.png`、`ch00_epoch100.png`（`Epoch_015/100.jpg` 前 3 列，662×200）。
