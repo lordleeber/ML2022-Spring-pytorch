@@ -95,3 +95,12 @@ HW04 也是同一個本機 session 依序寫完，沿用 HW02、HW03 的做法�
 - **scratchpad 可能在 session 中途被清空**（HW04 發生一次）：checkpoint 與暫存工具都會消失，所以工具要能重跑出相同結果，數字一律即時寫進 FACTS 與 jsonl。
 - **授權範圍照字面**：使用者說「之後不用等我、一路做完並推」時，每章寫完驗證就推、繼續下一章；規格外的加跑在授權裡明講過才跑。
 
+
+## HW06 的調整（2026-10-07～08）
+
+HW06 同樣由本機 session 依序寫完（不冷讀，使用者決定），另外學到這些：
+- **大綱前先對照目前版本的 skill**：HW06 原本照抄 HW04 的結構（含 appendix）與舊共用樣式，寫完才發現 completed-repo-to-html-textbook 已改成「不寫附錄」「不用舊的 style.css／enhance.js／inline_assets.py，每本書自己設計樣板、寫在 index.html」。後來把附錄併入最後一章、全書換樣板。下一本書在 Phase 0 就照現行 skill 做。
+- **渲染可以在本機看**：Windows 的 Chrome 可以 headless 截 WSL 裡的頁面（`chrome.exe --headless=new --user-data-dir=<scratch> --window-size=1200,N --screenshot=<path> file://wsl.localhost/...`）；HW06 靠它抓到兩個版面錯誤。
+- **評估工具也要先驗證**：FID 用的 pytorch-fid 0.3.0 在 SciPy 1.18 上會壞、OpenCV 5 沒有 CascadeClassifier；量法本身（樣本數、JPEG、種子）要在寫章之前先量清楚雜訊與偏差（HW06 第 4 章）。
+- **checkpoint 之間也要看**：GAN 的崩潰可能發生在兩個存檔之間；每個 epoch 的樣本格可以算出逐 epoch 的多樣性（HW06 第 5 章）。
+- **長任務每 30 分鐘回報**（session cron），使用者 2026-10-07 起的通用規則。

@@ -55,3 +55,9 @@ HW06（Anime Face Generation，用 GAN 從 100 維雜訊產生 64×64 的動漫�
 - 資料：`HW06/faces/` 71,314 張 96×96 RGB JPEG（560 MB），檔名 0.jpg–71313.jpg；被 `.gitignore` 排除。來源 Crypko（Arvin Liu 收集），授權沒寫；使用者決定原圖放少量。
 - `HW06/` 裡已有 2026-10-03 的一次 100 epoch 訓練（logs、checkpoints、output），2026-10-07 又跑一次計時。
 - 生成圖都是 JPEG；根目錄 `.gitignore` 排除 `*.jpg`，要放進書裡時加 `!docs/HW06/img/*.jpg` 或轉 PNG。
+
+## 2026-10-08 改版（依 completed-repo-to-html-textbook 現行版本）
+- 不寫附錄：名詞對照與速查併入 ch08（8.8、8.9）。
+- 樣式：不再用舊的共用 `style.css`／`enhance.js`／`inline_assets.py`（skill 註明「本 skill 不再使用」）。使用者選擇「HW06 全書重新設計」：依 Artifact 設計指引為本書設計一次（深墨紫 #15131d 底、象牙色字、櫻花粉 #ef8fae 強調、青色連結；Noto Serif TC 標題、Noto Sans TC 內文、JetBrains Mono 程式；頁首眉標是本書的資料流 `z ∈ ℝ¹⁰⁰ → G → 3×64×64 → D → 分數`），定義在 `index.html` 的 `<style id="book-style">`、`<script id="book-js">`，其他 10 頁逐字複製（11 頁雜湊相同）。原始檔與套用腳本存在 `docs/tools/hw06_book/`（`python3 docs/tools/hw06_book/apply_template.py docs/HW06 docs/tools/hw06_book/book.css docs/tools/hw06_book/book.js`）。
+- 舊 class 名稱全部沿用，內容不用改；ch00 導覽列拿掉多出來的「← 教學大綱」。
+- 渲染檢查：Windows 的 Chrome headless（`--headless=new --user-data-dir=<scratch>`、`file://wsl.localhost/...`）截 ch00、ch03、ch05、index；抓到並修了兩個問題（本章目錄重複編號、`ol.notes` 被 grid 拆成一字一行）。其餘頁沒有逐一截圖。
