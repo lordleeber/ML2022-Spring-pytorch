@@ -8,6 +8,9 @@
   model    ch02: transposed-conv shape formula, conv_transpose2d == gradient of conv2d, which modules
            weights_init touches and the resulting weight statistics, outputs of the freshly
            initialized G and D (train.py's seed order: same_seeds(2022) -> Generator -> Discriminator)
+  div      ch05: per-epoch diversity from the sample grids Epoch_001..100.jpg of a run directory (argv[2]):
+           the 100 tiles (64x64, padding 2) of each grid, mean per-pixel std over the 100 tiles (0-255)
+           and the median pairwise L2 distance (pixels in [0,1]); one JSON line per epoch
   figs     PNG grids for the book: the first 24 files by number at 96x96 and after the transform
            (64x64), written to the directory given as the second argument
 """
@@ -120,6 +123,22 @@ elif cmd == 'model':
         print('BCE at init: D loss %.4f (ln2 = %.4f), G loss %.4f' % (
             ((bce(dr, torch.ones(64)) + bce(df, torch.zeros(64))) / 2).item(), torch.log(torch.tensor(2.)).item(),
             bce(df, torch.ones(64)).item()))
+
+elif cmd == 'div':
+    import json
+    d = sys.argv[2]
+    for e in range(1, 101):
+        p = os.path.join(d, f'Epoch_{e:03d}.jpg')
+        if not os.path.exists(p):
+            continue
+        g = torchvision.io.read_image(p).float() / 255           # 3 x 662 x 662
+        tiles = torch.stack([g[:, 2 + 66 * r: 66 + 66 * r, 2 + 66 * c: 66 + 66 * c]
+                             for r in range(10) for c in range(10)])   # 100 x 3 x 64 x 64
+        flat = tiles.flatten(1)
+        pd = torch.cdist(flat, flat)
+        iu = torch.triu_indices(100, 100, 1)
+        print(json.dumps(dict(epoch=e, pixel_std=round(tiles.std(0).mean().item() * 255, 2),
+                              pair_l2_median=round(pd[iu[0], iu[1]].median().item(), 2))))
 
 elif cmd == 'figs':
     out = sys.argv[2]

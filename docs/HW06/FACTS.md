@@ -329,3 +329,12 @@ FID64（n = 1000、z 種子 0；FID96 與 AFD 見 jsonl）：
 - pytorch-fid 的 InceptionV3 預設 `resize_input=True`（雙線性放大到 299×299）、`normalize_input=True`。
 - AFD 範例：G_99 的 1000 張（種子 0、`--keep`）偵測到 666 張、沒偵測到 334 張；前 10 張偵測到的是 2, 4, 6, 7, 9, 10, 11, 12, 13, 16，沒偵測到的是 1, 3, 5, 8, 14, 15, 20, 22, 23, 28。圖 `docs/HW06/img/ch04_afd_yes.png`（畫了偵測框）、`ch04_afd_no.png`。兩排目視差不多。
 - `inference` 的 `show=True` 分支：`row = n_output // 10 + 1` = 4 被當成 `make_grid` 的 `nrow`（每列張數），`figsize=(row, col)` = (4, 10)（推論，`show` 預設 False，沒有實際跑）。
+
+## ch05 實測（2026-10-08）
+- `hw06_facts.py div <run_dir>`：每張樣本格 `Epoch_XXX.jpg`（662×662、10×10、padding 2）切成 100 張 64×64，算 100 張之間每個像素的標準差平均（0–255）與兩兩 L2 中位數。結果存 `docs/tools/hw06_logs/div_{gan,wgan,wgangp,wgan_sigmoid}.jsonl`（gan 用 HW06/logs/2026-10-07_11-00-32_GAN，其餘用 grid 的輸出資料夾）。
+- DCGAN：std < 30 的 epoch = **19–22、25–27、31、34–35**；最低 17.83（ep19）；最高 60.66（ep16）；ep2–18 46.35–60.66；ep23 53.38、ep24 57.29（恢復）；ep27 20.89、ep28 44.68、ep29 36.86、ep30 38.16、ep31 29.94、ep32 30.19、ep33 30.24、ep34 28.60、ep35 21.23、ep36 44.59；ep36–100 35.6–54.8，其中 78% 在 40–50；ep55 37.21、ep90 51.26、ep100 47.00。
+- WGAN：全程 ≥ 51.75（ep1），ep≥10 最低 56.35，ep100 57.8；最高 65.69（ep4）。WGAN-GP：全程 ≥ 53.45（ep6），ep≥10 最低 53.91，ep100 58.24。wgan_sigmoid：全程 < 22（最低 15.71 ep13、最高 21.67）。
+- 真圖參考（get_dataset 轉換後 tensor、不經 JPEG）：隨機 100 張（種子 0／1／2）std 58.96／57.10／58.19，兩兩 L2 中位數 35.14／34.27／34.99。
+- 21 個存檔依 FID64 排序，G_99（211.9）是第 9 名；G_44 178.3 是第 40 epoch 之後最低。
+- 樣本格前 2 列（20 個 z）：`docs/HW06/img/ch05_epoch{015,020,024,026,035,100}.png`（662×134）。目視：ep20 花掉的同一張；**ep24 恢復且同位置與 ep15 相像**；ep26 幾乎同一張棕髮瞇眼微笑臉；ep35 同一種模糊臉；ep100 較糊、偏淡。
+- 四色配色（DCGAN #3987e5、WGAN #d95926、WGAN-GP #199e70、StyleGAN2 #c98500）以 validate_palette.js 在 #161c24 上全部通過（最差相鄰 CVD ΔE 8.4、normal 19.8）。圖由 scratchpad 的 `ch05_chart.py` 產生。
