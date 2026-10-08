@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 0 章　全貌 — HW14 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=LXGW+WenKai+TC:wght@400;700&amp;display=swap">
+<style id="book-style">
+/* HW14 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「記憶實驗紀錄本」——偏藍綠的石墨底、紙白的字、赭黃只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   方法色（圖表與標籤）：baseline 灰、EWC 藍、MAS 橘、SI 青、RWalk 黃、SCP 洋紅、joint 紫、replay 綠
+   （dataviz 參考色盤的暗色步階，2026-10-08 以 validate_palette.js 對 #181e25 驗證通過）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #12161b;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #d9a35b;      /* 赭黃：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(217, 163, 91, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #d9a35b;
+  /* 方法色 */
+  --m-baseline: #8b949e; --m-ewc: #3987e5; --m-mas: #d95926; --m-si: #199e70;
+  --m-rwalk: #c98500; --m-scp: #d55181; --m-joint: #9085e9; --m-replay: #008300;
+  /* type */
+  --font-display: "LXGW WenKai TC", "Kaiti TC", "BiauKai", "Noto Serif TC", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "任務 1 → 2 → 3 → 4 → 5　·　0° 20° 40° 60° 80°　·　784 → 1024 → 512 → 256 → 10";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fbf4e8; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #161d24; border-color: rgba(217, 163, 91, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #16120b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 方法標籤（色塊只標身分，文字一律用內文色） ---------- */
+.mth { white-space: nowrap; }
+.mth::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--mc, var(--muted)); }
+.mth.baseline { --mc: var(--m-baseline); } .mth.ewc { --mc: var(--m-ewc); } .mth.mas { --mc: var(--m-mas); }
+.mth.si { --mc: var(--m-si); } .mth.rwalk { --mc: var(--m-rwalk); } .mth.scp { --mc: var(--m-scp); }
+.mth.joint { --mc: var(--m-joint); } .mth.replay { --mc: var(--m-replay); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="index.html">← 目錄</a><a href="ch01.html">第 1 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW14 讀碼教材</p>
+  <h1>第 0 章　全貌：五個任務、六種方法、一張成績表</h1>
+  <p class="chap-lead">這一章先把整份作業跑一遍：題目要什麼、模型長什麼樣子、指令怎麼下、跑多久、印出什麼。也交代本 repo 怎麼把 notebook 拆成檔案，以及怎麼確認拆完之後結果一個位元都沒變。讀完這章，你手上會有一張六種方法的成績表和報告要交的那張學習曲線；後面八章逐一回答「這些數字為什麼長這樣」。</p>
+</header>
+<main>
+
+<h2 id="task">0.1　題目：同一個模型，依序學五個任務</h2>
+<p>一般的分類作業是「給一份資料，訓練一個模型」。HW14 換了一個條件：資料分成好幾個<strong>任務</strong>（task），模型<strong>一次只看得到一個任務的資料</strong>，學完一個才換下一個，而且不能回頭再看舊資料。投影片 p.6 的說法是 Model Sequentially Learn Different Task。目標是學完全部任務之後，模型在每個任務上都還要表現得好（p.5：A model can beat all task!）。</p>
+<p>這份作業的五個任務都是辨認 0–9 的手寫數字（MNIST），差別只在圖片轉了幾度：任務 1 是原圖、任務 2 轉 20°、任務 3 轉 40°、任務 4 轉 60°、任務 5 轉 80°（投影片 p.12；第 1 章會看到實際的圖）。每個任務訓練 10 個 epoch，五個任務一共 50 個 epoch。</p>
+<p>如果什麼都不做，直接接著訓練，模型會漸漸忘掉舊任務：在任務 5 上練好的權重，拿去認正放的數字就不準了。這個現象叫 <strong>catastrophic forgetting</strong>（災難性遺忘）。研究「怎麼依序學、又不要忘」的領域叫 <strong>lifelong learning</strong>（終身學習），也叫 <strong>continual learning</strong>（持續學習）；本書兩個詞都會出現，指的是同一件事。</p>
+<p>範例程式已經把六種做法寫好，用同一套訓練與評估函式並排比較：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>方法</th><th>一句話</th><th>出處</th><th>章</th></tr></thead>
+<tbody>
+<tr><td><span class="mth baseline">baseline</span></td><td>什麼都不做，直接依序訓練</td><td>—</td><td>3</td></tr>
+<tr><td><span class="mth ewc">EWC</span></td><td>Elastic Weight Consolidation：用 Fisher 資訊估計每個參數對舊任務多重要，loss 裡加一項懲罰重要參數的變動</td><td>Kirkpatrick 等，2017</td><td>4</td></tr>
+<tr><td><span class="mth mas">MAS</span></td><td>Memory Aware Synapses：用「輸出對參數有多敏感」當重要度，不需要 label；<strong>重要度怎麼算是作業的 TODO</strong></td><td>Aljundi 等，2018</td><td>5</td></tr>
+<tr><td><span class="mth si">SI</span></td><td>Synaptic Intelligence：訓練過程中，累加每個參數的每一步更新對 loss 下降貢獻了多少</td><td>Zenke 等，2017</td><td>6</td></tr>
+<tr><td><span class="mth rwalk">RWalk</span></td><td>Riemannian Walk：EWC 的 Fisher 加上 SI 式的累加分數</td><td>Chaudhry 等，2018</td><td>7</td></tr>
+<tr><td><span class="mth scp">SCP</span></td><td>Sliced Cramér Preservation：在輸出的分布上取很多個隨機方向，看參數對這些方向的影響</td><td>Kolouri 等，2020</td><td>7</td></tr>
+</tbody>
+</table></div>
+<p>後五種都屬於同一類做法：在原本的分類 loss 後面加一個正則化項，把「重要的參數」拉住，不讓它離舊任務學到的值太遠。差別只在怎麼判斷一個參數重不重要。</p>
+<p>這份作業<strong>沒有排行榜</strong>，也沒有要你把準確率往上推。評分分兩部分（投影片 p.30–32）：</p>
+<ul>
+<li><strong>20 題選擇題，8 分</strong>：每題 0.4 分，要選對所有正確選項才給分。基本觀念 3 題、EWC 2 題、MAS 2 題、SI 2 題、RWalk 2 題、SCP 3 題、其他方法與情境 6 題。最後這 6 題考的是範例程式沒有寫的 iCaRL、LwF、GEM、DGR，以及「三種持續學習情境」，第 8 章會補上。</li>
+<li><strong>報告，2 分</strong>：畫出每種方法的學習曲線（0.5 分，畫圖函式已提供，本章 0.6 節就會畫出來）；描述這條曲線用的指標（0.5 分，第 2 章）；貼上你寫的 MAS 重要度程式（1 分，第 5 章）。投影片特別註明：MAS 的 TODO 沒寫出來，只要學習曲線畫對，第一部分照樣給分。</li>
+</ul>
+<p>因為評分不看準確率，這本書的重點不是「怎麼贏」，而是讀懂每種方法在程式裡到底算了什麼、算出來的東西大小如何、換個設定結果會不會翻盤。</p>
+
+<h2 id="model">0.2　模型總覽：四層全連接網路</h2>
+<p>為了公平比較，作業把模型固定住，不准改架構（notebook 的 Model Architecture 一格：To fair comparison, we fix our model architecture）。它是一個最基本的多層感知器（multilayer perceptron，MLP）：把 28×28 的圖攤平成 784 個數，經過三層「全連接 + ReLU」，最後一層輸出 10 個數，分別是 0–9 的分數（logits，還沒經過 softmax 的分數）。</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 250" role="img" aria-label="模型架構：輸入 (128, 1, 28, 28) 攤平成 (128, 784)，經過 fc1 變成 (128, 1024)、ReLU，fc2 變成 (128, 512)、ReLU，fc3 變成 (128, 256)、ReLU，fc4 變成 (128, 10) 的 logits。各層參數量：fc1 803,840、fc2 524,800、fc3 131,328、fc4 2,570">
+  <defs>
+    <marker id="arM" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#9aa5b1"/>
+    </marker>
+  </defs>
+  <rect x="10" y="40" width="120" height="120" rx="8" class="s-box"/>
+  <text class="s-lbl" x="70" y="72" text-anchor="middle" font-weight="700">輸入圖</text>
+  <text class="s-mono" x="70" y="98" text-anchor="middle">(128,1,28,28)</text>
+  <text class="s-sm" x="70" y="124" text-anchor="middle">view 攤平</text>
+  <text class="s-mono" x="70" y="146" text-anchor="middle">→ (128, 784)</text>
+
+  <rect x="170" y="40" width="160" height="120" rx="8" class="s-box" style="stroke:#d9a35b"/>
+  <text class="s-lbl" x="250" y="72" text-anchor="middle" font-weight="700">fc1 + ReLU</text>
+  <text class="s-mono" x="250" y="98" text-anchor="middle">Linear(784, 1024)</text>
+  <text class="s-mono" x="250" y="124" text-anchor="middle">→ (128, 1024)</text>
+  <text class="s-sm" x="250" y="146" text-anchor="middle">803,840 個參數</text>
+
+  <rect x="370" y="40" width="160" height="120" rx="8" class="s-box" style="stroke:#d9a35b"/>
+  <text class="s-lbl" x="450" y="72" text-anchor="middle" font-weight="700">fc2 + ReLU</text>
+  <text class="s-mono" x="450" y="98" text-anchor="middle">Linear(1024, 512)</text>
+  <text class="s-mono" x="450" y="124" text-anchor="middle">→ (128, 512)</text>
+  <text class="s-sm" x="450" y="146" text-anchor="middle">524,800 個參數</text>
+
+  <rect x="570" y="40" width="150" height="120" rx="8" class="s-box" style="stroke:#d9a35b"/>
+  <text class="s-lbl" x="645" y="72" text-anchor="middle" font-weight="700">fc3 + ReLU</text>
+  <text class="s-mono" x="645" y="98" text-anchor="middle">Linear(512, 256)</text>
+  <text class="s-mono" x="645" y="124" text-anchor="middle">→ (128, 256)</text>
+  <text class="s-sm" x="645" y="146" text-anchor="middle">131,328 個參數</text>
+
+  <rect x="760" y="40" width="130" height="120" rx="8" class="s-box" style="stroke:#d9a35b"/>
+  <text class="s-lbl" x="825" y="72" text-anchor="middle" font-weight="700">fc4</text>
+  <text class="s-mono" x="825" y="98" text-anchor="middle">Linear(256, 10)</text>
+  <text class="s-mono" x="825" y="124" text-anchor="middle">→ (128, 10)</text>
+  <text class="s-sm" x="825" y="146" text-anchor="middle">2,570 個參數</text>
+
+  <line x1="132" y1="100" x2="166" y2="100" stroke="#9aa5b1" stroke-width="2" marker-end="url(#arM)"/>
+  <line x1="332" y1="100" x2="366" y2="100" stroke="#9aa5b1" stroke-width="2" marker-end="url(#arM)"/>
+  <line x1="532" y1="100" x2="566" y2="100" stroke="#9aa5b1" stroke-width="2" marker-end="url(#arM)"/>
+  <line x1="722" y1="100" x2="756" y2="100" stroke="#9aa5b1" stroke-width="2" marker-end="url(#arM)"/>
+
+  <text class="s-sm" x="450" y="200" text-anchor="middle">形狀以一個訓練 batch（128 張）為例；ReLU 沒有參數。輸出的 10 個數是 0–9 的 logits，交給 CrossEntropyLoss。</text>
+  <text class="s-sm" x="450" y="224" text-anchor="middle">合計 1,462,538 個參數，其中 fc1 佔 55%。後面每一種方法都要替這 1,462,538 個參數各算一個「重要度」。</text>
+</svg>
+<figcaption>圖 0.1　<code>model.py</code> 的 <code>Model</code>。橘框是有參數的層。</figcaption>
+</figure>
+
+<figure class="listing"><figcaption>model.py:4–26 — Model：四個 Linear，前三個後面接 ReLU</figcaption>
+<pre class="py" data-hot="11-14,18"><code>class Model(nn.Module):
+  """
+  Model architecture 
+  1*28*28 (input) → 1024 → 512 → 256 → 10
+  """
+  def __init__(self):
+    super(Model, self).__init__()
+    self.fc1 = nn.Linear(1*28*28, 1024)
+    self.fc2 = nn.Linear(1024, 512)
+    self.fc3 = nn.Linear(512, 256)
+    self.fc4 = nn.Linear(256, 10)
+    self.relu = nn.ReLU()
+
+  def forward(self, x):
+    x = x.view(-1, 1*28*28)
+    x = self.fc1(x)
+    x = self.relu(x)
+    x = self.fc2(x)
+    x = self.relu(x)
+    x = self.fc3(x)
+    x = self.relu(x)
+    x = self.fc4(x)
+    return x</code></pre></figure>
+<p>第 18 行的 <code>x.view(-1, 1*28*28)</code> 把每張圖攤平：<code>-1</code> 的意思是「這一維讓 PyTorch 自己算」，輸入是 <code>(128, 1, 28, 28)</code> 時算出來是 128，所以結果是 <code>(128, 784)</code>。攤平之後，像素的上下左右關係對模型來說就不存在了：模型只看得到「第 i 個像素的值是多少」。這一點在第 1 章很重要，因為「把圖轉 20°」對這個模型而言，等於把 784 個輸入重新洗牌、混合，和「同一個數字」的直覺相差很遠。</p>
+<p>一個 <code>nn.Linear(a, b)</code> 有一個 <code>b×a</code> 的權重矩陣和 <code>b</code> 個偏置（bias），參數量是 <code>a·b + b</code>。手算四層：</p>
+<div class="eq">fc1：784 × 1024 + 1024 = 802,816 + 1,024 = 803,840<br>
+fc2：1024 × 512 + 512 = 524,288 + 512 = 524,800<br>
+fc3：512 × 256 + 256 = 131,072 + 256 = 131,328<br>
+fc4：256 × 10 + 10 = 2,560 + 10 = 2,570<br>
+合計：803,840 + 524,800 + 131,328 + 2,570 = 1,462,538</div>
+<p>讓 PyTorch 自己數一次：</p>
+<pre class="shell cmd"><code>$ cd HW14
+$ ../.venv/bin/python -c "
+from model import Model
+m = Model()
+for n, p in m.named_parameters(): print(n, tuple(p.shape), p.numel())
+print(sum(p.numel() for p in m.parameters()))"</code></pre>
+<pre class="shell"><code>fc1.weight (1024, 784) 802816
+fc1.bias (1024,) 1024
+fc2.weight (512, 1024) 524288
+fc2.bias (512,) 512
+fc3.weight (256, 512) 131072
+fc3.bias (256,) 256
+fc4.weight (10, 256) 2560
+fc4.bias (10,) 10
+1462538</code></pre>
+<p>和手算一致。注意權重的形狀是 <code>(輸出, 輸入)</code>：<code>fc1.weight</code> 是 <code>(1024, 784)</code>，不是 <code>(784, 1024)</code>，因為 <code>nn.Linear</code> 算的是 <code>x @ W.T + b</code>。這八個名字（<code>fc1.weight</code>、<code>fc1.bias</code>……）會一再出現：每種方法都用 <code>model.named_parameters()</code> 走過這八個張量，替每一個建一個同形狀的「重要度」張量，以參數名稱當 dict 的 key。</p>
+
+<h2 id="run">0.3　怎麼跑、跑多久</h2>
+<p>本 repo 的 HW14 是這樣跑的：</p>
+<pre class="shell cmd"><code>$ cd HW14
+$ ../.venv/bin/python train.py</code></pre>
+<p>第一次執行時，torchvision 會自動下載 MNIST（約 11 MB 的壓縮檔，解開後整個 <code>data/</code> 是 64 MB）。下載位置是 <code>HW14/data/MNIST/MNIST/raw/</code>，多一層 <code>MNIST</code> 是因為程式把 <code>root</code> 設成 <code>data/MNIST</code>，torchvision 又在底下自己建一個 <code>MNIST</code> 資料夾（第 1 章）。<code>data/</code> 已經加進 <code>.gitignore</code>。</p>
+<figure class="listing"><figcaption>train.py:234–259 — main()：設種子、建資料、依序跑六種方法</figcaption>
+<pre class="py" data-hot="240,251-252,256-259"><code>def main():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--methods', nargs='+', default=list(METHODS), choices=list(METHODS))
+  parser.add_argument('--out', default='output')
+  opt = parser.parse_args()
+
+  same_seeds(0)
+  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+  # prepare rotated MNIST datasets.
+  train_datasets = [Data('data', angle=angle_list[index]) for index in range(args.task_number)]
+  train_dataloaders = [DataLoader(data.dataset, batch_size=args.batch_size, shuffle=True) for data in train_datasets]
+
+  test_datasets = [Data('data', train=False, angle=angle_list[index]) for index in range(args.task_number)]
+  test_dataloaders = [DataLoader(data.dataset, batch_size=args.test_size, shuffle=True) for data in test_datasets]
+
+  # the notebook builds one example model here, which also draws from the random stream
+  example = Model()
+  print(example)
+
+  os.makedirs(opt.out, exist_ok=True)
+  results = {}
+  for name in opt.methods:
+    results[name] = METHODS[name](train_dataloaders, test_dataloaders, device)
+    with open(os.path.join(opt.out, 'acc.json'), 'w') as f:
+      json.dump(results, f, indent=1)</code></pre></figure>
+<p>流程很單純：設種子 0（第 240 行）；替五個角度各建一份訓練資料與測試資料；建一個 <code>example</code> 模型只為了印出來看（第 251–252 行，0.5 節會解釋為什麼保留它）；然後照 <code>METHODS</code> 的順序跑 baseline、EWC、MAS、SI、RWalk、SCP，每跑完一種就把結果寫進 <code>output/acc.json</code>（第 256–259 行）。六個 <code>run_*</code> 函式是 notebook 六格「RUN …」逐字搬過來的，第 3 章讀 baseline 的那一個，其餘五個的差別在第 4–7 章各自說明。</p>
+<p>實測輸出（逐字。進度條用了 <code>leave=False</code>，跑完就從畫面上消失，所以留在終端機上的只有下面這些；每個串列有 50 個數，這裡只留開頭與結尾）：</p>
+<pre class="shell"><code>Model(  «1»
+  (fc1): Linear(in_features=784, out_features=1024, bias=True)
+  (fc2): Linear(in_features=1024, out_features=512, bias=True)
+  (fc3): Linear(in_features=512, out_features=256, bias=True)
+  (fc4): Linear(in_features=256, out_features=10, bias=True)
+  (relu): ReLU()
+)
+RUN BASELINE
+[np.float64(92.58), np.float64(94.63000000000001), np.float64(95.76), …, np.float64(70.59200000000001)]  «2»
+==================================================================================================
+RUN EWC
+[np.float64(92.49000000000001), np.float64(94.63000000000001), np.float64(95.6), …, np.float64(71.66)]
+==================================================================================================
+RUN MAS
+…（MAS、SI、RWalk、SCP 同樣格式）
+RUN SLICE CRAMER PRESERVATION
+[…, np.float64(77.2)]
+==================================================================================================</code></pre>
+<ol class="notes">
+<li><span class="mk">1</span><code>print(example)</code> 印出的模型結構。<code>ReLU</code> 只建一次、四層共用，因為它沒有參數，共用沒有差別。</li>
+<li><span class="mk">2</span>每種方法印一個 50 個數的串列：第 k 個數是第 k 個 epoch 結束時的準確率（%）。它<strong>不是</strong>某一個任務的準確率，而是「目前學過的任務」各自的準確率取平均；第 2 章會把這件事拆開。<code>np.float64(92.58)</code> 這種寫法是 NumPy 2 的 repr；2022 年的 NumPy 1.x 印出來就是 <code>92.58</code>，數值相同。</li>
+</ol>
+<p>在本機（RTX PRO 4000 Blackwell）六種方法全部跑完是 <strong>52 分 07 秒</strong>（21:22:07 到 22:14:14，計時前後確認 GPU 上沒有別的程式）；單獨跑一種方法約 7–8 分鐘。投影片 p.10 說 Tesla T4 上每種方法約 20 分鐘、K80 約 60 分鐘。這個模型很小，GPU 大多時間在等資料：每張圖都要在 CPU 上轉成 tensor、旋轉，第 1 章會看到這段前處理。</p>
+
+<h2 id="split">0.4　notebook 拆成哪些檔：有兩行非改不可</h2>
+<p>官方的 <code>HW14.ipynb</code> 有 44 格。本 repo 把程式拆成下面這些檔（<a href="index.html#layer-env">目錄頁</a>有一張「哪一格對應哪一個檔」的對照表）：</p>
+<pre class="diagram">HW14/
+├── HW14.ipynb, HW14.pdf    官方 notebook 與投影片（未改）
+├── config.py               Args：5 個任務、每任務 10 epoch、lr 1e-4、batch 128、test_size 8192；angle_list
+├── utils.py                same_seeds
+├── dataset.py              旋轉、Pad、Data
+├── model.py                Model
+├── trainer.py              train、evaluate
+├── methods/
+│   ├── baseline.py  ewc.py  mas.py  si.py  rwalk.py  scp.py
+├── train.py                依 notebook 順序跑六種方法 → output/acc.json
+└── plot.py                 output/acc.json → acc_summary.png</pre>
+<p>六個方法類別（<code>methods/*.py</code>）是從 notebook 逐字複製的，只在檔頭加上需要的 <code>import</code>。唯一的內容改動是 MAS 的 TODO：原本只有一行 <code>pass</code>，本 repo 補上了作業要求的 global 版本（第 5 章逐行說明）。除此之外，有兩個地方不改就跑不起來。</p>
+<h3 id="split-tqdm">第一行：<code>tqdm.auto</code> 沒有被 import</h3>
+<p>notebook 第一格只寫了 <code>import tqdm</code> 與 <code>from tqdm import trange</code>，訓練函式卻呼叫 <code>tqdm.auto.trange</code>。<code>tqdm.auto</code> 是 <code>tqdm</code> 套件裡的一個子模組，Python 的規則是：<code>import tqdm</code> 只會載入套件本身，子模組要另外 <code>import tqdm.auto</code> 才會掛到 <code>tqdm</code> 底下，除非已經有別的程式碼載入過它。把 notebook 的程式原樣存成腳本、用一般的 Python 執行：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+import tqdm
+from tqdm import trange
+bar = tqdm.auto.trange(10)"</code></pre>
+<pre class="shell"><code>Traceback (most recent call last):
+  File "&lt;string&gt;", line 4, in &lt;module&gt;
+AttributeError: module 'tqdm' has no attribute 'auto'</code></pre>
+<p>在 Colab 上這份 notebook 能跑，表示當時的環境裡有別的模組先載入了 <code>tqdm.auto</code>（本書沒有追查是哪一個）。這是 notebook 常見的隱性依賴：程式依賴的東西不在程式裡，換一個環境就壞。本 repo 的 <code>trainer.py</code> 與 <code>train.py</code> 都明確地寫上 <code>import tqdm.auto</code>：</p>
+<figure class="listing"><figcaption>train.py:8–10 — 明確載入 tqdm.auto</figcaption>
+<pre class="py" data-hot="10"><code>import torch
+import tqdm
+import tqdm.auto</code></pre></figure>
+<h3 id="split-plot">第二行：<code>lineStyle</code> 在新版 Matplotlib 不認得</h3>
+<p>notebook 最後一格的畫圖函式寫 <code>plt.plot(acc, marker='o', lineStyle='--', …)</code>。Matplotlib 的參數名稱是全小寫的 <code>linestyle</code>（或縮寫 <code>ls</code>），3.11 不接受駝峰寫法的 <code>lineStyle</code>（2022 年的 Colab 環境接不接受，本書沒有驗證）：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
+plt.plot([92.58, 94.63], marker='o', lineStyle='--', linewidth=2, markersize=4, label='baseline')"</code></pre>
+<pre class="shell"><code>    raise AttributeError(
+AttributeError: Line2D.set() got an unexpected keyword argument 'lineStyle'</code></pre>
+<p>麻煩的是它發生在最後：六種方法花了將近一個小時跑完，最後畫圖這一步才報錯。在 notebook 裡結果還留在變數裡，改一下重跑那一格就好；寫成腳本就全部白跑了。本 repo 因此讓 <code>train.py</code> 每跑完一種方法就把結果寫進 <code>output/acc.json</code>，畫圖另外交給 <code>plot.py</code>：</p>
+<figure class="listing"><figcaption>plot.py:10–15 — draw_acc()：notebook 的畫圖函式，改成 linestyle、存檔不顯示</figcaption>
+<pre class="py" data-hot="13"><code>def draw_acc(acc_list, label_list, path='acc_summary.png'):
+  for acc, label in zip(acc_list, label_list):
+    # the notebook passes lineStyle='--', which Matplotlib 3.11 rejects (keyword is linestyle)
+    plt.plot(acc, marker='o', linestyle='--', linewidth=2, markersize=4, label=label)
+    plt.legend()
+  plt.savefig(path)</code></pre></figure>
+
+<h2 id="verify">0.5　怎麼確認拆完沒有改變結果</h2>
+<p>拆檔、補 import、改畫圖，每一步都可能不小心改變結果。這本書的每個數字都要能對回原版，所以先做一次逐位元的比對：</p>
+<ol>
+<li>把 notebook 的程式格原樣串成一支腳本（參照版）：拿掉 <code>!nvidia-smi</code> 那格（那是 notebook 專用的 shell 指令）和最後的畫圖格，補上 <code>import tqdm.auto</code>，MAS 的 TODO 填入和本 repo 相同的那幾行，其餘一字不改。</li>
+<li>跑參照版，記下印出的六個串列；再跑本 repo 的 <code>train.py</code>。</li>
+<li>用 <code>diff</code> 比對兩邊的輸出。</li>
+</ol>
+<p>結果：六種方法、每種 50 個、共 300 個準確率，兩邊<strong>完全相同</strong>，<code>diff</code> 沒有任何輸出。本書的實驗工具 <code>docs/tools/hw14_exp.py</code> 不加任何選項時，也和這 300 個數逐值相等；它另外多記了「每個 epoch 結束時在五個任務上各自的準確率」，第 2 章起會一直用到。</p>
+<div class="warn"><h4>為什麼要保留一個只用來印的 <code>example = Model()</code></h4>
+<p>notebook 的 Model Architecture 那一格最後寫了 <code>example = Model()</code> 與 <code>print(example)</code>，只是為了讓學生看看模型長什麼樣子。拆檔時很自然會想刪掉它，但它會改變結果：建立一個 <code>Model</code> 時，四個 <code>Linear</code> 要用亂數初始化權重，這會從 PyTorch 的全域亂數產生器（random number generator）取走一串數；之後 baseline 建的模型拿到的就是後面那一串。實測（在 CPU 上，設同一個種子之後建模型）：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python -c "
+import torch
+from utils import same_seeds
+from model import Model
+same_seeds(0); a = Model()
+same_seeds(0); example = Model(); b = Model()
+print(torch.equal(a.fc1.weight, b.fc1.weight), a.fc1.weight[0,:3].tolist(), b.fc1.weight[0,:3].tolist())"</code></pre>
+<pre class="shell"><code>False [-0.00026738643646240234, 0.019158700481057167, -0.029394470155239105] [-0.032978203147649765, -0.03205079957842827, -0.01618199422955513]</code></pre>
+<p>有沒有先建 <code>example</code>，baseline 的初始權重就不同，之後的訓練與印出的數字都不可能逐位元相同（完整重跑本書沒有做，見本章自我測驗第 3 題）。所以 <code>train.py</code> 第 251 行保留了它，並加註解說明。同樣的道理，六種方法共用同一條亂數流：EWC 的初始權重取決於 baseline 用掉了多少亂數。這代表「只跑 EWC」和「照順序跑到 EWC」得到的數字不同，<code>train.py</code> 檔頭的註解提醒了這一點。第 8 章的多種子實驗就是每種方法各自獨立跑。</p>
+</div>
+
+<h2 id="results">0.6　第一張成績表與報告的學習曲線</h2>
+<p>把參照版的結果交給 <code>plot.py</code>，就是報告第一部分要交的學習曲線：</p>
+<pre class="shell cmd"><code>$ ../.venv/bin/python plot.py output/acc.json</code></pre>
+<figure class="fig">
+<img src="img/acc_summary.png" width="640" height="480" alt="plot.py 畫出的學習曲線：橫軸 0 到 49 是 epoch，縱軸是準確率 70 到 98。六條線在第 0 到 9 個 epoch 幾乎重疊，從 92 升到 98；之後每 10 個 epoch 往下跳一階。到最後，MAS 約 83 最高，RWalk 約 78、SCP 約 77，SI、EWC、baseline 約 70 到 72">
+<figcaption>圖 0.2　<code>plot.py</code> 的實際輸出（Matplotlib 預設配色，和本書其他圖的方法色不同）。橫軸是第幾個 epoch（0–49），縱軸是「已學任務的平均準確率」（%）。</figcaption>
+</figure>
+<p>這張圖有一個明顯的形狀：每 10 個 epoch 往下跳一階。第 10、20、30、40 個 epoch 是換任務的時間點，平均準確率在那裡突然下降，然後在同一個任務的 10 個 epoch 裡大致持平。直覺的解讀是「換任務就開始遺忘」，但這只對了一半。換任務的那一刻，分母也變了：本來是「任務 1、2 的平均」，現在變成「任務 1、2、3 的平均」，而新加進來的任務 3 才剛開始學。所以那一階的落差，一部分是舊任務真的變差，一部分只是新任務還沒學會。第 2 章會把這條曲線拆成五條，各看一個任務。</p>
+<p>每種方法在五個任務學完時（第 10、20、30、40、50 個 epoch）的值：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>方法</th><th class="num">λ</th><th class="num">任務 1 學完</th><th class="num">任務 2</th><th class="num">任務 3</th><th class="num">任務 4</th><th class="num">任務 5（最後）</th></tr></thead>
+<tbody>
+<tr><td><span class="mth baseline">baseline</span></td><td class="num">0</td><td class="num">98.03</td><td class="num">95.58</td><td class="num">87.51</td><td class="num">77.70</td><td class="num">70.59</td></tr>
+<tr><td><span class="mth ewc">EWC</span></td><td class="num">100</td><td class="num">97.77</td><td class="num">95.31</td><td class="num">87.38</td><td class="num">80.40</td><td class="num">71.66</td></tr>
+<tr><td><span class="mth mas">MAS</span></td><td class="num">0.1</td><td class="num">97.89</td><td class="num">95.74</td><td class="num">92.70</td><td class="num">88.20</td><td class="num">83.06</td></tr>
+<tr><td><span class="mth si">SI</span></td><td class="num">1</td><td class="num">97.69</td><td class="num">95.95</td><td class="num">89.34</td><td class="num">82.30</td><td class="num">71.98</td></tr>
+<tr><td><span class="mth rwalk">RWalk</span></td><td class="num">100</td><td class="num">97.32</td><td class="num">96.25</td><td class="num">91.98</td><td class="num">85.42</td><td class="num">78.37</td></tr>
+<tr><td><span class="mth scp">SCP</span></td><td class="num">100</td><td class="num">97.64</td><td class="num">95.32</td><td class="num">88.64</td><td class="num">81.31</td><td class="num">77.20</td></tr>
+</tbody>
+</table></div>
+<p>三個觀察，後面各章會一一追下去：</p>
+<ul>
+<li><strong>學完任務 1 時，六種方法幾乎一樣</strong>（97.3–98.0）。這很合理：學第一個任務時還沒有「舊任務」，五種正則化方法的懲罰項都是 0，和 baseline 做的事一樣。差別只來自亂數：六種方法共用一條亂數流，各自的初始權重不同（0.5 節）。</li>
+<li><strong>MAS 最後最高（83.06），EWC 與 SI 和 baseline 差不到 1.5 個百分點。</strong>一個「幾乎沒有效果」的方法，可能是方法本身不行，也可能是 λ 太小。第 4 章會看到 EWC 算出來的重要度加起來只有 0.44，MAS 的是 44 萬，差了六個數量級，而兩者的 λ 只差一千倍（100 對 0.1）。</li>
+<li><strong>這張表只有一個種子。</strong>RWalk 的 78.37 和 SCP 的 77.20 差 1.2 個百分點，換一個種子順序會不會翻過來？第 3 章先量 baseline 自己在不同種子之間差多少，第 8 章用五個種子重新比一次。</li>
+</ul>
+
+<div class="note"><h4>現在的做法：把「跑得起來」寫成程式，而不是寫在環境裡</h4>
+<p>這一章碰到的兩個問題（隱性的 <code>tqdm.auto</code>、改了名的參數）和兩個預防措施（逐位元比對、每跑完一段就存檔），在 2026 年的專案裡通常用工具處理：用 <code>uv</code> 或 <code>pip-tools</code> 把套件版本鎖在 lock file 裡，換一台機器也裝到同一組版本；notebook 交出去之前用「Restart and run all」從乾淨的 kernel 重跑一遍，把隱性依賴抓出來；長時間的實驗把每個階段的結果寫到檔案或實驗追蹤工具（如 MLflow、Weights &amp; Biases），而不是只留在 notebook 的變數裡。本 repo 的做法是共用一個鎖定版本的 <code>.venv</code>，加上每本書的「先驗證逐位元一致，再做實驗」。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>HW14：同一個模型依序學五個任務（MNIST 轉 0°、20°、40°、60°、80°），每任務 10 個 epoch，學新任務時看不到舊資料。範例程式並排比較 baseline 與 EWC、MAS、SI、RWalk、SCP 五種「加正則化項拉住重要參數」的方法。沒有排行榜：20 題選擇題 8 分，報告 2 分（學習曲線、描述指標、MAS 的 TODO）。</li>
+<li>模型固定為 784 → 1024 → 512 → 256 → 10 的四層全連接網路，1,462,538 個參數，手算與 PyTorch 一致；每種方法都替這八個參數張量各建一個同形狀的重要度張量。</li>
+<li><code>python train.py</code> 依序跑六種方法，本機 52 分 07 秒；每種方法印 50 個數，是每個 epoch 結束時「已學任務的平均準確率」。</li>
+<li>notebook 原樣用一般的 Python 跑不起來：缺 <code>import tqdm.auto</code>、<code>lineStyle</code> 在 Matplotlib 3.11 報錯。本 repo 補上 import、把畫圖拆到 <code>plot.py</code>，並和參照版逐位元比對：300 個數完全相同。只為了印出來的 <code>example = Model()</code> 會用掉亂數，所以保留。</li>
+<li>一個種子的結果：MAS 83.06 最高，RWalk 78.37、SCP 77.20，SI 71.98、EWC 71.66 與 baseline 70.59 幾乎一樣。λ 與重要度的量級對不上、只有一個種子，這兩件事要先解決，才能說誰比較好。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. <code>fc2.weight</code> 的形狀是多少？為什麼不是 <code>(1024, 512)</code>？</summary>
+<p><code>(512, 1024)</code>。<code>nn.Linear(in, out)</code> 的權重形狀是 <code>(out, in)</code>，計算方式是 <code>x @ W.T + b</code>：輸入 <code>(128, 1024)</code> 乘上 <code>W.T</code> 的 <code>(1024, 512)</code>，得到 <code>(128, 512)</code>。</p></details>
+<details class="quiz"><summary>2. 學完任務 1 時，EWC 的準確率（97.77）和 baseline（98.03）不同。是 EWC 的正則化項造成的嗎？</summary>
+<p>不是。學第一個任務時還沒有舊任務，EWC 的重要度全是 0，懲罰項也是 0，做的事和 baseline 一樣。差別來自初始權重：六種方法共用一條亂數流，EWC 的模型是在 baseline 跑完之後才建立的，拿到的亂數不同。第 4 章讀 EWC 的程式時會確認「重要度全是 0」這件事。</p></details>
+<details class="quiz"><summary>3. 如果把 <code>train.py</code> 第 251–252 行（<code>example = Model()</code> 和 <code>print(example)</code>）刪掉，再跑一次，印出的 300 個數會一樣嗎？</summary>
+<p>不會。建立 <code>Model</code> 會從全域亂數產生器取亂數來初始化權重；少建一個，之後每個模型的初始權重都跟著改變。本章 0.5 節實測過：同一個種子下，「直接建模型」和「先建 example 再建模型」的 <code>fc1.weight</code> 不同（<code>torch.equal</code> 是 <code>False</code>）。完整重跑六種方法的結果本書沒有跑，但初始權重已經不同，結果不可能逐位元相同。</p></details>
+<details class="quiz"><summary>4. 學習曲線在第 10、20、30、40 個 epoch 往下跳。這個落差全部都是「遺忘」嗎？</summary>
+<p>不全是。曲線上的值是「目前學過的任務」的平均。換到新任務的那一刻，平均的分母多了一個剛開始學的任務，它的準確率還不高，會把平均往下拉；另一部分才是舊任務的準確率真的下降。要分開看，必須記錄每個任務各自的準確率，這是第 2 章的主題。</p></details>
+<details class="quiz"><summary>5. 用 <code>python train.py --methods EWC</code> 只跑 EWC，結果會和完整跑六種時印出的 EWC 串列相同嗎？</summary>
+<p>不會相同。完整跑的時候，EWC 是在 baseline 用掉一大段亂數（建模型、每個 epoch 洗牌）之後才開始的；只跑 EWC 時，它直接接在 <code>example</code> 之後。初始權重與資料順序都不同。<code>train.py</code> 檔頭的註解就是在提醒這件事。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>李宏毅，<a href="https://youtu.be/7qT5P9KJnWo">Life Long Learning</a>（課程影片，notebook 開頭引用的那一講）。</li>
+<li>Gido M. van de Ven、Andreas S. Tolias，<a href="https://arxiv.org/abs/1904.07734">Three scenarios for continual learning</a>（2019）：選擇題考的「三種情境」，第 8 章會用到。</li>
+<li>Matthias De Lange 等，<a href="https://arxiv.org/abs/1909.08383">A continual learning survey: Defying forgetting in classification tasks</a>（2019）：把方法分成 replay、regularization、parameter isolation 三大類的綜述，notebook 開頭那張分類圖用的就是這套分法。</li>
+<li>Rahaf Aljundi，<a href="https://arxiv.org/abs/1910.02718">Continual Learning in Neural Networks</a>（2019，博士論文）：notebook 在 EWC 一節引用的參考資料，2.4 節推導了 EWC。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="index.html">← 目錄</a><a href="ch01.html">第 1 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW14 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW14 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+</script>
+</body>
+</html>
