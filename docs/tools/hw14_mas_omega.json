@@ -1,0 +1,37 @@
+{
+ "sum": {
+  "mas_batch": 406353.3125,
+  "mas_per_sample": 735031.75,
+  "ewc_batch": 0.45281630754470825
+ },
+ "max": {
+  "mas_batch": 70.06242370605469,
+  "mas_per_sample": 72.96942901611328,
+  "ewc_batch": 0.00048291627899743617
+ },
+ "ratio_per_sample_over_batch": 1.8088489770889282,
+ "pearson_mas_batch_vs_per_sample": 0.866550624370575,
+ "spearman_mas_batch_vs_per_sample": 0.9362457394599915,
+ "pearson_mas_vs_ewc": 0.42714861035346985,
+ "spearman_mas_vs_ewc": 0.8605527877807617,
+ "output_sqnorm_mean": 399.0256042480469,
+ "output_sqnorm_median": 349.70147705078125,
+ "per_layer_sum": {
+  "fc1": {
+   "mas_batch": 205465.53125,
+   "mas_per_sample": 335250.5625
+  },
+  "fc2": {
+   "mas_batch": 110152.9609375,
+   "mas_per_sample": 217666.15625
+  },
+  "fc3": {
+   "mas_batch": 68925.421875,
+   "mas_per_sample": 136204.75
+  },
+  "fc4": {
+   "mas_batch": 21809.3984375,
+   "mas_per_sample": 45910.34375
+  }
+ }
+}
