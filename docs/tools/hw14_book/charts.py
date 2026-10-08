@@ -85,3 +85,38 @@ def line_chart(series, n, y0, y1, yticks, *, xlabel, ylabel, aria, task_lines=Tr
 def legend(series):
   items = ''.join(f'<span><i style="background:{s["color"]}"></i>{_esc(s.get("label", s["name"]))}</span>' for s in series)
   return f'<div class="legend">{items}</div>'
+
+
+def dot_rows(rows, x0, x1, xticks, *, xlabel, aria, row_h=40, label_w=150, unit=''):
+  """rows: list of {label, color, values (list), mean (optional)}; one row per item, dots per value."""
+  W2 = 900
+  mr, mt, mb = 30, 16, 44
+  h = mt + row_h * len(rows) + mb
+  pw = W2 - label_w - mr
+
+  def X(v):
+    return label_w + pw * (v - x0) / (x1 - x0)
+
+  out = [f'<svg viewBox="0 0 {W2} {h}" role="img" aria-label="{_esc(aria)}">']
+  for t in xticks:
+    x = X(t)
+    out.append(f'<line x1="{x:.1f}" y1="{mt}" x2="{x:.1f}" y2="{mt + row_h * len(rows)}" stroke="#2a343f" stroke-width="1"/>')
+    out.append(f'<text class="s-mono" x="{x:.1f}" y="{mt + row_h * len(rows) + 18}" text-anchor="middle">{_esc(t)}</text>')
+  out.append(f'<text class="s-sm" x="{label_w + pw / 2:.1f}" y="{h - 6}" text-anchor="middle">{_esc(xlabel)}</text>')
+  for i, r in enumerate(rows):
+    yc = mt + row_h * i + row_h / 2
+    out.append(f'<text class="s-lbl" x="{label_w - 12}" y="{yc + 4:.1f}" text-anchor="end">{_esc(r["label"])}</text>')
+    vals = r['values']
+    if len(vals) > 1:
+      out.append(f'<line x1="{X(min(vals)):.1f}" y1="{yc:.1f}" x2="{X(max(vals)):.1f}" y2="{yc:.1f}" stroke="{r["color"]}" stroke-width="2" opacity="0.6"/>')
+    for v in vals:
+      out.append(f'<circle cx="{X(v):.1f}" cy="{yc:.1f}" r="5" fill="{r["color"]}" stroke="#181e25" stroke-width="2" data-tip="{_esc(r["label"])}：{v:.2f}{unit}"/>')
+    if r.get('mean') is not None:
+      xm = X(r['mean'])
+      out.append(f'<line x1="{xm:.1f}" y1="{yc - 11:.1f}" x2="{xm:.1f}" y2="{yc + 11:.1f}" stroke="#e4e8ec" stroke-width="2"/>')
+      out.append(f'<text class="s-mono" x="{X(max(vals)) + 12:.1f}" y="{yc + 4:.1f}">{r["mean"]:.2f}</text>')
+    elif len(vals) == 1:
+      out.append(f'<text class="s-mono" x="{X(vals[0]) + 12:.1f}" y="{yc + 4:.1f}">{vals[0]:.2f}</text>')
+    out.append(f'<rect x="0" y="{yc - row_h / 2:.1f}" width="{W2}" height="{row_h}" fill="transparent" data-tip="{_esc(r["label"])}：' + _esc('、'.join(f'{v:.2f}' for v in vals)) + (f'（平均 {r["mean"]:.2f}）' if r.get('mean') is not None else '') + '"/>')
+  out.append('</svg>')
+  return '\n'.join(out)
