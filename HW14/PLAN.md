@@ -1,6 +1,6 @@
 # HW14 終身學習（LifeLong Learning）— 研究筆記與計畫
 
-> 2026-10-08 由前一個 session 整理。**2026-10-08 晚上開始做：Phase 0 進行中**（見下方「狀態」）。總覽與排序見 [docs/HW_STUDY_OVERVIEW.md](../docs/HW_STUDY_OVERVIEW.md)。**建議下一本書做這份。**
+> **2026-10-09 完成**：教材 docs/HW14（index、outline、ch00–ch08）全部推上 master；實驗 55 組 + 檢查工具的數字都在 docs/HW14/FACTS.md。總覽與排序見 [docs/HW_STUDY_OVERVIEW.md](../docs/HW_STUDY_OVERVIEW.md)。**建議下一本書做這份。**
 
 ## 題目（讀自 `HW14.ipynb`、`HW14.pdf`，兩者都從官方 repo 複製進本資料夾）
 - 同一個模型**依序**學多個任務，學新任務時不要忘掉舊任務（catastrophic forgetting，災難性遺忘）。
@@ -64,3 +64,7 @@
 ## 使用者授權（2026-10-09 00:00 左右）
 - F 跑完後直接寫 ch02；**每章寫完驗證就推上 master（一章一個 commit、一次推一個），接著寫下一章，直到 HW14 全部完成**（含 Phase 4 收尾）。
 - 寫章需要 GPU 實驗就直接做，但一組一組依序跑、不並行，也不和 grid 同時跑；長任務每 30 分鐘回報。
+
+## 完成（2026-10-09）
+- 全書 index、outline、ch00–ch08 推上 master（ch08 `86e619b`），check_links 全部通過、verify_book 全部 0 問題、11 頁同一份樣板；未冷讀（使用者決定）。
+- 額外工具：hw14_probe.py（ch03）、hw14_fisher.py（ch04）、hw14_mas_omega.py（ch05）、hw14_si_inspect.py（ch06）、hw14_extra.py（ch08）。

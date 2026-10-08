@@ -104,3 +104,14 @@ HW06 同樣由本機 session 依序寫完（不冷讀，使用者決定），另
 - **評估工具也要先驗證**：FID 用的 pytorch-fid 0.3.0 在 SciPy 1.18 上會壞、OpenCV 5 沒有 CascadeClassifier；量法本身（樣本數、JPEG、種子）要在寫章之前先量清楚雜訊與偏差（HW06 第 4 章）。
 - **checkpoint 之間也要看**：GAN 的崩潰可能發生在兩個存檔之間；每個 epoch 的樣本格可以算出逐 epoch 的多樣性（HW06 第 5 章）。
 - **長任務每 30 分鐘回報**（session cron），使用者 2026-10-07 起的通用規則。
+
+## HW14 的調整（2026-10-08～09）
+
+HW14 由同一個本機 session 寫完（不冷讀；使用者授權「每章寫完驗證就推、接著寫下一章，需要 GPU 實驗就直接做，一組一組依序跑」），另外學到這些：
+- **notebook 沒有 repo 時，先做「參照版」**：把 notebook 的程式格原樣串成腳本（只拿掉 `!` 指令、補上跑不起來的 import），拆檔後的 train.py 與實驗工具都對它做逐位元比對。notebook 在一般 Python 跑不起來的地方（隱性的 `tqdm.auto`、新版套件不收的參數）本身就是教材。
+- **只為了 print 的程式也可能改變結果**：notebook 的 `example = Model()` 會用掉亂數，拆檔時要保留。多個方法共用一條亂數流時，「只跑一種」和「照順序跑到它」結果不同，多種子實驗要每種方法獨立跑。
+- **實驗工具的額外量測要不碰亂數**：HW14 的逐任務評估用事先轉好的張量、`no_grad`，不經過 DataLoader（DataLoader 每建一次 iterator 就抽一次全域亂數，shuffle 再抽一次）。
+- **「重要度」這類量先量級、再形狀**：EWC 的 batch Fisher 比逐樣本小 111 倍、SCP 先平均再平方小 100 倍，但排序相關都很高；調 λ 就能補回。量了量級才看得出「作業的成績表其實在排懲罰強度」。
+- **多種子是基本盤**：baseline 換種子 ACC 就差 3 個百分點；一個種子的成績表排名要配五個種子的範圍一起看。
+- **圖表產生器與 listing 填入工具**放在 `docs/tools/hw14_book/`（`charts.py` 直接從 jsonl 畫 SVG、附 hover；`fill_listings.py` 依 figcaption 的「檔名:行號」從原始碼重填 code，避免行尾空白造成 verify 失敗）。
+- **正文字數**：skill 要求每章 3,000+ 中文字，寫完用 verify_book.py 的 cjk 計數檢查，不足就補一節實質內容（HW14 ch04–ch07 都補過）。
