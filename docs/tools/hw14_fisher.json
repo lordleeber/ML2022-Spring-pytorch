@@ -1,0 +1,42 @@
+{
+ "train_acc_note": "model trained on task 1 only, 10 epochs, seed 0",
+ "n_batches": 469,
+ "n_samples": 60000,
+ "sum": {
+  "batch": 0.45281630754470825,
+  "empirical": 50.14033508300781,
+  "true": 90.8229751586914
+ },
+ "max": {
+  "batch": 0.00048291627899743617,
+  "empirical": 0.05355140566825867,
+  "true": 0.09679397195577621
+ },
+ "ratio_empirical_over_batch": 110.72996520996094,
+ "pearson_batch_empirical": 0.9959700703620911,
+ "spearman_batch_empirical": 0.9990009069442749,
+ "pearson_empirical_true": 0.9872244000434875,
+ "spearman_empirical_true": 0.9927664399147034,
+ "per_layer": {
+  "fc1": {
+   "batch": 0.21032646298408508,
+   "empirical": 24.190326690673828,
+   "true": 45.05935287475586
+  },
+  "fc2": {
+   "batch": 0.031233659014105797,
+   "empirical": 3.383647918701172,
+   "true": 6.051453113555908
+  },
+  "fc3": {
+   "batch": 0.03624473512172699,
+   "empirical": 3.8653154373168945,
+   "true": 6.741734981536865
+  },
+  "fc4": {
+   "batch": 0.17501145601272583,
+   "empirical": 18.7010440826416,
+   "true": 32.97043228149414
+  }
+ }
+}

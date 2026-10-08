@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 4 章　EWC — HW14 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=LXGW+WenKai+TC:wght@400;700&amp;display=swap">
+<style id="book-style">
+/* HW14 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「記憶實驗紀錄本」——偏藍綠的石墨底、紙白的字、赭黃只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   方法色（圖表與標籤）：baseline 灰、EWC 藍、MAS 橘、SI 青、RWalk 黃、SCP 洋紅、joint 紫、replay 綠
+   （dataviz 參考色盤的暗色步階，2026-10-08 以 validate_palette.js 對 #181e25 驗證通過）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #12161b;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #d9a35b;      /* 赭黃：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(217, 163, 91, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #d9a35b;
+  /* 方法色 */
+  --m-baseline: #8b949e; --m-ewc: #3987e5; --m-mas: #d95926; --m-si: #199e70;
+  --m-rwalk: #c98500; --m-scp: #d55181; --m-joint: #9085e9; --m-replay: #008300;
+  /* type */
+  --font-display: "LXGW WenKai TC", "Kaiti TC", "BiauKai", "Noto Serif TC", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "任務 1 → 2 → 3 → 4 → 5　·　0° 20° 40° 60° 80°　·　784 → 1024 → 512 → 256 → 10";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fbf4e8; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #161d24; border-color: rgba(217, 163, 91, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #16120b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 方法標籤（色塊只標身分，文字一律用內文色） ---------- */
+.mth { white-space: nowrap; }
+.mth::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--mc, var(--muted)); }
+.mth.baseline { --mc: var(--m-baseline); } .mth.ewc { --mc: var(--m-ewc); } .mth.mas { --mc: var(--m-mas); }
+.mth.si { --mc: var(--m-si); } .mth.rwalk { --mc: var(--m-rwalk); } .mth.scp { --mc: var(--m-scp); }
+.mth.joint { --mc: var(--m-joint); } .mth.replay { --mc: var(--m-replay); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW14 讀碼教材</p>
+  <h1>第 4 章　EWC：用 Fisher 資訊衡量重要度</h1>
+  <p class="chap-lead">Elastic Weight Consolidation 是這類方法的原型：學完一個任務，估計每個參數對它有多重要，之後用一條「彈簧」把重要的參數拉在原位。第 0 章的成績表裡，EWC 和 baseline 幾乎一樣。這一章讀它的程式，找出原因：程式算出的重要度比論文的定義小了一百多倍，λ = 100 根本拉不住；舊任務的重要度還被重複累加。把 λ 調到 10,000，EWC 才開始有作用。</p>
+</header>
+<main>
+
+<h2 id="idea">4.1　想法：把舊任務的 loss 近似成一個二次碗</h2>
+<p>假設模型學完任務 A，停在權重 θ*<sub>A</sub>。現在要學任務 B，同時希望任務 A 的 loss 不要變大。最直接的做法是同時最小化兩個任務的 loss，但我們已經看不到任務 A 的資料了。EWC 的辦法是把任務 A 的 loss 在 θ*<sub>A</sub> 附近用一個二次函數近似：θ*<sub>A</sub> 是任務 A 的最低點，一階項（梯度）大約是 0，剩下的就是二次項，由 loss 的曲率決定。某個參數方向上曲率大，代表沿著它稍微移動，任務 A 的 loss 就上升很多，這個參數就重要；曲率小的方向可以隨便動。</p>
+<p>曲率要用 Hessian（二階導數矩陣）來算，對 146 萬個參數的模型來說，那是一個 146 萬 × 146 萬的矩陣，算不出來也存不下。EWC 用兩個近似把它變得可行：</p>
+<ul>
+<li>用 <strong>Fisher 資訊矩陣</strong>取代 Hessian。對「負的 log-likelihood」這種 loss，在最佳點附近，Fisher 矩陣等於 Hessian 的期望值，而 Fisher 只需要一階梯度就能算：它是「log-likelihood 的梯度」的外積的期望值。</li>
+<li>只取 Fisher 矩陣的<strong>對角線</strong>：每個參數一個數，忽略參數之間的交互作用。這樣重要度就和參數一樣大小，正好可以存成第 3 章那種「和參數同形狀的張量」。</li>
+</ul>
+<p>notebook 的 EWC 說明寫的 loss 是：</p>
+<div class="eq">L<sub>B</sub>(θ) = L(θ) + Σ<sub>i</sub> (λ/2) · F<sub>i</sub> · (θ<sub>i</sub> − θ*<sub>A,i</sub>)²<br>
+F = E[ ∇log p(y<sub>n</sub> | x<sub>n</sub>, θ*<sub>A</sub>) · ∇log p(y<sub>n</sub> | x<sub>n</sub>, θ*<sub>A</sub>)<sup>T</sup> ]，只取對角線 F<sub>i</sub></div>
+<p>L(θ) 是任務 B 的分類 loss，後面那一項就是第 3 章的 <code>Σ Ω (θ − θ*)²</code>，Ω 換成 Fisher 的對角線 F<sub>i</sub>。從貝氏的角度看，這相當於把「學完任務 A 之後的參數分布」近似成一個以 θ*<sub>A</sub> 為中心、精確度（變異數的倒數）為 F 的常態分布，再拿它當學任務 B 時的先驗。這也是程式裡把重要度叫做 <code>_precision_matrices</code> 的原因。</p>
+
+<h2 id="code">4.2　程式：每個 batch 算一次梯度、平方、平均</h2>
+<figure class="listing"><figcaption>methods/ewc.py:35–67 — ewc._calculate_importance()：加上前面的 guard，再加上這個任務的 Fisher 對角線</figcaption>
+<pre class="py" data-hot="40-42,47,59-60,64"><code>  def _calculate_importance(self):
+    precision_matrices = {}
+    # initialize Fisher (F) matrix（all fill zero）and add previous guards
+    for n, p in self.params.items(): 
+      precision_matrices[n] = p.clone().detach().fill_(0)                 
+      for i in range(len(self.previous_guards_list)):
+        if self.previous_guards_list[i]:
+          precision_matrices[n] += self.previous_guards_list[i][n]
+
+    self.model.eval()
+    if self.dataloader is not None:
+      number_data = len(self.dataloader)
+      for data in self.dataloader:
+        self.model.zero_grad()
+        # get image data
+        input = data[0].to(self.device)
+          
+        # image data forward model
+        output = self.model(input)
+          
+        # Simply use groud truth label of dataset.  
+        label = data[1].to(self.device)
+          
+        # generate Fisher(F) matrix for EWC     
+        loss = F.nll_loss(F.log_softmax(output, dim=1), label)
+        loss.backward()   
+
+        for n, p in self.model.named_parameters():
+          # get the gradient of each parameter and square it, then average it in all validation set.                          
+          precision_matrices[n].data += p.grad.data ** 2 / number_data   
+                                                                
+      precision_matrices = {n: p for n, p in precision_matrices.items()}
+    return precision_matrices</code></pre></figure>
+<p>分兩段讀。第 38–42 行先建一份全 0 的重要度，再把 <code>previous_guards_list</code> 裡每一份舊的重要度（guard，守衛：notebook 借用李宏毅老師上課的說法，指保護舊任務的那個量）加上去。4.4 節會回來看這一段。</p>
+<p>第 45–64 行是這個任務自己的 Fisher：走過這個任務的訓練資料（469 個 batch），每個 batch：</p>
+<ol>
+<li><code>self.model.zero_grad()</code> 清掉上一個 batch 的梯度。</li>
+<li>forward，算 <code>F.nll_loss(F.log_softmax(output, dim=1), label)</code>。<code>log_softmax</code> 之後接 <code>nll_loss</code>，就等於 <code>cross_entropy</code>：這正是負的 log-likelihood <code>−log p(y | x, θ)</code>，對 batch 取平均。</li>
+<li><code>backward()</code>，然後把每個參數的梯度<strong>平方</strong>，除以 batch 數 469，累加進去。</li>
+</ol>
+<p>469 個 batch 跑完，重要度就是「每個 batch 的平均 NLL 梯度的平方」的平均。它用的是資料的<strong>真實 label</strong>（第 55 行的註解：Simply use ground truth label of dataset）。投影片 p.19 問「這個方法需不需要 label」，從這一行看答案是需要。</p>
+<p>第 44 行的 <code>model.eval()</code> 對這個沒有 Dropout／BatchNorm 的模型沒有作用；它也不會影響之後的訓練，因為下一次呼叫 <code>train()</code> 時第一行就是 <code>model.train()</code>（第 2 章 2.3 節）。另外，迴圈結束後最後一個 batch 的梯度仍留在參數的 <code>.grad</code> 裡，EWC 的 <code>update()</code> 不做事，<code>train()</code> 每一步又會先清梯度，所以沒有影響；第 6 章會看到 SI 對這種「殘留的 <code>.grad</code>」是敏感的。</p>
+<p>任務結束時，<code>run_ewc</code> 這樣建立新的 EWC 物件：</p>
+<figure class="listing"><figcaption>train.py:81–90 — run_ewc() 的任務迴圈</figcaption>
+<pre class="py" data-hot="86-87"><code>  for train_indexes in task_bar:
+    # Train Each Task
+    model, _, acc_list = train(model, optimizer, train_dataloaders[train_indexes], args.epochs_per_task, lll_object, lll_lambda, evaluate=evaluate,device=device, test_dataloaders=test_dataloaders[:train_indexes+1])
+    
+    # get model weight and calculate guidance for each weight
+    prev_guards.append(lll_object._precision_matrices)
+    lll_object=ewc(model=model, dataloader=train_dataloaders[train_indexes], device=device, prev_guards=prev_guards)
+
+    # new a Optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)</code></pre></figure>
+<p>λ 設在第 75 行：<code>lll_lambda=100</code>。公式裡的 1/2 在程式中沒有出現，等於把 λ/2 整個寫成 λ，只差一個常數倍，調 λ 時一併吸收即可。</p>
+
+<h2 id="batch-fisher">4.3　先平均再平方：小了一百多倍</h2>
+<p>公式裡的 F 是<strong>每一筆資料</strong>的梯度外積的期望值：先對每張圖各自算梯度、各自平方，再平均。程式是先對一個 batch 的 128 張圖平均 loss（等於平均梯度），再平方。兩者不一樣：</p>
+<div class="eq">程式：　( (1/B) Σ<sub>k</sub> g<sub>k</sub> )² = (1/B²) Σ<sub>k</sub> g<sub>k</sub>² + (1/B²) Σ<sub>k≠l</sub> g<sub>k</sub> g<sub>l</sub><br>
+公式：　(1/B) Σ<sub>k</sub> g<sub>k</sub>²</div>
+<p>g<sub>k</sub> 是第 k 張圖對某個參數的梯度，B = 128。模型在任務 A 上訓練好之後，不同圖片的梯度方向大致互相抵消（整體的平均梯度接近 0），交叉項 Σ g<sub>k</sub> g<sub>l</sub> 很小，程式算出的值就大約是公式的 <strong>1/B</strong>。</p>
+<p>本書用 <code>docs/tools/hw14_fisher.py</code> 實際量了一次：只在任務 1 上訓練一個模型（10 個 epoch，和作業相同的設定），然後在任務 1 的 60,000 張訓練圖上用三種方法算 Fisher 對角線。逐樣本的梯度用 <code>torch.func</code> 的 <code>vmap</code> 一次算一整個 batch：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>算法</th><th class="num">全部參數的總和</th><th class="num">最大值</th><th class="num">fc1</th><th class="num">fc2</th><th class="num">fc3</th><th class="num">fc4</th></tr></thead>
+<tbody>
+<tr><td>程式的做法：batch 平均 NLL 的梯度平方</td><td class="num">0.453</td><td class="num">4.83e-4</td><td class="num">0.210</td><td class="num">0.031</td><td class="num">0.036</td><td class="num">0.175</td></tr>
+<tr><td>empirical Fisher：每張圖的梯度平方（真實 label）</td><td class="num">50.14</td><td class="num">0.0536</td><td class="num">24.19</td><td class="num">3.38</td><td class="num">3.87</td><td class="num">18.70</td></tr>
+<tr><td>true Fisher：每張圖的梯度平方（label 從模型自己的預測抽）</td><td class="num">90.82</td><td class="num">0.0968</td><td class="num">45.06</td><td class="num">6.05</td><td class="num">6.74</td><td class="num">32.97</td></tr>
+</tbody>
+</table></div>
+<p>empirical Fisher 是程式算法的 <strong>110.7 倍</strong>，接近 B = 128（交叉項不完全是 0，所以比 128 小一點）。但兩者在 146 萬個參數上的 Pearson 相關係數是 0.996，排序的相關係數（Spearman）是 0.999：<strong>哪個參數比較重要，兩種算法幾乎完全同意</strong>，只是整體大小差了約 111 倍。所以這不是「算錯了重要度」，而是「重要度的單位不同」：程式的 λ = 100，相當於論文算法下的 λ ≈ 0.9。這解釋了第 0 章 EWC 與 baseline 幾乎一樣的原因，也是第 0 章提到「EWC 重要度加總只有 0.44」的由來。</p>
+<p>true Fisher 是另一種常見的定義：label 不用資料的真實值，而是從模型自己預測的機率分布抽樣。它和 empirical Fisher 的相關係數是 0.987，總和大 1.8 倍（模型在訓練資料上非常有把握，抽到的 label 有時和真實的不同，那些樣本的梯度大）。用 true Fisher 時<strong>不需要 label</strong>，所以投影片「需不需要 label」的問題，嚴格說答案取決於用哪一種定義；這份程式用的是真實 label。</p>
+
+<h2 id="guards">4.4　舊任務的重要度被重複累加</h2>
+<p>回到 4.2 節的兩段程式。<code>run_ewc</code> 每個任務結束時把<strong>目前這個物件</strong>的 <code>_precision_matrices</code> append 進 <code>prev_guards</code>，然後建新物件；新物件在第 38–42 行把 <code>prev_guards</code> 裡的<strong>每一份</strong>都加起來，再加上新任務的 Fisher。問題在於，目前這個物件的 <code>_precision_matrices</code> 本身已經是「前面所有 guard 加上它自己那個任務的 Fisher」。用 F<sub>k</sub> 表示任務 k 自己的 Fisher，推一次：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>學完</th><th><code>prev_guards</code> 的內容</th><th>新物件的重要度</th></tr></thead>
+<tbody>
+<tr><td>任務 1</td><td>[0]（第一個物件，<code>dataloader=None</code>）</td><td>F<sub>1</sub></td></tr>
+<tr><td>任務 2</td><td>[0, F<sub>1</sub>]</td><td>F<sub>1</sub> + F<sub>2</sub></td></tr>
+<tr><td>任務 3</td><td>[0, F<sub>1</sub>, F<sub>1</sub>+F<sub>2</sub>]</td><td>2F<sub>1</sub> + F<sub>2</sub> + F<sub>3</sub></td></tr>
+<tr><td>任務 4</td><td>[0, F<sub>1</sub>, F<sub>1</sub>+F<sub>2</sub>, 2F<sub>1</sub>+F<sub>2</sub>+F<sub>3</sub>]</td><td>4F<sub>1</sub> + 2F<sub>2</sub> + F<sub>3</sub> + F<sub>4</sub></td></tr>
+</tbody>
+</table></div>
+<p>任務 1 的權重每多一個任務就加倍。原本的意思應該是「每個任務的 Fisher 各算一次、加總」（F<sub>1</sub> + F<sub>2</sub> + F<sub>3</sub> + F<sub>4</sub>）。要修正，只要把 <code>prev_guards</code> 改成只放最新那一份：<code>prev_guards = [lll_object._precision_matrices]</code>。本書的實驗工具用 <code>--guards latest</code> 做了這個修正（C 組），兩者的重要度總和（種子 0，各自獨立跑）可以直接對照：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>學完</th><th class="num">任務 1</th><th class="num">任務 2</th><th class="num">任務 3</th><th class="num">任務 4</th></tr></thead>
+<tbody>
+<tr><td>原版（重複累加）</td><td class="num">0.506</td><td class="num">0.837</td><td class="num">1.703</td><td class="num">3.228</td></tr>
+<tr><td>只算一次（C 組）</td><td class="num">0.506</td><td class="num">0.837</td><td class="num">1.197</td><td class="num">1.326</td></tr>
+</tbody>
+</table></div>
+<p>前兩個任務完全相同（推導表裡兩種寫法在任務 2 之前沒有差別），從任務 3 開始原版變大。數字也對得起來：任務 3 自己的 Fisher 是 1.197 − 0.837 = 0.360，原版是 0.506 + 0.837 + 0.360 = 1.703，正好多算了一份 F<sub>1</sub> + F<sub>2</sub>。</p>
+<p>但修正之後結果幾乎沒變：ACC 71.29（原版 71.67），BWT −33.46（原版 −32.93）。理由在 4.3 節：重要度本身太小，乘上 λ = 100 後懲罰項微不足道，加倍與否都拉不住參數。這個 bug 在 λ 夠大的時候才會有影響，第 8 章會在其他方法上再看一次。</p>
+
+<h2 id="lambda">4.5　把 λ 調大</h2>
+<p>B 組實驗把 EWC 的 λ 從 10 掃到 10,000（種子 0，每次只跑 EWC；λ = 100 那一點用 A 組種子 0）。下圖是任務 1 的準確率在 50 個 epoch 裡的變化：</p>
+<figure class="fig">
+<svg viewBox="0 0 900 360" role="img" aria-label="EWC 不同 λ 下任務 1 準確率隨 epoch 的變化">
+<line x1="56" y1="314.0" x2="780" y2="314.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="318.0" text-anchor="end">20</text>
+<line x1="56" y1="240.5" x2="780" y2="240.5" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="244.5" text-anchor="end">40</text>
+<line x1="56" y1="167.0" x2="780" y2="167.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="171.0" text-anchor="end">60</text>
+<line x1="56" y1="93.5" x2="780" y2="93.5" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="97.5" text-anchor="end">80</text>
+<line x1="56" y1="20.0" x2="780" y2="20.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="24.0" text-anchor="end">100</text>
+<line x1="196.4" y1="20" x2="196.4" y2="314" stroke="#3a4552" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="344.1" y1="20" x2="344.1" y2="314" stroke="#3a4552" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="491.9" y1="20" x2="491.9" y2="314" stroke="#3a4552" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="639.6" y1="20" x2="639.6" y2="314" stroke="#3a4552" stroke-width="1" stroke-dasharray="4 4"/>
+<text class="s-sm" x="122.5" y="332" text-anchor="middle">任務 1</text>
+<text class="s-sm" x="270.2" y="332" text-anchor="middle">任務 2</text>
+<text class="s-sm" x="418.0" y="332" text-anchor="middle">任務 3</text>
+<text class="s-sm" x="565.8" y="332" text-anchor="middle">任務 4</text>
+<text class="s-sm" x="713.5" y="332" text-anchor="middle">任務 5</text>
+<line x1="56" y1="314" x2="780" y2="314" stroke="#4a5562" stroke-width="1"/>
+<text class="s-sm" x="418.0" y="354" text-anchor="middle">第幾個 epoch（每 10 個換一個任務）</text>
+<text class="s-sm" x="14" y="167.0" text-anchor="middle" transform="rotate(-90 14 167.0)">任務 1 的測試準確率（%）</text>
+<polyline points="56.0,47.3 70.8,39.7 85.6,35.6 100.3,34.2 115.1,30.4 129.9,29.5 144.7,29.2 159.4,28.5 174.2,29.3 189.0,27.2 203.8,41.4 218.5,41.4 233.3,44.3 248.1,43.9 262.9,45.8 277.6,44.9 292.4,48.7 307.2,46.6 322.0,48.3 336.7,45.4 351.5,89.8 366.3,103.3 381.1,109.0 395.8,107.9 410.6,122.8 425.4,119.3 440.2,122.7 454.9,129.6 469.7,122.9 484.5,131.5 499.3,178.4 514.0,193.6 528.8,200.5 543.6,198.0 558.4,199.5 573.1,204.6 587.9,200.1 602.7,200.6 617.5,206.0 632.2,208.1 647.0,245.9 661.8,250.9 676.6,263.1 691.3,258.7 706.1,258.5 720.9,261.4 735.7,267.4 750.4,262.3 765.2,263.2 780.0,257.3" fill="none" stroke="#8b949e" stroke-width="2" stroke-linejoin="round" stroke-dasharray="5 4"/>
+<polyline points="56.0,47.3 70.8,39.7 85.6,35.6 100.3,34.2 115.1,30.4 129.9,29.5 144.7,29.2 159.4,28.5 174.2,29.3 189.0,27.2 203.8,38.3 218.5,44.3 233.3,43.7 248.1,45.5 262.9,44.7 277.6,46.0 292.4,47.3 307.2,44.6 322.0,49.1 336.7,46.1 351.5,93.6 366.3,107.4 381.1,106.4 395.8,117.6 410.6,118.8 425.4,135.0 440.2,126.3 454.9,123.9 469.7,127.0 484.5,124.8 499.3,173.8 514.0,179.4 528.8,190.8 543.6,190.8 558.4,195.9 573.1,201.0 587.9,201.1 602.7,199.1 617.5,201.4 632.2,198.5 647.0,238.7 661.8,248.5 676.6,258.9 691.3,258.8 706.1,256.4 720.9,260.1 735.7,255.5 750.4,259.1 765.2,256.6 780.0,254.3" fill="none" stroke="#86b6ef" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,47.3 70.8,39.7 85.6,35.6 100.3,34.2 115.1,30.4 129.9,29.5 144.7,29.2 159.4,28.5 174.2,29.3 189.0,27.2 203.8,38.3 218.5,44.2 233.3,43.6 248.1,45.0 262.9,44.4 277.6,45.4 292.4,46.4 307.2,44.0 322.0,48.3 336.7,45.5 351.5,92.9 366.3,107.0 381.1,105.9 395.8,116.2 410.6,117.0 425.4,133.3 440.2,124.0 454.9,121.9 469.7,126.3 484.5,118.4 499.3,170.7 514.0,174.2 528.8,185.7 543.6,186.1 558.4,190.4 573.1,194.1 587.9,194.3 602.7,190.8 617.5,195.6 632.2,192.4 647.0,234.1 661.8,245.6 676.6,253.6 691.3,255.8 706.1,249.4 720.9,252.0 735.7,249.5 750.4,249.5 765.2,253.0 780.0,256.9" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,47.3 70.8,39.7 85.6,35.6 100.3,34.2 115.1,30.4 129.9,29.5 144.7,29.2 159.4,28.5 174.2,29.3 189.0,27.2 203.8,38.1 218.5,43.9 233.3,42.6 248.1,43.3 262.9,42.6 277.6,44.0 292.4,44.3 307.2,42.2 322.0,45.9 336.7,42.0 351.5,92.8 366.3,104.2 381.1,103.2 395.8,109.7 410.6,109.4 425.4,124.9 440.2,115.9 454.9,109.5 469.7,116.8 484.5,105.8 499.3,157.4 514.0,165.4 528.8,171.3 543.6,174.0 558.4,174.7 573.1,178.4 587.9,175.3 602.7,185.7 617.5,184.1 632.2,180.7 647.0,216.1 661.8,222.1 676.6,230.5 691.3,233.8 706.1,232.6 720.9,234.4 735.7,232.1 750.4,236.8 765.2,229.4 780.0,254.0" fill="none" stroke="#256abf" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,47.3 70.8,39.7 85.6,35.6 100.3,34.2 115.1,30.4 129.9,29.5 144.7,29.2 159.4,28.5 174.2,29.3 189.0,27.2 203.8,36.6 218.5,40.4 233.3,39.9 248.1,39.1 262.9,39.4 277.6,39.7 292.4,40.8 307.2,38.3 322.0,41.6 336.7,37.5 351.5,82.2 366.3,83.7 381.1,88.5 395.8,86.9 410.6,89.1 425.4,98.9 440.2,97.4 454.9,92.5 469.7,95.3 484.5,92.3 499.3,141.2 514.0,143.4 528.8,149.3 543.6,157.3 558.4,152.3 573.1,150.6 587.9,143.1 602.7,160.7 617.5,153.7 632.2,150.7 647.0,173.4 661.8,181.4 676.6,173.9 691.3,178.6 706.1,178.1 720.9,180.9 735.7,168.7 750.4,176.7 765.2,173.4 780.0,180.3" fill="none" stroke="#184f95" stroke-width="2" stroke-linejoin="round"/>
+<rect x="786.0" y="176.3" width="8" height="8" rx="2" fill="#184f95"/>
+<text class="s-lbl" x="798.0" y="184.3">λ = 10000</text>
+<rect x="786.0" y="250.0" width="8" height="8" rx="2" fill="#256abf"/>
+<text class="s-lbl" x="798.0" y="258.0">λ = 1000</text>
+<rect x="786.0" y="264.0" width="8" height="8" rx="2" fill="#86b6ef"/>
+<text class="s-lbl" x="798.0" y="272.0">λ = 10</text>
+<rect x="786.0" y="278.0" width="8" height="8" rx="2" fill="#3987e5"/>
+<text class="s-lbl" x="798.0" y="286.0">λ = 100</text>
+<rect x="786.0" y="292.0" width="8" height="8" rx="2" fill="#8b949e"/>
+<text class="s-lbl" x="798.0" y="300.0">baseline</text>
+<rect x="48.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 1：baseline 92.58　λ = 10 92.58　λ = 100 92.58　λ = 1000 92.58　λ = 10000 92.58"/>
+<rect x="63.4" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 2：baseline 94.63　λ = 10 94.63　λ = 100 94.63　λ = 1000 94.63　λ = 10000 94.63"/>
+<rect x="78.2" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 3：baseline 95.76　λ = 10 95.76　λ = 100 95.76　λ = 1000 95.76　λ = 10000 95.76"/>
+<rect x="92.9" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 4：baseline 96.13　λ = 10 96.13　λ = 100 96.13　λ = 1000 96.13　λ = 10000 96.13"/>
+<rect x="107.7" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 5：baseline 97.18　λ = 10 97.18　λ = 100 97.18　λ = 1000 97.18　λ = 10000 97.18"/>
+<rect x="122.5" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 6：baseline 97.41　λ = 10 97.41　λ = 100 97.41　λ = 1000 97.41　λ = 10000 97.41"/>
+<rect x="137.3" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 7：baseline 97.49　λ = 10 97.49　λ = 100 97.49　λ = 1000 97.49　λ = 10000 97.49"/>
+<rect x="152.0" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 8：baseline 97.69　λ = 10 97.69　λ = 100 97.69　λ = 1000 97.69　λ = 10000 97.69"/>
+<rect x="166.8" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 9：baseline 97.48　λ = 10 97.48　λ = 100 97.48　λ = 1000 97.48　λ = 10000 97.48"/>
+<rect x="181.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 10：baseline 98.03　λ = 10 98.03　λ = 100 98.03　λ = 1000 98.03　λ = 10000 98.03"/>
+<rect x="196.4" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 11：baseline 94.17　λ = 10 95.01　λ = 100 95.03　λ = 1000 95.07　λ = 10000 95.47"/>
+<rect x="211.1" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 12：baseline 94.17　λ = 10 93.39　λ = 100 93.41　λ = 1000 93.50　λ = 10000 94.44"/>
+<rect x="225.9" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 13：baseline 93.40　λ = 10 93.55　λ = 100 93.58　λ = 1000 93.86　λ = 10000 94.59"/>
+<rect x="240.7" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 14：baseline 93.50　λ = 10 93.07　λ = 100 93.19　λ = 1000 93.66　λ = 10000 94.80"/>
+<rect x="255.5" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 15：baseline 92.98　λ = 10 93.28　λ = 100 93.37　λ = 1000 93.86　λ = 10000 94.73"/>
+<rect x="270.2" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 16：baseline 93.23　λ = 10 92.93　λ = 100 93.08　λ = 1000 93.46　λ = 10000 94.63"/>
+<rect x="285.0" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 17：baseline 92.20　λ = 10 92.58　λ = 100 92.81　λ = 1000 93.38　λ = 10000 94.33"/>
+<rect x="299.8" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 18：baseline 92.77　λ = 10 93.30　λ = 100 93.48　λ = 1000 93.95　λ = 10000 95.01"/>
+<rect x="314.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 19：baseline 92.29　λ = 10 92.08　λ = 100 92.31　λ = 1000 92.94　λ = 10000 94.13"/>
+<rect x="329.3" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 20：baseline 93.08　λ = 10 92.90　λ = 100 93.07　λ = 1000 94.02　λ = 10000 95.25"/>
+<rect x="344.1" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 21：baseline 81.01　λ = 10 79.97　λ = 100 80.16　λ = 1000 80.20　λ = 10000 83.07"/>
+<rect x="358.9" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 22：baseline 77.32　λ = 10 76.22　λ = 100 76.32　λ = 1000 77.09　λ = 10000 82.68"/>
+<rect x="373.7" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 23：baseline 75.77　λ = 10 76.49　λ = 100 76.63　λ = 1000 77.35　λ = 10000 81.35"/>
+<rect x="388.4" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 24：baseline 76.09　λ = 10 73.44　λ = 100 73.81　λ = 1000 75.59　λ = 10000 81.80"/>
+<rect x="403.2" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 25：baseline 72.02　λ = 10 73.11　λ = 100 73.60　λ = 1000 75.68　λ = 10000 81.20"/>
+<rect x="418.0" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 26：baseline 72.99　λ = 10 68.72　λ = 100 69.17　λ = 1000 71.45　λ = 10000 78.54"/>
+<rect x="432.8" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 27：baseline 72.05　λ = 10 71.08　λ = 100 71.69　λ = 1000 73.91　λ = 10000 78.93"/>
+<rect x="447.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 28：baseline 70.18　λ = 10 71.74　λ = 100 72.26　λ = 1000 75.65　λ = 10000 80.28"/>
+<rect x="462.3" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 29：baseline 71.99　λ = 10 70.89　λ = 100 71.08　λ = 1000 73.67　λ = 10000 79.52"/>
+<rect x="477.1" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 30：baseline 69.66　λ = 10 71.49　λ = 100 73.22　λ = 1000 76.65　λ = 10000 80.33"/>
+<rect x="491.9" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 31：baseline 56.90　λ = 10 58.15　λ = 100 59.00　λ = 1000 62.62　λ = 10000 67.02"/>
+<rect x="506.7" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 32：baseline 52.77　λ = 10 56.62　λ = 100 58.05　λ = 1000 60.43　λ = 10000 66.41"/>
+<rect x="521.4" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 33：baseline 50.89　λ = 10 53.53　λ = 100 54.90　λ = 1000 58.84　λ = 10000 64.82"/>
+<rect x="536.2" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 34：baseline 51.57　λ = 10 53.53　λ = 100 54.80　λ = 1000 58.09　λ = 10000 62.65"/>
+<rect x="551.0" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 35：baseline 51.15　λ = 10 52.13　λ = 100 53.64　λ = 1000 57.90　λ = 10000 63.99"/>
+<rect x="565.8" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 36：baseline 49.76　λ = 10 50.75　λ = 100 52.62　λ = 1000 56.90　λ = 10000 64.46"/>
+<rect x="580.5" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 37：baseline 51.00　λ = 10 50.72　λ = 100 52.58　λ = 1000 57.74　λ = 10000 66.49"/>
+<rect x="595.3" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 38：baseline 50.85　λ = 10 51.27　λ = 100 53.53　λ = 1000 54.92　λ = 10000 61.72"/>
+<rect x="610.1" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 39：baseline 49.39　λ = 10 50.65　λ = 100 52.22　λ = 1000 55.36　λ = 10000 63.63"/>
+<rect x="624.9" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 40：baseline 48.81　λ = 10 51.42　λ = 100 53.08　λ = 1000 56.28　λ = 10000 64.43"/>
+<rect x="639.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 41：baseline 38.54　λ = 10 40.50　λ = 100 41.75　λ = 1000 46.64　λ = 10000 58.27"/>
+<rect x="654.4" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 42：baseline 37.18　λ = 10 37.83　λ = 100 38.62　λ = 1000 45.00　λ = 10000 56.08"/>
+<rect x="669.2" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 43：baseline 33.84　λ = 10 34.99　λ = 100 36.44　λ = 1000 42.72　λ = 10000 58.13"/>
+<rect x="684.0" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 44：baseline 35.05　λ = 10 35.01　λ = 100 35.83　λ = 1000 41.82　λ = 10000 56.84"/>
+<rect x="698.7" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 45：baseline 35.10　λ = 10 35.66　λ = 100 37.59　λ = 1000 42.16　λ = 10000 56.99"/>
+<rect x="713.5" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 46：baseline 34.30　λ = 10 34.66　λ = 100 36.88　λ = 1000 41.65　λ = 10000 56.23"/>
+<rect x="728.3" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 47：baseline 32.67　λ = 10 35.93　λ = 100 37.54　λ = 1000 42.29　λ = 10000 59.54"/>
+<rect x="743.1" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 48：baseline 34.08　λ = 10 34.93　λ = 100 37.54　λ = 1000 41.01　λ = 10000 57.36"/>
+<rect x="757.8" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 49：baseline 33.82　λ = 10 35.61　λ = 100 36.61　λ = 1000 43.03　λ = 10000 58.26"/>
+<rect x="772.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 50：baseline 35.43　λ = 10 36.24　λ = 100 35.54　λ = 1000 36.34　λ = 10000 56.38"/>
+</svg>
+<div class="legend"><span><i style="background:#8b949e"></i>baseline（虛線）</span><span><i style="background:#86b6ef"></i>λ = 10</span><span><i style="background:#3987e5"></i>λ = 100（作業的設定）</span><span><i style="background:#256abf"></i>λ = 1000</span><span><i style="background:#184f95"></i>λ = 10000</span></div>
+<figcaption>圖 4.1　EWC 在不同 λ 下，任務 1 的測試準確率。顏色越深 λ 越大。λ = 10、100、1000 和 baseline 幾乎重疊；λ = 10000 才明顯拉住任務 1。</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<thead><tr><th>λ</th><th class="num">ACC</th><th class="num">BWT</th><th class="num">任務 1 最後</th><th>對角線（任務 1→5）</th></tr></thead>
+<tbody>
+<tr><td>0（baseline，種子 0）</td><td class="num">70.59</td><td class="num">−34.53</td><td class="num">35.43</td><td>98.03 / 98.08 / 98.32 / 98.29 / 98.37</td></tr>
+<tr><td>10</td><td class="num">72.02</td><td class="num">−32.51</td><td class="num">36.24</td><td>98.03 / 98.13 / 98.15 / 98.18 / 97.64</td></tr>
+<tr><td>100（作業）</td><td class="num">71.67</td><td class="num">−32.93</td><td class="num">35.54</td><td>98.03 / 98.09 / 97.99 / 98.15 / 97.84</td></tr>
+<tr><td>1000</td><td class="num">72.47</td><td class="num">−31.87</td><td class="num">36.34</td><td>98.03 / 98.09 / 98.01 / 97.98 / 97.70</td></tr>
+<tr><td>10000</td><td class="num"><strong>80.75</strong></td><td class="num"><strong>−20.47</strong></td><td class="num"><strong>56.38</strong></td><td>98.03 / 97.78 / 97.51 / 96.57 / 95.73</td></tr>
+</tbody>
+</table></div>
+<p>λ 從 10 到 1000 幾乎沒有差別；到 10,000 時 ACC 跳到 80.75，任務 1 最後保住了 56.38。依 4.3 節的換算，程式的 λ = 10,000 大約等於逐樣本 Fisher 下的 λ ≈ 90。</p>
+<p>代價也同時出現：對角線從 98% 一路降到 95.73。λ 越大，參數越難離開原位，新任務就學得越不好。這就是第 2 章說的穩定性與可塑性的取捨，BWT 從 −32.93 改善到 −20.47，一部分是因為真的記住了，一部分是因為新任務學得沒那麼好、可以掉的空間變小了。再往上調能不能更好、會不會開始學不會新任務，本書只掃到 10,000，沒有再往上跑；第 8 章把五種方法調過 λ 之後的最好結果放在一起比。</p>
+<p>回到作業的設定 λ = 100：五個種子的 ACC 是 71.67、70.85、71.69、71.82、72.03，平均 71.61 ± 0.45；baseline 是 69.47 ± 1.40。EWC 確實比 baseline 好約 2 個百分點，但這個差距和 baseline 自己換種子的變動同一個量級，單看一個種子很容易誤判為「EWC 沒用」或「EWC 有用」。</p>
+
+<h2 id="cost">4.6　EWC 要多存什麼、多算什麼</h2>
+<p>和 baseline 比，EWC 多出兩種成本，在這個小模型上感覺不到，換成大模型就是決定能不能用的因素：</p>
+<ul>
+<li><strong>記憶體</strong>：每個 EWC 物件存一份重要度和一份舊權重，各和模型一樣大（1,462,538 個 float32，約 5.9 MB）。更麻煩的是 <code>prev_guards</code>：它是一個 list，存的是每個舊物件 <code>_precision_matrices</code> 的參考，舊物件被丟掉了，這些張量仍然被 list 抓著，不會釋放。學完五個任務時，list 裡有 5 份重要度，加上目前物件的一份，記憶體隨任務數線性成長。若照 4.4 節的修正只保留最新的一份，就只需要固定的兩份。一個 70 億參數的語言模型，每一份 float32 的副本就是 28 GB。</li>
+<li><strong>計算</strong>：每個任務結束時多跑一個 epoch 的 forward 與 backward（469 個 batch）來算 Fisher；訓練時每一步多算一次懲罰項，要走過全部參數做逐元素運算。用逐樣本梯度算 Fisher（4.3 節的做法）會更貴：一個 batch 要存 128 份參數大小的梯度，這個模型是 128 × 146 萬個數，約 750 MB。</li>
+</ul>
+<p>這兩點也說明了為什麼 EWC 在大模型上常被簡化：只保留一份累積的重要度（online EWC），或乾脆不估計重要度、對所有參數用同一個權重（等於 L2 懲罰）。</p>
+
+<div class="note"><h4>現在的做法：EWC 的想法還在，算法換了</h4>
+<p>EWC 的核心（用曲率估計參數的重要度，在 loss 裡加一個以舊權重為中心的二次懲罰）在 2026 年仍然常見，但實作上有幾點改變：Fisher 用逐樣本的梯度算（PyTorch 2.x 的 <code>torch.func.vmap</code> 讓這件事只要幾行），或用 K-FAC 這類保留層內交互作用的近似；多個任務時用 online EWC（Schwarz 等，2018）維護一份隨時間衰減的 Fisher，而不是每個任務各存一份；也有研究指出 empirical Fisher 和真正的曲率可能差很多（Kunstner 等，2019），使用時要清楚自己在近似什麼。在大型語言模型的微調裡，更常見的是更簡單的版本：直接對「離預訓練權重的距離」加 L2 懲罰（L2-SP），不估計每個參數的重要度；或者乾脆只訓練 LoRA 這類附加參數，讓原本的權重完全不動。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>EWC 把舊任務的 loss 在 θ* 附近近似成二次函數，曲率用 Fisher 資訊的對角線估計；懲罰項是 Σ (λ/2) F<sub>i</sub> (θ<sub>i</sub> − θ*<sub>i</sub>)²，程式省略了 1/2。</li>
+<li>程式的 Fisher：每個 batch 算平均 NLL（用真實 label）的梯度、平方、對 469 個 batch 平均。這比逐樣本的 empirical Fisher 小 110.7 倍（約 1/B），但兩者相關係數 0.996：形狀相同，大小不同。所以作業的 λ = 100 約等於論文的 λ ≈ 0.9。</li>
+<li><code>prev_guards</code> 存的是已經含舊 guard 的矩陣，舊任務的重要度每個任務加倍（學完任務 4：4F<sub>1</sub> + 2F<sub>2</sub> + F<sub>3</sub> + F<sub>4</sub>）。實測總和 1.703 對修正後 1.197；但 λ 太小，修正後 ACC 幾乎不變（71.29 對 71.67）。</li>
+<li>λ 掃描：10、100、1000 都在 72 上下；λ = 10000 時 ACC 80.75、BWT −20.47、任務 1 保住 56.38，對角線降到 95.73。</li>
+<li>作業設定下五個種子：EWC 71.61 ± 0.45，baseline 69.47 ± 1.40。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 投影片問：EWC 需不需要 label？</summary>
+<p>這份程式需要：第 59 行的 <code>nll_loss</code> 用的是資料的真實 label（empirical Fisher）。但 Fisher 的另一種定義（true Fisher）是從模型自己預測的分布抽 label，那樣就不需要真實 label；本章 4.3 節實測兩者的相關係數是 0.987。回答選擇題時以程式為準，並留意題目問的是哪一種定義。</p></details>
+<details class="quiz"><summary>2. 如果把 <code>DataLoader</code> 的 batch 大小從 128 改成 1 來算 EWC 的 Fisher（其他不變），重要度的總和大約會變成多少倍？λ = 100 會比較有效嗎？</summary>
+<p>batch 大小 1 時，程式的算法就變成逐樣本的 empirical Fisher；依 4.3 節的實測，總和約變成 110.7 倍。重要度變大，λ = 100 的懲罰項也跟著大約 111 倍，效果應該接近 B 組 λ = 10000 那一組。這題是推論，本書沒有用 batch 1 實際重跑 EWC（469 個 batch 會變成 60,000 次 backward）。</p></details>
+<details class="quiz"><summary>3. 學完任務 4 之後，原版程式中任務 1 的 Fisher 被算了幾次？修正的方法是什麼？</summary>
+<p>4 次（4F<sub>1</sub> + 2F<sub>2</sub> + F<sub>3</sub> + F<sub>4</sub>）。修正：<code>prev_guards</code> 只放最新的那一份，例如把 <code>prev_guards.append(...)</code> 改成 <code>prev_guards = [lll_object._precision_matrices]</code>。新物件就是「前面所有任務的 Fisher 各一次」加上新任務的 Fisher。</p></details>
+<details class="quiz"><summary>4. 為什麼修正了重複累加，EWC 的結果幾乎沒變？</summary>
+<p>因為 λ = 100 搭配這份程式算出的 Fisher（總和不到 1），懲罰項太小，幾乎沒有拉住參數。重要度乘 2 或乘 4 仍然太小。重複累加的影響要在 λ 夠大、懲罰項真的起作用時才看得出來。</p></details>
+<details class="quiz"><summary>5. λ = 10000 時 BWT 改善到 −20.47。可以說 EWC 記住了更多嗎？</summary>
+<p>部分可以：任務 1 最後從 35.54 升到 56.38，確實保住更多。但對角線也從約 98% 降到 95.73，新任務學得比較差，BWT 的「最後 − 剛學完」中，「剛學完」那一項變小了，也會讓 BWT 看起來比較好。所以要同時看 ACC（80.75，也明顯提高）和對角線，才能說「記住更多，代價是新任務略差」。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>James Kirkpatrick 等，<a href="https://arxiv.org/abs/1612.00796">Overcoming catastrophic forgetting in neural networks</a>（PNAS 2017）：EWC 的原始論文。</li>
+<li>Ferenc Huszár，<a href="https://arxiv.org/abs/1712.03847">Note on the quadratic penalties in elastic weight consolidation</a>（PNAS 2018）：指出多任務時懲罰項該怎麼組合，和本章 4.4 節的重複累加相關。</li>
+<li>Jonathan Schwarz 等，<a href="https://arxiv.org/abs/1805.06370">Progress &amp; Compress: A scalable framework for continual learning</a>（2018）：online EWC。</li>
+<li>Frederik Kunstner、Lukas Balles、Philipp Hennig，<a href="https://arxiv.org/abs/1905.12558">Limitations of the Empirical Fisher Approximation for Natural Gradient Descent</a>（2019）。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW14 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW14 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>
