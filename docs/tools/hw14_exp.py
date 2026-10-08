@@ -148,6 +148,7 @@ def main():
   p.add_argument('--lam', type=float, default=None, help='override lambda of every method run')
   p.add_argument('--guards', choices=['accum', 'latest'], default='accum')
   p.add_argument('--scp_per_slice', action='store_true')
+  p.add_argument('--test_noshuffle', action='store_true', help='test DataLoaders with shuffle=False (chapter 2)')
   p.add_argument('--tag', required=True)
   p.add_argument('--out', default='../docs/tools/hw14_runs.jsonl')
   opt = p.parse_args()
@@ -158,7 +159,7 @@ def main():
   train_datasets = [Data('data', angle=angle_list[index]) for index in range(args.task_number)]
   train_dataloaders = [DataLoader(data.dataset, batch_size=args.batch_size, shuffle=True) for data in train_datasets]
   test_datasets = [Data('data', train=False, angle=angle_list[index]) for index in range(args.task_number)]
-  test_dataloaders = [DataLoader(data.dataset, batch_size=args.test_size, shuffle=True) for data in test_datasets]
+  test_dataloaders = [DataLoader(data.dataset, batch_size=args.test_size, shuffle=not opt.test_noshuffle) for data in test_datasets]
 
   # precomputed test tensors: transforms are deterministic, so no random numbers are drawn here
   test_tensors = []
@@ -174,7 +175,7 @@ def main():
     r = run_method(name, train_dataloaders, test_dataloaders, test_tensors, device, opt)
     print(r['acc'], flush=True)
     rec = {'tag': opt.tag, 'method': name, 'seed': opt.seed, 'guards': opt.guards,
-           'scp_per_slice': opt.scp_per_slice, 'methods_run': opt.methods, **r}
+           'scp_per_slice': opt.scp_per_slice, 'test_noshuffle': opt.test_noshuffle, 'methods_run': opt.methods, **r}
     with open(opt.out, 'a') as f:
       f.write(json.dumps(rec) + '\n')
 

@@ -61,3 +61,4 @@ Thumbs.db
 !docs/HW03/img/*.jpg
 HW14/data/
 HW14/output/
+docs/tools/hw14_logs/*.err

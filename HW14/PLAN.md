@@ -59,3 +59,8 @@
 - 大綱核可：index、ch00–ch08（全貌／資料／訓練迴圈與指標／baseline／EWC／MAS／SI／RWalk+SCP／總結），不寫附錄、不冷讀、樣板自己設計。
 - 實驗：A 多種子（6 方法 × 種子 0–4，各自獨立跑）、B λ 掃描（seed 0）、C guard 只算一次（`--guards latest`）、D SCP 每個 slice 各自平方；**一組一組依序跑，不並行**（`docs/tools/hw14_run_grid.sh`，23:18 開始，約 6 小時）。
 - **加 E**：E1 五個任務一起訓練（上界）、E2 replay（每任務保留少量舊資料，2–3 種保留量）；寫在實驗工具裡，不改 `HW14/` 作業程式；排在 A–D 之後。
+- **加 F**（2026-10-09 使用者同意）：baseline 種子 0、測試 DataLoader `shuffle=False`（`hw14_exp.py --test_noshuffle`），對照 `A_baseline_s0`，給第 2 章「評估也會改變訓練」用；排在 E 之後。
+
+## 使用者授權（2026-10-09 00:00 左右）
+- F 跑完後直接寫 ch02；**每章寫完驗證就推上 master（一章一個 commit、一次推一個），接著寫下一章，直到 HW14 全部完成**（含 Phase 4 收尾）。
+- 寫章需要 GPU 實驗就直接做，但一組一組依序跑、不並行，也不和 grid 同時跑；長任務每 30 分鐘回報。
