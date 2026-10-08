@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 6 章　SI — HW14 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=LXGW+WenKai+TC:wght@400;700&amp;display=swap">
+<style id="book-style">
+/* HW14 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「記憶實驗紀錄本」——偏藍綠的石墨底、紙白的字、赭黃只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   方法色（圖表與標籤）：baseline 灰、EWC 藍、MAS 橘、SI 青、RWalk 黃、SCP 洋紅、joint 紫、replay 綠
+   （dataviz 參考色盤的暗色步階，2026-10-08 以 validate_palette.js 對 #181e25 驗證通過）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #12161b;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #d9a35b;      /* 赭黃：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(217, 163, 91, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #d9a35b;
+  /* 方法色 */
+  --m-baseline: #8b949e; --m-ewc: #3987e5; --m-mas: #d95926; --m-si: #199e70;
+  --m-rwalk: #c98500; --m-scp: #d55181; --m-joint: #9085e9; --m-replay: #008300;
+  /* type */
+  --font-display: "LXGW WenKai TC", "Kaiti TC", "BiauKai", "Noto Serif TC", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "任務 1 → 2 → 3 → 4 → 5　·　0° 20° 40° 60° 80°　·　784 → 1024 → 512 → 256 → 10";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fbf4e8; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #161d24; border-color: rgba(217, 163, 91, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #16120b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 方法標籤（色塊只標身分，文字一律用內文色） ---------- */
+.mth { white-space: nowrap; }
+.mth::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--mc, var(--muted)); }
+.mth.baseline { --mc: var(--m-baseline); } .mth.ewc { --mc: var(--m-ewc); } .mth.mas { --mc: var(--m-mas); }
+.mth.si { --mc: var(--m-si); } .mth.rwalk { --mc: var(--m-rwalk); } .mth.scp { --mc: var(--m-scp); }
+.mth.joint { --mc: var(--m-joint); } .mth.replay { --mc: var(--m-replay); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch05.html">← 第 5 章</a><a href="ch07.html">第 7 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW14 讀碼教材</p>
+  <h1>第 6 章　SI：把訓練路徑上的貢獻累加起來</h1>
+  <p class="chap-lead">EWC 和 MAS 都在任務結束後，另外走一遍資料來算重要度。Synaptic Intelligence 不需要這一步：它在訓練的每一步記下「這個參數這一步動了多少，對 loss 下降貢獻了多少」，任務結束時把累加的結果整理成重要度。這是六種方法裡唯一真正用到 <code>update()</code> 的（RWalk 沿用它）。這一章讀 <code>update()</code> 為什麼要放在 <code>backward()</code> 之前、資料怎麼藏在模型的 buffer 裡傳給下一個物件，再實測它累加出來的東西：分母裡的 ε 完全蓋過了參數的變化量。</p>
+</header>
+<main>
+
+<h2 id="idea">6.1　想法：loss 下降的功勞，分給每個參數</h2>
+<p>訓練一個任務時，參數沿著一條路徑從 θ(0) 走到 θ(T)，loss 從 L(0) 降到 L(T)。把 loss 的總變化寫成沿路徑的積分，再拆成每個參數各自的部分：</p>
+<div class="eq">L(T) − L(0) = ∫ ∇L · dθ ≈ Σ<sub>t</sub> Σ<sub>i</sub> g<sub>i</sub>(t) · Δθ<sub>i</sub>(t)<br>
+ω<sub>i</sub> = − Σ<sub>t</sub> g<sub>i</sub>(t) · Δθ<sub>i</sub>(t)　（參數 i 對 loss 下降的貢獻）</div>
+<p>g<sub>i</sub>(t) 是第 t 步的梯度，Δθ<sub>i</sub>(t) 是第 t 步參數的變化。梯度下降讓參數往梯度的反方向走，所以 −g · Δθ 通常是正的；一個參數一路上對 loss 下降貢獻越多，ω<sub>i</sub> 越大。任務結束時，SI 把 ω<sub>i</sub> 除以這個參數在整個任務中總共移動了多少（的平方），再加上一個小常數 ξ 避免除以 0：</p>
+<div class="eq">Ω<sub>i</sub> += ω<sub>i</sub> / ( (θ<sub>i</sub>(T) − θ<sub>i</sub>(0))² + ξ )</div>
+<p>直覺是：一個參數只移動了一點點，卻貢獻了很多 loss 下降，它就很重要，之後別動它。程式裡 ξ 叫做 <code>epsilon</code>，設為 0.1。</p>
+<p>這個做法有兩個好處：不需要任務結束後再走一遍資料（ω 是訓練時順便算的），而且它用的是訓練當下的梯度，不必另外定義 Fisher 或輸出敏感度。投影片 p.22 的提示 Accumulated loss change in each update step 說的就是 ω。至於「需不需要 label」：SI 本身不另外用 label，但它累加的梯度來自訓練的 loss，訓練需要 label，所以間接用到了。</p>
+
+<h2 id="update">6.2　<code>update()</code>：每一步記下「梯度 × 變化」</h2>
+<figure class="listing"><figcaption>methods/si.py:83–91 — si.update()：累加 −g·Δθ，並把 W 寄存在模型的 buffer 裡</figcaption>
+<pre class="py" data-hot="88-90"><code>  def update(self, model):
+    for n, p in model.named_parameters():
+      n = n.replace('.', '__')
+      if p.requires_grad:
+        if p.grad is not None:
+          self.W[n].add_(-p.grad * (p.detach() - self.p_old[n]))
+          self.model.register_buffer('{}_W'.format(n), self.W[n])
+        self.p_old[n] = p.detach().clone()
+    return</code></pre></figure>
+<p>第 88 行就是 ω 的累加：<code>W[n]</code> 加上 <code>−p.grad × (p − p_old)</code>。要讓這一行算對，<code>p.grad</code> 和 <code>p − p_old</code> 必須是同一步的梯度與變化。第 2 章 2.2 節讀過 <code>train()</code> 一步的順序：</p>
+<pre class="diagram">第 t 步：forward → loss → penalty → update() → zero_grad → backward（算出 g(t)）→ step（θ 變成 θ(t)）
+第 t+1 步：forward → loss → penalty → update() ← 這時 .grad 是 g(t)，p 是 θ(t)，p_old 是上一次 update 記下的 θ(t−1)</pre>
+<p>所以在第 t+1 步呼叫 <code>update()</code> 時，<code>.grad</code> 還留著第 t 步的梯度（<code>zero_grad</code> 在 <code>update</code> 之後才做），<code>p − p_old</code> 正是第 t 步 <code>optimizer.step()</code> 造成的變化。兩者配成一對，第 90 行再把目前的參數記成新的 <code>p_old</code>。<code>update()</code> 放在 <code>zero_grad()</code> 與 <code>backward()</code> 之前，不是隨手寫的，是這個配對成立的條件：如果放在 <code>backward()</code> 之後、<code>step()</code> 之前，<code>.grad</code> 會變成在 θ(t) 這個位置新算的梯度 g(t+1)，配上第 t 步的變化：梯度不再是「造成這一步變化的那一個」，而是走完這一步之後的位置的梯度。兩者都是一階近似，但原本的寫法讓 g 與 Δθ 來自同一個 batch，這一點 6.4 節會用到。</p>
+<p>邊界情況：整個訓練的第一步，模型還沒做過 backward，<code>p.grad</code> 是 <code>None</code>，第 87 行跳過累加，只記下 <code>p_old</code>。之後每個任務的第一步，<code>.grad</code> 是上一個任務最後一步留下的梯度，但新物件的 <code>p_old</code> 就是目前的參數（<code>_init_</code> 第 34 行），變化是 0，所以這一步貢獻 0。也就是說每個任務的最後一步不會被算進 W，一個任務 4,690 步中少算一步，影響可以忽略。</p>
+<p>還有兩個細節：<code>p.grad</code> 是 <code>total_loss</code> 的梯度，包含懲罰項（第 2 章 2.2 節），所以 W 累加的是「分類 loss 加懲罰項」的下降，不只是分類 loss；Δθ 是 Adam 走的那一步，不是 −學習率 × 梯度，但 ω 的定義只需要「實際走了多少」，和用哪種 optimizer 無關。</p>
+<h3 id="buffer">為什麼要 <code>register_buffer</code></h3>
+<p>第 89 行每一步都把 <code>W[n]</code> 用 <code>register_buffer</code> 存進模型。原因在 <code>run_si</code> 的結構：每個任務結束時建立一個<strong>新的</strong> <code>si</code> 物件（下面的第 155 行），而 W 是存在舊物件的 <code>self.W</code> 裡的。舊物件沒有被傳給新物件，新物件要拿到 W，只能透過兩者共有的東西：模型。所以程式把 W、上一個任務結束時的參數、累積的重要度，都當成 buffer 掛在模型上，參數名稱裡的 <code>.</code> 換成 <code>__</code>（buffer 的名稱不能有 <code>.</code>），例如 <code>fc1__weight_W</code>。</p>
+<figure class="listing"><figcaption>train.py:150–158 — run_si() 的任務迴圈：新的 si 物件只拿到模型</figcaption>
+<pre class="py" data-hot="155"><code>  for train_indexes in task_bar:
+    # Train Each Task
+    model, _, acc_list = train(model, optimizer, train_dataloaders[train_indexes], args.epochs_per_task, lll_object, lll_lambda, evaluate=evaluate,device=device, test_dataloaders=test_dataloaders[:train_indexes+1])
+    
+    # get model weight and calculate guidance for each weight
+    lll_object=si(model=model, dataloader=train_dataloaders[train_indexes], epsilon=0.1, device=device)
+
+    # New a Optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)</code></pre></figure>
+<p>這個做法能跑，但有副作用。實測：建立第一個 <code>si</code> 物件後模型多了 8 個 buffer，做過一次 <code>update</code> 後是 16 個，第二個物件建立後是 24 個（8 個參數 × 3 種：<code>_W</code>、<code>_SI_prev_task</code>、<code>_SI_omega</code>）。buffer 會進到 <code>state_dict()</code>，模型的 <code>state_dict</code> 從 8 項變成 32 項；把它存檔之後，想載入一個全新的 <code>Model()</code> 會出現 <code>RuntimeError: Error(s) in loading state_dict for Model</code>（多出來的 key）。另外每一步都對 8 個參數各呼叫一次 <code>register_buffer</code>，是不必要的開銷：<code>self.W[n]</code> 是原地累加的，第一次登記之後，buffer 指向的就是同一個張量。比較乾淨的寫法是讓新物件直接接收舊物件（或它的 W），不經過模型。</p>
+<p>這個類別的 docstring 引用的是 EWC 的論文（Kirkpatrick 等，2017），不是 SI 的論文（Zenke、Poole、Ganguli，2017），應該是複製 EWC 類別時沒有改。</p>
+
+<h2 id="importance">6.3　任務結束：把 W 變成重要度</h2>
+<figure class="listing"><figcaption>methods/si.py:37–70 — si._calculate_importance()：Ω += W / (Δ² + ε)</figcaption>
+<pre class="py" data-hot="46-50,55,60-61"><code>  def _calculate_importance(self):
+    n_p_prev = {}
+    n_omega = {}
+
+    if self.dataloader != None:
+      for n, p in self.model.named_parameters():
+        n = n.replace('.', '__')
+        if p.requires_grad:
+          # Find/calculate new values for quadratic penalty on parameters
+          p_prev = getattr(self.model, '{}_SI_prev_task'.format(n))
+          W = getattr(self.model, '{}_W'.format(n))
+          p_current = p.detach().clone()
+          p_change = p_current - p_prev
+          omega_add = W/(p_change**2 + self.epsilon)
+          try:
+            omega = getattr(self.model, '{}_SI_omega'.format(n))
+          except AttributeError:
+            omega = p.detach().clone().zero_()
+          omega_new = omega + omega_add
+          n_omega[n] = omega_new
+          n_p_prev[n] = p_current
+
+          # Store these new values in the model
+          self.model.register_buffer('{}_SI_prev_task'.format(n), p_current)
+          self.model.register_buffer('{}_SI_omega'.format(n), omega_new)
+
+    else:
+      for n, p in self.model.named_parameters():
+        n = n.replace('.', '__')
+        if p.requires_grad:
+          n_p_prev[n] = p.detach().clone()
+          n_omega[n] = p.detach().clone().zero_()
+          self.model.register_buffer('{}_SI_prev_task'.format(n), p.detach().clone())
+    return n_p_prev, n_omega</code></pre></figure>
+<p>兩個分支：</p>
+<ul>
+<li><strong><code>dataloader</code> 是 <code>None</code></strong>（第 63–69 行，訓練開始前的第一個物件）：重要度全 0，並把目前的參數登記成 <code>_SI_prev_task</code>，當成任務 1 的起點 θ(0)。</li>
+<li><strong>否則</strong>（第 41–61 行，任務結束時）：從 buffer 讀出這個任務的起點 <code>p_prev</code> 和累加的 <code>W</code>，算出參數在整個任務中的變化 <code>p_change</code>，<code>omega_add = W / (p_change² + ε)</code>，加到之前累積的 <code>_SI_omega</code> 上（第一次沒有這個 buffer，<code>getattr</code> 丟出 <code>AttributeError</code>，就從 0 開始）。最後把目前的參數登記成下一個任務的起點，把新的重要度存回 buffer。</li>
+</ul>
+<p>這裡 <code>dataloader</code> 只是一個旗標：程式只檢查它是不是 <code>None</code>，從來沒有走過它的資料。這是 SI 不需要額外一輪資料的具體證據。寫法 <code>!= None</code> 在 Python 裡能用，慣例是寫 <code>is not None</code>（<code>!=</code> 會呼叫物件的比較方法，對 <code>DataLoader</code> 沒差，但對張量之類的物件會出問題）。</p>
+<p>和 EWC、MAS 不同，SI 的重要度<strong>沒有重複累加</strong>：每個任務只把自己的 <code>omega_add</code> 加到前一份累積值上一次（第 55 行），不是把整個歷史清單再加一遍。所以第 4 章 4.4 節的 bug 在 SI 不存在（實驗工具的 <code>--guards</code> 選項也只對 EWC、MAS、RWalk、SCP 有作用）。</p>
+<p>懲罰項（第 72–81 行）和其他方法相同：<code>Σ Ω (θ − θ_prev)²</code>，<code>θ_prev</code> 是上一個任務結束時的參數。</p>
+
+<h2 id="measure">6.4　實測：ε 蓋過了參數的變化</h2>
+<p>SI 的公式看起來很合理，但分母 <code>(Δ² + ε)</code> 裡兩項的大小要實際看了才知道。本書用 <code>docs/tools/hw14_si_inspect.py</code> 照原樣跑一次 SI（種子 0，印出的 50 個數和 A 組 SI 種子 0 逐位元相同），在每個任務結束、新物件建立之前，讀出模型 buffer 裡的 W 與參數變化 Δ：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>任務結束</th><th class="num">W 總和</th><th class="num">W &lt; 0 的比例</th><th class="num">W = 0 的比例</th><th class="num">|Δ| 中位數</th><th class="num">|Δ| 最大</th><th class="num">Δ² &lt; ε</th><th class="num">Δ² &lt; ε/100</th><th class="num">Ω 增量總和</th></tr></thead>
+<tbody>
+<tr><td>任務 1</td><td class="num">27.09</td><td class="num">0%</td><td class="num">5.1%</td><td class="num">0.0077</td><td class="num">0.134</td><td class="num">100%</td><td class="num">95.4%</td><td class="num">270.2</td></tr>
+<tr><td>任務 2</td><td class="num">21.85</td><td class="num">0%</td><td class="num">9.4%</td><td class="num">0.0038</td><td class="num">0.076</td><td class="num">100%</td><td class="num">99.8%</td><td class="num">218.3</td></tr>
+<tr><td>任務 3</td><td class="num">23.22</td><td class="num">0%</td><td class="num">11.6%</td><td class="num">0.0029</td><td class="num">0.059</td><td class="num">100%</td><td class="num">99.96%</td><td class="num">232.2</td></tr>
+<tr><td>任務 4</td><td class="num">25.26</td><td class="num">0%</td><td class="num">11.2%</td><td class="num">0.0025</td><td class="num">0.066</td><td class="num">100%</td><td class="num">99.96%</td><td class="num">252.5</td></tr>
+<tr><td>任務 5</td><td class="num">27.12</td><td class="num">0%</td><td class="num">8.8%</td><td class="num">0.0022</td><td class="num">0.064</td><td class="num">100%</td><td class="num">99.98%</td><td class="num">271.1</td></tr>
+</tbody>
+</table></div>
+<p>三件事：</p>
+<ul>
+<li><strong>ε 完全主導分母。</strong>每個參數在一整個任務裡移動的距離都很小（中位數 0.002–0.008，最大 0.134），Δ² 全部小於 ε = 0.1，95% 以上甚至小於 ε 的百分之一。所以 <code>W / (Δ² + ε)</code> 幾乎就是 <code>W / 0.1 = 10 W</code>：Ω 增量的總和 270.2 正好約是 W 總和 27.09 的 10 倍。SI「除以參數移動距離」的那一半公式在這份作業裡沒有作用，重要度就是「累加的 −g·Δθ」乘 10。反過來，如果把 ε 拿掉，任務 1 結束時的 Ω 增量總和會變成 1.4 × 10<sup>11</sup>（有些參數幾乎沒動），ε 的大小決定了 SI 的行為。學習率 1e-4 的 Adam 讓參數移動得很少，這是 Δ² 這麼小的原因；ε 的合適大小和參數的尺度、學習率都有關，作業沿用了 0.1 這個值。</li>
+<li><strong>W 沒有任何負值</strong>，146 萬個參數裡 5–12% 是 0。單一步的 −g·Δθ 可能是負的（Adam 的一步是梯度的移動平均，方向不一定和這一步的梯度相同），但累加 4,690 步之後全都是非負的。等於 0 的參數主要是 fc1 裡連到「永遠是黑色的邊角像素」的權重：輸入是 0，梯度就是 0。</li>
+<li><strong>W 的總和遠大於 loss 實際的下降。</strong>任務 1 結束時 W 總和是 27.09；但一個從隨機初始化開始的十類分類器，訓練 loss 從約 ln 10 ≈ 2.30 降到接近 0，總共最多降 2.3 左右。如果 W 是 loss 下降的精確分解，總和應該接近 2.3。多出來的十倍來自小批次梯度的雜訊：每一步的 g 是這個 batch 的梯度，Δθ 也是用這個 batch 的梯度算出來的，兩者的雜訊同方向，乘起來總是正的，一路累加上去。後來的研究也指出，SI 的重要度在實務上很大一部分反映的是梯度雜訊的大小，而不是真正的 loss 貢獻。</li>
+</ul>
+
+<h2 id="lambda">6.5　λ 與五個種子</h2>
+<p>作業的 SI 用 λ = 1。B 組實驗掃了 0.1、10、100（種子 0）：</p>
+<figure class="fig">
+<svg viewBox="0 0 900 360" role="img" aria-label="SI 不同 λ 下任務 1 準確率隨 epoch 的變化">
+<line x1="56" y1="314.0" x2="780" y2="314.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="318.0" text-anchor="end">20</text>
+<line x1="56" y1="240.5" x2="780" y2="240.5" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="244.5" text-anchor="end">40</text>
+<line x1="56" y1="167.0" x2="780" y2="167.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="171.0" text-anchor="end">60</text>
+<line x1="56" y1="93.5" x2="780" y2="93.5" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="97.5" text-anchor="end">80</text>
+<line x1="56" y1="20.0" x2="780" y2="20.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="24.0" text-anchor="end">100</text>
+<line x1="196.4" y1="20" x2="196.4" y2="314" stroke="#3a4552" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="344.1" y1="20" x2="344.1" y2="314" stroke="#3a4552" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="491.9" y1="20" x2="491.9" y2="314" stroke="#3a4552" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="639.6" y1="20" x2="639.6" y2="314" stroke="#3a4552" stroke-width="1" stroke-dasharray="4 4"/>
+<text class="s-sm" x="122.5" y="332" text-anchor="middle">任務 1</text>
+<text class="s-sm" x="270.2" y="332" text-anchor="middle">任務 2</text>
+<text class="s-sm" x="418.0" y="332" text-anchor="middle">任務 3</text>
+<text class="s-sm" x="565.8" y="332" text-anchor="middle">任務 4</text>
+<text class="s-sm" x="713.5" y="332" text-anchor="middle">任務 5</text>
+<line x1="56" y1="314" x2="780" y2="314" stroke="#4a5562" stroke-width="1"/>
+<text class="s-sm" x="418.0" y="354" text-anchor="middle">第幾個 epoch（每 10 個換一個任務）</text>
+<text class="s-sm" x="14" y="167.0" text-anchor="middle" transform="rotate(-90 14 167.0)">任務 1 的測試準確率（%）</text>
+<polyline points="56.0,47.3 70.8,39.7 85.6,35.6 100.3,34.2 115.1,30.4 129.9,29.5 144.7,29.2 159.4,28.5 174.2,29.3 189.0,27.2 203.8,41.4 218.5,41.4 233.3,44.3 248.1,43.9 262.9,45.8 277.6,44.9 292.4,48.7 307.2,46.6 322.0,48.3 336.7,45.4 351.5,89.8 366.3,103.3 381.1,109.0 395.8,107.9 410.6,122.8 425.4,119.3 440.2,122.7 454.9,129.6 469.7,122.9 484.5,131.5 499.3,178.4 514.0,193.6 528.8,200.5 543.6,198.0 558.4,199.5 573.1,204.6 587.9,200.1 602.7,200.6 617.5,206.0 632.2,208.1 647.0,245.9 661.8,250.9 676.6,263.1 691.3,258.7 706.1,258.5 720.9,261.4 735.7,267.4 750.4,262.3 765.2,263.2 780.0,257.3" fill="none" stroke="#8b949e" stroke-width="2" stroke-linejoin="round" stroke-dasharray="5 4"/>
+<polyline points="56.0,47.3 70.8,39.7 85.6,35.6 100.3,34.2 115.1,30.4 129.9,29.5 144.7,29.2 159.4,28.5 174.2,29.3 189.0,27.2 203.8,41.4 218.5,41.3 233.3,44.3 248.1,43.9 262.9,45.7 277.6,44.4 292.4,48.1 307.2,46.1 322.0,47.7 336.7,45.9 351.5,90.4 366.3,103.8 381.1,109.3 395.8,107.9 410.6,123.3 425.4,117.8 440.2,122.9 454.9,129.1 469.7,122.4 484.5,132.0 499.3,175.6 514.0,192.6 528.8,198.5 543.6,196.7 558.4,199.8 573.1,200.6 587.9,194.7 602.7,195.6 617.5,200.6 632.2,202.3 647.0,244.6 661.8,247.5 676.6,258.4 691.3,252.8 706.1,252.1 720.9,254.5 735.7,258.6 750.4,254.8 765.2,262.4 780.0,251.0" fill="none" stroke="#86b6ef" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,47.3 70.8,39.7 85.6,35.6 100.3,34.2 115.1,30.4 129.9,29.5 144.7,29.2 159.4,28.5 174.2,29.3 189.0,27.2 203.8,41.2 218.5,40.9 233.3,43.0 248.1,42.9 262.9,44.4 277.6,42.9 292.4,45.9 307.2,43.6 322.0,44.3 336.7,43.2 351.5,87.2 366.3,100.7 381.1,103.2 395.8,101.1 410.6,114.9 425.4,107.4 440.2,106.4 454.9,112.4 469.7,110.6 484.5,116.0 499.3,166.6 514.0,182.8 528.8,190.4 543.6,189.1 558.4,182.0 573.1,192.4 587.9,177.0 602.7,177.1 617.5,183.1 632.2,186.6 647.0,233.3 661.8,235.2 676.6,244.8 691.3,247.6 706.1,240.9 720.9,245.7 735.7,246.2 750.4,241.0 765.2,240.4 780.0,231.8" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,47.3 70.8,39.7 85.6,35.6 100.3,34.2 115.1,30.4 129.9,29.5 144.7,29.2 159.4,28.5 174.2,29.3 189.0,27.2 203.8,39.3 218.5,37.6 233.3,38.2 248.1,39.3 262.9,39.0 277.6,36.7 292.4,39.3 307.2,37.2 322.0,37.5 336.7,39.8 351.5,77.4 366.3,90.5 381.1,86.5 395.8,80.3 410.6,81.5 425.4,80.1 440.2,77.7 454.9,81.7 469.7,76.4 484.5,85.2 499.3,139.5 514.0,148.2 528.8,159.5 543.6,147.6 558.4,144.8 573.1,152.4 587.9,148.6 602.7,145.3 617.5,143.2 632.2,140.5 647.0,192.5 661.8,189.2 676.6,176.5 691.3,195.5 706.1,194.3 720.9,195.4 735.7,185.8 750.4,195.0 765.2,174.4 780.0,186.5" fill="none" stroke="#256abf" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,47.3 70.8,39.7 85.6,35.6 100.3,34.2 115.1,30.4 129.9,29.5 144.7,29.2 159.4,28.5 174.2,29.3 189.0,27.2 203.8,35.0 218.5,33.8 233.3,32.5 248.1,34.7 262.9,33.9 277.6,33.1 292.4,35.8 307.2,33.7 322.0,35.0 336.7,36.8 351.5,57.1 366.3,65.2 381.1,63.7 395.8,58.3 410.6,58.9 425.4,59.3 440.2,60.9 454.9,63.6 469.7,55.6 484.5,62.4 499.3,103.1 514.0,101.6 528.8,103.4 543.6,96.9 558.4,100.4 573.1,103.2 587.9,101.0 602.7,102.7 617.5,99.6 632.2,97.0 647.0,147.9 661.8,132.8 676.6,132.3 691.3,147.1 706.1,129.4 720.9,143.0 735.7,140.5 750.4,146.9 765.2,150.5 780.0,136.1" fill="none" stroke="#184f95" stroke-width="2" stroke-linejoin="round"/>
+<rect x="786.0" y="132.1" width="8" height="8" rx="2" fill="#184f95"/>
+<text class="s-lbl" x="798.0" y="140.1">λ = 100</text>
+<rect x="786.0" y="182.5" width="8" height="8" rx="2" fill="#256abf"/>
+<text class="s-lbl" x="798.0" y="190.5">λ = 10</text>
+<rect x="786.0" y="227.8" width="8" height="8" rx="2" fill="#3987e5"/>
+<text class="s-lbl" x="798.0" y="235.8">λ = 1</text>
+<rect x="786.0" y="247.0" width="8" height="8" rx="2" fill="#86b6ef"/>
+<text class="s-lbl" x="798.0" y="255.0">λ = 0.1</text>
+<rect x="786.0" y="261.0" width="8" height="8" rx="2" fill="#8b949e"/>
+<text class="s-lbl" x="798.0" y="269.0">baseline</text>
+<rect x="48.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 1：baseline 92.58　λ = 0.1 92.58　λ = 1 92.58　λ = 10 92.58　λ = 100 92.58"/>
+<rect x="63.4" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 2：baseline 94.63　λ = 0.1 94.63　λ = 1 94.63　λ = 10 94.63　λ = 100 94.63"/>
+<rect x="78.2" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 3：baseline 95.76　λ = 0.1 95.76　λ = 1 95.76　λ = 10 95.76　λ = 100 95.76"/>
+<rect x="92.9" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 4：baseline 96.13　λ = 0.1 96.13　λ = 1 96.13　λ = 10 96.13　λ = 100 96.13"/>
+<rect x="107.7" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 5：baseline 97.18　λ = 0.1 97.18　λ = 1 97.18　λ = 10 97.18　λ = 100 97.18"/>
+<rect x="122.5" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 6：baseline 97.41　λ = 0.1 97.41　λ = 1 97.41　λ = 10 97.41　λ = 100 97.41"/>
+<rect x="137.3" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 7：baseline 97.49　λ = 0.1 97.49　λ = 1 97.49　λ = 10 97.49　λ = 100 97.49"/>
+<rect x="152.0" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 8：baseline 97.69　λ = 0.1 97.69　λ = 1 97.69　λ = 10 97.69　λ = 100 97.69"/>
+<rect x="166.8" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 9：baseline 97.48　λ = 0.1 97.48　λ = 1 97.48　λ = 10 97.48　λ = 100 97.48"/>
+<rect x="181.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 10：baseline 98.03　λ = 0.1 98.03　λ = 1 98.03　λ = 10 98.03　λ = 100 98.03"/>
+<rect x="196.4" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 11：baseline 94.17　λ = 0.1 94.17　λ = 1 94.22　λ = 10 94.75　λ = 100 95.93"/>
+<rect x="211.1" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 12：baseline 94.17　λ = 0.1 94.21　λ = 1 94.32　λ = 10 95.20　λ = 100 96.24"/>
+<rect x="225.9" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 13：baseline 93.40　λ = 0.1 93.40　λ = 1 93.75　λ = 10 95.04　λ = 100 96.59"/>
+<rect x="240.7" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 14：baseline 93.50　λ = 0.1 93.50　λ = 1 93.77　λ = 10 94.74　λ = 100 95.99"/>
+<rect x="255.5" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 15：baseline 92.98　λ = 0.1 93.00　λ = 1 93.35　λ = 10 94.84　λ = 100 96.23"/>
+<rect x="270.2" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 16：baseline 93.23　λ = 0.1 93.36　λ = 1 93.78　λ = 10 95.45　λ = 100 96.43"/>
+<rect x="285.0" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 17：baseline 92.20　λ = 0.1 92.36　λ = 1 92.96　λ = 10 94.76　λ = 100 95.70"/>
+<rect x="299.8" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 18：baseline 92.77　λ = 0.1 92.89　λ = 1 93.59　λ = 10 95.33　λ = 100 96.26"/>
+<rect x="314.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 19：baseline 92.29　λ = 0.1 92.46　λ = 1 93.40　λ = 10 95.25　λ = 100 95.91"/>
+<rect x="329.3" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 20：baseline 93.08　λ = 0.1 92.95　λ = 1 93.69　λ = 10 94.62　λ = 100 95.42"/>
+<rect x="344.1" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 21：baseline 81.01　λ = 0.1 80.84　λ = 1 81.71　λ = 10 84.39　λ = 100 89.91"/>
+<rect x="358.9" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 22：baseline 77.32　λ = 0.1 77.21　λ = 1 78.03　λ = 10 80.81　λ = 100 87.69"/>
+<rect x="373.7" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 23：baseline 75.77　λ = 0.1 75.70　λ = 1 77.35　λ = 10 81.90　λ = 100 88.10"/>
+<rect x="388.4" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 24：baseline 76.09　λ = 0.1 76.09　λ = 1 77.94　λ = 10 83.58　λ = 100 89.58"/>
+<rect x="403.2" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 25：baseline 72.02　λ = 0.1 71.90　λ = 1 74.18　λ = 10 83.27　λ = 100 89.42"/>
+<rect x="418.0" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 26：baseline 72.99　λ = 0.1 73.38　λ = 1 76.23　λ = 10 83.64　λ = 100 89.31"/>
+<rect x="432.8" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 27：baseline 72.05　λ = 0.1 72.01　λ = 1 76.49　λ = 10 84.31　λ = 100 88.86"/>
+<rect x="447.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 28：baseline 70.18　λ = 0.1 70.30　λ = 1 74.86　λ = 10 83.21　λ = 100 88.14"/>
+<rect x="462.3" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 29：baseline 71.99　λ = 0.1 72.14　λ = 1 75.36　λ = 10 84.64　λ = 100 90.30"/>
+<rect x="477.1" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 30：baseline 69.66　λ = 0.1 69.53　λ = 1 73.89　λ = 10 82.25　λ = 100 88.46"/>
+<rect x="491.9" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 31：baseline 56.90　λ = 0.1 57.65　λ = 1 60.12　λ = 10 67.49　λ = 100 77.38"/>
+<rect x="506.7" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 32：baseline 52.77　λ = 0.1 53.03　λ = 1 55.69　λ = 10 65.12　λ = 100 77.79"/>
+<rect x="521.4" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 33：baseline 50.89　λ = 0.1 51.43　λ = 1 53.63　λ = 10 62.05　λ = 100 77.31"/>
+<rect x="536.2" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 34：baseline 51.57　λ = 0.1 51.92　λ = 1 53.98　λ = 10 65.27　λ = 100 79.08"/>
+<rect x="551.0" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 35：baseline 51.15　λ = 0.1 51.07　λ = 1 55.93　λ = 10 66.03　λ = 100 78.13"/>
+<rect x="565.8" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 36：baseline 49.76　λ = 0.1 50.87　λ = 1 53.08　λ = 10 63.96　λ = 100 77.37"/>
+<rect x="580.5" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 37：baseline 51.00　λ = 0.1 52.46　λ = 1 57.29　λ = 10 65.02　λ = 100 77.96"/>
+<rect x="595.3" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 38：baseline 50.85　λ = 0.1 52.23　λ = 1 57.26　λ = 10 65.90　λ = 100 77.51"/>
+<rect x="610.1" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 39：baseline 49.39　λ = 0.1 50.85　λ = 1 55.61　λ = 10 66.47　λ = 100 78.33"/>
+<rect x="624.9" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 40：baseline 48.81　λ = 0.1 50.39　λ = 1 54.68　λ = 10 67.20　λ = 100 79.05"/>
+<rect x="639.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 41：baseline 38.54　λ = 0.1 38.89　λ = 1 41.95　λ = 10 53.06　λ = 100 65.21"/>
+<rect x="654.4" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 42：baseline 37.18　λ = 0.1 38.10　λ = 1 41.44　λ = 10 53.95　λ = 100 69.31"/>
+<rect x="669.2" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 43：baseline 33.84　λ = 0.1 35.13　λ = 1 38.82　λ = 10 57.42　λ = 100 69.44"/>
+<rect x="684.0" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 44：baseline 35.05　λ = 0.1 36.64　λ = 1 38.06　λ = 10 52.24　λ = 100 65.42"/>
+<rect x="698.7" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 45：baseline 35.10　λ = 0.1 36.84　λ = 1 39.90　λ = 10 52.58　λ = 100 70.22"/>
+<rect x="713.5" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 46：baseline 34.30　λ = 0.1 36.19　λ = 1 38.58　λ = 10 52.28　λ = 100 66.54"/>
+<rect x="728.3" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 47：baseline 32.67　λ = 0.1 35.08　λ = 1 38.45　λ = 10 54.89　λ = 100 67.22"/>
+<rect x="743.1" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 48：baseline 34.08　λ = 0.1 36.11　λ = 1 39.86　λ = 10 52.38　λ = 100 65.47"/>
+<rect x="757.8" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 49：baseline 33.82　λ = 0.1 34.04　λ = 1 40.04　λ = 10 58.00　λ = 100 64.50"/>
+<rect x="772.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 50：baseline 35.43　λ = 0.1 37.13　λ = 1 42.38　λ = 10 54.70　λ = 100 68.40"/>
+</svg>
+<div class="legend"><span><i style="background:#8b949e"></i>baseline（虛線）</span><span><i style="background:#86b6ef"></i>λ = 0.1</span><span><i style="background:#3987e5"></i>λ = 1（作業的設定）</span><span><i style="background:#256abf"></i>λ = 10</span><span><i style="background:#184f95"></i>λ = 100</span></div>
+<figcaption>圖 6.1　SI 在不同 λ 下，任務 1 的測試準確率。顏色越深 λ 越大（和第 4 章圖 4.1 同樣的表示法）。</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<thead><tr><th>λ</th><th class="num">ACC</th><th class="num">BWT</th><th class="num">任務 1 最後</th><th>對角線（任務 1→5）</th></tr></thead>
+<tbody>
+<tr><td>0.1</td><td class="num">71.68</td><td class="num">−33.08</td><td class="num">37.13</td><td>98.03 / 98.08 / 98.27 / 98.23 / 98.11</td></tr>
+<tr><td>1（作業）</td><td class="num">74.50</td><td class="num">−29.43</td><td class="num">42.38</td><td>98.03 / 98.09 / 98.16 / 97.97 / 97.97</td></tr>
+<tr><td>10</td><td class="num">78.20</td><td class="num">−23.62</td><td class="num">54.70</td><td>98.03 / 97.58 / 97.37 / 96.39 / 96.14</td></tr>
+<tr><td>100</td><td class="num"><strong>82.61</strong></td><td class="num">−13.36</td><td class="num">68.40</td><td>98.03 / 96.29 / 93.53 / 90.95 / 87.72</td></tr>
+</tbody>
+</table></div>
+<p>和 EWC（第 4 章）一樣，作業的 λ 太小。λ = 100 時 ACC 82.61，和 MAS（第 5 章，λ = 0.1 時 83.88）差不多，對角線的樣子也很像：越後面的任務越學不好（任務 5 剛學完只有 87.72）。本書的掃描到 100 為止，再大是否更好沒有實測。</p>
+<p>λ = 1 時五個種子的 ACC 是 74.50、73.97、74.06、75.30、74.05，平均 74.38 ± 0.56；BWT −29.52 ± 0.68。比 baseline（69.47 ± 1.40）好約 5 個百分點，比 EWC 的作業設定（71.61 ± 0.45）好約 3 個百分點。注意第 0 章參照執行裡 SI 是 71.98：參照執行六種方法共用一條亂數流，SI 排在第四個跑，拿到的初始權重與資料順序都和 A 組不同，換一條亂數流就差了 2.5 個百分點。</p>
+
+<p>成本方面，SI 把 EWC「任務結束後多跑一個 epoch」的成本，換成「每一步多做一次逐元素運算」：每一步對 8 個參數張量各算一次乘法、一次累加、一次 <code>clone()</code>，一個任務 4,690 步。它還要多存兩份和模型一樣大的東西（W 與 <code>p_old</code>），加上 buffer 裡的起點參數與累積的 Ω，比 EWC 的「一份重要度加一份舊權重」多。在這個小模型上兩者都感覺不到；換成大模型時，每一步都要碰一次全部參數的做法，成本會和訓練本身同一個量級。</p>
+
+<div class="note"><h4>現在的做法：從訓練軌跡估重要度</h4>
+<p>SI「訓練時順便記錄，不另外走資料」的想法很省，但 6.4 節看到的兩個問題（ε 的尺度要配合學習率與參數大小、累加量被梯度雜訊主導）讓它在實務上比 EWC、MAS 更難調。現在直接使用 SI 的場合不多；它的概念在別處延續，例如用訓練過程中參數的移動量或梯度統計（Adam 的二階動量本身就是梯度平方的移動平均）來判斷哪些參數「對這個任務很敏感」，在模型合併（model merging）時決定各個微調結果裡哪些參數要保留。另外，像本章這樣把狀態寄存在模型的 buffer 裡、讓存檔多出一堆 key 的做法，現在多半改成把方法的狀態放在獨立的物件（或 optimizer 的 state）裡，存檔時分開存。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>SI 的重要度：訓練時每一步累加 −g·Δθ 得到 W（參數對 loss 下降的貢獻），任務結束時 Ω += W / (Δ² + ε)，Δ 是參數在整個任務中的變化，ε = 0.1。不需要額外走一遍資料。</li>
+<li><code>update()</code> 在 <code>zero_grad</code>、<code>backward</code> 之前被呼叫，<code>.grad</code> 是上一步的梯度、<code>p − p_old</code> 是上一步造成的變化，兩者正好配對；放到 <code>backward</code> 之後就會錯開一步。</li>
+<li>W、起點參數、累積的 Ω 都用 <code>register_buffer</code> 寄存在模型上，給下一個 si 物件讀；副作用是 <code>state_dict</code> 從 8 項變成 32 項，無法直接載入新的 <code>Model</code>。<code>dataloader</code> 只當旗標用。docstring 引錯論文。SI 沒有重複累加的問題。</li>
+<li>實測：Δ² 全部小於 ε（95% 以上小於 ε/100），所以 Ω ≈ 10 W；W 全部非負，總和 27 遠大於 loss 實際的下降（約 2.3），多出來的是小批次梯度的雜訊。</li>
+<li>λ 掃描：0.1 → 71.68、1 → 74.50、10 → 78.20、100 → 82.61；作業設定下五個種子 74.38 ± 0.56。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 如果把 <code>train()</code> 裡的 <code>lll_object.update(model)</code> 移到 <code>optimizer.step()</code> 之後，SI 的 W 會累加什麼？</summary>
+<p><code>update()</code> 在 <code>step()</code> 之後被呼叫時，<code>.grad</code> 是這一步剛算出的梯度 g(t)，<code>p − p_old</code> 是這一步 <code>step()</code> 造成的變化，兩者其實也配成一對（同一步的梯度與它造成的變化）。差別在於原本的寫法是在下一步開頭才算；移到 <code>step()</code> 之後，每個任務的最後一步也會被算進去，第一步則一樣。如果放在 <code>backward()</code> 之後、<code>step()</code> 之前，則是新梯度配上一步的變化（6.2 節）。這題是依程式推論，本書沒有實際跑。</p></details>
+<details class="quiz"><summary>2. SI 的 <code>__init__</code> 收到 <code>dataloader=train_dataloaders[train_indexes]</code>，它會走過這些資料嗎？</summary>
+<p>不會。<code>_calculate_importance()</code> 只檢查 <code>self.dataloader != None</code> 來決定走哪個分支，從來沒有 iterate 它。SI 的重要度完全來自訓練時 <code>update()</code> 累加的 W。</p></details>
+<details class="quiz"><summary>3. 把 <code>epsilon</code> 從 0.1 改成 0.001，SI 的重要度大約會變成幾倍？</summary>
+<p>依 6.4 節的實測，Δ² 有 95% 以上小於 0.001（ε/100），所以這些參數的分母從約 0.1 變成約 0.001 加上 Δ²，重要度大約放大到 50–100 倍，移動距離較大的少數參數放大得少一些。效果類似把 λ 放大很多倍。本書沒有實際跑 ε = 0.001。</p></details>
+<details class="quiz"><summary>4. 為什麼 SI 不會有 EWC、MAS 那種「舊任務的重要度被重複累加」的問題？</summary>
+<p>SI 每個任務只把新算出的 <code>omega_add</code> 加到前一份累積值（存在 <code>_SI_omega</code> buffer）上一次。EWC、MAS 則把每個舊物件的「已經包含所有歷史」的重要度存進 <code>prev_guards</code> 清單，新物件再把整份清單加總，歷史就被重複加了。</p></details>
+<details class="quiz"><summary>5. 用 <code>torch.save(model.state_dict(), 'si.pth')</code> 存下跑完 SI 的模型，再用 <code>Model().load_state_dict(torch.load('si.pth'))</code> 載入，會發生什麼？怎麼解決？</summary>
+<p>會出現 <code>RuntimeError</code>：state_dict 裡多了 24 個 <code>fc1__weight_W</code>、<code>fc1__weight_SI_prev_task</code>、<code>fc1__weight_SI_omega</code> 之類的 buffer，新的 <code>Model</code> 沒有這些 key（本章實測 load 失敗）。可以用 <code>load_state_dict(..., strict=False)</code> 忽略多出來的 key，或存檔前只挑出參數（例如用 <code>{n: p for n, p in model.named_parameters()}</code>）。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Friedemann Zenke、Ben Poole、Surya Ganguli，<a href="https://arxiv.org/abs/1703.04200">Continual Learning Through Synaptic Intelligence</a>（ICML 2017）：SI 的原始論文。</li>
+<li>Frederik Benzing，<a href="https://arxiv.org/abs/2006.06357">Unifying Importance Based Regularisation Methods for Continual Learning</a>（AISTATS 2022）：分析 SI 與 MAS 的重要度實際上在量什麼，指出 SI 受梯度雜訊的影響。</li>
+<li>PyTorch 文件：<a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.register_buffer"><code>nn.Module.register_buffer</code></a>。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch05.html">← 第 5 章</a><a href="ch07.html">第 7 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW14 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW14 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>
