@@ -259,3 +259,12 @@ FID64（n = 1000、z 種子 0；FID96 與 AFD 見 jsonl）：
 - **兩次 test.py 的輸出不同**（`output/1.jpg` md5 `b8699eec…` vs `f773f383…`）：test.py 沒有呼叫 `same_seeds`，`inference` 的 `torch.randn` 每次不同。
 - 100 張 tar.gz：116,043 bytes。
 - **1000 張**（hw06_eval 的 `--keep`，`torchvision.utils.save_image` 存 JPEG，n 1000、種子 0）照投影片的 `tar -zcf ... *.jpg`：gan G_99 jpg 共 1,736,900 B → tgz **1,138,801 B**；wgan G_99 1,761,607 → **1,180,344**；StyleGAN2 ψ1.0 1,747,508 → **1,167,445**。都在 2MB 限制以內（約 1.1–1.2 MB）。tar 裡是 `1.jpg`、`10.jpg`…（沒有資料夾，符合 p.12 第 3 點）。
+
+## Crypko（ch01 用；2026-10-08 網路查證）
+- Preferred Networks（PFN，日本）的動漫角色生成服務，以 GAN 為基礎；2018 年開發出產生臉部插圖的模型，**2018 年 5 月公開 beta**；第一代服務 **2019 年 3 月結束**，當時用 blockchain 智慧合約記錄角色的生成、融合與使用者的對應（PFN 2019 公告，沒寫是哪一條鏈）。來源：https://www.preferred.jp/en/news/pr20190403
+- 2022 年 4 月在日本以瀏覽器平台重新上線（可生成臉或上半身、融合、編輯髮色表情等 30 多項屬性；第六代可生成上半身），**2022-06-29 推出英文與簡中版**。來源：https://www.preferred.jp/en/news/pr20220629
+- 2022 年 8 月加入可商用的 Premium Plan。來源：https://www.preferred.jp/en/news/pr20220825
+- **2025 年 6 月結束一般使用者服務**（PFN entertainment 頁）；萌娘百科寫 2025-06-30 起無法連上（另有寫 7 月的版本，日期以 PFN 為準）。來源：https://www.preferred.jp/en/industries/entertainment
+- 查不到的：PFN 用的是哪一種 GAN 架構（公告沒寫 StyleGAN）、是哪一條鏈。教材不寫這兩點。
+- 投影片 p.9：「Website which can generate anime face by yourself」「Thanks Arvin Liu for collecting the dataset」。→ 作業的 71,314 張是 Crypko 生成的角色圖，即**訓練資料本身就是 GAN 的輸出**（由「Crypko 是 GAN 服務」推得；資料集何時、怎麼收集沒有公開來源）。
+- 使用者決定（2026-10-08）：書裡放少量 Crypko 原圖。
