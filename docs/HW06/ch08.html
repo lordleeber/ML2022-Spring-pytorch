@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 8 章　往上爬：StyleGAN2 與三級題庫 — HW06 動漫臉生成</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a><a href="appendix.html">附錄 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW06 讀碼教材</p>
+  <h1>第 8 章　往上爬：StyleGAN2 與三級題庫</h1>
+  <p class="chap-lead">投影片給 Boss 基準線的建議是 StyleGAN。這一章先講 StyleGAN 和前面的 DCGAN 差在哪裡——不只是換一個 loss，而是生成器的整個結構都變了；接著用一個開源套件從零訓練 50,000 步（本機 4 小時 18 分），看它的 FID 降到 66.3、到最後都還在進步，以及 truncation ψ 怎麼在「像」與「多樣」之間取捨；然後把全書所有實驗放進同一張表，整理「如果只能挑幾件事做」；最後是入門、進階、挑戰三級題庫。</p>
+</header>
+<main>
+
+<h2 id="stylegan">8.1　StyleGAN 改了什麼</h2>
+<p>前面三種 GAN（DCGAN、WGAN、WGAN-GP）用的是同一個生成器（第 2 章）：亂數 z 經過一層 Linear 攤成 4×4 的特徵圖，再用轉置卷積一路放大。它們的差別只在判別器與 loss。<strong>StyleGAN</strong>（Karras 等，2019）與它的改良版 <strong>StyleGAN2</strong>（2020）則從生成器的結構下手。投影片第 25 頁點出兩個重點：「First transform latent variable z to w」「Use w in different stage in generator (deal with different resolutions)」。完整一點的對照：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>DCGAN 的生成器（本作業）</th><th>StyleGAN2 的生成器</th></tr></thead>
+<tbody>
+<tr><td>亂數從哪裡進去</td><td>z 只在第一層進去，攤成 4×4</td><td>先經過一個 <strong>mapping 網路</strong>（8 層全連接）把 z 變成 <strong>w</strong>，w 在<strong>每一個解析度</strong>都進去一次</td></tr>
+<tr><td>第一層的輸入</td><td>z 的線性投影</td><td>一張<strong>可學習的常數</strong> 4×4 特徵圖，和 z 無關</td></tr>
+<tr><td>w 怎麼影響圖</td><td>—</td><td>每一層卷積的權重依 w 縮放（modulated convolution）：w 控制這一層每個 channel 的「強弱」，也就是這個解析度上的「風格」（style）</td></tr>
+<tr><td>放大方式</td><td>轉置卷積（第 2 章的棋盤格問題）</td><td>雙線性內插放大 + 一般卷積</td></tr>
+<tr><td>細節的隨機性</td><td>全部來自 z</td><td>每一層另外加一張<strong>逐像素的雜訊</strong>，負責髮絲這類不影響整體的細節</td></tr>
+<tr><td>畫圖用的權重</td><td>訓練中的生成器</td><td>生成器權重的<strong>指數移動平均</strong>（EMA）</td></tr>
+</tbody>
+</table></div>
+<p>直觀的理解：mapping 網路把「常態分布的亂數」轉換成一個比較好用的空間 w，而 w 被拆給不同的解析度——4×4、8×8 這些粗的層決定臉的方向、輪廓、髮型這類大結構，32×32、64×64 這些細的層決定顏色與紋理。所以 StyleGAN 可以做 <strong>style mixing</strong>：粗的層用一個人的 w、細的層用另一個人的 w，得到「A 的臉型、B 的配色」。訓練時也刻意這樣混（本書的設定有 90% 的機率混用兩個 w），逼生成器讓不同解析度的 style 各自獨立。</p>
+
+<h3 id="lucidrains">本書用的實作：lucidrains 的 stylegan2-pytorch</h3>
+<p>NVIDIA 官方的 StyleGAN2-ADA 需要編譯自訂的 CUDA 運算，在新版 PyTorch 上不容易裝起來（repo 的 <code>筆記.txt</code> 第三條：「styleGAN2 看起來在 win10 下用 python3.8 會有安裝套件的問題」）。本書用的是 lucidrains 的 <code>stylegan2-pytorch</code> 1.9.0：純 PyTorch、可以 <code>pip</code> 安裝、一行指令就能從一個圖片資料夾開始訓練。安裝時有兩件事要處理（版本與步驟見事實清單）：用 <code>--no-deps</code> 裝在 <code>.venv</code> 之外以免動到共用環境，以及它在模組最上面 <code>import aim</code>（一個實驗紀錄工具，只有加 <code>--log</code> 才用），要放一個空的 <code>aim</code> 模組才載得起來。從原始碼讀到的關鍵設定：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>項目</th><th>lucidrains 1.9.0（本書的設定）</th></tr></thead>
+<tbody>
+<tr><td>mapping 網路</td><td>8 層全連接，寬 512，LeakyReLU；學習率乘 0.1</td></tr>
+<tr><td>生成器</td><td>64×64 → 5 個解析度（4、8、16、32、64），channel 512、256、128、64、32（<code>network_capacity</code> 16）；每個區塊：雙線性放大 → 兩層 3×3 modulated 卷積，各加一張雜訊 → 輸出一張 RGB 疊加到上一層的 RGB</td></tr>
+<tr><td>loss</td><td>hinge loss</td></tr>
+<tr><td>正則化</td><td>每 4 步一次梯度懲罰（權重 10、以 0 為目標，真圖與生成圖都算，第 7 章）；第 5,000 步之後每 32 步一次 path length 正則化（log 裡的 <code>PL</code>）</td></tr>
+<tr><td>優化器</td><td>Adam，β (0.5, 0.9)；生成器 lr 2×10<sup>−4</sup>，判別器 lr 乘 1.5（TTUR）</td></tr>
+<tr><td>EMA</td><td>係數 0.995；第 25,000 步之前每 1,000 步把 EMA 重設成目前的權重，第 20,000 步之後每 10 步更新一次</td></tr>
+<tr><td>參數量</td><td>mapping 2,101,248 + 生成器 11,216,556；判別器 22,679,184（DCGAN：生成器 5,142,080、判別器 2,766,529）</td></tr>
+</tbody>
+</table></div>
+<p>本書沒有改動套件的任何預設，只指定解析度、batch 與步數：</p>
+<figure class="listing"><figcaption>docs/tools/hw06_sg2_train.sh:14–17 — 訓練指令</figcaption>
+<pre class="shell"><code>PYTHONPATH="$LIB" "$ROOT/.venv/bin/python" -c "from stylegan2_pytorch.cli import main; main()" \
+  --data "$ROOT/HW06/faces" --name "$NAME" --results_dir ./results --models_dir ./models \
+  --image_size 64 --batch_size 32 --gradient_accumulate_every 1 \
+  --num_train_steps 50000 --save_every 2500 --evaluate_every 2500</code></pre></figure>
+<p>注意它讀的是原始的 <code>faces/</code>（96×96），由套件自己縮成 64×64，不經過 <code>get_dataset</code>；所以它和前三種 GAN 的初始權重、資料順序、前處理都不同，只有資料本身相同。評分仍用第 4 章的量法（1000 張、存成 JPEG、和 real64 比），用的是 EMA 的生成器。</p>
+
+<h2 id="training">8.2　訓練：4 小時 18 分、約 22 個 epoch</h2>
+<ul>
+  <li><strong>速度</strong>：batch 32，每秒 3.22–3.26 步（約 104 張圖／秒），50,000 步 <strong>4 小時 18 分 37 秒</strong>。50,000 × 32 = 1,600,000 張，約 <strong>22.4 個 epoch</strong>——前三種 GAN 都是 100 個 epoch，判別器看過 7,131,400 張。</li>
+  <li><strong>資源</strong>：GPU 記憶體 7.4 GB（DCGAN 約 760 MiB），每個存檔 197 MB（含 EMA 與判別器）。</li>
+  <li><strong>log</strong>：每 50 步印一行，共 1,000 行。前三行是 <code>G: 5.45 | D: 0.37 | GP: 11.18</code>、<code>G: 1.17 | D: 5.90 | GP: 55.92</code>、<code>G: -0.99 | D: 2.83 | GP: 17.94</code>；第 101 行起多了 <code>PL</code>；最後一行 <code>G: 0.34 | D: 2.06 | GP: 0.03 | PL: 0.41</code>。全程沒有 NaN。和第 3 章一樣，這些數字不代表圖的好壞。</li>
+</ul>
+
+<h2 id="results">8.3　結果：FID 66.3，而且還在下降</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>步數</th><th>2,500</th><th>5,000</th><th>10,000</th><th>15,000</th><th>20,000</th><th>25,000</th><th>30,000</th><th>35,000</th><th>40,000</th><th>45,000</th><th>50,000</th></tr></thead>
+<tbody>
+<tr><td>FID64（ψ 1.0）</td><td>262.0</td><td>192.0</td><td>125.5</td><td>101.6</td><td>98.7</td><td>83.1</td><td>78.6</td><td>74.2</td><td>73.9</td><td>70.5</td><td><strong>66.3</strong></td></tr>
+<tr><td>FID64（ψ 0.75）</td><td>268.5</td><td>203.6</td><td>130.1</td><td>101.8</td><td>106.9</td><td>89.0</td><td>87.6</td><td>86.1</td><td>82.5</td><td>79.7</td><td>76.7</td></tr>
+<tr><td>AFD（ψ 1.0）</td><td>0.014</td><td>0.221</td><td>0.442</td><td>0.428</td><td>0.406</td><td>0.439</td><td>0.456</td><td>0.471</td><td>0.456</td><td>0.443</td><td>0.467</td></tr>
+</tbody>
+</table></div>
+<p>（每 2,500 步一個存檔，共 21 個；完整數字在事實清單。）FID 大致一路下降，第 50,000 步的 <strong>66.3</strong> 是全書最低（FID96 92.8）；換 z 種子是 66.3–68.5（第 4 章），比 WGAN 的 90.3 低了 24。曲線到最後還在往下走（第 45,000 → 50,000 步 70.5 → 66.3），再訓練下去很可能更好。中途有幾次回升（第 15,000 → 17,500 步 101.6 → 121.2、第 7,500 步 200.0），但和 DCGAN 那種崩潰不同，下一個存檔就回到下降的趨勢。</p>
+<div class="legend">
+  <span><i style="background:#3987e5"></i>DCGAN</span>
+  <span><i style="background:#d95926"></i>WGAN</span>
+  <span><i style="background:#199e70"></i>WGAN-GP</span>
+  <span><i style="background:#c98500"></i>StyleGAN2（ψ 1.0）</span>
+</div>
+<figure class="fig">
+<svg viewBox="0 0 900 400" role="img" aria-label="四種 GAN 的 FID64 對訓練時間（分鐘，log 尺度）。DCGAN 在第 4.3 分鐘達到 105.0 後變差，29 分鐘時 211.9；WGAN 20 分鐘時 90.3；WGAN-GP 42 分鐘時 94.1；StyleGAN2 在 4 小時 18 分時 66.3，約 1 小時 56 分（第 22,500 步）時降到 96.3，與 WGAN、WGAN-GP 的終點相當">
+<line x1="80" y1="320.0" x2="880" y2="320.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="72" y="324.0" text-anchor="end">0</text>
+<line x1="80" y1="250.0" x2="880" y2="250.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="72" y="254.0" text-anchor="end">100</text>
+<line x1="80" y1="180.0" x2="880" y2="180.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="72" y="184.0" text-anchor="end">200</text>
+<line x1="80" y1="110.0" x2="880" y2="110.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="72" y="114.0" text-anchor="end">300</text>
+<line x1="80" y1="40.0" x2="880" y2="40.0" stroke="#2b3540" stroke-width="1"/>
+<text class="s-sm" x="72" y="44.0" text-anchor="end">400</text>
+<line x1="80" y1="297.7" x2="880" y2="297.7" stroke="#93a1af" stroke-width="1" stroke-dasharray="4 3"/>
+<text class="s-sm" x="880" y="291.7" text-anchor="end">真圖 1000 張的底線 ≈ 32</text>
+<text class="s-sm" x="80.0" y="338" text-anchor="middle">0.1</text>
+<line x1="80.0" y1="320" x2="80.0" y2="324" stroke="#93a1af"/>
+<text class="s-sm" x="310.1" y="338" text-anchor="middle">1</text>
+<line x1="310.1" y1="320" x2="310.1" y2="324" stroke="#93a1af"/>
+<text class="s-sm" x="540.2" y="338" text-anchor="middle">10</text>
+<line x1="540.2" y1="320" x2="540.2" y2="324" stroke="#93a1af"/>
+<text class="s-sm" x="649.9" y="338" text-anchor="middle">30</text>
+<line x1="649.9" y1="320" x2="649.9" y2="324" stroke="#93a1af"/>
+<text class="s-sm" x="719.2" y="338" text-anchor="middle">60</text>
+<line x1="719.2" y1="320" x2="719.2" y2="324" stroke="#93a1af"/>
+<text class="s-sm" x="788.4" y="338" text-anchor="middle">120</text>
+<line x1="788.4" y1="320" x2="788.4" y2="324" stroke="#93a1af"/>
+<text class="s-sm" x="880.0" y="338" text-anchor="middle">300</text>
+<line x1="880.0" y1="320" x2="880.0" y2="324" stroke="#93a1af"/>
+<text class="s-sm" x="480.0" y="360" text-anchor="middle">訓練時間（分鐘，log 尺度；本機 RTX PRO 4000）</text>
+<text class="s-sm" x="72" y="26">FID64（1000 張，越低越好）</text>
+<polyline points="185.9,65.7 346.8,174.7 416.0,236.5 456.5,246.5 485.3,77.0 507.6,126.4 525.8,120.6 541.2,124.8 554.5,161.4 566.3,195.2 576.8,176.5 586.4,167.4 595.1,180.4 603.0,158.7 610.5,150.7 617.3,147.5 623.8,166.8 629.9,190.1 635.6,171.9 641.0,168.1 646.1,171.7" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+<g><title>DCGAN，第 1 個 epoch（約 0.3 分鐘）：FID64 363.2</title><circle cx="185.9" cy="65.7" r="9" fill="#000" fill-opacity="0"/><circle cx="185.9" cy="65.7" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 5 個 epoch（約 1.4 分鐘）：FID64 207.6</title><circle cx="346.8" cy="174.7" r="9" fill="#000" fill-opacity="0"/><circle cx="346.8" cy="174.7" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 10 個 epoch（約 2.9 分鐘）：FID64 119.3</title><circle cx="416.0" cy="236.5" r="9" fill="#000" fill-opacity="0"/><circle cx="416.0" cy="236.5" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 15 個 epoch（約 4.3 分鐘）：FID64 105.0</title><circle cx="456.5" cy="246.5" r="9" fill="#000" fill-opacity="0"/><circle cx="456.5" cy="246.5" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 20 個 epoch（約 5.8 分鐘）：FID64 347.1</title><circle cx="485.3" cy="77.0" r="9" fill="#000" fill-opacity="0"/><circle cx="485.3" cy="77.0" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 25 個 epoch（約 7.2 分鐘）：FID64 276.6</title><circle cx="507.6" cy="126.4" r="9" fill="#000" fill-opacity="0"/><circle cx="507.6" cy="126.4" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 30 個 epoch（約 8.7 分鐘）：FID64 284.9</title><circle cx="525.8" cy="120.6" r="9" fill="#000" fill-opacity="0"/><circle cx="525.8" cy="120.6" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 35 個 epoch（約 10.1 分鐘）：FID64 278.8</title><circle cx="541.2" cy="124.8" r="9" fill="#000" fill-opacity="0"/><circle cx="541.2" cy="124.8" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 40 個 epoch（約 11.5 分鐘）：FID64 226.5</title><circle cx="554.5" cy="161.4" r="9" fill="#000" fill-opacity="0"/><circle cx="554.5" cy="161.4" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 45 個 epoch（約 13.0 分鐘）：FID64 178.3</title><circle cx="566.3" cy="195.2" r="9" fill="#000" fill-opacity="0"/><circle cx="566.3" cy="195.2" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 50 個 epoch（約 14.4 分鐘）：FID64 205.0</title><circle cx="576.8" cy="176.5" r="9" fill="#000" fill-opacity="0"/><circle cx="576.8" cy="176.5" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 55 個 epoch（約 15.9 分鐘）：FID64 218.0</title><circle cx="586.4" cy="167.4" r="9" fill="#000" fill-opacity="0"/><circle cx="586.4" cy="167.4" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 60 個 epoch（約 17.3 分鐘）：FID64 199.5</title><circle cx="595.1" cy="180.4" r="9" fill="#000" fill-opacity="0"/><circle cx="595.1" cy="180.4" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 65 個 epoch（約 18.8 分鐘）：FID64 230.4</title><circle cx="603.0" cy="158.7" r="9" fill="#000" fill-opacity="0"/><circle cx="603.0" cy="158.7" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 70 個 epoch（約 20.2 分鐘）：FID64 241.8</title><circle cx="610.5" cy="150.7" r="9" fill="#000" fill-opacity="0"/><circle cx="610.5" cy="150.7" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 75 個 epoch（約 21.7 分鐘）：FID64 246.4</title><circle cx="617.3" cy="147.5" r="9" fill="#000" fill-opacity="0"/><circle cx="617.3" cy="147.5" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 80 個 epoch（約 23.1 分鐘）：FID64 218.9</title><circle cx="623.8" cy="166.8" r="9" fill="#000" fill-opacity="0"/><circle cx="623.8" cy="166.8" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 85 個 epoch（約 24.5 分鐘）：FID64 185.6</title><circle cx="629.9" cy="190.1" r="9" fill="#000" fill-opacity="0"/><circle cx="629.9" cy="190.1" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 90 個 epoch（約 26.0 分鐘）：FID64 211.6</title><circle cx="635.6" cy="171.9" r="9" fill="#000" fill-opacity="0"/><circle cx="635.6" cy="171.9" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 95 個 epoch（約 27.4 分鐘）：FID64 216.9</title><circle cx="641.0" cy="168.1" r="9" fill="#000" fill-opacity="0"/><circle cx="641.0" cy="168.1" r="3" fill="#3987e5"/></g>
+<g><title>DCGAN，第 100 個 epoch（約 28.9 分鐘）：FID64 211.9</title><circle cx="646.1" cy="171.7" r="9" fill="#000" fill-opacity="0"/><circle cx="646.1" cy="171.7" r="3" fill="#3987e5"/></g>
+<polyline points="147.6,52.2 308.5,95.1 377.7,155.7 418.2,189.1 447.0,211.2 469.3,224.3 487.5,226.9 502.9,232.1 516.2,234.4 528.0,240.9 538.5,242.0 548.1,247.4 556.8,249.6 564.8,249.2 572.2,251.9 579.1,252.5 585.5,253.6 591.6,254.0 597.3,255.9 602.7,256.4 607.8,256.8" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round"/>
+<g><title>WGAN，第 1 個 epoch（約 0.2 分鐘）：FID64 382.6</title><circle cx="147.6" cy="52.2" r="9" fill="#000" fill-opacity="0"/><circle cx="147.6" cy="52.2" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 5 個 epoch（約 1.0 分鐘）：FID64 321.2</title><circle cx="308.5" cy="95.1" r="9" fill="#000" fill-opacity="0"/><circle cx="308.5" cy="95.1" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 10 個 epoch（約 2.0 分鐘）：FID64 234.8</title><circle cx="377.7" cy="155.7" r="9" fill="#000" fill-opacity="0"/><circle cx="377.7" cy="155.7" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 15 個 epoch（約 3.0 分鐘）：FID64 187.0</title><circle cx="418.2" cy="189.1" r="9" fill="#000" fill-opacity="0"/><circle cx="418.2" cy="189.1" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 20 個 epoch（約 3.9 分鐘）：FID64 155.5</title><circle cx="447.0" cy="211.2" r="9" fill="#000" fill-opacity="0"/><circle cx="447.0" cy="211.2" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 25 個 epoch（約 4.9 分鐘）：FID64 136.7</title><circle cx="469.3" cy="224.3" r="9" fill="#000" fill-opacity="0"/><circle cx="469.3" cy="224.3" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 30 個 epoch（約 5.9 分鐘）：FID64 132.9</title><circle cx="487.5" cy="226.9" r="9" fill="#000" fill-opacity="0"/><circle cx="487.5" cy="226.9" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 35 個 epoch（約 6.9 分鐘）：FID64 125.5</title><circle cx="502.9" cy="232.1" r="9" fill="#000" fill-opacity="0"/><circle cx="502.9" cy="232.1" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 40 個 epoch（約 7.9 分鐘）：FID64 122.3</title><circle cx="516.2" cy="234.4" r="9" fill="#000" fill-opacity="0"/><circle cx="516.2" cy="234.4" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 45 個 epoch（約 8.9 分鐘）：FID64 113.0</title><circle cx="528.0" cy="240.9" r="9" fill="#000" fill-opacity="0"/><circle cx="528.0" cy="240.9" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 50 個 epoch（約 9.8 分鐘）：FID64 111.4</title><circle cx="538.5" cy="242.0" r="9" fill="#000" fill-opacity="0"/><circle cx="538.5" cy="242.0" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 55 個 epoch（約 10.8 分鐘）：FID64 103.7</title><circle cx="548.1" cy="247.4" r="9" fill="#000" fill-opacity="0"/><circle cx="548.1" cy="247.4" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 60 個 epoch（約 11.8 分鐘）：FID64 100.6</title><circle cx="556.8" cy="249.6" r="9" fill="#000" fill-opacity="0"/><circle cx="556.8" cy="249.6" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 65 個 epoch（約 12.8 分鐘）：FID64 101.1</title><circle cx="564.8" cy="249.2" r="9" fill="#000" fill-opacity="0"/><circle cx="564.8" cy="249.2" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 70 個 epoch（約 13.8 分鐘）：FID64 97.2</title><circle cx="572.2" cy="251.9" r="9" fill="#000" fill-opacity="0"/><circle cx="572.2" cy="251.9" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 75 個 epoch（約 14.8 分鐘）：FID64 96.5</title><circle cx="579.1" cy="252.5" r="9" fill="#000" fill-opacity="0"/><circle cx="579.1" cy="252.5" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 80 個 epoch（約 15.7 分鐘）：FID64 94.8</title><circle cx="585.5" cy="253.6" r="9" fill="#000" fill-opacity="0"/><circle cx="585.5" cy="253.6" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 85 個 epoch（約 16.7 分鐘）：FID64 94.3</title><circle cx="591.6" cy="254.0" r="9" fill="#000" fill-opacity="0"/><circle cx="591.6" cy="254.0" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 90 個 epoch（約 17.7 分鐘）：FID64 91.6</title><circle cx="597.3" cy="255.9" r="9" fill="#000" fill-opacity="0"/><circle cx="597.3" cy="255.9" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 95 個 epoch（約 18.7 分鐘）：FID64 90.8</title><circle cx="602.7" cy="256.4" r="9" fill="#000" fill-opacity="0"/><circle cx="602.7" cy="256.4" r="3" fill="#d95926"/></g>
+<g><title>WGAN，第 100 個 epoch（約 19.7 分鐘）：FID64 90.3</title><circle cx="607.8" cy="256.8" r="9" fill="#000" fill-opacity="0"/><circle cx="607.8" cy="256.8" r="3" fill="#d95926"/></g>
+<polyline points="228.3,47.3 389.1,112.9 458.4,151.5 498.9,178.5 527.7,193.5 550.0,206.3 568.2,217.2 583.6,222.8 596.9,232.1 608.7,229.5 619.2,236.4 628.7,238.3 637.4,244.0 645.4,245.4 652.8,247.4 659.7,248.6 666.2,250.8 672.2,249.2 677.9,252.7 683.4,254.1 688.5,252.3" fill="none" stroke="#199e70" stroke-width="2" stroke-linejoin="round"/>
+<g><title>WGAN-GP，第 1 個 epoch（約 0.4 分鐘）：FID64 389.6</title><circle cx="228.3" cy="47.3" r="9" fill="#000" fill-opacity="0"/><circle cx="228.3" cy="47.3" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 5 個 epoch（約 2.2 分鐘）：FID64 295.8</title><circle cx="389.1" cy="112.9" r="9" fill="#000" fill-opacity="0"/><circle cx="389.1" cy="112.9" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 10 個 epoch（約 4.4 分鐘）：FID64 240.7</title><circle cx="458.4" cy="151.5" r="9" fill="#000" fill-opacity="0"/><circle cx="458.4" cy="151.5" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 15 個 epoch（約 6.6 分鐘）：FID64 202.1</title><circle cx="498.9" cy="178.5" r="9" fill="#000" fill-opacity="0"/><circle cx="498.9" cy="178.5" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 20 個 epoch（約 8.8 分鐘）：FID64 180.7</title><circle cx="527.7" cy="193.5" r="9" fill="#000" fill-opacity="0"/><circle cx="527.7" cy="193.5" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 25 個 epoch（約 11.0 分鐘）：FID64 162.4</title><circle cx="550.0" cy="206.3" r="9" fill="#000" fill-opacity="0"/><circle cx="550.0" cy="206.3" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 30 個 epoch（約 13.2 分鐘）：FID64 146.8</title><circle cx="568.2" cy="217.2" r="9" fill="#000" fill-opacity="0"/><circle cx="568.2" cy="217.2" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 35 個 epoch（約 15.4 分鐘）：FID64 138.8</title><circle cx="583.6" cy="222.8" r="9" fill="#000" fill-opacity="0"/><circle cx="583.6" cy="222.8" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 40 個 epoch（約 17.6 分鐘）：FID64 125.5</title><circle cx="596.9" cy="232.1" r="9" fill="#000" fill-opacity="0"/><circle cx="596.9" cy="232.1" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 45 個 epoch（約 19.9 分鐘）：FID64 129.3</title><circle cx="608.7" cy="229.5" r="9" fill="#000" fill-opacity="0"/><circle cx="608.7" cy="229.5" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 50 個 epoch（約 22.1 分鐘）：FID64 119.4</title><circle cx="619.2" cy="236.4" r="9" fill="#000" fill-opacity="0"/><circle cx="619.2" cy="236.4" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 55 個 epoch（約 24.3 分鐘）：FID64 116.7</title><circle cx="628.7" cy="238.3" r="9" fill="#000" fill-opacity="0"/><circle cx="628.7" cy="238.3" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 60 個 epoch（約 26.5 分鐘）：FID64 108.5</title><circle cx="637.4" cy="244.0" r="9" fill="#000" fill-opacity="0"/><circle cx="637.4" cy="244.0" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 65 個 epoch（約 28.7 分鐘）：FID64 106.6</title><circle cx="645.4" cy="245.4" r="9" fill="#000" fill-opacity="0"/><circle cx="645.4" cy="245.4" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 70 個 epoch（約 30.9 分鐘）：FID64 103.7</title><circle cx="652.8" cy="247.4" r="9" fill="#000" fill-opacity="0"/><circle cx="652.8" cy="247.4" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 75 個 epoch（約 33.1 分鐘）：FID64 102.0</title><circle cx="659.7" cy="248.6" r="9" fill="#000" fill-opacity="0"/><circle cx="659.7" cy="248.6" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 80 個 epoch（約 35.3 分鐘）：FID64 98.8</title><circle cx="666.2" cy="250.8" r="9" fill="#000" fill-opacity="0"/><circle cx="666.2" cy="250.8" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 85 個 epoch（約 37.5 分鐘）：FID64 101.1</title><circle cx="672.2" cy="249.2" r="9" fill="#000" fill-opacity="0"/><circle cx="672.2" cy="249.2" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 90 個 epoch（約 39.7 分鐘）：FID64 96.1</title><circle cx="677.9" cy="252.7" r="9" fill="#000" fill-opacity="0"/><circle cx="677.9" cy="252.7" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 95 個 epoch（約 41.9 分鐘）：FID64 94.1</title><circle cx="683.4" cy="254.1" r="9" fill="#000" fill-opacity="0"/><circle cx="683.4" cy="254.1" r="3" fill="#199e70"/></g>
+<g><title>WGAN-GP，第 100 個 epoch（約 44.1 分鐘）：FID64 96.7</title><circle cx="688.5" cy="252.3" r="9" fill="#000" fill-opacity="0"/><circle cx="688.5" cy="252.3" r="3" fill="#199e70"/></g>
+<polyline points="565.8,136.6 635.1,185.6 675.6,180.0 704.4,232.1 726.6,233.9 744.9,248.9 760.3,235.2 773.6,250.9 785.4,252.6 795.9,261.8 805.4,263.2 814.1,265.0 822.1,266.7 829.5,268.1 836.4,267.5 842.9,268.3 848.9,270.5 854.6,270.6 860.0,271.4 865.2,273.6" fill="none" stroke="#c98500" stroke-width="2" stroke-linejoin="round"/>
+<g><title>StyleGAN2（ψ 1.0），第 2,500 步（約 12.9 分鐘）：FID64 262.0</title><circle cx="565.8" cy="136.6" r="9" fill="#000" fill-opacity="0"/><circle cx="565.8" cy="136.6" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 5,000 步（約 25.9 分鐘）：FID64 192.0</title><circle cx="635.1" cy="185.6" r="9" fill="#000" fill-opacity="0"/><circle cx="635.1" cy="185.6" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 7,500 步（約 38.8 分鐘）：FID64 200.0</title><circle cx="675.6" cy="180.0" r="9" fill="#000" fill-opacity="0"/><circle cx="675.6" cy="180.0" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 10,000 步（約 51.7 分鐘）：FID64 125.5</title><circle cx="704.4" cy="232.1" r="9" fill="#000" fill-opacity="0"/><circle cx="704.4" cy="232.1" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 12,500 步（約 64.7 分鐘）：FID64 122.9</title><circle cx="726.6" cy="233.9" r="9" fill="#000" fill-opacity="0"/><circle cx="726.6" cy="233.9" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 15,000 步（約 77.6 分鐘）：FID64 101.6</title><circle cx="744.9" cy="248.9" r="9" fill="#000" fill-opacity="0"/><circle cx="744.9" cy="248.9" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 17,500 步（約 90.5 分鐘）：FID64 121.2</title><circle cx="760.3" cy="235.2" r="9" fill="#000" fill-opacity="0"/><circle cx="760.3" cy="235.2" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 20,000 步（約 103.4 分鐘）：FID64 98.7</title><circle cx="773.6" cy="250.9" r="9" fill="#000" fill-opacity="0"/><circle cx="773.6" cy="250.9" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 22,500 步（約 116.4 分鐘）：FID64 96.3</title><circle cx="785.4" cy="252.6" r="9" fill="#000" fill-opacity="0"/><circle cx="785.4" cy="252.6" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 25,000 步（約 129.3 分鐘）：FID64 83.1</title><circle cx="795.9" cy="261.8" r="9" fill="#000" fill-opacity="0"/><circle cx="795.9" cy="261.8" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 27,500 步（約 142.2 分鐘）：FID64 81.2</title><circle cx="805.4" cy="263.2" r="9" fill="#000" fill-opacity="0"/><circle cx="805.4" cy="263.2" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 30,000 步（約 155.2 分鐘）：FID64 78.6</title><circle cx="814.1" cy="265.0" r="9" fill="#000" fill-opacity="0"/><circle cx="814.1" cy="265.0" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 32,500 步（約 168.1 分鐘）：FID64 76.1</title><circle cx="822.1" cy="266.7" r="9" fill="#000" fill-opacity="0"/><circle cx="822.1" cy="266.7" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 35,000 步（約 181.0 分鐘）：FID64 74.2</title><circle cx="829.5" cy="268.1" r="9" fill="#000" fill-opacity="0"/><circle cx="829.5" cy="268.1" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 37,500 步（約 194.0 分鐘）：FID64 75.0</title><circle cx="836.4" cy="267.5" r="9" fill="#000" fill-opacity="0"/><circle cx="836.4" cy="267.5" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 40,000 步（約 206.9 分鐘）：FID64 73.9</title><circle cx="842.9" cy="268.3" r="9" fill="#000" fill-opacity="0"/><circle cx="842.9" cy="268.3" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 42,500 步（約 219.8 分鐘）：FID64 70.7</title><circle cx="848.9" cy="270.5" r="9" fill="#000" fill-opacity="0"/><circle cx="848.9" cy="270.5" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 45,000 步（約 232.8 分鐘）：FID64 70.5</title><circle cx="854.6" cy="270.6" r="9" fill="#000" fill-opacity="0"/><circle cx="854.6" cy="270.6" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 47,500 步（約 245.7 分鐘）：FID64 69.4</title><circle cx="860.0" cy="271.4" r="9" fill="#000" fill-opacity="0"/><circle cx="860.0" cy="271.4" r="3" fill="#c98500"/></g>
+<g><title>StyleGAN2（ψ 1.0），第 50,000 步（約 258.6 分鐘）：FID64 66.3</title><circle cx="865.2" cy="273.6" r="9" fill="#000" fill-opacity="0"/><circle cx="865.2" cy="273.6" r="3" fill="#c98500"/></g>
+<text class="s-sm" x="652.1" y="163.7" text-anchor="start">DCGAN 211.9</text>
+<text class="s-sm" x="613.8" y="270.8" text-anchor="start">WGAN 90.3</text>
+<text class="s-sm" x="694.5" y="270.3" text-anchor="start">WGAN-GP 96.7</text>
+<text class="s-sm" x="861.2" y="239.6" text-anchor="end">StyleGAN2 66.3</text>
+</svg>
+<figcaption>圖 8.1　四種 GAN 的 FID64 對訓練時間（分鐘，log 尺度）。時間用各自總訓練時間平均攤到每個存檔，StyleGAN2 從第 2,500 步（約 13 分鐘）的第一個存檔開始畫。滑鼠移到點上可看是哪一個存檔。</figcaption>
+</figure>
+<p>用時間來看比較公平：StyleGAN2 要到約 <strong>1 小時 56 分</strong>（第 22,500 步，FID 96.3）才追上 WGAN-GP 跑完 100 個 epoch 的水準，WGAN 只花 20 分鐘就到 90.3。換句話說，<strong>如果只有半小時</strong>，WGAN 是這四者裡最好的選擇；<strong>如果有幾個小時</strong>，StyleGAN2 會遙遙領先，而且沒有停下來的跡象。投影片估 Boss 要「&lt; 5 小時」，和本書的經驗一致。</p>
+<figure class="fig">
+<img src="img/ch08_compare.png" alt="五列各 10 張：第一列是隨機抽的 10 張真圖；第二到四列是 DCGAN 第 15 個 epoch、WGAN 第 100 個 epoch、WGAN-GP 第 95 個 epoch；第五列是 StyleGAN2，臉的線條與眼睛最清楚" style="max-width:100%;image-rendering:pixelated">
+<figcaption>圖 8.2　由上到下：隨機抽的 10 張真圖（64×64，資料來源 Crypko）；DCGAN 最好的存檔（第 15 個 epoch，FID 105.0）；WGAN（第 100 個 epoch，90.3）；WGAN-GP（第 95 個 epoch，94.1）；StyleGAN2（第 50,000 步、ψ 1.0，66.3）。各取評分用的 1000 張裡的前 10 張；DCGAN、WGAN、WGAN-GP 用的是同一組 z。</figcaption>
+</figure>
+<p>用眼睛看，StyleGAN2 那一列的線條最乾淨：眼睛、瀏海的邊界清楚，臉部比例也比較穩定；前三種 GAN 都能畫出臉，但常有扭曲的五官與糊掉的髮絲。這和 FID 的排名一致。</p>
+
+<h2 id="psi">8.4　truncation ψ：在「像」與「多樣」之間取捨</h2>
+<p>StyleGAN 畫圖時常用一個技巧：先算出很多個 w 的平均 w̄（本書的套件取 2,000 個亂數），再把每個 w 往平均拉一點：</p>
+<div class="eq">w′ = w̄ + ψ · (w − w̄)，　ψ = 1 不拉，ψ 越小越接近「平均臉」</div>
+<p>w 空間的邊緣是訓練資料比較少見的樣子，生成器在那裡畫得比較差；往中間拉，就避開了那些地方。代價是每張圖都更像平均臉，多樣性下降。同一組 z、同一個存檔（第 50,000 步），三種 ψ：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>ψ</th><th>FID64</th><th>FID96</th><th>AFD</th></tr></thead>
+<tbody>
+<tr><td>0.5</td><td>95.9</td><td>119.2</td><td><strong>0.656</strong></td></tr>
+<tr><td>0.75（套件的預設）</td><td>76.7</td><td>102.3</td><td>0.559</td></tr>
+<tr><td>1.0（不截斷）</td><td><strong>66.3</strong></td><td>92.8</td><td>0.467</td></tr>
+</tbody>
+</table></div>
+<figure class="fig">
+<img src="img/ch08_psi.png" alt="三列各 10 張，同一組 z：上列 ψ 0.5 的臉彼此很像、配色接近；中列 ψ 0.75；下列 ψ 1.0 髮色與表情的差異最大" style="max-width:100%;image-rendering:pixelated">
+<figcaption>圖 8.3　同樣 10 個 z，由上到下 ψ = 0.5、0.75、1.0。ψ 越小，同一個 z 的臉越接近「平均」：髮色變淡、表情趨同。</figcaption>
+</figure>
+<p>ψ 越小，FID 越差（多樣性不夠，第 4 章的共變異項變大），AFD 卻越高（偵測器喜歡標準的正臉）。這也再一次說明，本書的 AFD 和 FID 量的是不同的東西：如果作業只看 AFD，最好的策略是把 ψ 調小、交一堆平均臉。StyleGAN 論文報的 FID 都是 ψ = 1.0；需要每張都「看起來沒問題」的展示用途，才會用 0.5–0.75。</p>
+
+<h2 id="table">8.5　全部實驗的總表</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th>最好的存檔</th><th>FID64（1000 張）</th><th>FID64（10,000 張）</th><th>FID96</th><th>AFD</th><th>崩潰</th><th>訓練時間</th><th>章</th></tr></thead>
+<tbody>
+<tr><td>DCGAN，照跑 <code>train.py</code></td><td>第 15 個 epoch</td><td>105.0</td><td>90.8</td><td>134.2</td><td>0.366</td><td>多次</td><td>29 分（100 epoch）</td><td>0、5</td></tr>
+<tr><td>DCGAN，<code>test.py</code> 會挑的</td><td>第 100 個 epoch</td><td>211.9</td><td>205.9</td><td>233.2</td><td>0.666</td><td>—</td><td>同上</td><td>0、5</td></tr>
+<tr><td>只換 loss_G（筆記的做法）</td><td>第 20 個 epoch</td><td>122.9</td><td>—</td><td>146.7</td><td>0.385</td><td>未見（只跑 20 epoch）</td><td>約 6 分（20 epoch）</td><td>6</td></tr>
+<tr><td>WGAN loss + 保留 Sigmoid</td><td>第 1 個 epoch</td><td>307.8</td><td>—</td><td>315.4</td><td>0.000</td><td>第 5 個 epoch 起卡死</td><td>29 分</td><td>6</td></tr>
+<tr><td>WGAN（clip 0.01）</td><td>第 100 個 epoch</td><td>90.3</td><td>74.0</td><td>120.7</td><td>0.364</td><td>無</td><td><strong>20 分</strong></td><td>6</td></tr>
+<tr><td>WGAN-GP（λ 10）</td><td>第 95 個 epoch</td><td>94.1</td><td>78.4</td><td>123.0</td><td>0.362</td><td>無</td><td>44 分</td><td>7</td></tr>
+<tr><td>StyleGAN2（ψ 1.0）</td><td>第 50,000 步</td><td><strong>66.3</strong></td><td><strong>52.3</strong></td><td><strong>92.8</strong></td><td>0.467</td><td>無</td><td>4 時 18 分</td><td>8</td></tr>
+<tr><td>StyleGAN2（ψ 0.75）</td><td>第 50,000 步</td><td>76.7</td><td>64.1</td><td>102.3</td><td>0.559</td><td>無</td><td>同上</td><td>8</td></tr>
+<tr><td>參考：1000 張真圖</td><td>—</td><td>31.6–32.0</td><td>15.8</td><td>59.9–60.6</td><td>0.40–0.46</td><td>—</td><td>—</td><td>4</td></tr>
+</tbody>
+</table></div>
+<p>（FID 都是 z 種子 0；換種子的雜訊約 ±1.5，第 4 章。每種設定都只訓練了一次，種子 2022。本書的 FID／AFD 和投影片的基準線不是同一把尺。）</p>
+
+<h2 id="recipe">8.6　如果只能挑幾件事做</h2>
+<ol>
+  <li><strong>先讓交出去的東西正確</strong>：<code>test.py</code> 改成產生 1000 張、設種子、清空舊的 <code>output/</code>（第 4 章）。這不改變模型，但不改就交不出作業。</li>
+  <li><strong>每個存檔都量 FID，挑最低的</strong>：同樣是照跑 <code>train.py</code>，挑對存檔就從 211.9 變成 105.0（第 5 章）。成本是 21 × 12 秒。</li>
+  <li><strong>換成 WGAN</strong>：五處改動（第 6 章），比原版還快，FID 再降到 90.3，而且不用煩惱挑存檔。這是時間有限時 CP 值最高的一步。</li>
+  <li><strong>有幾個小時，就上 StyleGAN2</strong>：不必自己寫，用現成的實作從零訓練；本書 4 小時 18 分到 66.3，還沒收斂。</li>
+  <li><strong>順手的效能修正</strong>：判別器那一步加 <code>detach()</code>（快 15%、結果不變，第 3 章）。</li>
+</ol>
+<div class="note"><h4>現在的做法</h4>
+<p>2026 年要生成動漫頭像，多半不會從零訓練 GAN：diffusion 模型（以及它們的蒸餾版本）是主流，社群也有大量在動漫圖上微調過的模型。但這份作業的限制（不准用預訓練模型、64×64、從零開始）下，本章的結論仍然成立：訓練要穩定（WGAN 系列或現代的正則化）、生成器的結構要對（StyleGAN 的 style 注入與內插放大）、評估要有一把可靠的尺（FID，而且要知道它的雜訊與偏差）。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>StyleGAN 改的是生成器：mapping 網路把 z 轉成 w、w 注入每一個解析度（modulated 卷積）、可學習的常數輸入、雙線性放大取代轉置卷積、逐像素雜訊、EMA 權重。</li>
+  <li>lucidrains 的 stylegan2-pytorch 從零訓練 64×64、batch 32、50,000 步：4 小時 18 分、約 22.4 個 epoch；FID64 降到 66.3（ψ 1.0，10,000 張是 52.3），到最後都還在下降。</li>
+  <li>以時間計：WGAN 20 分鐘到 90.3，StyleGAN2 要約 1 小時 56 分才到 96.3；時間短選 WGAN，時間長選 StyleGAN2。</li>
+  <li>truncation ψ：0.5／0.75／1.0 的 FID64 是 95.9／76.7／66.3，AFD 是 0.656／0.559／0.467——越截斷越像平均臉，AFD 越高、FID 越差。</li>
+  <li>CP 值的順序：修好 <code>test.py</code> → 用 FID 挑存檔（211.9 → 105.0）→ 換 WGAN（90.3，更快）→ 有時間再上 StyleGAN2（66.3）。</li>
+</ul>
+</div>
+
+<h2 id="bank">8.7　三級題庫</h2>
+<p>每一題都標了本書有沒有實際跑過。有跑過的，答案裡的數字來自本書的實測；沒跑過的，答案是方向與推理，需要自己驗證。</p>
+
+<h3 id="level1">入門</h3>
+<details class="quiz"><summary>入門 1（有跑過）：要交作業，<code>test.py</code> 最少要改哪幾件事？</summary>
+<p>三件：產生 1000 張（<code>trainer.inference(G_path, n_generate=1000)</code>，原本是 100）、在建 <code>TrainerGAN</code> 之前呼叫 <code>utils.same_seeds(...)</code>（否則每次的圖都不同）、指定用 FID 挑出來的存檔（而不是「最新的」）。執行前刪掉舊的 <code>output/</code>，免得混到上一次的檔案。1000 張打包約 1.1–1.2 MB，符合 2 MB 的限制（第 4 章）。</p></details>
+<details class="quiz"><summary>入門 2（有跑過）：照 <code>trainer_gan.py:142–143</code> 的註解打開 clipping，為什麼第一步就失敗？怎麼修？</summary>
+<p>錯誤是 <code>KeyError: 'clip_value'</code>：程式讀 <code>self.config["clip_value"]</code>，但 <code>config.py</code> 沒有這個鍵。在 <code>config</code> 裡加 <code>"clip_value": 0.01</code> 即可。但只打開 clipping 不是 WGAN，還要拿掉 Sigmoid、換 loss、換 RMSprop、<code>n_critic</code> 設 5（第 6 章）。</p></details>
+<details class="quiz"><summary>入門 3（有跑過）：在判別器那一步把 <code>self.D(f_imgs)</code> 改成 <code>self.D(f_imgs.detach())</code>，訓練結果會變嗎？</summary>
+<p>不會。本書實測 5 個 epoch 後的生成器與判別器權重逐位元相同，每個 epoch 從 17.2 秒降到 14.7 秒。被省掉的只有「判別器 loss 對生成器參數的梯度」，而它們本來就會在生成器那一步的 <code>G.zero_grad()</code> 被清掉（第 3 章）。</p></details>
+<details class="quiz"><summary>入門 4（有跑過）：照跑 <code>train.py</code> 100 個 epoch，最好的存檔是哪一個？<code>test.py</code> 會用哪一個？</summary>
+<p>最好的是 <code>G_14.pth</code>（第 15 個 epoch，FID64 105.0）；<code>test.py</code> 用修改時間最新的 <code>G_99.pth</code>（211.9），排第 9 名。中間第 19–22、25–27、31、34–35 個 epoch 發生了 mode collapse（第 5 章）。</p></details>
+<details class="quiz"><summary>入門 5（有跑過）：同一個模型，生成 1000 張與 10,000 張，FID 為什麼不同？哪一個比較「對」？</summary>
+<p>共變異矩陣有 2048 × 2048 個數，1000 個樣本估得不準，FID 會系統性地偏高；本書的模型多半差 14–16（崩過的 <code>G_99</code> 只差 6），但排名不變。兩者都「對」，只是量的條件不同；只有張數相同的 FID 才能互相比較。作業交 1000 張，所以本書用 1000 張（第 4 章）。</p></details>
+
+<h3 id="level2">進階</h3>
+<details class="quiz"><summary>進階 1（有跑過）：WGAN 只換了 loss、忘了拿掉 Sigmoid，會發生什麼事？為什麼？</summary>
+<p>判別器在第 5 個 epoch 之前就對所有圖都輸出 1.0000，loss_D = 0、loss_G = −1，之後 95 個 epoch 梯度全是 0，FID 卡在 336–338、AFD 全是 0。WGAN 的 loss 沒有 log，Sigmoid 又把輸出壓在 0–1：critic 與生成器一起把分數推到上限，Sigmoid 飽和（輸入超過約 17 時 float32 算出精確的 1.0），導數為 0（第 6 章）。</p></details>
+<details class="quiz"><summary>進階 2（有跑過）：自己寫 <code>gp()</code>。為什麼 <code>torch.autograd.grad</code> 一定要 <code>create_graph=True</code>？</summary>
+<p>penalty 是「梯度的大小」的函數，訓練判別器時要對它再微分一次（二次反向傳播）。不加 <code>create_graph=True</code>，算出的梯度不帶計算圖，penalty 對權重而言是常數，<code>loss_D.backward()</code> 時這一項的梯度是 0——程式不報錯，penalty 卻悄悄失效（這一點本書沒有實際跑）。實作見第 7 章；本書的 WGAN-GP 每個 epoch 26.5 秒，是 WGAN 的 2.2 倍，主要就是二次反向傳播的成本。</p></details>
+<details class="quiz"><summary>進階 3（有跑過）：報告第 2 題的圖，clipping 的 conv1 梯度範數是 conv4 的 157 倍，GP 只有 2.4 倍。這代表什麼？</summary>
+<p>weight clipping 讓梯度在層與層之間嚴重失衡：最深的幾層權重幾乎全部卡在 ±0.01（conv4 後面的 BatchNorm 縮放參數 100% 被截到 0.01），訊號與梯度一層一層被縮放。gradient penalty 直接約束 critic 對輸入的梯度大小（在內插點上穩定在約 1.2），各層的梯度保持同一量級。要比的是同一條線上的層間比例，不是兩條線的高低（第 7 章）。</p></details>
+<details class="quiz"><summary>進階 4（有跑過）：同一個 StyleGAN2，ψ 從 1.0 調到 0.5，FID 與 AFD 各怎麼變？要交作業的話選哪個？</summary>
+<p>FID64 從 66.3 變差到 95.9，AFD 從 0.467 升到 0.656。ψ 小會把每個 w 拉向平均，圖更「標準」（偵測器喜歡），但多樣性下降（FID 懲罰）。投影片的基準線同時要求 FID 與 AFD 達標，助教的偵測器又和本書不同，所以要在自己的尺上掃幾個 ψ、看兩個指標的取捨，再決定；只看 FID 就選 1.0（本章 8.4 節）。</p></details>
+<details class="quiz"><summary>進階 5（沒跑過）：把 <code>config.py</code> 的 <code>n_critic</code> 設成 3、其他不改（仍是原版 GAN），進度條上的 <code>loss_G</code> 會有什麼問題？訓練會怎樣？</summary>
+<p>進度條每 10 步印一次，但 <code>loss_G</code> 只在步數是 3 的倍數時重算，所以第 10、20 步印的其實是第 9、18 步的值——小問題，只影響顯示。訓練上，生成器的更新次數變成三分之一，原版 GAN 的判別器本來就太強（第 3 章），讓它多訓練幾次可能更容易壓制生成器、更早崩潰；但這需要實際跑才知道。</p></details>
+
+<h3 id="level3">挑戰</h3>
+<details class="quiz"><summary>挑戰 1（沒跑過）：本書的 DCGAN 只用種子 2022 跑了一次。設計一個實驗，回答「mode collapse 是不是每次都會發生」。</summary>
+<p>用同樣的設定換 3–5 個種子（改 <code>train.py:42</code> 的 <code>same_seeds</code>），各跑 100 個 epoch；每個 epoch 用第 5 章的方法（樣本格的像素標準差）記錄多樣性，每 5 個 epoch 量一次 FID。統計每次訓練「多樣性掉到 30 以下」的 epoch、最好的 FID 出現在哪個 epoch。注意：換種子同時改變了初始權重與資料順序，要分開兩者，可以給 DataLoader 一個獨立的 <code>torch.Generator</code>。本機每次約 30 分鐘加 4 分鐘評估。</p></details>
+<details class="quiz"><summary>挑戰 2（沒跑過）：把生成器的轉置卷積換成「雙線性放大 + 3×3 卷積」，會改善什麼？怎麼確認？</summary>
+<p>預期可以消除轉置卷積重疊不均造成的棋盤格紋（第 2 章），StyleGAN 系列就是這樣放大的。改法：<code>dconv_bn_relu</code> 換成 <code>nn.Upsample(scale_factor=2, mode='bilinear')</code> + <code>nn.Conv2d(in, out, 3, padding=1)</code> + BN + ReLU，最後一層同理。參數量會變（5×5 → 3×3）。確認方法：同樣的種子、同樣 100 個 epoch，比 FID 曲線與樣本格放大後的紋路；最好也搭配 WGAN 跑一次，把「訓練穩定性」和「上採樣方式」兩個因素分開。</p></details>
+<details class="quiz"><summary>挑戰 3（沒跑過）：WGAN-GP 不把 BatchNorm 換成 InstanceNorm，會怎樣？</summary>
+<p>理論上，BatchNorm 讓每張圖的輸出依賴同一批其他圖，penalty 罰的就不是「critic 對單張圖的梯度」（第 7 章）。實際影響要跑才知道：可能仍然能訓練，但 penalty 的意義變了，梯度範數的圖也會不同。實驗工具已經支援：<code>hw06_exp.py --model_type WGANGP --norm bn --lr 1e-4 --beta1 0 --beta2 0.9 --n_critic 5</code>，和本書的 <code>wgangp</code> 只差 <code>--norm</code>。也可以試 <code>--norm none</code>（完全不正規化，WGAN-GP 論文的做法之一）。</p></details>
+<details class="quiz"><summary>挑戰 4（沒跑過）：用 clean-fid 或 torchmetrics 重新量本書的四個最佳存檔，排名會不會變？</summary>
+<p>不同實作的縮放方式與 Inception 權重不同，FID 的絕對值一定會變（clean-fid 的作者報告過不同實作差好幾點）。但四者的差距很大（66、90、94、105），排名應該不變；WGAN 與 WGAN-GP 只差 4，是最可能互換的一對。做法：用 <code>hw06_eval.py --keep</code> 存下各 1000 張 JPEG，再交給其他工具；同時用 10,000 張量一次，看樣本數與實作哪一個影響比較大。</p></details>
+<details class="quiz"><summary>挑戰 5（沒跑過）：StyleGAN2 到第 50,000 步還在進步。如果有一整天，你會怎麼安排？</summary>
+<p>先延長同一次訓練（lucidrains 的套件會從最新的存檔接著跑，<code>--num_train_steps</code> 設大一點），每 2,500 步用 ψ 1.0 量 FID，直到曲線變平；本書的速度約每小時 11,700 步。其次試套件的資料增強（<code>--aug_prob</code>，StyleGAN2-ADA 的想法，資料少時能防止判別器過擬合），以及更大的 <code>network_capacity</code>。每一個改動都只改一個變數，用同一把尺（1000 張、同一組 z、同一份參考統計量）比較。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+  <li>Karras、Laine、Aila，〈A Style-Based Generator Architecture for Generative Adversarial Networks〉（CVPR 2019）：StyleGAN，mapping 網路、style 注入、雜訊、style mixing、truncation，<a href="https://arxiv.org/abs/1812.04948">arXiv:1812.04948</a>。</li>
+  <li>Karras 等，〈Analyzing and Improving the Image Quality of StyleGAN〉（CVPR 2020）：StyleGAN2，modulated／demodulated 卷積、path length 正則化、lazy regularization，<a href="https://arxiv.org/abs/1912.04958">arXiv:1912.04958</a>。</li>
+  <li>lucidrains，<a href="https://github.com/lucidrains/stylegan2-pytorch">stylegan2-pytorch</a>：本章用的實作，README 有所有命令列參數的說明。</li>
+  <li>Karras 等，〈Training Generative Adversarial Networks with Limited Data〉（NeurIPS 2020）：StyleGAN2-ADA，自適應資料增強，<a href="https://arxiv.org/abs/2006.06676">arXiv:2006.06676</a>。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a><a href="appendix.html">附錄 →</a></nav>
+<footer class="chap-footer">本教材根據 lordleeber/ML2022-Spring-pytorch 的 HW06 程式碼與 ML2022 Spring 作業投影片撰寫。</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>

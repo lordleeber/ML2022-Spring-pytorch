@@ -131,7 +131,7 @@ FID64（n = 1000、z 種子 0；FID96 與 AFD 見 jsonl）：
 - 設定：64×64、batch 32、`gradient_accumulate_every 1`、50,000 步、每 2,500 步存檔（`model_0.pt`–`model_20.pt`，各 197,352,625 bytes）與樣本圖；其餘是套件預設（network_capacity 16、lr 2e-4、ttur_mult 1.5、mixed_prob 0.9、seed 42、`trunc_psi` 0.75）。從零訓練，沒有預訓練權重。
 - 計時：開跑前 `nvidia-smi --query-compute-apps` 空；`/usr/bin/time -v` **Elapsed 4:18:37**、CPU 101%、最大 RSS 2,110,352 KB；進度條穩定在 3.22–3.26 it/s（前 200 步的試跑 3.16 it/s）。50,000 × 32 = 1,600,000 張 ≈ **22.4 個 epoch**（DCGAN 100 epoch 是 7,131,400 張送進 D）。GPU 記憶體 7.4 GB。
 - 參數量：mapping 網路 S 2,101,248、G 11,216,556、D 22,679,184（另有 EMA 的 SE、GE，以及和 D 同大小的 D_aug）。DCGAN：G 5,142,080、D 2,766,529。
-- loss 紀錄：`docs/tools/hw06_logs/sg2.txt`（1,000 行，每 50 步一行 `G | D | GP | PL`）。前 3 行 `G: 5.45 | D: 0.37 | GP: 11.18` …；最後 `G: 0.67 | D: 1.99 | GP: 0.01 | PL: 0.41`。過程中沒有 NaN。
+- loss 紀錄：`docs/tools/hw06_logs/sg2.txt`（1,000 行，每 50 步一行 `G | D | GP | PL`）。前 3 行 `G: 5.45 | D: 0.37 | GP: 11.18` …；最後一行 `G: 0.34 | D: 2.06 | GP: 0.03 | PL: 0.41`（第 1000 行）；PL 從第 101 行起出現（每行 50 步 → 約第 5,050 步，對應 `steps > 5000` 才開始的 path length 正則化）。過程中沒有 NaN。（2026-10-08 更正：之前寫的 `G: 0.67 | D: 1.99 | GP: 0.01` 是訓練中途監看時的某一行，不是最後一行。）
 - 評估（`hw06_eval.py sg2`，EMA 的 SE／GE、套件自己的 `generate_truncated`、全域亂數種子 0、n = 1000；逐行 `docs/tools/hw06_sg2_eval.jsonl`）：
 
 | 步數 | FID64 ψ0.75 | FID96 ψ0.75 | AFD ψ0.75 | FID64 ψ1.0 | FID96 ψ1.0 | AFD ψ1.0 |
@@ -362,3 +362,11 @@ FID64（n = 1000、z 種子 0；FID96 與 AFD 見 jsonl）：
 - 照註解字面改 WGAN-GP 的 traceback（lit_gp）：`    gradient_penalty = self.gp(r_imgs, f_imgs)` / `                       ^^^^^^^^^^^^^^^^^^^^^^^` / `TypeError: TrainerGAN.gp() takes 1 positional argument but 3 were given`。
 - lucidrains stylegan2-pytorch 1.9.0 的 `gradient_penalty(images, output, weight = 10, center = 0.)`：以 0 為目標；`apply_gradient_penalty = self.steps % 4 == 0`；`gp = gradient_penalty(image_batch, real_output) + gradient_penalty(generated_images, fake_output)`（真圖與生成圖都算）。
 - 圖 7.1 由 scratchpad 的 `ch07_chart.py` 產生（WGAN 橘、WGAN-GP 青綠、DCGAN 藍虛線）。
+
+## ch08 實測與查證（2026-10-08）
+- lucidrains stylegan2-pytorch 1.9.0 原始碼：`StyleVectorizer(emb=512, depth=8, lr_mul=0.1)`（EqualLinear + leaky_relu，輸入先 `F.normalize`）；Generator `num_layers = log2(64) - 1 = 5`，filters `network_capacity * 2**(i+1)` 反轉 → 512, 256, 128, 64, 32；`initial_block = nn.Parameter(torch.randn((1, 512, 4, 4)))`；GeneratorBlock：`nn.Upsample(scale_factor=2, mode='bilinear')` → `Conv2DMod(…, 3)` ×2，各加 `to_noise` 的雜訊，`to_rgb` 疊加；loss `hinge_loss = (F.relu(1 + real) + F.relu(1 - fake)).mean()`、`gen_hinge_loss = fake.mean()`；Adam betas (0.5, 0.9)，D lr × `ttur_mult`（CLI 1.5）；`EMA(0.995)`，`steps % 10 == 0 and steps > 20000` 時更新，`steps <= 25000 and steps % 1000 == 2` 時 `reset_parameter_averaging`（EMA 直接複製目前權重）；`apply_path_penalty = steps > 5000 and steps % 32 == 0`；`mixed_prob` 0.9；CLI 預設 `trunc_psi` 0.75。
+- sg2.txt：PL 從第 101 行起出現（約第 5,050 步）。
+- **ψ = 0.5**（model_20、n 1000、種子 0）：FID64 **95.91**、FID96 119.25、AFD **0.656**（ψ 0.75：76.69／102.28／0.559；ψ 1.0：66.34／92.83／0.467）。
+- 圖 8.2 `docs/HW06/img/ch08_compare.png`：第 1 列真圖（sorted 檔名 randperm 種子 0 的前 10：69142, 25815, 29660, 10649, 19652, 34403, 8356, 55892, 7289, 47075），第 2–5 列 gan G_14、wgan G_99、wgangp G_94、sg2 model_20 ψ1.0 的評分圖前 10 張（z 種子 0）。圖 8.3 `ch08_psi.png`：ψ 0.5／0.75／1.0 同 10 個 z（第一批 z 在算 w̄ 之前就取好，三種 ψ 相同）。
+- 圖 8.1（FID 對時間）：每個存檔的時間 = 總訓練秒數平均攤；DCGAN 第 15 epoch ≈ 4.3 分、WGAN 第 100 epoch ≈ 19.7 分、WGAN-GP 第 95 epoch ≈ 41.9 分；SG2 第 2,500 步 ≈ 12.9 分、**第 22,500 步 ≈ 116.4 分、FID 96.3**、第 50,000 步 258.6 分。由 scratchpad 的 `ch08_chart.py` 產生。
+- 速度換算：3.24 it/s × 32 ≈ 104 張/秒；≈ 11,700 步/小時。
