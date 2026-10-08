@@ -347,12 +347,12 @@ td.num { font-family: var(--font-mono); }
 <div class="tablewrap"><table>
 <thead><tr><th>方法</th><th class="num">λ</th><th class="num">作業的指標（最後一點）</th><th class="num">ACC</th><th class="num">BWT</th><th>任務 1 最後剩多少</th></tr></thead>
 <tbody>
-<tr><td><span class="mth baseline">baseline</span></td><td class="num">0</td><td class="num">70.59</td><td class="num">70.58</td><td class="num">−34.55</td><td>98.0 → 35.4</td></tr>
-<tr><td><span class="mth ewc">EWC</span></td><td class="num">100</td><td class="num">71.66</td><td class="num">71.66</td><td class="num">−33.15</td><td>97.8 → 36.4</td></tr>
-<tr><td><span class="mth mas">MAS</span></td><td class="num">0.1</td><td class="num">83.06</td><td class="num">83.04</td><td class="num">−14.00</td><td>97.9 → 68.7</td></tr>
-<tr><td><span class="mth si">SI</span></td><td class="num">1</td><td class="num">71.98</td><td class="num">71.98</td><td class="num">−32.42</td><td>97.7 → 37.1</td></tr>
-<tr><td><span class="mth rwalk">RWalk</span></td><td class="num">100</td><td class="num">78.37</td><td class="num">78.36</td><td class="num">−21.65</td><td>97.3 → 57.0</td></tr>
-<tr><td><span class="mth scp">SCP</span></td><td class="num">100</td><td class="num">77.20</td><td class="num">77.20</td><td class="num">−25.77</td><td>97.6 → 45.3</td></tr>
+<tr><td><span class="mth baseline">baseline</span></td><td class="num">0</td><td class="num">70.59</td><td class="num">70.59</td><td class="num">−34.53</td><td>98.0 → 35.4</td></tr>
+<tr><td><span class="mth ewc">EWC</span></td><td class="num">100</td><td class="num">71.66</td><td class="num">71.66</td><td class="num">−33.14</td><td>97.8 → 36.4</td></tr>
+<tr><td><span class="mth mas">MAS</span></td><td class="num">0.1</td><td class="num">83.06</td><td class="num">83.06</td><td class="num">−13.97</td><td>97.9 → 68.7</td></tr>
+<tr><td><span class="mth si">SI</span></td><td class="num">1</td><td class="num">71.98</td><td class="num">71.98</td><td class="num">−32.41</td><td>97.7 → 37.1</td></tr>
+<tr><td><span class="mth rwalk">RWalk</span></td><td class="num">100</td><td class="num">78.37</td><td class="num">78.37</td><td class="num">−21.67</td><td>97.3 → 57.0</td></tr>
+<tr><td><span class="mth scp">SCP</span></td><td class="num">100</td><td class="num">77.20</td><td class="num">77.20</td><td class="num">−25.80</td><td>97.6 → 45.3</td></tr>
 </tbody>
 </table></div>
 <p>乍看是 MAS 最好、EWC 和 SI 幾乎沒用。但這張表只跑了一個種子，而且六種方法的 λ 是各自隨手設定的：EWC 算出來的重要度加總只有 0.44，MAS 的是 44 萬，兩者差了六個數量級，λ 卻只差一千倍。所以這張表比較的與其說是「方法」，不如說是「方法加上一個沒調過的 λ」。第 4–7 章逐一讀懂每種重要度在算什麼，第 8 章用五個種子、λ 掃描和兩組對照實驗重新比一次。</p>
@@ -495,6 +495,23 @@ td.num { font-family: var(--font-mono); }
       header.insertAdjacentElement('afterend', box);
     }
   }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
 })();
 </script>
 </body>

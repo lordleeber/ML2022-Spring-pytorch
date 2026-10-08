@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 2 章　訓練迴圈與指標 — HW14 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=LXGW+WenKai+TC:wght@400;700&amp;display=swap">
+<style id="book-style">
+/* HW14 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「記憶實驗紀錄本」——偏藍綠的石墨底、紙白的字、赭黃只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   方法色（圖表與標籤）：baseline 灰、EWC 藍、MAS 橘、SI 青、RWalk 黃、SCP 洋紅、joint 紫、replay 綠
+   （dataviz 參考色盤的暗色步階，2026-10-08 以 validate_palette.js 對 #181e25 驗證通過）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #12161b;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #d9a35b;      /* 赭黃：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(217, 163, 91, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #d9a35b;
+  /* 方法色 */
+  --m-baseline: #8b949e; --m-ewc: #3987e5; --m-mas: #d95926; --m-si: #199e70;
+  --m-rwalk: #c98500; --m-scp: #d55181; --m-joint: #9085e9; --m-replay: #008300;
+  /* type */
+  --font-display: "LXGW WenKai TC", "Kaiti TC", "BiauKai", "Noto Serif TC", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "任務 1 → 2 → 3 → 4 → 5　·　0° 20° 40° 60° 80°　·　784 → 1024 → 512 → 256 → 10";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fbf4e8; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #161d24; border-color: rgba(217, 163, 91, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #16120b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 方法標籤（色塊只標身分，文字一律用內文色） ---------- */
+.mth { white-space: nowrap; }
+.mth::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--mc, var(--muted)); }
+.mth.baseline { --mc: var(--m-baseline); } .mth.ewc { --mc: var(--m-ewc); } .mth.mas { --mc: var(--m-mas); }
+.mth.si { --mc: var(--m-si); } .mth.rwalk { --mc: var(--m-rwalk); } .mth.scp { --mc: var(--m-scp); }
+.mth.joint { --mc: var(--m-joint); } .mth.replay { --mc: var(--m-replay); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch01.html">← 第 1 章</a><a href="ch03.html">第 3 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW14 讀碼教材</p>
+  <h1>第 2 章　訓練迴圈與指標</h1>
+  <p class="chap-lead">六種方法共用同一個 <code>train()</code> 和同一個 <code>evaluate()</code>，差別只在傳進去的 lifelong 物件。這一章逐行讀這兩個函式：一步之內 forward、懲罰項、<code>update()</code>、<code>backward()</code> 的順序；報告要你描述的那個指標到底在算什麼、會漏掉什麼；怎麼把它拆成逐任務的矩陣，算出 ACC 與 BWT。最後量一件不在任何說明裡的事：光是「評估」這個動作，就會改變之後的訓練。</p>
+</header>
+<main>
+
+<h2 id="skeleton">2.1　<code>train()</code> 的骨架</h2>
+<figure class="listing"><figcaption>trainer.py:8–38 — train()：訓練一個任務的 epochs_per_task 個 epoch，每個 epoch 結束評估一次</figcaption>
+<pre class="py" data-hot="15-16,21-26,31-35"><code>def train(model, optimizer, dataloader, epochs_per_task, lll_object, lll_lambda, test_dataloaders, evaluate, device, log_step=1):
+  model.train()
+  model.zero_grad()
+  objective = nn.CrossEntropyLoss()
+  acc_per_epoch = []
+  loss = 1.0
+  bar = tqdm.auto.trange(epochs_per_task, leave=False, desc=f"Epoch 1, Loss: {loss:.7f}")
+  for epoch in bar:
+    for imgs, labels in tqdm.auto.tqdm(dataloader, leave=False):            
+      imgs, labels = imgs.to(device), labels.to(device)
+      outputs = model(imgs)
+      loss = objective(outputs, labels)
+      total_loss = loss
+      lll_loss = lll_object.penalty(model)
+      total_loss += lll_lambda * lll_loss 
+      lll_object.update(model)
+      optimizer.zero_grad()
+      total_loss.backward()
+      optimizer.step()
+
+      loss = total_loss.item()
+      bar.set_description_str(desc=f"Epoch {epoch+1:2}, Loss: {loss:.7f}", refresh=True)
+    acc_average  = []
+    for test_dataloader in test_dataloaders: 
+      acc_test = evaluate(model, test_dataloader, device)
+      acc_average.append(acc_test)
+    average=np.mean(np.array(acc_average))
+    acc_per_epoch.append(average*100.0)
+    bar.set_description_str(desc=f"Epoch {epoch+2:2}, Loss: {loss:.7f}", refresh=True)
+                
+  return model, optimizer, acc_per_epoch</code></pre></figure>
+<p><code>train()</code> 一次只負責<strong>一個任務</strong>。參數裡最重要的三個：</p>
+<ul>
+<li><code>dataloader</code>：這個任務的訓練資料（469 個 batch，第 1 章）。</li>
+<li><code>lll_object</code> 與 <code>lll_lambda</code>：lifelong learning 物件和它的權重 λ。<code>lll_object</code> 只需要提供兩個方法：<code>penalty(model)</code> 傳回懲罰項，<code>update(model)</code> 在每一步被呼叫一次。<code>train()</code> 完全不知道它是 EWC 還是 SI，這是六種方法能共用同一個迴圈的原因（第 3 章讀這個介面）。</li>
+<li><code>test_dataloaders</code>：要評估哪些任務。呼叫的地方傳的是 <code>test_dataloaders[:train_indexes+1]</code>，也就是「到目前為止學過的任務」，2.4 節的主角。</li>
+</ul>
+<p>外層迴圈跑 <code>epochs_per_task</code>（10）個 epoch，內層迴圈跑完一個 epoch 的所有 batch；每個 epoch 結束評估一次，把一個數字加進 <code>acc_per_epoch</code>。函式傳回這 10 個數字。呼叫它的 <code>run_baseline</code> 用 <code>extend</code> 把五個任務的 10 個數接成 50 個，就是第 0 章印出的那一串。</p>
+<p>兩個 <code>tqdm.auto</code> 進度條都設了 <code>leave=False</code>，跑完就從終端機上清掉，這是第 0 章的輸出只剩串列的原因。<code>log_step=1</code> 這個參數在函式裡從來沒有用到。</p>
+
+<h2 id="step">2.2　一步之內的順序</h2>
+<p>內層迴圈的每一步（第 17–26 行）做這些事：</p>
+<ol>
+<li><strong>forward</strong>：<code>outputs = model(imgs)</code>，得到 <code>(128, 10)</code> 的 logits。</li>
+<li><strong>分類 loss</strong>：<code>nn.CrossEntropyLoss</code>，對一個 batch 取平均。</li>
+<li><strong>懲罰項</strong>：<code>lll_object.penalty(model)</code>，再乘上 λ 加進去。各方法的懲罰項都長成 <code>Σ Ωᵢ (θᵢ − θ*ᵢ)²</code>：每個參數離「上一個任務結束時的值」<code>θ*</code> 多遠，乘上它的重要度 <code>Ω</code>，全部加起來。</li>
+<li><strong><code>update()</code></strong>：讓 lifelong 物件在每一步看一眼模型。baseline、EWC、MAS、SCP 的 <code>update</code> 什麼都不做，只有 SI 和 RWalk 用它累積資訊。</li>
+<li><strong>清梯度、backward、更新</strong>：<code>optimizer.zero_grad()</code>、<code>total_loss.backward()</code>、<code>optimizer.step()</code>。</li>
+</ol>
+<p>有兩個細節值得停下來看。</p>
+<h3 id="step-alias">第 20、22 行：<code>total_loss</code> 和 <code>loss</code> 是同一個張量</h3>
+<p><code>total_loss = loss</code> 不會複製張量，只是讓 <code>total_loss</code> 這個名字也指向 <code>loss</code> 指向的那個物件。接著第 22 行的 <code>+=</code> 對 PyTorch 張量是<strong>原地</strong>（in-place）運算，直接修改那個物件。所以執行完第 22 行，<code>loss</code> 和 <code>total_loss</code> 都是「分類 loss 加懲罰項」。這裡剛好沒有造成錯誤：<code>backward()</code> 用的就是加總後的值，第 28 行印出的也是加總後的值（進度條上的 Loss 包含了懲罰項）。但如果有人在第 22 行之後想印「純分類 loss」，拿 <code>loss</code> 就會拿錯。要分開記，得寫成 <code>total_loss = loss + lll_lambda * lll_loss</code>（產生新張量）。</p>
+<p>baseline 的 λ 是 0.0，<code>penalty</code> 仍然每一步都會算：它走過八個參數張量、把 <code>0 × (θ − θ*)²</code> 加總，乘上 0.0 再加進去。結果是 0，只是白算。</p>
+<h3 id="step-update">第 23–24 行：<code>update()</code> 在清梯度之前</h3>
+<p><code>update()</code> 被呼叫的時候，這一步的 <code>backward()</code> 還沒做，<code>optimizer.zero_grad()</code> 也還沒做。所以參數的 <code>.grad</code> 裡留著的是<strong>上一步</strong>的梯度，參數本身則是上一步 <code>optimizer.step()</code> 更新過的值。SI 正是要「上一步的梯度」乘上「上一步造成的參數變化」，這個順序是刻意的，第 6 章會逐行驗證。</p>
+<h3 id="step-adam">每個任務重建一次 Adam</h3>
+<figure class="listing"><figcaption>train.py:40–52 — run_baseline() 的任務迴圈：訓練、重建 lifelong 物件、重建 optimizer</figcaption>
+<pre class="py" data-hot="46,49"><code>  for train_indexes in task_bar:
+    # Train each task
+    model, _, acc_list = train(model, optimizer, train_dataloaders[train_indexes], args.epochs_per_task, 
+                    lll_object, lll_lambda, evaluate=evaluate,device=device, test_dataloaders=test_dataloaders[:train_indexes+1])
+    
+    # get model weight to baseline class and do nothing!
+    lll_object=baseline(model=model, dataloader=train_dataloaders[train_indexes],device=device)
+    
+    # new a optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    
+    # Collect average accuracy in each epoch
+    baseline_acc.extend(acc_list)</code></pre></figure>
+<p>每個任務訓練完，迴圈做兩件事：建一個新的 lifelong 物件（第 46 行，把「這個任務結束時的權重」與「這個任務的資料」交給它，第 3 章起逐一讀），以及建一個新的 Adam（第 49 行）。Adam 會替每個參數記住梯度的移動平均（一階動量）和梯度平方的移動平均（二階動量），用來調整每個參數的步長。重建 optimizer 等於把這些記憶清空，新任務從「沒有動量」開始。這是持續學習程式的常見做法：上一個任務的動量指向上一個任務的方向，帶進新任務沒有意義。學習率維持 1e-4，沒有任何排程。</p>
+
+<h2 id="evaluate">2.3　<code>evaluate()</code>：沒有 <code>no_grad</code>，也回不到 train 模式</h2>
+<figure class="listing"><figcaption>trainer.py:41–52 — evaluate()：一個任務的測試準確率</figcaption>
+<pre class="py" data-hot="42,47-48,51"><code>def evaluate(model, test_dataloader, device):
+    model.eval()
+    correct_cnt = 0
+    total = 0
+    for imgs, labels in test_dataloader:
+        imgs, labels = imgs.to(device), labels.to(device)
+        outputs = model(imgs)
+        _, pred_label = torch.max(outputs.data, 1)
+
+        correct_cnt += (pred_label == labels.data).sum().item()
+        total += torch.ones_like(labels.data).sum().item()
+    return correct_cnt / total</code></pre></figure>
+<p>它做的事很直接：對測試集的每個 batch 算 logits，<code>torch.max(…, 1)</code> 沿著類別那一維取最大值，傳回 <code>(最大值, 索引)</code>，索引就是預測的類別；猜對的個數除以總數。第 51 行用 <code>torch.ones_like(labels).sum()</code> 數這個 batch 有幾張，等於 <code>labels.size(0)</code>，只是繞了一圈。（這個函式用 4 格縮排，<code>train</code> 用 2 格，看得出是不同人寫的。）</p>
+<p>有兩件事和一般的寫法不同：</p>
+<ul>
+<li><strong>沒有 <code>torch.no_grad()</code></strong>。評估時不需要梯度，但沒有包在 <code>no_grad</code> 裡，PyTorch 仍會為 forward 建立計算圖、保留中間結果。一個 batch 是 8,192 張，這會多佔一些 GPU 記憶體和時間，但不影響數字：<code>outputs.data</code> 取的是不帶計算圖的值，也沒有人對它呼叫 <code>backward()</code>，所以參數的 <code>.grad</code> 不會被動到。</li>
+<li><strong><code>model.eval()</code> 之後沒有切回 <code>model.train()</code></strong>。<code>train()</code> 只在開頭（第 9 行）呼叫一次 <code>model.train()</code>；第 1 個 epoch 結束評估之後，模型就一直停在 eval 模式，第 2–10 個 epoch 都是在 eval 模式下訓練的。eval 與 train 模式只影響 Dropout 與 BatchNorm 這類層，這個模型兩種都沒有（第 0 章），所以結果不受影響。但同樣的程式換成有 Dropout 或 BatchNorm 的模型，就會在不知不覺中關掉它們。</li>
+</ul>
+<div class="warn"><h4>改模型時別忘了這兩行</h4>
+<p>作業規定不准改架構，所以這兩個問題在作業裡是無害的。但這是「看起來能跑、換個設定就悄悄出錯」的典型：要把這套迴圈用在別的模型上，評估要包 <code>with torch.no_grad():</code>，評估完要切回 <code>model.train()</code>（或在每個 epoch 開頭呼叫）。</p>
+</div>
+
+<h2 id="metric">2.4　作業的指標：已學任務的平均準確率</h2>
+<p>報告的第二部分（0.5 分）要你描述學習曲線用的指標。從 <code>train()</code> 第 30–35 行讀出來是這樣：</p>
+<div class="eq">學完第 t 個任務的第 e 個 epoch 之後：<br>
+指標 = (1/t) · Σ<sub>j=1..t</sub> acc<sub>j</sub>　，acc<sub>j</sub> = 模型在任務 j 測試集（10,000 張）上的準確率 × 100</div>
+<p>也就是說，學習曲線上的每一個點，是「目前為止學過的每個任務」各自的測試準確率的<strong>算術平均</strong>，還沒學到的任務不算。學任務 1 時是 1 個任務的準確率，學任務 2 時是 2 個的平均，到任務 5 才是全部 5 個的平均。每個任務的權重相同（都是 10,000 張，所以和「把已學任務的測試集合起來算一個準確率」一樣）。</p>
+<p>這個指標同時反映兩件事：舊任務還記得多少，和新任務學得多好。兩者混在一個數字裡，看不出是哪一個在變。本書的實驗工具在每個 epoch 結束時，另外對<strong>全部五個</strong>任務各算一次準確率（用事先轉好的測試張量，不經過 <code>DataLoader</code>，所以不會動到亂數，2.6 節）。這樣每種方法都有一個 50 × 5 的表。把 baseline 的這張表畫出來：</p>
+<figure class="fig">
+<svg viewBox="0 0 900 380" role="img" aria-label="baseline 在五個任務測試集上的準確率隨 epoch 的變化，以及作業印出的平均指標">
+<line x1="56" y1="334.0" x2="780" y2="334.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="338.0" text-anchor="end">0</text>
+<line x1="56" y1="271.2" x2="780" y2="271.2" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="275.2" text-anchor="end">20</text>
+<line x1="56" y1="208.4" x2="780" y2="208.4" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="212.4" text-anchor="end">40</text>
+<line x1="56" y1="145.6" x2="780" y2="145.6" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="149.6" text-anchor="end">60</text>
+<line x1="56" y1="82.8" x2="780" y2="82.8" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="86.8" text-anchor="end">80</text>
+<line x1="56" y1="20.0" x2="780" y2="20.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="24.0" text-anchor="end">100</text>
+<line x1="196.4" y1="20" x2="196.4" y2="334" stroke="#3a4552" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="344.1" y1="20" x2="344.1" y2="334" stroke="#3a4552" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="491.9" y1="20" x2="491.9" y2="334" stroke="#3a4552" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="639.6" y1="20" x2="639.6" y2="334" stroke="#3a4552" stroke-width="1" stroke-dasharray="4 4"/>
+<text class="s-sm" x="122.5" y="352" text-anchor="middle">任務 1</text>
+<text class="s-sm" x="270.2" y="352" text-anchor="middle">任務 2</text>
+<text class="s-sm" x="418.0" y="352" text-anchor="middle">任務 3</text>
+<text class="s-sm" x="565.8" y="352" text-anchor="middle">任務 4</text>
+<text class="s-sm" x="713.5" y="352" text-anchor="middle">任務 5</text>
+<line x1="56" y1="334" x2="780" y2="334" stroke="#4a5562" stroke-width="1"/>
+<text class="s-sm" x="418.0" y="374" text-anchor="middle">第幾個 epoch（每 10 個換一個任務）</text>
+<text class="s-sm" x="14" y="177.0" text-anchor="middle" transform="rotate(-90 14 177.0)">測試準確率（%）</text>
+<polyline points="56.0,43.3 70.8,36.9 85.6,33.3 100.3,32.2 115.1,28.9 129.9,28.1 144.7,27.9 159.4,27.3 174.2,27.9 189.0,26.2 203.8,38.3 218.5,38.3 233.3,40.7 248.1,40.4 262.9,42.0 277.6,41.3 292.4,44.5 307.2,42.7 322.0,44.2 336.7,41.7 351.5,79.6 366.3,91.2 381.1,96.1 395.8,95.1 410.6,107.9 425.4,104.8 440.2,107.8 454.9,113.6 469.7,108.0 484.5,115.3 499.3,155.3 514.0,168.3 528.8,174.2 543.6,172.1 558.4,173.4 573.1,177.8 587.9,173.9 602.7,174.3 617.5,178.9 632.2,180.7 647.0,213.0 661.8,217.3 676.6,227.7 691.3,223.9 706.1,223.8 720.9,226.3 735.7,231.4 750.4,227.0 765.2,227.8 780.0,222.7" fill="none" stroke="#9ec5f4" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,86.3 70.8,79.5 85.6,72.3 100.3,72.0 115.1,62.5 129.9,57.9 144.7,57.8 159.4,52.8 174.2,53.8 189.0,49.7 203.8,29.1 218.5,28.1 233.3,27.1 248.1,26.8 262.9,26.6 277.6,26.2 292.4,25.9 307.2,26.4 322.0,25.9 336.7,26.0 351.5,32.7 366.3,35.4 381.1,34.1 395.8,35.1 410.6,39.8 425.4,35.4 440.2,35.4 454.9,37.2 469.7,36.4 484.5,37.1 499.3,80.2 514.0,97.1 528.8,96.2 543.6,100.1 558.4,97.8 573.1,107.7 587.9,105.2 602.7,99.5 617.5,106.8 632.2,112.4 647.0,147.2 661.8,155.2 676.6,164.7 691.3,163.8 706.1,167.8 720.9,171.8 735.7,171.0 750.4,169.0 765.2,172.6 780.0,171.9" fill="none" stroke="#6da7ec" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,206.5 70.8,195.5 85.6,188.0 100.3,185.1 115.1,176.6 129.9,171.4 144.7,169.7 159.4,160.3 174.2,162.1 189.0,159.2 203.8,66.5 218.5,60.6 233.3,53.9 248.1,51.2 262.9,53.8 277.6,51.7 292.4,48.4 307.2,51.7 322.0,48.8 336.7,49.5 351.5,28.4 366.3,26.9 381.1,26.2 395.8,26.2 410.6,26.0 425.4,25.2 440.2,25.1 454.9,25.1 469.7,25.6 484.5,25.3 499.3,34.7 514.0,38.5 528.8,37.9 543.6,38.5 558.4,39.3 573.1,41.8 587.9,40.8 602.7,37.9 617.5,39.5 632.2,41.7 647.0,71.1 661.8,84.7 676.6,87.0 691.3,90.1 706.1,97.9 720.9,97.9 735.7,97.2 750.4,96.3 765.2,100.8 780.0,104.4" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,273.0 70.8,265.1 85.6,263.7 100.3,258.3 115.1,260.2 129.9,256.1 144.7,253.2 159.4,250.2 174.2,252.5 189.0,253.4 203.8,186.6 218.5,174.9 233.3,164.9 248.1,161.4 262.9,167.4 277.6,161.0 292.4,154.9 307.2,163.1 322.0,161.7 336.7,157.8 351.5,66.8 366.3,61.5 381.1,57.9 395.8,54.9 410.6,53.6 425.4,53.2 440.2,52.8 454.9,50.2 469.7,53.4 484.5,47.6 499.3,28.9 514.0,27.3 528.8,26.5 543.6,26.0 558.4,26.4 573.1,25.9 587.9,25.7 602.7,25.8 617.5,25.3 632.2,25.4 647.0,31.0 661.8,34.2 676.6,33.8 691.3,34.5 706.1,36.0 720.9,35.2 735.7,34.9 750.4,35.4 765.2,36.4 780.0,37.6" fill="none" stroke="#256abf" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,288.9 70.8,284.2 85.6,285.3 100.3,281.5 115.1,287.8 129.9,286.7 144.7,285.7 159.4,285.8 174.2,284.0 189.0,290.0 203.8,265.2 218.5,259.6 233.3,256.0 248.1,255.7 262.9,259.6 277.6,257.1 292.4,253.8 307.2,256.2 322.0,256.3 336.7,254.3 351.5,183.0 366.3,176.6 381.1,172.9 395.8,166.5 410.6,164.0 425.4,163.0 440.2,164.9 454.9,156.2 469.7,160.3 484.5,153.1 499.3,65.9 514.0,58.5 528.8,57.2 543.6,53.5 558.4,54.6 573.1,49.8 587.9,52.2 602.7,51.6 617.5,51.3 632.2,49.6 647.0,28.3 661.8,26.8 676.6,26.8 691.3,25.9 706.1,25.7 720.9,25.7 735.7,25.7 750.4,25.8 765.2,25.7 780.0,25.1" fill="none" stroke="#184f95" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,43.3 70.8,36.9 85.6,33.3 100.3,32.2 115.1,28.9 129.9,28.1 144.7,27.9 159.4,27.3 174.2,27.9 189.0,26.2 203.8,33.7 218.5,33.2 233.3,33.9 248.1,33.6 262.9,34.3 277.6,33.7 292.4,35.2 307.2,34.6 322.0,35.1 336.7,33.9 351.5,46.9 366.3,51.2 381.1,52.1 395.8,52.1 410.6,57.9 425.4,55.1 440.2,56.1 454.9,58.6 469.7,56.6 484.5,59.2 499.3,74.8 514.0,82.8 528.8,83.7 543.6,84.2 558.4,84.2 573.1,88.3 587.9,86.4 602.7,84.4 617.5,87.6 632.2,90.0 647.0,98.1 661.8,103.6 676.6,108.0 691.3,107.6 706.1,110.2 720.9,111.4 735.7,112.1 750.4,110.7 765.2,112.6 780.0,112.3" fill="none" stroke="#e4e8ec" stroke-width="2" stroke-linejoin="round" stroke-dasharray="5 4"/>
+<rect x="786.0" y="21.1" width="8" height="8" rx="2" fill="#184f95"/>
+<text class="s-lbl" x="798.0" y="29.1">任務 5（80°）</text>
+<rect x="786.0" y="35.1" width="8" height="8" rx="2" fill="#256abf"/>
+<text class="s-lbl" x="798.0" y="43.1">任務 4（60°）</text>
+<rect x="786.0" y="100.4" width="8" height="8" rx="2" fill="#3987e5"/>
+<text class="s-lbl" x="798.0" y="108.4">任務 3（40°）</text>
+<rect x="786.0" y="114.4" width="8" height="8" rx="2" fill="#e4e8ec"/>
+<text class="s-lbl" x="798.0" y="122.4">作業的指標</text>
+<rect x="786.0" y="167.9" width="8" height="8" rx="2" fill="#6da7ec"/>
+<text class="s-lbl" x="798.0" y="175.9">任務 2（20°）</text>
+<rect x="786.0" y="218.7" width="8" height="8" rx="2" fill="#9ec5f4"/>
+<text class="s-lbl" x="798.0" y="226.7">任務 1（0°）</text>
+<rect x="48.6" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 1：任務 1（0°） 92.58　任務 2（20°） 78.88　任務 3（40°） 40.61　任務 4（60°） 19.44　任務 5（80°） 14.37　作業的指標 92.58"/>
+<rect x="63.4" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 2：任務 1（0°） 94.63　任務 2（20°） 81.06　任務 3（40°） 44.11　任務 4（60°） 21.94　任務 5（80°） 15.86　作業的指標 94.63"/>
+<rect x="78.2" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 3：任務 1（0°） 95.76　任務 2（20°） 83.34　任務 3（40°） 46.50　任務 4（60°） 22.39　任務 5（80°） 15.50　作業的指標 95.76"/>
+<rect x="92.9" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 4：任務 1（0°） 96.13　任務 2（20°） 83.45　任務 3（40°） 47.42　任務 4（60°） 24.11　任務 5（80°） 16.71　作業的指標 96.13"/>
+<rect x="107.7" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 5：任務 1（0°） 97.18　任務 2（20°） 86.47　任務 3（40°） 50.13　任務 4（60°） 23.50　任務 5（80°） 14.72　作業的指標 97.18"/>
+<rect x="122.5" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 6：任務 1（0°） 97.41　任務 2（20°） 87.94　任務 3（40°） 51.79　任務 4（60°） 24.81　任務 5（80°） 15.05　作業的指標 97.41"/>
+<rect x="137.3" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 7：任務 1（0°） 97.49　任務 2（20°） 87.96　任務 3（40°） 52.31　任務 4（60°） 25.73　任務 5（80°） 15.39　作業的指標 97.49"/>
+<rect x="152.0" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 8：任務 1（0°） 97.69　任務 2（20°） 89.56　任務 3（40°） 55.32　任務 4（60°） 26.68　任務 5（80°） 15.34　作業的指標 97.69"/>
+<rect x="166.8" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 9：任務 1（0°） 97.48　任務 2（20°） 89.23　任務 3（40°） 54.73　任務 4（60°） 25.96　任務 5（80°） 15.92　作業的指標 97.48"/>
+<rect x="181.6" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 10：任務 1（0°） 98.03　任務 2（20°） 90.53　任務 3（40°） 55.66　任務 4（60°） 25.68　任務 5（80°） 14.02　作業的指標 98.03"/>
+<rect x="196.4" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 11：任務 1（0°） 94.17　任務 2（20°） 97.11　任務 3（40°） 85.19　任務 4（60°） 46.95　任務 5（80°） 21.92　作業的指標 95.64"/>
+<rect x="211.1" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 12：任務 1（0°） 94.17　任務 2（20°） 97.41　任務 3（40°） 87.06　任務 4（60°） 50.66　任務 5（80°） 23.70　作業的指標 95.79"/>
+<rect x="225.9" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 13：任務 1（0°） 93.40　任務 2（20°） 97.75　任務 3（40°） 89.19　任務 4（60°） 53.84　任務 5（80°） 24.85　作業的指標 95.58"/>
+<rect x="240.7" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 14：任務 1（0°） 93.50　任務 2（20°） 97.85　任務 3（40°） 90.07　任務 4（60°） 54.98　任務 5（80°） 24.95　作業的指標 95.67"/>
+<rect x="255.5" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 15：任務 1（0°） 92.98　任務 2（20°） 97.89　任務 3（40°） 89.25　任務 4（60°） 53.07　任務 5（80°） 23.71　作業的指標 95.44"/>
+<rect x="270.2" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 16：任務 1（0°） 93.23　任務 2（20°） 98.03　任務 3（40°） 89.90　任務 4（60°） 55.09　任務 5（80°） 24.49　作業的指標 95.63"/>
+<rect x="285.0" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 17：任務 1（0°） 92.20　任務 2（20°） 98.12　任務 3（40°） 90.95　任務 4（60°） 57.03　任務 5（80°） 25.54　作業的指標 95.16"/>
+<rect x="299.8" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 18：任務 1（0°） 92.77　任務 2（20°） 97.96　任務 3（40°） 89.89　任務 4（60°） 54.42　任務 5（80°） 24.78　作業的指標 95.36"/>
+<rect x="314.6" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 19：任務 1（0°） 92.29　任務 2（20°） 98.12　任務 3（40°） 90.82　任務 4（60°） 54.87　任務 5（80°） 24.73　作業的指標 95.21"/>
+<rect x="329.3" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 20：任務 1（0°） 93.08　任務 2（20°） 98.08　任務 3（40°） 90.62　任務 4（60°） 56.13　任務 5（80°） 25.39　作業的指標 95.58"/>
+<rect x="344.1" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 21：任務 1（0°） 81.01　任務 2（20°） 95.96　任務 3（40°） 97.31　任務 4（60°） 85.10　任務 5（80°） 48.10　作業的指標 91.43"/>
+<rect x="358.9" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 22：任務 1（0°） 77.32　任務 2（20°） 95.09　任務 3（40°） 97.79　任務 4（60°） 86.78　任務 5（80°） 50.13　作業的指標 90.07"/>
+<rect x="373.7" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 23：任務 1（0°） 75.77　任務 2（20°） 95.50　任務 3（40°） 98.04　任務 4（60°） 87.94　任務 5（80°） 51.31　作業的指標 89.77"/>
+<rect x="388.4" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 24：任務 1（0°） 76.09　任務 2（20°） 95.20　任務 3（40°） 98.02　任務 4（60°） 88.90　任務 5（80°） 53.34　作業的指標 89.77"/>
+<rect x="403.2" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 25：任務 1（0°） 72.02　任務 2（20°） 93.71　任務 3（40°） 98.10　任務 4（60°） 89.30　任務 5（80°） 54.15　作業的指標 87.94"/>
+<rect x="418.0" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 26：任務 1（0°） 72.99　任務 2（20°） 95.09　任務 3（40°） 98.35　任務 4（60°） 89.42　任務 5（80°） 54.46　作業的指標 88.81"/>
+<rect x="432.8" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 27：任務 1（0°） 72.05　任務 2（20°） 95.08　任務 3（40°） 98.38　任務 4（60°） 89.54　任務 5（80°） 53.84　作業的指標 88.50"/>
+<rect x="447.6" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 28：任務 1（0°） 70.18　任務 2（20°） 94.53　任務 3（40°） 98.39　任務 4（60°） 90.37　任務 5（80°） 56.64　作業的指標 87.70"/>
+<rect x="462.3" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 29：任務 1（0°） 71.99　任務 2（20°） 94.78　任務 3（40°） 98.22　任務 4（60°） 89.35　任務 5（80°） 55.32　作業的指標 88.33"/>
+<rect x="477.1" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 30：任務 1（0°） 69.66　任務 2（20°） 94.56　任務 3（40°） 98.32　任務 4（60°） 91.22　任務 5（80°） 57.60　作業的指標 87.51"/>
+<rect x="491.9" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 31：任務 1（0°） 56.90　任務 2（20°） 80.84　任務 3（40°） 95.31　任務 4（60°） 97.18　任務 5（80°） 85.39　作業的指標 82.56"/>
+<rect x="506.7" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 32：任務 1（0°） 52.77　任務 2（20°） 75.44　任務 3（40°） 94.12　任務 4（60°） 97.69　任務 5（80°） 87.73　作業的指標 80.01"/>
+<rect x="521.4" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 33：任務 1（0°） 50.89　任務 2（20°） 75.73　任務 3（40°） 94.30　任務 4（60°） 97.94　任務 5（80°） 88.16　作業的指標 79.72"/>
+<rect x="536.2" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 34：任務 1（0°） 51.57　任務 2（20°） 74.48　任務 3（40°） 94.10　任務 4（60°） 98.09　任務 5（80°） 89.34　作業的指標 79.56"/>
+<rect x="551.0" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 35：任務 1（0°） 51.15　任務 2（20°） 75.21　任務 3（40°） 93.85　任務 4（60°） 97.97　任務 5（80°） 88.99　作業的指標 79.55"/>
+<rect x="565.8" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 36：任務 1（0°） 49.76　任務 2（20°） 72.07　任務 3（40°） 93.05　任務 4（60°） 98.12　任務 5（80°） 90.52　作業的指標 78.25"/>
+<rect x="580.5" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 37：任務 1（0°） 51.00　任務 2（20°） 72.86　任務 3（40°） 93.39　任務 4（60°） 98.18　任務 5（80°） 89.75　作業的指標 78.86"/>
+<rect x="595.3" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 38：任務 1（0°） 50.85　任務 2（20°） 74.69　任務 3（40°） 94.31　任務 4（60°） 98.16　任務 5（80°） 89.94　作業的指標 79.50"/>
+<rect x="610.1" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 39：任務 1（0°） 49.39　任務 2（20°） 72.35　任務 3（40°） 93.79　任務 4（60°） 98.30　任務 5（80°） 90.02　作業的指標 78.46"/>
+<rect x="624.9" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 40：任務 1（0°） 48.81　任務 2（20°） 70.58　任務 3（40°） 93.10　任務 4（60°） 98.29　任務 5（80°） 90.58　作業的指標 77.70"/>
+<rect x="639.6" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 41：任務 1（0°） 38.54　任務 2（20°） 59.50　任務 3（40°） 83.74　任務 4（60°） 96.51　任務 5（80°） 97.35　作業的指標 75.13"/>
+<rect x="654.4" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 42：任務 1（0°） 37.18　任務 2（20°） 56.93　任務 3（40°） 79.39　任務 4（60°） 95.48　任務 5（80°） 97.84　作業的指標 73.36"/>
+<rect x="669.2" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 43：任務 1（0°） 33.84　任務 2（20°） 53.92　任務 3（40°） 78.65　任務 4（60°） 95.62　任務 5（80°） 97.83　作業的指標 71.97"/>
+<rect x="684.0" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 44：任務 1（0°） 35.05　任務 2（20°） 54.21　任務 3（40°） 77.69　任務 4（60°） 95.38　任務 5（80°） 98.12　作業的指標 72.09"/>
+<rect x="698.7" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 45：任務 1（0°） 35.10　任務 2（20°） 52.92　任務 3（40°） 75.19　任務 4（60°） 94.92　任務 5（80°） 98.19　作業的指標 71.26"/>
+<rect x="713.5" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 46：任務 1（0°） 34.30　任務 2（20°） 51.65　任務 3（40°） 75.18　任務 4（60°） 95.17　任務 5（80°） 98.18　作業的指標 70.90"/>
+<rect x="728.3" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 47：任務 1（0°） 32.67　任務 2（20°） 51.90　任務 3（40°） 75.41　任務 4（60°） 95.26　任務 5（80°） 98.18　作業的指標 70.68"/>
+<rect x="743.1" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 48：任務 1（0°） 34.08　任務 2（20°） 52.54　任務 3（40°） 75.70　任務 4（60°） 95.11　任務 5（80°） 98.15　作業的指標 71.12"/>
+<rect x="757.8" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 49：任務 1（0°） 33.82　任務 2（20°） 51.40　任務 3（40°） 74.27　任務 4（60°） 94.78　任務 5（80°） 98.20　作業的指標 70.49"/>
+<rect x="772.6" y="20" width="14.8" height="314" fill="transparent" data-tip="epoch 50：任務 1（0°） 35.43　任務 2（20°） 51.63　任務 3（40°） 73.13　任務 4（60°） 94.40　任務 5（80°） 98.37　作業的指標 70.59"/>
+</svg>
+<div class="legend"><span><i style="background:#9ec5f4"></i>任務 1（0°）</span><span><i style="background:#6da7ec"></i>任務 2（20°）</span><span><i style="background:#3987e5"></i>任務 3（40°）</span><span><i style="background:#256abf"></i>任務 4（60°）</span><span><i style="background:#184f95"></i>任務 5（80°）</span><span><i style="background:#e4e8ec"></i>作業的指標（虛線）</span></div>
+<figcaption>圖 2.1　baseline（第 0 章的參照執行）在五個任務測試集上的準確率，以及作業印出的指標。滑鼠移到圖上可看每個 epoch 的數值。顏色由淺到深是任務 1 到任務 5（轉的角度由小到大）。</figcaption>
+</figure>
+<p>這張圖把一條曲線拆成了五條，有幾件事一眼就看得到：</p>
+<ul>
+<li><strong>新任務學得很快。</strong>每換一個任務，那個任務的準確率在第一個 epoch 就跳到 97% 左右（任務 2–5 在第 11、21、31、41 個 epoch 分別是 97.11、97.31、97.18、97.35）。</li>
+<li><strong>舊任務掉得也很快，而且不會停。</strong>任務 1 學完時 98.03，學任務 2 的第一個 epoch 就掉到 94.17，之後每換一個任務再往下掉一截，最後剩 35.43。</li>
+<li><strong>還沒學的任務也在動。</strong>學任務 1 時，任務 2 跟著到了 90% 左右（第 1 章：轉 20° 的圖和原圖很像）；學任務 2 時，任務 3 從 55.66 升到 90.62。學一個任務會順便讓「角度相近」的任務變好，讓「角度遠」的任務變差。</li>
+</ul>
+<p>回到第 0 章留下的問題：學習曲線在換任務時那一階的落差，有多少是遺忘？可以這樣拆：假設舊任務完全沒有忘、維持換任務前的準確率，再加上新任務實際的準確率，算出一個「沒有遺忘時的指標」。實際指標比它低多少，就是遺忘造成的；它比換任務前低多少，就是「新任務還不夠好」造成的：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>換任務</th><th class="num">換之前（第 10k 個 epoch）</th><th class="num">換之後第 1 個 epoch</th><th class="num">看到的落差</th><th class="num">其中新任務的影響</th><th class="num">其中遺忘的影響</th><th class="num">新任務的準確率</th></tr></thead>
+<tbody>
+<tr><td>任務 1 → 2</td><td class="num">98.03</td><td class="num">95.64</td><td class="num">2.39</td><td class="num">0.46</td><td class="num">1.93</td><td class="num">97.11</td></tr>
+<tr><td>任務 2 → 3</td><td class="num">95.58</td><td class="num">91.43</td><td class="num">4.15</td><td class="num">−0.58</td><td class="num">4.73</td><td class="num">97.31</td></tr>
+<tr><td>任務 3 → 4</td><td class="num">87.51</td><td class="num">82.56</td><td class="num">4.96</td><td class="num">−2.42</td><td class="num">7.37</td><td class="num">97.18</td></tr>
+<tr><td>任務 4 → 5</td><td class="num">77.70</td><td class="num">75.13</td><td class="num">2.57</td><td class="num">−3.93</td><td class="num">6.50</td><td class="num">97.35</td></tr>
+</tbody>
+</table></div>
+<p>只有第一次換任務時，「新任務還沒學到 98%」佔了一點點（0.46）。從任務 3 開始，新任務第一個 epoch 就有 97% 以上，比當時的平均還高，加進來反而把平均往上拉（負值）。所以<strong>落差幾乎全是遺忘，而且真正的遺忘比看到的落差還大</strong>：換到任務 4 時曲線只掉了 4.96，遺忘卻讓指標少了 7.37，新任務把其中 2.42 補了回來。作業的指標會<strong>低估</strong>遺忘，因為它把一個學得很好的新任務和幾個正在忘的舊任務平均在一起。</p>
+<div class="note"><h4>報告怎麼寫</h4>
+<p>描述指標時，把三件事講清楚就夠了：(1) 每個 epoch 結束評估一次；(2) 只評估到目前為止學過的任務（第 t 個任務期間是任務 1..t），各自在完整的測試集上算準確率；(3) 取算術平均、乘以 100。可以再補一句它的限制：分母會隨任務變多，新任務的準確率和舊任務的遺忘混在同一個數字裡，看不出個別任務忘了多少。</p>
+</div>
+
+<h2 id="matrix">2.5　逐任務矩陣、ACC 與 BWT</h2>
+<p>持續學習的論文通常不畫作業那條曲線，而是報一個 <strong>T × T 的準確率矩陣</strong>：第 i 列是「學完任務 i 之後」，第 j 行是「在任務 j 的測試集上」。baseline 的矩陣（取每個任務最後一個 epoch，即第 10、20、30、40、50 個）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>學完之後 ＼ 測在</th><th class="num">任務 1</th><th class="num">任務 2</th><th class="num">任務 3</th><th class="num">任務 4</th><th class="num">任務 5</th></tr></thead>
+<tbody>
+<tr><td>任務 1</td><td class="num"><strong>98.03</strong></td><td class="num">90.53</td><td class="num">55.66</td><td class="num">25.68</td><td class="num">14.02</td></tr>
+<tr><td>任務 2</td><td class="num">93.08</td><td class="num"><strong>98.08</strong></td><td class="num">90.62</td><td class="num">56.13</td><td class="num">25.39</td></tr>
+<tr><td>任務 3</td><td class="num">69.66</td><td class="num">94.56</td><td class="num"><strong>98.32</strong></td><td class="num">91.22</td><td class="num">57.60</td></tr>
+<tr><td>任務 4</td><td class="num">48.81</td><td class="num">70.58</td><td class="num">93.10</td><td class="num"><strong>98.29</strong></td><td class="num">90.58</td></tr>
+<tr><td>任務 5</td><td class="num">35.43</td><td class="num">51.63</td><td class="num">73.13</td><td class="num">94.40</td><td class="num"><strong>98.37</strong></td></tr>
+</tbody>
+</table></div>
+<p>讀法：<strong>對角線</strong>（粗體）是「剛學完這個任務時」的準確率；對角線<strong>左下</strong>是學完之後的舊任務，從上往下看就是遺忘的過程；對角線<strong>右上</strong>是還沒學的任務。作業的指標只用到對角線和左下三角，而且還把每一列平均掉了。</p>
+<p>從這張矩陣定義兩個常用的數字（Lopez-Paz 與 Ranzato 在 GEM 的論文裡提出，之後成為這個領域的標準報法）。設 <code>R[i][j]</code> 是上表第 i 列、第 j 行，共 T = 5 個任務：</p>
+<div class="eq">ACC = (1/T) · Σ<sub>j=1..T</sub> R[T][j]　　　　（最後一列的平均）<br>
+BWT = (1/(T−1)) · Σ<sub>j=1..T−1</sub> ( R[T][j] − R[j][j] )　（舊任務「最後」減「剛學完」的平均）</div>
+<ul>
+<li><strong>ACC</strong>（average accuracy）：學完全部任務之後，在每個任務上的平均準確率。baseline 是 (35.43 + 51.63 + 73.13 + 94.40 + 98.37) / 5 = <strong>70.59</strong>。它和作業指標的最後一個點是同一個數，因為到了任務 5，「已學任務」就是全部任務。</li>
+<li><strong>BWT</strong>（backward transfer）：學後面的任務對前面的任務有什麼影響。負的代表遺忘，正的代表後來的學習反而幫了舊任務。baseline 是 [(35.43 − 98.03) + (51.63 − 98.08) + (73.13 − 98.32) + (94.40 − 98.29)] / 4 = <strong>−34.53</strong>：舊任務平均掉了 34.5 個百分點。</li>
+</ul>
+<p>兩個數字要一起看。ACC 高可能是因為記得多，也可能是新任務學得特別好；BWT 接近 0 可能是因為記得住，也可能是因為什麼都沒學會（剛學完就不高，自然掉不多）。第 5 章的 MAS 就是後一種情況的例子：它的 BWT 是 −13.97，看起來遺忘少很多，但它的對角線從 97.9 一路降到 89.7，新任務學不好。所以本書每種方法都會同時報 ACC、BWT 和對角線。</p>
+<p>另一個常見的量叫 <strong>forgetting</strong>（Chaudhry 等人在 RWalk 的論文提出）：每個舊任務「歷史上最好的準確率」減「最後的準確率」，再取平均。baseline 的每個舊任務都是剛學完時最好，所以它就是 −BWT，四個任務分別忘了 62.60、46.45、25.19、3.89，平均 34.53。越早學的任務忘得越多：任務 1 和任務 5 的角度差最大（第 1 章）。</p>
+<p>每種方法的 ACC 與 BWT 已經整理在<a href="index.html#results">目錄頁的成績表</a>；本書的實驗工具 <code>docs/tools/hw14_exp.py</code> 把整個 50 × 5 的表存在 <code>hw14_runs.jsonl</code> 的 <code>matrix</code> 欄位，第 3 章起的每一張圖都從這裡畫。</p>
+
+<h2 id="rng">2.6　評估也會改變訓練</h2>
+<p>最後一件事不在任何說明裡。<code>train.py</code> 建測試資料的 <code>DataLoader</code> 時用了 <code>shuffle=True</code>（第 0 章 <code>train.py</code> 第 248 行）。測試資料打不打亂，對準確率沒有影響：加總起來都是那 10,000 張。但打亂需要亂數，而這些亂數和訓練資料的打亂、模型初始化，取自<strong>同一個</strong>全域亂數產生器。</p>
+<p>每次從 <code>DataLoader</code> 拿一個新的迭代器時，PyTorch 會先從全域產生器抽一個數，當作這一輪資料讀取的基礎種子；如果 <code>shuffle=True</code>，抽樣器還會再抽一個數來決定排列。實測（在 CPU 上，用一個小資料集，比對抽了幾次數之後的產生器狀態）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>動作</th><th class="num">從全域亂數產生器抽了幾次</th></tr></thead>
+<tbody>
+<tr><td>走過一次 <code>shuffle=True</code> 的 <code>DataLoader</code></td><td class="num">2</td></tr>
+<tr><td>走過一次 <code>shuffle=False</code> 的 <code>DataLoader</code></td><td class="num">1</td></tr>
+<tr><td>用 <code>tqdm.auto.tqdm(...)</code> 包住再走一次 <code>shuffle=True</code> 的 <code>DataLoader</code>（<code>train()</code> 第 16 行的寫法）</td><td class="num">3</td></tr>
+<tr><td><code>tqdm.auto.trange(10)</code></td><td class="num">0</td></tr>
+</tbody>
+</table></div>
+<p>第三列多出來的一次，是因為在一般 Python 環境下 <code>tqdm.auto.tqdm</code> 實際上是 <code>tqdm_asyncio</code>，它在建立時就先對 <code>DataLoader</code> 呼叫一次 <code>iter()</code>，多建了一個沒用到的迭代器。（同樣的現象在 HW03 的教材裡也遇過。）</p>
+<p>所以每個 epoch 的亂數用量是：訓練 3 次，加上評估「每個已學任務 2 次」。評估用掉的亂數會讓<strong>下一個 epoch</strong> 的訓練資料以不同的順序出現。為了量這個影響有多大，本書加跑了一組：baseline、種子 0，<strong>只把測試資料改成 <code>shuffle=False</code></strong>（實驗工具的 <code>--test_noshuffle</code>），其他完全相同。注意這不會讓評估完全不用亂數，每個測試集仍抽 1 次，只是少抽 1 次：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th class="num">任務 1 學完</th><th class="num">任務 2</th><th class="num">任務 3</th><th class="num">任務 4</th><th class="num">任務 5（ACC）</th><th class="num">BWT</th></tr></thead>
+<tbody>
+<tr><td>測試資料 <code>shuffle=True</code>（原版）</td><td class="num">98.03</td><td class="num">95.58</td><td class="num">87.51</td><td class="num">77.70</td><td class="num">70.59</td><td class="num">−34.53</td></tr>
+<tr><td>測試資料 <code>shuffle=False</code></td><td class="num">97.78</td><td class="num">95.12</td><td class="num">88.03</td><td class="num">78.47</td><td class="num">70.86</td><td class="num">−34.15</td></tr>
+<tr><td><em>參考</em>：原版換種子 0–4</td><td colspan="5" class="num">ACC 67.56 – 70.73</td><td class="num">−38.32 – −34.22</td></tr>
+</tbody>
+</table></div>
+<p>兩組的第 1 個 epoch 完全相同（92.58），因為在第一次評估之前，兩者用掉的亂數一樣；從第 2 個 epoch 起就分岔了（94.63 對 94.86）。最後的 ACC 差 0.27。這個差距本身不重要，它和換一個種子造成的差異（67.56 到 70.73，差 3.17）是同一類東西：都是「資料順序不同」。重要的是它說明了兩件事：</p>
+<ul>
+<li><strong>「只改評估」不是中性的修改。</strong>把評估的批次大小、打不打亂、評估的頻率改掉，訓練結果都會變。要比較兩個方法，它們的評估方式要一模一樣，或者讓評估完全不碰全域亂數。</li>
+<li><strong>差距要和種子之間的差異比。</strong>baseline 光是換種子，ACC 就在 67.56–70.73 之間。兩個方法差 1 個百分點，在只跑一個種子的情況下說明不了什麼。第 3 章會用這五個種子定出 baseline 的範圍，第 8 章用同樣的方式比較所有方法。</li>
+</ul>
+<div class="note"><h4>現在的做法：評估不碰訓練的亂數</h4>
+<p>現在的寫法會把評估和訓練的亂數分開：評估包在 <code>torch.no_grad()</code> 或更嚴格的 <code>torch.inference_mode()</code> 裡；測試資料不打亂；需要亂數的 <code>DataLoader</code> 傳入自己的 <code>torch.Generator</code>（<code>DataLoader(..., generator=g)</code>），它的抽樣與基礎種子就改從 <code>g</code> 取，不再動到全域產生器。持續學習的研究則多半用現成的框架（例如 Avalanche）來管理任務序列與評估，ACC、BWT、forgetting 這些指標由框架統一計算，各篇論文的數字才能互相比較。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li><code>train()</code> 一次訓練一個任務 10 個 epoch；每一步：forward → CE loss → 加上 λ·<code>penalty</code> → <code>update()</code> → 清梯度、backward、step。<code>update()</code> 在清梯度前呼叫，看到的是上一步的梯度（SI 要的就是這個）。每個任務結束都重建 lifelong 物件和 Adam。</li>
+<li><code>total_loss = loss</code> 加上原地的 <code>+=</code>，讓 <code>loss</code> 也變成加總後的值；<code>evaluate()</code> 沒有 <code>no_grad</code>，且之後模型一直停在 eval 模式，這個模型沒有 Dropout／BatchNorm 所以結果不受影響。</li>
+<li>作業的指標：每個 epoch 結束，對已學過的任務各算測試準確率，取平均乘 100。分母隨任務增加，新任務與舊任務混在一起；新任務一個 epoch 就到 97% 左右，所以這個指標會低估遺忘（換到任務 4 時，曲線掉 4.96，遺忘 7.37）。</li>
+<li>逐任務矩陣 R[i][j]；ACC = 最後一列平均（baseline 70.59，等於作業指標最後一點），BWT = 舊任務「最後 − 剛學完」的平均（baseline −34.53）。兩者要和對角線一起看。</li>
+<li>評估會用掉全域亂數（打亂的 <code>DataLoader</code> 每走一次抽 2 次，不打亂也抽 1 次；<code>tqdm.auto</code> 包住訓練資料再多 1 次）。只把測試資料改成不打亂，baseline 的 ACC 從 70.59 變成 70.86；換種子的範圍是 67.56–70.73。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 學任務 3 的第 5 個 epoch 結束時，<code>train()</code> 會呼叫幾次 <code>evaluate()</code>？印出的那個數是怎麼算的？</summary>
+<p>3 次：<code>test_dataloaders</code> 是 <code>test_dataloaders[:3]</code>，任務 1、2、3 各一次。印出的是三個準確率的算術平均乘以 100。任務 4、5 的測試集不會被評估。</p></details>
+<details class="quiz"><summary>2. 進度條上顯示的 <code>Loss</code> 包含懲罰項嗎？</summary>
+<p>包含。第 20 行 <code>total_loss = loss</code> 讓兩個名字指向同一個張量，第 22 行的 <code>+=</code> 是原地修改，所以第 28 行的 <code>total_loss.item()</code> 是分類 loss 加上 λ 乘懲罰項。對 baseline（λ = 0）兩者相同，對其他方法則不同。</p></details>
+<details class="quiz"><summary>3. 如果這個模型有一層 <code>nn.Dropout(0.5)</code>，<code>train()</code> 會出什麼問題？</summary>
+<p>第 1 個 epoch 結束評估時呼叫了 <code>model.eval()</code>，之後沒有任何地方切回 <code>model.train()</code>，所以第 2 個 epoch 起訓練時 Dropout 都是關掉的，等於只有第 1 個 epoch 有 Dropout。這題是依程式推論，本書沒有實際跑（作業的模型沒有 Dropout）。</p></details>
+<details class="quiz"><summary>4. 方法 A 的 ACC 是 72.0、BWT 是 −20；方法 B 的 ACC 是 72.0、BWT 是 −32。兩者的 ACC 一樣，差別在哪裡？</summary>
+<p>A 舊任務掉得比較少，但最後的平均一樣，代表 A 剛學完每個任務時的準確率（對角線）比較低：它記得住，但學不好新任務。B 學每個任務都學得很好，但忘得多。這就是穩定性（stability）與可塑性（plasticity）的取捨，第 5 章的 MAS 是偏向 A 的例子。</p></details>
+<details class="quiz"><summary>5. 本書的實驗工具在每個 epoch 結束時對五個任務都多評估一次。為什麼這樣做不會改變訓練結果？</summary>
+<p>因為它不經過 <code>DataLoader</code>：五個測試集在一開始就轉成張量放在 GPU 上（旋轉是確定性的，不用亂數），評估時直接把張量送進模型，包在 <code>torch.no_grad()</code> 裡，結束後恢復原本的 train／eval 狀態。不抽亂數、不動 <code>.grad</code>，所以第 0 章驗證過：加了這個額外評估，印出的 300 個數和原版逐位元相同。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>David Lopez-Paz、Marc'Aurelio Ranzato，<a href="https://arxiv.org/abs/1706.08840">Gradient Episodic Memory for Continual Learning</a>（2017）：第 4 節定義了 ACC、BWT、FWT。</li>
+<li>Arslan Chaudhry 等，<a href="https://arxiv.org/abs/1801.10112">Riemannian Walk for Incremental Learning: Understanding Forgetting and Intransigence</a>（2018）：定義了 forgetting 與 intransigence（學不會新任務的程度）；RWalk 本身在第 7 章。</li>
+<li>PyTorch 文件：<a href="https://pytorch.org/docs/stable/notes/randomness.html">Reproducibility</a>（DataLoader 的亂數與 <code>generator</code> 參數）。</li>
+<li><a href="https://avalanche.continualai.org/">Avalanche</a>：ContinualAI 社群維護的持續學習框架。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch01.html">← 第 1 章</a><a href="ch03.html">第 3 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW14 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW14 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

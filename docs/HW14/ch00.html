@@ -510,7 +510,7 @@ print(torch.equal(a.fc1.weight, b.fc1.weight), a.fc1.weight[0,:3].tolist(), b.fc
 <img src="img/acc_summary.png" width="640" height="480" alt="plot.py 畫出的學習曲線：橫軸 0 到 49 是 epoch，縱軸是準確率 70 到 98。六條線在第 0 到 9 個 epoch 幾乎重疊，從 92 升到 98；之後每 10 個 epoch 往下跳一階。到最後，MAS 約 83 最高，RWalk 約 78、SCP 約 77，SI、EWC、baseline 約 70 到 72">
 <figcaption>圖 0.2　<code>plot.py</code> 的實際輸出（Matplotlib 預設配色，和本書其他圖的方法色不同）。橫軸是第幾個 epoch（0–49），縱軸是「已學任務的平均準確率」（%）。</figcaption>
 </figure>
-<p>這張圖有一個明顯的形狀：每 10 個 epoch 往下跳一階。第 10、20、30、40 個 epoch 是換任務的時間點，平均準確率在那裡突然下降，然後在同一個任務的 10 個 epoch 裡大致持平。直覺的解讀是「換任務就開始遺忘」，但這只對了一半。換任務的那一刻，分母也變了：本來是「任務 1、2 的平均」，現在變成「任務 1、2、3 的平均」，而新加進來的任務 3 才剛開始學。所以那一階的落差，一部分是舊任務真的變差，一部分只是新任務還沒學會。第 2 章會把這條曲線拆成五條，各看一個任務。</p>
+<p>這張圖有一個明顯的形狀：每 10 個 epoch 往下跳一階。第 10、20、30、40 個 epoch 是換任務的時間點，平均準確率在那裡突然下降，然後在同一個任務的 10 個 epoch 裡大致持平。直覺的解讀是「換任務就開始遺忘」。但要小心，換任務的那一刻，分母也變了：本來是「任務 1、2 的平均」，現在變成「任務 1、2、3 的平均」，新加進來的任務也會影響這個平均。所以那一階的落差不能直接當成遺忘的量。第 2 章會把這條曲線拆成五條，各看一個任務，並算出每一階裡遺忘佔了多少（答案是：幾乎全部，而且真正的遺忘比看到的落差還大）。</p>
 <p>每種方法在五個任務學完時（第 10、20、30、40、50 個 epoch）的值：</p>
 <div class="tablewrap"><table>
 <thead><tr><th>方法</th><th class="num">λ</th><th class="num">任務 1 學完</th><th class="num">任務 2</th><th class="num">任務 3</th><th class="num">任務 4</th><th class="num">任務 5（最後）</th></tr></thead>
@@ -552,7 +552,7 @@ print(torch.equal(a.fc1.weight, b.fc1.weight), a.fc1.weight[0,:3].tolist(), b.fc
 <details class="quiz"><summary>3. 如果把 <code>train.py</code> 第 251–252 行（<code>example = Model()</code> 和 <code>print(example)</code>）刪掉，再跑一次，印出的 300 個數會一樣嗎？</summary>
 <p>不會。建立 <code>Model</code> 會從全域亂數產生器取亂數來初始化權重；少建一個，之後每個模型的初始權重都跟著改變。本章 0.5 節實測過：同一個種子下，「直接建模型」和「先建 example 再建模型」的 <code>fc1.weight</code> 不同（<code>torch.equal</code> 是 <code>False</code>）。完整重跑六種方法的結果本書沒有跑，但初始權重已經不同，結果不可能逐位元相同。</p></details>
 <details class="quiz"><summary>4. 學習曲線在第 10、20、30、40 個 epoch 往下跳。這個落差全部都是「遺忘」嗎？</summary>
-<p>不全是。曲線上的值是「目前學過的任務」的平均。換到新任務的那一刻，平均的分母多了一個剛開始學的任務，它的準確率還不高，會把平均往下拉；另一部分才是舊任務的準確率真的下降。要分開看，必須記錄每個任務各自的準確率，這是第 2 章的主題。</p></details>
+<p>不能直接這樣看。曲線上的值是「目前學過的任務」的平均，換到新任務時分母多了一個任務，新任務的準確率也會影響平均。要分開看，必須記錄每個任務各自的準確率，這是第 2 章的主題。第 2 章 2.4 節拆開之後的答案是：新任務只要一個 epoch 就到 97% 左右，從任務 3 起反而把平均往上拉，所以那一階的落差幾乎全是遺忘，真正的遺忘量還比看到的落差大（換到任務 4 時，落差 4.96，遺忘 7.37）。</p></details>
 <details class="quiz"><summary>5. 用 <code>python train.py --methods EWC</code> 只跑 EWC，結果會和完整跑六種時印出的 EWC 串列相同嗎？</summary>
 <p>不會相同。完整跑的時候，EWC 是在 baseline 用掉一大段亂數（建模型、每個 epoch 洗牌）之後才開始的；只跑 EWC 時，它直接接在 <code>example</code> 之後。初始權重與資料順序都不同。<code>train.py</code> 檔頭的註解就是在提醒這件事。</p></details>
 
@@ -668,6 +668,23 @@ print(torch.equal(a.fc1.weight, b.fc1.weight), a.fc1.weight[0,:3].tolist(), b.fc
       header.insertAdjacentElement('afterend', box);
     }
   }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
 })();
 </script>
 </body>
