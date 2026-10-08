@@ -712,7 +712,7 @@ footer.chap-footer {
 <h2 id="toc">章節目錄</h2>
 <ol class="toc">
   <li><a href="ch00.html"><span class="toc-title">第 0 章　任務、環境與模型總覽</span></a><p class="toc-desc">作業要做什麼、FID 與 AFD、四條基準線與報告兩題；模型總覽（生成器 5,142,080、判別器 2,766,529 個參數，手算與 PyTorch 一致）；<code>train.py</code>、<code>test.py</code> 怎麼跑、輸出寫到哪裡、100 個 epoch 要 29 分鐘。</p></li>
-  <li><a href="ch01.html"><span class="toc-title">第 1 章　資料：71,314 張臉變成 [-1, 1] 的 tensor</span></a><p class="toc-desc">Crypko 是什麼——訓練資料本身就是 GAN 畫的；96×96 縮成 64×64、正規化到 [-1, 1]；一個 epoch 1,115 步；worker 數的實測速度；兩次訓練逐位元相同。</p></li>
+  <li><a href="ch01.html"><span class="toc-title">第 1 章　資料：71,314 張臉變成 [-1, 1] 的 tensor</span></a><p class="toc-desc">Crypko 是什麼——一個用 GAN 生成動漫角色的服務；96×96 縮成 64×64、正規化到 [-1, 1]；一個 epoch 1,115 步；worker 數的實測速度；兩次訓練逐位元相同。</p></li>
   <li><a href="ch02.html"><span class="toc-title">第 2 章　生成器與判別器逐行</span></a><p class="toc-desc">轉置卷積怎麼把長寬加倍；BatchNorm、ReLU、Tanh；判別器的 stride-2 卷積與 LeakyReLU；<code>weights_init</code>；檔案裡錯的形狀註解。</p></li>
   <li><a href="ch03.html"><span class="toc-title">第 3 章　對抗訓練迴圈</span></a><p class="toc-desc">先更新 D、再更新 G；真圖標 1、假圖標 0；少一個 <code>detach()</code> 讓每個 epoch 慢 15%；存檔編號從 0 起算；loss 怎麼讀。</p></li>
   <li><a href="ch04.html"><span class="toc-title">第 4 章　怎麼評估一個 GAN：FID、AFD 與提交檔</span></a><p class="toc-desc">FID 的定義與本書的量法；換種子差多少、取 1000 張和 10000 張差多少；真圖的 AFD 只有 0.54；<code>test.py</code> 只產生 100 張；提交檔的大小。</p></li>
@@ -735,7 +735,7 @@ footer.chap-footer {
 
 <h2 id="version">版本聲明</h2>
 <p>本教材對應 repo commit <code>7aceb85</code>；HW06 的程式碼最後一次改動是 commit <code>381aad0</code>（只改了 <code>test.py</code>），原始碼位於 repo 的 <code>HW06/</code> 目錄。書中所有實測輸出都在 2026-10-07 於下列環境取得：Python 3.12.3、PyTorch 2.11.0+cu128、torchvision 0.26.0+cu128、NumPy 2.5.3、SciPy 1.18.1、NVIDIA RTX PRO 4000 Blackwell（WSL2）。評估另外用了 pytorch-fid 0.3.0（Inception 權重 <code>pt_inception-2015-12-05</code>）、opencv-python-headless 4.14.0.94 與 nagadomi 的 <code>lbpcascade_animeface.xml</code>，StyleGAN2 用 lucidrains 的 stylegan2-pytorch 1.9.0，都裝在專案的 .venv 之外。換一台機器、換一個套件版本，小數點後幾位可能不同。</p>
-<p>原版課程程式碼與投影片（repo 裡的 <code>HW06/Machine Learning HW6.pdf</code>）來自 ML2022 Spring 課程助教群。資料是 Preferred Networks 的 Crypko 服務產生的角色頭像，由 Arvin Liu 收集（投影片 p.9）；資料集沒有附授權說明，書中只為教學引用少量原圖，版權屬於原權利人。本書的文字與圖為另行撰寫的學習筆記，書中的生成圖由本書訓練的模型產生。</p>
+<p>原版課程程式碼與投影片（repo 裡的 <code>HW06/Machine Learning HW6.pdf</code>）來自 ML2022 Spring 課程助教群。資料是 Crypko（Preferred Networks 的動漫角色生成服務）的角色頭像，由 Arvin Liu 收集（投影片 p.9）；資料集沒有附授權說明，書中只為教學引用少量原圖，版權屬於原權利人。本書的文字與圖為另行撰寫的學習筆記，書中的生成圖由本書訓練的模型產生。</p>
 
 </main>
 <nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="outline.html">教學大綱</a><a href="ch00.html">開始閱讀 →</a></nav>

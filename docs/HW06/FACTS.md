@@ -266,7 +266,7 @@ FID64（n = 1000、z 種子 0；FID96 與 AFD 見 jsonl）：
 - 2022 年 8 月加入可商用的 Premium Plan。來源：https://www.preferred.jp/en/news/pr20220825
 - **2025 年 6 月結束一般使用者服務**（PFN entertainment 頁）；萌娘百科寫 2025-06-30 起無法連上（另有寫 7 月的版本，日期以 PFN 為準）。來源：https://www.preferred.jp/en/industries/entertainment
 - 查不到的：PFN 用的是哪一種 GAN 架構（公告沒寫 StyleGAN）、是哪一條鏈。教材不寫這兩點。
-- 投影片 p.9：「Website which can generate anime face by yourself」「Thanks Arvin Liu for collecting the dataset」。→ 作業的 71,314 張是 Crypko 生成的角色圖，即**訓練資料本身就是 GAN 的輸出**（由「Crypko 是 GAN 服務」推得；資料集何時、怎麼收集沒有公開來源）。
+- 投影片 p.9：「Website which can generate anime face by yourself」「Thanks Arvin Liu for collecting the dataset」。→ 投影片把資料歸給 Crypko，但**資料集何時、怎麼收集沒有公開來源**（2026-10-08 再查一次仍查不到）；目視前 24 張有幾張很像東方 Project 的角色（Flandre、Marisa 的帽子）。所以教材只能說「投影片說來自 Crypko 這個 GAN 生成服務」，**不能斷言每張都是 GAN 的輸出**。index 目錄與 outline 原本的說法已改。
 - 使用者決定（2026-10-08）：書裡放少量 Crypko 原圖。
 
 ## ch00 實測（2026-10-08）
@@ -282,3 +282,12 @@ FID64（n = 1000、z 種子 0；FID96 與 AFD 見 jsonl）：
 - 判別器吃 128×128：輸出 `torch.Size([100])`（4 張 × 5×5），BCELoss 報 `ValueError: Using a target size (torch.Size([4])) that is different to the input size (torch.Size([100])) is deprecated. Please ensure they have the same size.`
 - `HW06/.gitignore`：`checkpoints/*`、`faces/*`、`logs/*`、`output/*`、`*.zip`。`HW06/筆記.txt` 日期 2022/10/01，三條（n_epoch 提升有效；WGAN/WGAN-GP 只換 loss_G 不能用；StyleGAN2 在 win10 + py3.8 裝不起來）。
 - 圖：`docs/HW06/img/ch00_epoch015.png`、`ch00_epoch100.png`（`Epoch_015/100.jpg` 前 3 列，662×200）。
+
+## ch01 實測（`docs/tools/hw06_facts.py`，2026-10-08）
+- `data`：71,314 個檔，**全部** 96×96 RGB JPEG（逐一打開）；總 453,033,731 bytes（`du` 560M 是區塊配置）、平均 6,352.7、最小 2,074、最大 9,219。glob 順序前 5：`56141, 6620, 54470, 32619, 50504`；既不是數字順序也不是字串排序。
+- `faces/0.jpg` 逐步：`read_image` uint8 (3, 96, 96) 8–255 → `ToPILImage` PIL 96×96 RGB → `Resize` 64×64（`InterpolationMode.BILINEAR`、antialias True）→ `ToTensor` float32 (3, 64, 64) 0.0980–1.0000 → `Normalize` -0.8039–1.0000。
+- `stats`（全部 71,314 張轉換後）：mean RGB **0.4476、0.2342、0.1957**，std 0.5115、0.5166、0.4814，min -1.0000、max 1.0000；換回 [0,1] 的平均 0.7238、0.6171、0.5979。
+- `loader`（只跑 DataLoader，batch 64、shuffle）：len 1,115、最後一批 (18, 3, 64, 64)；一個 epoch：workers 0 **14.2 s**、2 **9.3 s**、4 **4.7 s**、8 **2.6 s**。對照完整訓練每 epoch 28.9／17.2／17.3／17.4 s（速度表）。
+- `figs`：`docs/HW06/img/ch01_crypko96.png`（0–23.jpg 原圖，12×2）、`ch01_crypko64.png`（轉換後再 (x+1)/2）。
+- 71,313 = 3 × 11 × 2,161；batch 3、11、33 時最後一批剩 1 張。生成器（train 模式）吃 1 個 z：`ValueError: Expected more than 1 value per channel when training, got input size torch.Size([1, 8192])`。
+- 解碼後大小：96×96 全部 ≈ 1.97 GB（uint8）、64×64 ≈ 0.876 GB。

@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 1 章　資料：71,314 張臉變成 [-1, 1] 的 tensor — HW06 動漫臉生成</title>
+<style id="inline-style">
+/* ============================================================
+   repo → HTML 教材 — 共用樣式表（深色主題，通用樣板）
+   completed-repo-to-html-textbook 與 incremental-html-textbook 兩個 skill
+   共用這一份（唯一來源）。class 名稱是與章節骨架的契約，不可改名。
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #10141a;
+  --bg-panel: #161c24;
+  --fg: #dde5ec;
+  --muted: #93a1af;
+  --accent: #58a6ff;
+  --accent-2: #79c0ff;
+  --accent-warm: #e3b341;
+  --link: #58a6ff;
+  --link-visited: #b0a3e8;
+  --hairline: #2b3540;
+
+  --code-bg: #171d25;
+  --code-border: #2b3540;
+  --code-fg: #d6dee6;
+
+  --shell-bg: #0a0e12;
+  --shell-fg: #c8d6e0;
+
+  --note-bg: #142433;
+  --note-border: #3a6ea5;
+  --warn-bg: #2d2416;
+  --warn-border: #b08834;
+  --lab-bg: #14281a;
+  --lab-border: #3f7d4e;
+  --recap-bg: #211b31;
+  --recap-border: #7458b5;
+
+  --ok: #4ac26b;
+  --bad: #ff7b72;
+
+  --table-head-bg: #1b2330;
+  --kbd-bg: #232b36;
+
+  /* syntax highlight tokens */
+  --tok-kw: #79b8ff;
+  --tok-type: #66d4cf;
+  --tok-str: #a5d691;
+  --tok-num: #e0b76e;
+  --tok-cmt: #7d8b99;
+  --tok-pre: #d2a8ff;
+  --tok-fn: #dcbdfb;
+  --sh-prompt: #58d68d;
+  --sh-cmd: #eaf1f8;
+  --sh-out: #94a6b5;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+  /* 1080px. Wider than the 50-70 character prose convention on purpose: these
+     pages are not prose. They carry terminal output, generated dependency
+     lists and other long unwrappable lines, wide tables, and mechanism figures
+     drawn on a viewBox="0 0 900 H" grid -- all of which are forced to scroll or
+     shrink at the ~832px this used to be. Matches the incremental-html-textbook
+     sibling, so a reader moving between the two books sees one layout.
+
+     Knock-on effect: a figure at width:100% now scales up about 1.2x, so a 13px
+     .s-lbl renders near 15.6px, close to body text. That has been read and
+     accepted. If one page's figures look too heavy for it, cap that page with
+     figure.fig svg { max-width: 900px; margin: 0 auto; } -- do not narrow the
+     page back, or the long-line problem returns. */
+  max-width: 67.5rem;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(88, 166, 255, 0.07), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+}
+
+::selection { background: rgba(88, 166, 255, 0.35); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- 捲軸 ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2e3947; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #3b485a; }
+
+/* ---------- 導覽列 ---------- */
+nav.chapnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.95rem;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(8px);
+}
+nav.chapnav.bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--hairline);
+  margin-top: 3rem;
+  background: none;
+  backdrop-filter: none;
+}
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); }
+nav.chapnav a:hover { color: var(--accent); text-decoration: none; }
+nav.chapnav .disabled { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 章首 ---------- */
+header.chap-header {
+  margin: 2.5rem 0 2.5rem;
+  padding: 1.6rem 1.8rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.10), rgba(88, 166, 255, 0.02) 55%), var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+header.chap-header .book-title {
+  margin: 0 0 0.5rem;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+header.chap-header h1 {
+  margin: 0 0 0.9rem;
+  font-size: 1.85rem;
+  line-height: 1.4;
+  color: #eef4fa;
+}
+header.chap-header .chap-lead {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ---------- 本章目錄（JS 自動生成） ---------- */
+.toc-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1.3rem;
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+}
+.toc-box .toc-box-title {
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+.toc-box ol { margin: 0; padding-left: 1.4rem; }
+.toc-box li { margin: 0.1rem 0; }
+
+/* ---------- 標題 ---------- */
+h1, h2, h3, h4 { line-height: 1.5; font-weight: 650; }
+h2 {
+  margin: 3rem 0 1.2rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-size: 1.42rem;
+  color: #e8f0f8;
+  border-left: 4px solid var(--accent);
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.45rem;
+}
+h3 { margin: 2.2rem 0 0.9rem; font-size: 1.16rem; color: var(--accent-2); }
+h4 { margin: 1.6rem 0 0.7rem; font-size: 1.02rem; }
+
+h2:target, h3:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash {
+  0% { background: rgba(88, 166, 255, 0.25); }
+  100% { background: transparent; }
+}
+
+p { margin: 0 0 1.1rem; }
+ul, ol { margin: 0 0 1.1rem; padding-left: 1.6rem; }
+li { margin-bottom: 0.35rem; }
+strong { font-weight: 700; color: #f0f6fc; }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.5rem 0; }
+
+/* ---------- 程式碼 ---------- */
+code, kbd, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+}
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  font-size: 0.86em;
+  color: var(--accent-2);
+}
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.82em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.2rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--code-fg);
+}
+
+/* 語法上色 token（由 JS 標注；C 與 GAS 組語 pre.asm 共用同一組） */
+.tok-kw  { color: var(--tok-kw); font-weight: 600; }
+.tok-type{ color: var(--tok-type); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-cmt { color: var(--tok-cmt); font-style: italic; }
+.tok-pre { color: var(--tok-pre); }
+.tok-fn  { color: var(--tok-fn); }
+
+/* 行級強調（<pre data-hot="3,5-7">，由 JS 包 span）：把讀者的眼睛
+   釘在教學重點行上。原始碼在 HTML source 保持純文字，逐字 diff 不受影響。 */
+.hot-line {
+  display: inline-block;
+  width: 100%;
+  background: rgba(227, 179, 65, 0.13);
+  border-left: 3px solid var(--accent-warm);
+  margin-left: -1.1rem;
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* 終端機指令 */
+pre.shell {
+  background: var(--shell-bg);
+  color: var(--sh-out);
+  border-color: #1d2733;
+}
+pre.shell .sh-prompt { color: var(--sh-prompt); font-weight: 700; }
+pre.shell .sh-cmd { color: var(--sh-cmd); }
+pre.shell .sh-cmt { color: var(--tok-cmt); font-style: italic; }
+/* 「要讀者貼上執行」的指令塊：加 cmd，與輸出塊分得開，指令才數得出來。 */
+pre.shell.cmd { border-left: 3px solid var(--accent); }
+pre.shell.cmd::before {
+  content: "貼上執行";
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* ASCII 結構圖 */
+pre.diagram {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.05), transparent 40%), var(--code-bg);
+  border-style: dashed;
+  line-height: 1.45;
+  color: #b9c9d8;
+}
+
+/* 標注版終端輸出：pre 內寫 «N»（JS 轉成圓形標記），下方 ol.notes 逐點對照。
+   「實測輸出逐行解讀」是驗證章的招牌元件。 */
+.mk {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 0 0.45em;
+  font-weight: 700;
+}
+pre .mk { margin-left: 0.5em; }
+ol.notes { font-size: 0.9rem; list-style: none; padding-left: 0; }
+ol.notes li { margin: 0.45rem 0; padding-left: 1.8em; text-indent: -1.8em; }
+ol.notes .mk { margin-right: 0.5em; }
+
+/* 圖例（建議全書統一「色彩 = 執行者」語意，例如 CPU／組語／C／外部硬體） */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.7rem 0 0;
+}
+.legend i {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  vertical-align: -0.08em;
+  margin-right: 0.4em;
+  font-style: normal;
+}
+
+/* 手繪 inline SVG 圖（契約與畫法見 assets/svg-figures.md） */
+figure.fig {
+  margin: 0 0 1.4rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1rem 1rem 0.6rem;
+  overflow-x: auto;
+}
+figure.fig svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figure.fig figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.s-lbl  { fill: var(--fg);    font-size: 13px;   font-family: inherit; }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: inherit; }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.s-box  { fill: var(--code-bg); stroke: var(--hairline); stroke-width: 1.5; }
+/* 圖內關鍵字／短程式碼片段。fill 一定要寫：SVG 沒有繼承 color，
+   沒寫就吃預設的黑色，在深色底上等於隱形。 */
+.s-key  { fill: var(--fg);    font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 公式／定義塊 */
+.eq {
+  background: var(--shell-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  margin: 0 0 1.2rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+/* 並排小卡（術語群、對照組） */
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; margin: 0 0 1.4rem; }
+.cardgrid .card { background: var(--bg-panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.8rem 1rem; }
+.cardgrid .card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--accent-warm); }
+.cardgrid .card p { margin: 0.2rem 0; font-size: 0.88rem; color: var(--muted); }
+
+/* 原始碼列表（含出處標註） */
+figure.listing { margin: 0 0 1.4rem; }
+figure.listing figcaption {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  background: #1d2530;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.45rem 1.1rem;
+}
+figure.listing figcaption::before { content: "◈ "; color: var(--accent); }
+figure.listing pre {
+  margin-bottom: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border-radius: 8px; border: 1px solid var(--hairline); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+th, td {
+  border: 1px solid var(--hairline);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.tablewrap table { margin: 0; }
+.tablewrap th, .tablewrap td { border-left: none; border-right: none; }
+th {
+  background: var(--table-head-bg);
+  font-weight: 650;
+  color: var(--accent-2);
+  border-bottom: 2px solid var(--accent);
+}
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+tbody tr:hover { background: rgba(88, 166, 255, 0.06); }
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .lab, .recap {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+.note  { background: var(--note-bg);  border-color: var(--note-border); }
+.warn  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.lab   { background: var(--lab-bg);   border-color: var(--lab-border); }
+.recap { background: var(--recap-bg); border-color: var(--recap-border); }
+
+.note > :first-child, .warn > :first-child,
+.lab > :first-child, .recap > :first-child { margin-top: 0; }
+.note > :last-child, .warn > :last-child,
+.lab > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+.note h4, .warn h4, .lab h4, .recap h4 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.note h4::before  { content: "💡 "; }
+.warn h4::before  { content: "⚠️ "; }
+.lab h4::before   { content: "🧪 "; }
+.recap h4::before { content: "📌 "; }
+
+/* ---------- 自我測驗 ---------- */
+details.quiz {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0 0.9rem;
+  background: var(--bg-panel);
+}
+details.quiz summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.7;
+}
+details.quiz summary::marker { color: var(--accent); }
+details.quiz[open] { border-color: var(--accent); }
+details.quiz[open] summary { margin-bottom: 0.6rem; }
+
+/* ---------- 隨 PR 共生章（incremental-html-textbook）的元件 ----------
+   取自該 skill 實戰寫成的書，改成本表的深色 token。批次成書也可以用。 */
+
+/* hero：step 徽章、導言、meta、動到的檔案 chips */
+.hero { margin: 1.5rem 0 2rem; }
+.badge {
+  display: inline-block;
+  background: var(--ok);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+.hero h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; line-height: 1.4; }
+.lead { font-size: 1.05rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.meta span + span::before { content: " · "; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+.chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: var(--bg-panel);
+  color: var(--muted);
+}
+.chip.new { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.chip.new::before { content: "+ "; }
+
+/* 散文裡的語意強調色：只掛在既有 <b> 上，多數 <b> 維持不上色 */
+b.hl-ok  { color: var(--ok); }      /* 驗證通過／修好了／正向結果 */
+b.hl-bad { color: var(--bad); }     /* 缺陷／錯誤／反例／警告 */
+b.hl-key { color: var(--accent); }  /* 貫穿全章的關鍵詞或核心主張 */
+
+/* 常見錯誤格網：每格「症狀 → 後果 → 正解」 */
+.pitfalls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 1rem 0 1.4rem;
+}
+.pit {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-panel);
+}
+.pit h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.pit dl { margin: 0; font-size: 0.9rem; }
+.pit dt { font-weight: 600; color: var(--muted); font-size: 0.8rem; margin-top: 0.4rem; }
+.pit dd { margin: 0; }
+.pit dd.fix { color: var(--ok); }
+
+/* 判準清單：li.pass / li.partial / li.fail */
+ul.criteria { list-style: none; padding-left: 0; }
+ul.criteria li { margin: 0.5rem 0; padding-left: 1.9rem; text-indent: -1.9rem; }
+ul.criteria li::before { display: inline-block; width: 1.9rem; text-indent: 0; }
+li.pass::before    { content: "✅"; }
+li.partial::before { content: "⚠"; }
+li.fail::before    { content: "❌"; }
+
+/* 「你可能以為要自己做／實際上」兩欄表 */
+table.twocol td:first-child { color: var(--muted); width: 42%; }
+table.twocol td:last-child  { color: var(--fg); }
+
+/* 導讀卡：hero 之後、正文之前，先給一個站得住的全貌 */
+.tldr {
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-panel);
+  padding: 1rem 1.15rem 0.9rem;
+  margin: 1.5rem 0 2.25rem;
+}
+.tldr .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+.tldr .one { font-size: 1.12rem; font-weight: 600; margin: 0.35rem 0 1rem; }
+.tldr h3 { margin: 1.15rem 0 0.35rem; font-size: 0.92rem; color: var(--muted); }
+.tldr ul { margin: 0.35rem 0; padding-left: 1.25rem; }
+.tldr li { margin: 0.28rem 0; }
+
+/* 專案位置條：已完成／這一步／之後 */
+.where { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 0.2rem; }
+.where span {
+  font-size: 0.82rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.18rem 0.55rem;
+  background: var(--bg);
+  color: var(--muted);
+}
+.where span.now { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+.where i { color: var(--muted); font-style: normal; }
+
+/* ---------- 目錄頁 ---------- */
+ol.toc { list-style: none; padding: 0; counter-reset: chap; }
+ol.toc > li {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.85rem 0.2rem;
+  margin: 0;
+}
+ol.toc > li:hover { background: rgba(88, 166, 255, 0.05); }
+ol.toc .toc-title { font-weight: 650; font-size: 1.05rem; }
+ol.toc .toc-desc { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0; }
+
+/* ---------- 頁尾 ---------- */
+footer.chap-footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media print {
+  nav.chapnav { display: none; }
+  body { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW06 讀碼教材</p>
+  <h1>第 1 章　資料：71,314 張臉變成 [-1, 1] 的 tensor</h1>
+  <p class="chap-lead">GAN 要模仿的對象就是這份資料。這一章先介紹資料的來源 Crypko，再看一張 96×96 的 JPEG 怎麼經過四步轉換，變成生成器要模仿的 3×64×64、值域 [-1, 1] 的 tensor；接著看 DataLoader 怎麼把它們疊成一個 epoch 1,115 批，以及讀圖用幾個背景行程才夠快；最後看亂數種子怎麼讓整個訓練逐位元重現，又在哪裡留了一個換機器就會不同的縫。</p>
+</header>
+<main>
+
+<h2 id="crypko">1.1　Crypko 是什麼</h2>
+<p>投影片第 9 頁介紹資料來源時寫的是：「Crypko — Website which can generate anime face by yourself」，並感謝 Arvin Liu 收集了這份資料集。<strong>Crypko</strong> 是日本 AI 公司 Preferred Networks（PFN）做的動漫角色生成服務，核心技術正是本作業的主題 GAN。它的經歷大致如下（依 PFN 的公告）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>時間</th><th>事件</th></tr></thead>
+<tbody>
+<tr><td>2018 年</td><td>PFN 開發出能生成動漫臉部插圖的 GAN 模型；5 月公開 beta 版。早期的服務用 blockchain 的智慧合約記錄每個角色的生成、「融合」（把兩個角色合成新角色）以及角色屬於哪個使用者，角色像收藏卡一樣可以擁有、交換。</td></tr>
+<tr><td>2019 年 3 月</td><td>第一代服務結束。</td></tr>
+<tr><td>2022 年 4 月</td><td>改版成瀏覽器上的角色生成平台，在日本重新上線：一次生成 10 個角色（臉或上半身）、融合角色、編輯髮色與表情等 30 多項屬性。6 月推出英文與簡體中文版，8 月加入可以商用的付費方案。</td></tr>
+<tr><td>2025 年 6 月</td><td>結束對一般使用者的服務。</td></tr>
+</tbody>
+</table></div>
+<p>這份作業出在 2022 年 3 月，剛好在 Crypko 改版重新上線之前。投影片把資料歸給 Crypko，那麼這些頭像應該是 Crypko 的 GAN 畫出來的——也就是說，這份作業可能是在「用 GAN 學另一個 GAN 的作品」。不過資料集是怎麼收集的（從網站上的哪裡、哪一個時期）沒有公開的說明，本書無法確認每一張都是 Crypko 生成的；下面幾張裡就有幾張很像某部知名作品的角色。讀這本書時，把它當成「71,314 張風格一致的動漫頭像」就夠了。</p>
+<figure class="fig">
+<img src="img/ch01_crypko96.png" alt="資料集的前 24 張圖（0.jpg 到 23.jpg），原始 96×96：都是正面或略側的動漫少女頭像，髮色有黑、棕、銀、金，背景多半是淺色" style="max-width:100%;image-rendering:pixelated">
+<figcaption>圖 1.1　<code>faces/0.jpg</code> 到 <code>faces/23.jpg</code>，原始 96×96。來源：Crypko（Preferred Networks），由 Arvin Liu 收集；資料集沒有附授權說明，本書只為教學引用少量原圖，版權屬於原權利人。</figcaption>
+</figure>
+<p>從這 24 張就能看出這份資料的特性：<strong>每一張都是裁切好的頭像</strong>，臉大致在正中央、大小差不多，眼睛的位置也很接近；畫風統一（大眼睛、細線條、柔和的陰影）；變化主要在髮色、髮型、眼睛顏色、表情和頭飾。這對 GAN 是很友善的設定——要學的東西集中在「一張臉的各種變化」，不用學構圖、背景或姿勢。換成一般照片（風景、街道、各種物體），64×64 的 DCGAN 就很難畫出像樣的東西。</p>
+
+<h2 id="files">1.2　資料長什麼樣子：71,314 個 JPEG</h2>
+<p>資料放在 <code>HW06/faces/</code>（被 <code>.gitignore</code> 排除，第 0 章）。本書寫了一個小工具把全部檔案掃過一遍（<code>docs/tools/hw06_facts.py data</code>）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>項目</th><th>實測</th></tr></thead>
+<tbody>
+<tr><td>檔案數</td><td>71,314，檔名 <code>0.jpg</code> 到 <code>71313.jpg</code>，一個不缺</td></tr>
+<tr><td>格式</td><td><strong>全部</strong>都是 96×96、RGB 三個 channel 的 JPEG（71,314 張逐一打開檢查，沒有灰階、沒有透明 channel、沒有其他尺寸）</td></tr>
+<tr><td>檔案大小</td><td>總共 453,033,731 bytes，平均 6,353 bytes，最小 2,074、最大 9,219（<code>du</code> 會顯示 560 MB，因為檔案系統以區塊為單位配置空間，七萬多個小檔浪費了不少）</td></tr>
+<tr><td>像素平均（換到 0–1）</td><td>R 0.724、G 0.617、B 0.598——偏亮、偏暖，是淺色背景與膚色造成的</td></tr>
+</tbody>
+</table></div>
+<p>和前幾份作業不同，<strong>這份資料沒有標籤</strong>：沒有 csv、沒有 json，就只有一堆圖。GAN 的訓練是非監督式（unsupervised）的——它不需要知道每張圖「是什麼」，只需要知道「真圖長這樣」。判別器學的「真或假」標籤是訓練時臨時貼上的（真圖貼 1、生成的圖貼 0，第 3 章），不是資料裡附的。</p>
+
+<h2 id="dataset">1.3　CrypkoDataset：只回傳一張圖</h2>
+<figure class="listing"><figcaption>dataset.py:20–33 — CrypkoDataset：讀檔、套轉換、回傳</figcaption>
+<pre class="py" data-hot="23,28,29,30"><code>class CrypkoDataset(Dataset):
+    def __init__(self, fnames, transform):
+        self.transform = transform
+        self.fnames = fnames
+        self.num_samples = len(self.fnames)
+
+    def __getitem__(self,idx):
+        fname = self.fnames[idx]
+        img = torchvision.io.read_image(fname)
+        img = self.transform(img)
+        return img
+
+    def __len__(self):
+        return self.num_samples</code></pre></figure>
+<p>這是一個最簡單的 PyTorch <code>Dataset</code>：建構時收下一串檔名和一個轉換函式；第 <code>idx</code> 筆就是讀第 <code>idx</code> 個檔、套轉換、回傳。注意第 30 行只回傳 <code>img</code>，不是 HW03 那種 <code>(img, label)</code>——呼應上一節，沒有標籤可回傳。所以 DataLoader 疊出來的每一批就是一個形狀 <code>(64, 3, 64, 64)</code> 的 tensor，訓練迴圈拿到的 <code>data</code> 就是它（第 3 章）。</p>
+<p>第 28 行用的是 <code>torchvision.io.read_image</code>：它直接把 JPEG 解碼成 PyTorch tensor，形狀是 <code>(channel, 高, 寬)</code>、型別 <code>uint8</code>（0–255 的整數）。實測 <code>faces/0.jpg</code> 讀出來是 <code>torch.uint8 (3, 96, 96)</code>，最小值 8、最大值 255。</p>
+<p>檔案不是在建構時一次讀進記憶體，而是每次取用才讀——71,314 張解碼後是 71,314 × 3 × 96 × 96 bytes ≈ 1.97 GB，全部預先讀進來也放得下，但範例程式選擇邊讀邊用，把讀檔的工作交給 DataLoader 的背景行程（1.5 節）。</p>
+
+<h2 id="transform">1.4　get_dataset：四步轉換，從 96×96 的整數到 64×64 的 [-1, 1]</h2>
+<figure class="listing"><figcaption>utils.py:10–20 — get_dataset：找檔名、組轉換、建 Dataset</figcaption>
+<pre class="py" data-hot="11,13,14,15,16"><code>def get_dataset(root):
+    fnames = glob.glob(os.path.join(root, '*'))
+    compose = [
+        transforms.ToPILImage(),
+        transforms.Resize((64, 64)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
+    ]
+    transform = transforms.Compose(compose)
+    dataset = CrypkoDataset(fnames, transform)
+    return dataset</code></pre></figure>
+<p>第 11 行用 <code>glob</code> 列出 <code>faces/</code> 底下所有檔案；第 12–18 行把四個轉換串成一個 <code>transforms.Compose</code>。把 <code>faces/0.jpg</code> 一步一步送過這四個轉換，每一步的輸出實測如下：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>步驟</th><th>程式</th><th>輸出</th><th>值域</th></tr></thead>
+<tbody>
+<tr><td>讀檔</td><td>dataset.py:28 <code>read_image</code></td><td>tensor，<code>uint8</code>，<code>(3, 96, 96)</code></td><td>8 – 255</td></tr>
+<tr><td>1</td><td>utils.py:13 <code>ToPILImage()</code></td><td>PIL 影像，96×96，RGB</td><td>（整數像素）</td></tr>
+<tr><td>2</td><td>utils.py:14 <code>Resize((64, 64))</code></td><td>PIL 影像，64×64；雙線性內插、antialias 開啟</td><td>（整數像素）</td></tr>
+<tr><td>3</td><td>utils.py:15 <code>ToTensor()</code></td><td>tensor，<code>float32</code>，<code>(3, 64, 64)</code></td><td>0.0980 – 1.0000</td></tr>
+<tr><td>4</td><td>utils.py:16 <code>Normalize(0.5, 0.5)</code></td><td>tensor，<code>float32</code>，<code>(3, 64, 64)</code></td><td>-0.8039 – 1.0000</td></tr>
+</tbody>
+</table></div>
+<p>一步一步看：</p>
+<ul>
+  <li><strong>先轉回 PIL 再轉回 tensor，繞了一圈</strong>。<code>read_image</code> 已經給了 tensor，第 13 行卻先把它轉成 PIL 影像，縮放後第 15 行再轉回 tensor。這是因為 2022 年以前的 <code>transforms.Resize</code> 主要是為 PIL 影像設計的；繞一圈的代價是每張圖多做兩次格式轉換。下面的「現在的做法」框會說怎麼省掉。</li>
+  <li><strong>Resize 從 96 縮到 64</strong>：長寬都乘 2/3，用雙線性內插（bilinear），並開啟 antialias（縮小前先做一點模糊，避免鋸齒）。為什麼是 64？因為生成器就是設計來畫 64×64 的（第 0 章圖 0.1），判別器的結構也只吃 64×64。<strong>原圖的 96×96 從頭到尾沒被用到</strong>：生成器學的是縮小後的版本。圖 1.2 就是圖 1.1 那 24 張縮小後的樣子。</li>
+  <li><strong>ToTensor</strong> 把 0–255 的整數除以 255，變成 0–1 的小數，並排成 <code>(channel, 高, 寬)</code>。<code>faces/0.jpg</code> 縮小後最暗的像素是 25/255 = 0.0980（縮小前是 8，內插把最暗的點和周圍平均掉了）。</li>
+  <li><strong>Normalize(mean=0.5, std=0.5)</strong> 對每個 channel 算 (x − 0.5) / 0.5 = 2x − 1，把 [0, 1] 線性地搬到 <strong>[-1, 1]</strong>：0 變 -1、0.5 變 0、1 變 1。0.0980 → 2 × 0.0980 − 1 = -0.8039，和實測一致。</li>
+</ul>
+<figure class="fig">
+<img src="img/ch01_crypko64.png" alt="同樣 24 張圖縮成 64×64 後的樣子：細節略少，頭髮的細線與眼睛的高光變模糊，但每張臉仍清楚可辨" style="max-width:100%;image-rendering:pixelated">
+<figcaption>圖 1.2　同樣 24 張經過 <code>get_dataset</code> 的轉換（再用 (x + 1) / 2 換回 0–1 才能存成圖）：64×64，這才是生成器要模仿的東西。和圖 1.1 比，髮絲與眼睛高光的細節少了一些。</figcaption>
+</figure>
+
+<h3 id="why-pm1">為什麼是 [-1, 1]？——配合生成器最後的 Tanh</h3>
+<p>第 0 章看過，生成器最後一層是 <code>nn.Tanh()</code>，它的輸出永遠落在 (-1, 1) 之間。判別器要比較的是「真圖」和「生成器畫的圖」，兩者必須在同一個值域：如果真圖是 0–1、假圖是 -1 到 1，判別器只要看「有沒有負的像素」就能分辨真假，根本不用學臉長什麼樣子，生成器也就學不到東西。所以資料的正規化和生成器的最後一層是<strong>一組的設計</strong>：Tanh 配 [-1, 1]。如果生成器最後換成 Sigmoid（輸出 0–1），資料就要拿掉 Normalize、停在 ToTensor 的 0–1。</p>
+<p>反過來，要把生成器的輸出存成圖片，就要把 [-1, 1] 換回 [0, 1]：<code>trainer_gan.py</code> 存樣本格時寫的 <code>(self.G(self.z_samples).data + 1) / 2.0</code>（第 3 章）、推論時的 <code>(self.G(z).data + 1) / 2.0</code>（第 4 章），都是 Normalize 的反運算。</p>
+<p>還有一點容易誤會：<code>Normalize(mean=0.5, std=0.5)</code> 名字叫 normalize，但它<strong>不是</strong>把資料標準化成平均 0、標準差 1。0.5 只是「把 [0, 1] 搬到 [-1, 1]」的固定常數，不是這份資料真正的平均與標準差。本書把 71,314 張全部轉換後統計（<code>hw06_facts.py stats</code>）：三個 channel 的平均是 <strong>0.448、0.234、0.196</strong>，標準差 0.512、0.517、0.481；最小值剛好 -1、最大值剛好 1（有純黑與純白的像素）。平均偏正，是因為這些圖本來就偏亮（1.2 節）。這對 GAN 沒有影響：它要的只是值域對得上 Tanh，不是平均為 0。</p>
+<div class="note"><h4>現在的做法：直接在 tensor 上縮放</h4>
+<p>torchvision 0.15（2023）之後推出了 <code>torchvision.transforms.v2</code>，所有轉換都能直接作用在 tensor 上，不必先轉 PIL；同樣的轉換可以寫成 <code>v2.Compose([v2.Resize((64, 64), antialias=True), v2.ToDtype(torch.float32, scale=True), v2.Normalize([0.5]*3, [0.5]*3)])</code>，直接接在 <code>read_image</code> 後面。另外，七萬張 64×64 的小圖解碼後只占約 0.9 GB（以 uint8 計），現在常見的做法是第一次讀完就把整份資料轉好、存成一個大 tensor 或 numpy 檔，之後每個 epoch 直接從記憶體取，完全省掉讀檔與解碼。本書為了和範例程式逐位元一致，沒有這樣改。</p>
+</div>
+
+<h3 id="glob">glob 的順序：不是 0、1、2……</h3>
+<p>第 11 行的 <code>glob.glob</code> 回傳的檔名順序，是作業系統列出目錄的順序，<strong>沒有排序</strong>。本書的機器上，前五個是：</p>
+<pre class="shell"><code>['faces/56141.jpg', 'faces/6620.jpg', 'faces/54470.jpg', 'faces/32619.jpg', 'faces/50504.jpg']</code></pre>
+<p>既不是數字順序（0、1、2…），也不是字串排序（0、1、10、100…）。這份清單決定了「第 <code>idx</code> 筆是哪個檔」。訓練時 DataLoader 會打亂順序（下一節），所以順序本身不影響學習；但它會影響<strong>可重現性</strong>：亂數種子固定的是「打亂後的 index 順序」，同一個 index 在另一台機器上可能對到另一個檔案，於是同樣的種子、同樣的程式，每一批拿到的圖不同，訓練結果也就不同（1.6 節）。在同一台機器、同一個資料夾上，<code>glob</code> 的順序每次都一樣，所以本書兩次訓練逐位元相同。把第 11 行改成 <code>sorted(glob.glob(...))</code> 就能消除這個差異，代價是和本書的實測結果不再逐位元相同。</p>
+
+<h2 id="loader">1.5　DataLoader：一個 epoch 1,115 批，兩個背景行程</h2>
+<figure class="listing"><figcaption>trainer_gan.py:60–82 — prepare_environment：建資料夾、建 DataLoader、模型搬到 GPU</figcaption>
+<pre class="py" data-hot="68,69,70,75,76,79,80,81,82"><code>    def prepare_environment(self):
+        """
+        Use this funciton to prepare function
+        """
+        os.makedirs(self.log_dir, exist_ok=True)
+        os.makedirs(self.ckpt_dir, exist_ok=True)
+
+        # update dir by time
+        time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        self.log_dir = os.path.join(self.log_dir, time + f'_{self.config["model_type"]}')
+        self.ckpt_dir = os.path.join(self.ckpt_dir, time + f'_{self.config["model_type"]}')
+        os.makedirs(self.log_dir)
+        os.makedirs(self.ckpt_dir)
+
+        # create dataset by the above function
+        dataset = utils.get_dataset(os.path.join(self.config["workspace_dir"], 'faces'))
+        self.dataloader = DataLoader(dataset, batch_size=self.config["batch_size"], shuffle=True, num_workers=2)
+
+        # model preparation
+        self.G = self.G.cuda()
+        self.D = self.D.cuda()
+        self.G.train()
+        self.D.train()</code></pre></figure>
+<p><code>prepare_environment</code> 在訓練開始時呼叫一次（第 3 章），做三件事：第 68–72 行用開跑時間建 <code>logs/</code> 與 <code>checkpoints/</code> 底下的新資料夾（第 0 章看過的 <code>2026-10-07_11-00-32_GAN</code>）；第 75–76 行建資料集與 DataLoader；第 79–82 行把兩個模型搬到 GPU、切到訓練模式。注意第 75 行<strong>又</strong>呼叫了一次 <code>get_dataset</code>——<code>train.py:49</code> 已經建過一個 <code>temp_dataset</code>，那一個沒有被用到（第 0 章）；兩次 <code>glob</code> 拿到的順序相同，所以沒有影響。</p>
+<p>第 76 行的 DataLoader 有三個設定：</p>
+<ul>
+  <li><strong><code>batch_size=64</code></strong>：一批 64 張。71,314 = 1,114 × 64 + 18，所以一個 epoch 有 <strong>1,115 批</strong>，最後一批只有 <strong>18 張</strong>（沒有設 <code>drop_last</code>，最後不滿一批的也照樣送進去）。實測 <code>len(dataloader)</code> 是 1,115，最後一批的形狀是 <code>(18, 3, 64, 64)</code>。100 個 epoch 共 111,500 步。</li>
+  <li><strong><code>shuffle=True</code></strong>：每個 epoch 開始時，用 PyTorch 的全域亂數產生一個 0–71,313 的新排列，照這個順序取圖。每個 epoch 看到的圖都一樣是全部 71,314 張，只是順序和分批不同。</li>
+  <li><strong><code>num_workers=2</code></strong>：開兩個背景行程（worker）負責讀檔和轉換，主行程只管訓練。worker 會預先準備好下幾批，主行程要用時直接拿。</li>
+</ul>
+
+<h3 id="workers">讀圖要多快才夠？</h3>
+<p>worker 數要開多少？本書做了兩組實測。第一組只跑 DataLoader、不跑模型，量讀完一個 epoch 要多久（<code>hw06_facts.py loader</code>）；第二組是真的訓練 5 個 epoch，取每個 epoch 的平均秒數（<code>hw06_exp.py --workers N</code>）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th><code>num_workers</code></th><th>只讀圖，一個 epoch</th><th>完整訓練，一個 epoch</th><th>訓練出來的權重</th></tr></thead>
+<tbody>
+<tr><td>0（主行程自己讀）</td><td>14.2 秒</td><td>28.9 秒</td><td>與 2 個 worker 逐位元相同</td></tr>
+<tr><td>2（範例程式）</td><td>9.3 秒</td><td><strong>17.2 秒</strong></td><td>——</td></tr>
+<tr><td>4</td><td>4.7 秒</td><td>17.3 秒</td><td>逐位元相同</td></tr>
+<tr><td>8</td><td>2.6 秒</td><td>17.4 秒</td><td>逐位元相同</td></tr>
+</tbody>
+</table></div>
+<p>這張表說明了訓練速度的瓶頸在哪：</p>
+<ul>
+  <li><strong>0 個 worker</strong>：主行程讀一批、訓練一批、再讀下一批，兩件事輪流做，時間相加：讀圖 14.2 秒 + 計算約 14.7 秒 ≈ 28.9 秒。</li>
+  <li><strong>2 個 worker</strong>：讀圖在背景進行，和 GPU 的計算重疊。兩個 worker 讀完一個 epoch 要 9.3 秒，比計算還快，所以讀圖不再是瓶頸，每個 epoch 降到 17.2 秒，<strong>快了 1.7 倍</strong>。</li>
+  <li><strong>4、8 個 worker</strong>：讀圖快到 4.7、2.6 秒，但訓練還是 17.3、17.4 秒——瓶頸已經是 GPU 的計算（以及主行程把資料送上 GPU、啟動每一層運算的開銷），讀得再快也沒用。</li>
+</ul>
+<p>（17.2 秒比單純的計算時間 14.7 秒多了 2.5 秒，是背景行程和主行程搶 CPU、搬資料的額外成本；14.7 秒是第 3 章加上 <code>detach()</code> 之後量到的每 epoch 時間，在這裡當作計算時間的估計。）所以範例程式的 2 個 worker 剛好夠用。順帶一提，HW03 的實測發現把 <code>OMP_NUM_THREADS</code> 設成 1 能讓讀圖變快；這裡也試了，2 個與 8 個 worker 都沒有差別（87.1 vs 86.1 秒、87.5 vs 87.5 秒，5 個 epoch）。</p>
+<p>表的最後一欄很重要：<strong>worker 數不影響訓練結果</strong>，5 個 epoch 後的 <code>G_4.pth</code>、<code>D_4.pth</code> 和範例程式的設定逐位元相同。原因有二：這四個轉換都沒有隨機性（同一張圖每次轉出來都一樣）；打亂順序的排列是由主行程的全域亂數決定的，和有幾個 worker 無關。HW03 的資料增強有隨機性，worker 數會改變亂數的取用、結果跟著不同；HW06 沒有隨機的轉換，所以不受影響。</p>
+
+<h2 id="seed">1.6　same_seeds：讓兩次訓練逐位元相同</h2>
+<figure class="listing"><figcaption>utils.py:24–35 — same_seeds：四個亂數來源加上 cuDNN 的兩個開關</figcaption>
+<pre class="py" data-hot="26,28,30,32,33,34,35"><code>def same_seeds(seed):
+    # Python built-in random module
+    random.seed(seed)
+    # Numpy
+    np.random.seed(seed)
+    # Torch
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True</code></pre></figure>
+<p><code>train.py:42</code> 一開始就呼叫 <code>same_seeds(2022)</code>，把四個亂數來源都設成同一個種子：Python 的 <code>random</code>、NumPy、PyTorch 的 CPU 亂數、PyTorch 的 GPU 亂數。這份作業實際用到的只有 PyTorch 的 CPU 亂數——模型的初始權重（第 2 章）、每一步的亂數 z（<code>torch.randn</code> 在 CPU 上產生，再 <code>.cuda()</code> 搬過去，第 3 章）、DataLoader 每個 epoch 的排列，都來自它；另外兩個是範例程式的通用寫法，設了也無妨。</p>
+<p>最後兩行和亂數無關，而是關於 <strong>cuDNN</strong>（NVIDIA 的深度學習運算函式庫，PyTorch 在 GPU 上算卷積就靠它）：</p>
+<ul>
+  <li><code>cudnn.benchmark = False</code>：不要在第一次遇到某種形狀時試跑好幾種演算法、挑最快的。挑出來的演算法可能每次不同，結果在小數點後幾位也會不同。</li>
+  <li><code>cudnn.deterministic = True</code>：只用結果固定的演算法。有些卷積演算法（尤其是反向傳播）會用到 GPU 上的並行累加，加法的順序不固定，浮點數的捨入就不同；這個開關叫 cuDNN 避開它們。</li>
+</ul>
+<p>效果在第 0 章已經看過：同一台機器上兩次訓練，100 個 epoch 後的 <code>G_99.pth</code>、<code>D_99.pth</code> 逐位元相同。本書後面所有實驗也都建立在這一點上：只要改一個設定、其他都相同，就能確定結果的差異來自那個設定，而不是亂數。</p>
+<div class="warn"><h4>「同樣的種子」不保證換一台機器也相同</h4>
+<p>逐位元相同有三個前提：同一份檔名順序（1.4 節的 <code>glob</code>）、同一個 PyTorch 與 CUDA 版本、同一款 GPU。換一台機器，<code>glob</code> 的順序可能不同，同一個 index 對到不同的圖；換一款 GPU 或版本，cuDNN 選的演算法可能不同，浮點數的捨入跟著不同。GAN 的訓練又對小差異很敏感（第 5 章會看到，FID 在幾個 epoch 之間就能從 105 跳到 347），所以別人照同樣的程式跑出來的曲線，細節很可能和本書不一樣。本書能保證的是：在本書的環境裡，每個數字都重跑得出來。</p>
+</div>
+<div class="note"><h4>現在的做法：更完整的可重現設定</h4>
+<p>PyTorch 文件〈Reproducibility〉現在建議用 <code>torch.use_deterministic_algorithms(True)</code>，它會讓所有沒有確定性版本的運算直接報錯，而不只是管 cuDNN 的卷積；DataLoader 則可以傳一個自己的 <code>torch.Generator</code>（<code>generator=torch.Generator().manual_seed(...)</code>），讓「資料的打亂」和「模型的亂數」用不同的亂數流，改了模型也不會改到資料順序。檔名清單則一律 <code>sorted()</code>。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+  <li>資料來自 Crypko——Preferred Networks 的 GAN 動漫角色生成服務（2018 年 beta、2022 年改版、2025 年結束一般服務）。收集方式沒有公開說明。71,314 張全部是 96×96 的 RGB JPEG，裁切好的頭像，風格一致；<strong>沒有標籤</strong>，<code>CrypkoDataset</code> 只回傳圖。</li>
+  <li><code>get_dataset</code> 的四步：<code>ToPILImage</code> → <code>Resize((64, 64))</code>（雙線性、antialias）→ <code>ToTensor</code>（0–1）→ <code>Normalize(0.5, 0.5)</code>（[-1, 1]）。96×96 的原圖沒被用到，生成器學的是 64×64 的版本。</li>
+  <li>[-1, 1] 是為了配合生成器最後的 Tanh：真圖與假圖要在同一個值域，判別器才不會用值域作弊。存成圖片時用 (x + 1) / 2 換回來。<code>Normalize(0.5, 0.5)</code> 不是標準化，轉換後的平均是 0.448、0.234、0.196。</li>
+  <li>DataLoader：batch 64、shuffle、2 個 worker；一個 epoch 1,115 批，最後一批 18 張。0 → 2 個 worker 快 1.7 倍，再多就沒用了，瓶頸在 GPU 計算；worker 數不影響結果。</li>
+  <li><code>same_seeds(2022)</code> 加上 cuDNN 的兩個開關，讓同一台機器上的兩次訓練逐位元相同；但 <code>glob</code> 沒排序，換一台機器就不保證了。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. <code>CrypkoDataset.__getitem__</code> 只回傳一張圖，沒有標籤。判別器訓練時需要「真／假」的標籤，它是從哪裡來的？</summary>
+<p>訓練迴圈自己做的：每一批真圖貼上全是 1 的標籤（<code>torch.ones</code>）、生成器畫的假圖貼上全是 0 的標籤（<code>torch.zeros</code>），第 3 章會讀到這兩行。這些標籤不描述圖的內容，只描述「這張圖從哪裡來」，所以資料本身不需要任何標註——這就是 GAN 能做非監督式學習的原因。</p></details>
+<details class="quiz"><summary>2. 把 <code>utils.py:16</code> 的 <code>Normalize</code> 刪掉、其他都不改，資料會落在哪個值域？會發生什麼事？</summary>
+<p>真圖會停在 ToTensor 的 [0, 1]，生成器的 Tanh 卻輸出 (-1, 1)。判別器只要注意到「有負的像素就是假圖」就能分辨真假，生成器就得先學會把所有像素推到正的那一半，浪費大量訓練在值域上，畫出來的圖也會因為顏色範圍不對而偏暗、偏灰。正確的改法是兩邊一起改：拿掉 Normalize 的同時，把生成器最後的 Tanh 換成 Sigmoid（以及存圖時不再做 (x + 1) / 2）。這題是推論，本書沒有實際跑。</p></details>
+<details class="quiz"><summary>3. 把 <code>num_workers</code> 從 2 改成 8，讀圖快了 3.6 倍（9.3 → 2.6 秒），訓練卻沒變快。為什麼？</summary>
+<p>因為 2 個 worker 時讀圖就已經比 GPU 計算快了：讀一個 epoch 9.3 秒，計算約 14.7 秒，讀圖在背景進行、和計算重疊，主行程從來不用等資料。這時候的瓶頸是 GPU 計算，再加速讀圖也只是讓 worker 更早做完、等更久。只有在 0 個 worker（讀圖和計算輪流、時間相加）時，讀圖才是瓶頸。</p></details>
+<details class="quiz"><summary>4. 一個 epoch 的最後一批只有 18 張。這會不會造成問題？<code>batch_size</code> 改成多少時，最後一批會只剩 1 張？那時會發生什麼事？</summary>
+<p>在這份作業裡不會：生成器與判別器的 BatchNorm 在訓練模式下用當下這一批的平均與變異數，18 張的統計量雖然比 64 張不準，但一個 epoch 只有一批，影響很小。最後一批剩 1 張，代表 71,314 除以 batch 大小餘 1，也就是 batch 大小整除 71,313 = 3 × 11 × 2,161：例如 3、11、33。那時生成器 <code>l1</code> 的 <code>BatchNorm1d</code> 會報錯——不過不是在讀真圖時，而是在訓練迴圈依這一批的張數 <code>bs</code> 產生同樣 1 個亂數 z、送進生成器的時候。本書實測把 1 個 z 送進訓練模式的生成器：<code>ValueError: Expected more than 1 value per channel when training, got input size torch.Size([1, 8192])</code>。BatchNorm1d 的每個 channel 只有 1 個值，算不出變異數。遇到這種情況就設 <code>drop_last=True</code>。</p></details>
+<details class="quiz"><summary>5. 另一位同學在自己的電腦上照跑本 repo，種子同樣是 2022，第 100 個 epoch 的樣本格卻和本書不同。可能是哪些原因？</summary>
+<p>至少三個：一、<code>glob</code> 列出的檔名順序不同，同樣的打亂排列對到不同的圖，每一批的內容就不同；二、PyTorch、CUDA、cuDNN 版本或 GPU 型號不同，選用的卷積演算法不同，浮點數的捨入在小數點後幾位就不同；三、GAN 的訓練對微小差異很敏感，一開始只差一點點，跑了 111,500 步之後就是完全不同的生成器。前兩個原因 <code>same_seeds</code> 管不到。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+  <li>Preferred Networks 的 Crypko 公告：<a href="https://www.preferred.jp/en/news/pr20190403">2019 年第一代服務結束的說明</a>（含 2018 年 beta 與 blockchain 的介紹）、<a href="https://www.preferred.jp/en/news/pr20220629">2022 年國際版上線</a>。</li>
+  <li>torchvision 文件〈<a href="https://pytorch.org/vision/stable/transforms.html">Transforming images, videos, boxes and more</a>〉：<code>transforms.v2</code> 的用法，以及 <code>Resize</code> 的 antialias 參數。</li>
+  <li>PyTorch 文件〈<a href="https://pytorch.org/docs/stable/notes/randomness.html">Reproducibility</a>〉：<code>cudnn.deterministic</code>、<code>use_deterministic_algorithms</code>、DataLoader 的 <code>generator</code> 與 worker 的種子。</li>
+  <li>PyTorch 文件 <a href="https://pytorch.org/docs/stable/data.html"><code>torch.utils.data</code></a>：<code>num_workers</code>、<code>drop_last</code>、<code>shuffle</code> 的行為。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<footer class="chap-footer">本教材根據 lordleeber/ML2022-Spring-pytorch 的 HW06 程式碼與 ML2022 Spring 作業投影片撰寫。</footer>
+<script id="inline-js">
+/* repo → HTML 教材 — 頁面強化腳本
+   （Python/C/GAS/shell 語法上色、data-hot 行強調、«N» 標注、本章目錄） */
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- C 語法上色 ---------- */
+  var KW = new Set(('if else for while do return switch case default break continue goto sizeof ' +
+    'typedef struct union enum static const extern inline register volatile ' +
+    'unsigned signed NULL true false').split(' '));
+  var TYPE = new Set(('void int char long short float double bool ' +
+    'uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t ' +
+    'size_t ssize_t loff_t sector_t dev_t mode_t umode_t pgoff_t gfp_t ' +
+    'u8 u16 u32 u64 s8 s16 s32 s64 journal_t handle_t tid_t').split(' '));
+
+  var C_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)' +            // 1 comment
+    '|("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')' + // 2 string/char
+    '|(^[ \\t]*#[ \\t]*\\w+(?:[ \\t]+[<"][^>"\\n]*[>"])?)' +   // 3 preprocessor
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                     // 4 function call
+    '|\\b(0[xX][0-9a-fA-F]+[uUlL]*|\\d+[uUlL]*)\\b' +      // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                              // 6 identifier
+    'gm');
+
+  function highlightC(text) {
+    var out = '', last = 0, m;
+    C_RE.lastIndex = 0;
+    while ((m = C_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = C_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (TYPE.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else if (TYPE.has(m[6])) out += '<span class="tok-type">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- GAS 組語上色（pre.asm；AT&T 語法，.S/.s 檔案用） ---------- */
+  var ASM_RE = new RegExp(
+    '(\\/\\*[\\s\\S]*?\\*\\/)' +                       // 1 區塊註解（可跨行）
+    '|(^[ \\t]*#[ \\t]*\\w+[^\\n]*)' +                 // 2 cpp 行（#include 等）
+    '|(^[ \\t]*\\.[a-z_]\\w*)' +                       // 3 指示詞（.macro/.global…）
+    '|(^[ \\t]*[A-Za-z_.\\\\][\\w\\\\]*:)' +           // 4 標籤（含巨集的 \\label:）
+    '|(%[a-z][a-z0-9]{1,4}\\b)' +                      // 5 暫存器
+    '|(\\$?0[xX][0-9a-fA-F]+\\b|\\$\\d+\\b|\\b\\d+\\b)', // 6 立即數/數字
+    'gm');
+
+  function highlightAsm(text) {
+    var out = '', last = 0, m;
+    ASM_RE.lastIndex = 0;
+    while ((m = ASM_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = ASM_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-pre">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-kw">' + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-type">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-num">' + esc(m[6]) + '</span>';
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- Python 上色（pre.py） ---------- */
+  var PY_KW = new Set(('False None True and as assert break class continue def del elif else ' +
+    'except finally for from global if import in is lambda nonlocal not or pass raise ' +
+    'return try while with yield self super').split(' '));
+  var PY_BUILTIN = new Set(('print len range list sum enumerate open int float str dict ' +
+    'set tuple isinstance zip map').split(' '));
+
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                     // 1 comment
+    '|((?:[rRbBfF]{1,2})?(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'' +
+      '|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'))' +      // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                           // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                                 // 4 call
+    '|\\b(\\d+\\.?\\d*(?:[eE][-+]?\\d+)?)\\b' +                        // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b',                                          // 6 identifier
+    'g');
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        if (PY_KW.has(m[4])) out += '<span class="tok-kw">' + esc(m[4]) + '</span>';
+        else if (PY_BUILTIN.has(m[4])) out += '<span class="tok-type">' + esc(m[4]) + '</span>';
+        else out += '<span class="tok-fn">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) {
+        if (PY_KW.has(m[6])) out += '<span class="tok-kw">' + esc(m[6]) + '</span>';
+        else out += esc(m[6]);
+      }
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  /* ---------- shell 上色 ---------- */
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)(\$|#)\s(.*)$/);
+      if (m && m[2] === '$') {
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(m[3]) + '</span>';
+      }
+      if (/^\s*#/.test(line)) {
+        return '<span class="sh-cmt">' + esc(line) + '</span>';
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* ---------- data-hot 行強調 ---------- */
+  function parseHotSpec(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return;
+      for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 把 data-hot 指定的行包進 .hot-line。行號 = offset + 區塊內第幾行（1 起算）；
+     figure.listing 的 offset 取自 figcaption 的起始行號，所以 data-hot 寫原始碼行號。
+     跨行的 span（多行註解）先在行尾補收、下一行重開，維持合法巢狀。 */
+  function wrapHotLines(html, spec, offset) {
+    var hot = parseHotSpec(spec);
+    var carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [];
+      var closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) {
+        carry = opens[opens.length - 1];
+        s += '</span>';
+      } else {
+        carry = null;
+      }
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    /* pre.manual：作者手工上色/標注的頁面，enhance 完全不碰 */
+    if (pre.classList.contains('diagram') || pre.classList.contains('manual')) return;
+    var code = pre.querySelector('code');
+    var target = code || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) {
+      target.innerHTML = highlightShell(text);
+    } else if (pre.classList.contains('py')) {
+      target.innerHTML = highlightPy(text);
+    } else if (pre.classList.contains('asm')) {
+      target.innerHTML = highlightAsm(text);
+    } else if (/[;{}()#]|->|\breturn\b|\bstruct\b/.test(text)) {
+      /* 只對看起來像 C 的內容上色（含常見符號），避免誤傷純文字 */
+      target.innerHTML = highlightC(text);
+    }
+    /* «N» → 圓形標記：寫在 pre 的純文字裡（如實測輸出的逐行標注），
+       不破壞「原始碼保持純文字」的逐字 diff 原則 */
+    if (/«\d+»/.test(target.innerHTML)) {
+      target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    }
+    if (pre.dataset.hot) {
+      var offset = 0;
+      var fig = pre.closest('figure.listing');
+      var cap = fig && fig.querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      if (m) offset = parseInt(m[1], 10) - 1;
+      target.innerHTML = wrapHotLines(target.innerHTML, pre.dataset.hot, offset);
+    }
+  });
+
+  /* ---------- 本章目錄（自動生成） ---------- */
+  var main = document.querySelector('main');
+  var header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('div');
+      box.className = 'toc-box';
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+      });
+      html += '</ol>';
+      box.innerHTML = html;
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+})();
+
+</script>
+</body>
+</html>
