@@ -1,6 +1,6 @@
 # HW14 終身學習（LifeLong Learning）— 研究筆記與計畫
 
-> 2026-10-08 由前一個 session 整理，尚未開始做。總覽與排序見 [docs/HW_STUDY_OVERVIEW.md](../docs/HW_STUDY_OVERVIEW.md)。**建議下一本書做這份。**
+> 2026-10-08 由前一個 session 整理。**2026-10-08 晚上開始做：Phase 0 進行中**（見下方「狀態」）。總覽與排序見 [docs/HW_STUDY_OVERVIEW.md](../docs/HW_STUDY_OVERVIEW.md)。**建議下一本書做這份。**
 
 ## 題目（讀自 `HW14.ipynb`、`HW14.pdf`，兩者都從官方 repo 複製進本資料夾）
 - 同一個模型**依序**學多個任務，學新任務時不要忘掉舊任務（catastrophic forgetting，災難性遺忘）。
@@ -47,3 +47,15 @@
 - 方法比較：同一規格下的學習曲線、平均準確率、遺忘量；多種子。
 - 總結章：三種持續學習情境、其他方法（iCaRL、LwF、GEM、DGR）、選擇題題庫、名詞對照、速查。
 - 「現在的做法」框：LoRA、Self-Instruct（重播的精神）如何延續這些想法，引用 ML2025 HW6／ML2026 HW5。
+
+## 狀態（2026-10-08 23:00）
+- MNIST 已下載（使用者同意，torchvision，`HW14/data/` 被 .gitignore 排除）。
+- notebook 已拆成 `config.py`、`utils.py`、`dataset.py`、`model.py`、`trainer.py`、`methods/*.py`、`train.py`、`plot.py`；MAS TODO 已填。
+- 參照版（notebook 原樣當腳本）跑完 52 分 07 秒；`train.py` 與 `docs/tools/hw14_exp.py` 都逐位元一致。數字與疑點在 `docs/HW14/FACTS.md`。
+- 任務數確定是 **5**（角度 0／20／40／60／80），「10」是註解錯。
+- 下一步：大綱與實驗規格給使用者核可。
+
+## 使用者決定（2026-10-08 23:20）
+- 大綱核可：index、ch00–ch08（全貌／資料／訓練迴圈與指標／baseline／EWC／MAS／SI／RWalk+SCP／總結），不寫附錄、不冷讀、樣板自己設計。
+- 實驗：A 多種子（6 方法 × 種子 0–4，各自獨立跑）、B λ 掃描（seed 0）、C guard 只算一次（`--guards latest`）、D SCP 每個 slice 各自平方；**一組一組依序跑，不並行**（`docs/tools/hw14_run_grid.sh`，23:18 開始，約 6 小時）。
+- **加 E**：E1 五個任務一起訓練（上界）、E2 replay（每任務保留少量舊資料，2–3 種保留量）；寫在實驗工具裡，不改 `HW14/` 作業程式；排在 A–D 之後。
