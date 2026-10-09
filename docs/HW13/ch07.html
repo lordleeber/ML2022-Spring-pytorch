@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 7 章　量化與其他壓縮方法 — HW13 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW13 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「壓縮實驗台」——近黑的冷灰底、紙白的字、薄荷青只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：老師 紫、學生 CE 灰、學生 KD 藍、架構變體 橘／青、剪枝 洋紅、量化 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與 HW14 相同，色盤沿用 HW14 2026-10-08 的 validate_palette.js 結果）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #5cc9ae;      /* 薄荷青：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(92, 201, 174, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #5cc9ae;
+  /* 角色色 */
+  --r-teacher: #9085e9; --r-ce: #8b949e; --r-kd: #3987e5; --r-arch1: #d95926;
+  --r-arch2: #199e70; --r-prune: #d55181; --r-quant: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "老師 ResNet-18 11,182,155 參數　→　學生 ≤ 100,000　·　Food-11　224×224 → 11 類";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #f2fbf8; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #141c1f; border-color: rgba(92, 201, 174, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #0b1613; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.teacher { --rc: var(--r-teacher); } .role.ce { --rc: var(--r-ce); } .role.kd { --rc: var(--r-kd); }
+.role.arch1 { --rc: var(--r-arch1); } .role.arch2 { --rc: var(--r-arch2); } .role.prune { --rc: var(--r-prune); }
+.role.quant { --rc: var(--r-quant); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="ch08.html">第 8 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW13 讀碼教材</p>
+  <h1>第 7 章　量化與其他壓縮方法</h1>
+  <p class="chap-lead">投影片列了五種壓縮技術，作業只做了三種。這一章補上第四種：parameter quantization（參數量化）。它不減少參數，而是減少每個參數用的位元數；在今天的大型語言模型上，它是最常用的壓縮手段。本章在老師與 Simple 學生上量 16 位元、8 位元與更低位元的準確率、檔案大小與速度，最後簡介沒有實作的第五種技術（dynamic computation）與投影片 Boss 基準線提到的進階蒸餾。</p>
+</header>
+<main>
+
+<h2 id="what">7.1　量化：用更少的位元存一個數</h2>
+<p>PyTorch 預設用 32 位元浮點數（float32、fp32）存每一個權重與中間結果。<a href="ch02.html#file">第 2 章</a>算過，範例學生的 87,907 個參數乘 4 bytes 就是檔案的主體。量化有兩大類：</p>
+<ul>
+<li><strong>換成較短的浮點數</strong>：16 位元的 float16（fp16，精度較高、範圍較小）或 bfloat16（bf16，範圍和 fp32 一樣、精度較低）。現代 GPU 對它們有專門的運算單元，通常不需要任何校正。</li>
+<li><strong>換成整數</strong>：例如 8 位元整數 int8，只能表示 −128 到 127。浮點數要先用一個比例 s（scale）映射過去：q = round(x / s)（有時再加一個零點 z），用的時候再乘回來，x ≈ s · q。關鍵在 s 怎麼選：太大，小的數都被四捨五入成 0；太小，大的數被截斷。</li>
+</ul>
+<p>對整數量化，還要決定量化的對象。只量化<strong>權重</strong>（weight-only）比較容易，權重在訓練完就固定了，最大值最小值都知道；連中間結果（activation）也量化，運算才能真的用整數做、真的變快，但中間結果的範圍要先拿一些資料跑過才知道，這一步叫<strong>校正</strong>（calibration）。</p>
+
+<h2 id="fp16">7.2　16 位元：幾乎免費</h2>
+<p>把整個模型與輸入轉成 fp16（<code>model.half()</code>）或 bf16，在 GPU 上推論。本書的 <code>docs/tools/hw13_quant.py</code> 與 <code>hw13_speed.py</code> 量到：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>模型</th><th class="num">fp32 準確率</th><th class="num">fp16</th><th class="num">bf16</th><th class="num">檔案 fp32 → fp16</th><th class="num">GPU batch 64：fp32 → fp16</th></tr></thead>
+<tbody>
+<tr><td><span class="role teacher">老師</span></td><td class="num">0.87143</td><td class="num">0.87143</td><td class="num">0.87026</td><td class="num">44,800,651 → 22,414,667</td><td class="num">16.531 → <strong>7.443 ms</strong></td></tr>
+<tr><td><span class="role ce">Simple 學生</span></td><td class="num">0.50408</td><td class="num">0.50408</td><td class="num">0.50496</td><td class="num">361,765 → 184,613</td><td class="num">22.369 → 15.728 ms</td></tr>
+</tbody>
+</table></div>
+<p>fp16 的準確率和 fp32 一模一樣（兩個模型答對的張數都沒有變；本書沒有逐張比對預測），檔案剛好減半，老師在 GPU 上快了 2.2 倍。bf16 的精度只有 8 個有效位元，老師掉了 4 張（0.12 個百分點），學生反而多對 3 張：都是四捨五入讓少數邊界上的預測換了答案。學生只快了 1.4 倍，因為它的時間有很大一部分花在搬大特徵圖，而不是乘法（<a href="ch06.html#four">第 6 章 6.5 節</a>）。</p>
+<p>這是本書所有壓縮手段裡「性價比」最高的一個：不用重新訓練、不用校正、準確率不變、大小減半、速度翻倍。今天在 GPU 上推論，fp16 或 bf16 幾乎是預設值；訓練也普遍用混合精度（autocast），只在需要的地方保留 fp32。</p>
+
+<h2 id="int8">7.3　8 位元整數：動態與靜態</h2>
+<p>PyTorch 的 <code>torch.ao.quantization</code> 提供兩種 int8 量化。</p>
+<figure class="listing"><figcaption>docs/tools/hw13_quant.py:62–80 — 動態與靜態 int8</figcaption>
+<pre class="py" data-hot="66,73,74,76,77,78"><code>  with warnings.catch_warnings(record=True) as w:
+    warnings.simplefilter('always')
+    # dynamic int8: only nn.Linear is supported for this kind of model
+    from torch.ao.quantization import quantize_dynamic
+    dq = quantize_dynamic(copy.deepcopy(base), {nn.Linear}, dtype=torch.qint8)
+    r['dynamic_int8_cpu'] = acc(dq, 'cpu')
+    r['dynamic_int8_file'] = size(dq.state_dict())
+    # static int8 (FX graph mode, x86 backend): calibrate activation ranges on 987 training images
+    from torch.ao.quantization import get_default_qconfig_mapping
+    from torch.ao.quantization.quantize_fx import prepare_fx, convert_fx
+    torch.backends.quantized.engine = 'x86'
+    qmap = get_default_qconfig_mapping('x86')
+    prepared = prepare_fx(copy.deepcopy(base), qmap, example_inputs=(calib[0][:1],))
+    with torch.no_grad():
+      for x in calib:
+        prepared(x)
+    sq = convert_fx(prepared)
+    r['static_int8_cpu'] = acc(sq, 'cpu')
+    r['static_int8_file'] = size(sq.state_dict())</code></pre></figure>
+<p><strong>動態量化</strong>（第 66 行，<code>quantize_dynamic</code>）：權重事先轉成 int8，中間結果在每次推論時當場量出範圍、當場量化。它不需要校正資料，但 PyTorch 只對 <code>nn.Linear</code>、LSTM 這類層支援，卷積不在其中。對 ResNet 這種幾乎全是卷積的模型，它只換掉了最後一個 512 → 11 的全連接層：老師的檔案從 44,800,651 變成 44,784,581 bytes，只小了 16 KB，準確率完全不變。這種量化是為 BERT 一類以全連接層為主的模型設計的，用在 CNN 上等於沒做。</p>
+<p><strong>靜態量化</strong>（第 70–78 行，FX graph mode）：<code>prepare_fx</code> 先把模型轉成計算圖，在每個要量化的地方插入 observer（記錄數值範圍的小模組）；接著拿校正資料跑過一遍（第 76–77 行，本書用訓練集每 10 張取 1 張，共 987 張，<code>test_tfm</code>）；<code>convert_fx</code> 再根據記錄到的範圍算出每一處的 s 與 z，把卷積換成 int8 的版本，BatchNorm 也在這一步合併進前面的卷積。結果只能在 CPU 上跑（x86 後端）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>模型</th><th class="num">fp32 準確率</th><th class="num">靜態 int8 準確率</th><th class="num">檔案</th><th class="num">CPU batch 1（4 執行緒）</th></tr></thead>
+<tbody>
+<tr><td><span class="role teacher">老師</span></td><td class="num">0.87143</td><td class="num">0.87201</td><td class="num">44,800,651 → <strong>11,308,361</strong>（÷ 3.96）</td><td class="num">9.386 → <strong>3.742 ms</strong>（2.5 倍快）</td></tr>
+<tr><td><span class="role ce">Simple 學生</span></td><td class="num">0.50408</td><td class="num">0.49563</td><td class="num">361,765 → 101,085（÷ 3.58）</td><td class="num">5.698 → 2.621 ms（2.2 倍快）</td></tr>
+</tbody>
+</table></div>
+<p>老師的檔案剩四分之一，CPU 上快 2.5 倍，準確率還多了 2 張（雜訊）。學生掉了 0.85 個百分點：小模型的每一個權重都比較吃重，量化誤差的影響比較大，和第 6 章「學生幾乎沒有冗餘」是同一件事。學生的檔案只縮了 3.58 倍，因為檔案裡還有每一層的 s、z 與量化後模型的結構描述，模型越小，這些固定開銷的比例越高。</p>
+<div class="warn"><h4>這個 API 已經被宣告淘汰</h4>
+<p>執行這段程式時，PyTorch 2.11 會印出：「torch.ao.quantization is deprecated and will be removed in 2.10. For migrations of users: 1. Eager mode quantization (torch.ao.quantization.quantize, torch.ao.quantization.quantize_dynamic), please …」。說好在 2.10 移除，到 2.11 都還在，但方向很明確：PyTorch 的量化功能正在搬到獨立的 <code>torchao</code> 套件與 PT2E（<code>torch.export</code> 之後再量化）流程，本機的環境沒有安裝 <code>torchao</code>，<code>torch.ao.quantization.quantize_pt2e</code> 也已經不存在。本章的程式碼在未來的版本很可能無法執行；概念（observer、校正、s 與 z、合併 BatchNorm）則不會變。</p>
+</div>
+
+<h2 id="lowbit">7.4　再少一點：只量化權重，8 位元到 2 位元</h2>
+<p>大型語言模型最常用的量化是 weight-only：權重存成 4 位元甚至更少，計算時再還原成 16 位元。本書用最簡單的做法模擬它：每個輸出通道取自己的最大絕對值當範圍，對稱地四捨五入到 2<sup>b−1</sup> − 1 個等級，再乘回來（權重仍以浮點數存，只模擬精度的損失，不模擬速度）：</p>
+<figure class="listing"><figcaption>docs/tools/hw13_quant.py:38–48 — fake_quant_weights() 的主體</figcaption>
+<pre class="py" data-hot="40,45,47"><code>  # weight-only, symmetric, per output channel: w -&gt; round(w / s) * s with s = max|w| / (2^(bits-1) - 1)
+  m = copy.deepcopy(model)
+  qmax = 2 ** (bits - 1) - 1
+  with torch.no_grad():
+    for mod in m.modules():
+      if isinstance(mod, (nn.Conv2d, nn.Linear)):
+        w = mod.weight
+        s = w.abs().flatten(1).max(1).values.clamp_min(1e-12) / qmax
+        s = s.view(-1, *([1] * (w.dim() - 1)))
+        w.copy_((w / s).round().clamp(-qmax, qmax) * s)
+  return m</code></pre></figure>
+<figure class="fig">
+<svg viewBox="0 0 900 360" role="img" aria-label="只量化權重時，位元數對驗證準確率。老師：fp32 87.1%、8 位元 87.1%、6 位元 86.6%、4 位元 71.5%、3 位元 33.4%、2 位元 10.1%。Simple 學生：50.4%、49.9%、50.1%、42.4%、34.2%、12.1%">
+<line x1="56" y1="314.0" x2="780" y2="314.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="318.0" text-anchor="end">0</text>
+<line x1="56" y1="281.3" x2="780" y2="281.3" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="285.3" text-anchor="end">10</text>
+<line x1="56" y1="248.7" x2="780" y2="248.7" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="252.7" text-anchor="end">20</text>
+<line x1="56" y1="216.0" x2="780" y2="216.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="220.0" text-anchor="end">30</text>
+<line x1="56" y1="183.3" x2="780" y2="183.3" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="187.3" text-anchor="end">40</text>
+<line x1="56" y1="150.7" x2="780" y2="150.7" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="154.7" text-anchor="end">50</text>
+<line x1="56" y1="118.0" x2="780" y2="118.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="122.0" text-anchor="end">60</text>
+<line x1="56" y1="85.3" x2="780" y2="85.3" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="89.3" text-anchor="end">70</text>
+<line x1="56" y1="52.7" x2="780" y2="52.7" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="56.7" text-anchor="end">80</text>
+<line x1="56" y1="20.0" x2="780" y2="20.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="24.0" text-anchor="end">90</text>
+<text class="s-mono" x="56.0" y="332" text-anchor="middle">fp32</text>
+<text class="s-mono" x="200.8" y="332" text-anchor="middle">int8</text>
+<text class="s-mono" x="345.6" y="332" text-anchor="middle">int6</text>
+<text class="s-mono" x="490.4" y="332" text-anchor="middle">int4</text>
+<text class="s-mono" x="635.2" y="332" text-anchor="middle">int3</text>
+<text class="s-mono" x="780.0" y="332" text-anchor="middle">int2</text>
+<line x1="56" y1="314" x2="780" y2="314" stroke="#4a5562" stroke-width="1"/>
+<text class="s-sm" x="418.0" y="354" text-anchor="middle">權重的位元數（每個輸出通道各自對稱量化，不重新訓練）</text>
+<text class="s-sm" x="14" y="167.0" text-anchor="middle" transform="rotate(-90 14 167.0)">驗證準確率（%）</text>
+<polyline points="56.0,29.3 200.8,29.5 345.6,31.0 490.4,80.6 635.2,205.0 780.0,280.9" fill="none" stroke="#9085e9" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,149.3 200.8,150.9 345.6,150.5 490.4,175.4 635.2,202.3 780.0,274.4" fill="none" stroke="#8b949e" stroke-width="2" stroke-linejoin="round"/>
+<rect x="786.0" y="270.4" width="8" height="8" rx="2" fill="#8b949e"/>
+<text class="s-lbl" x="798.0" y="278.4">Simple 學生</text>
+<rect x="786.0" y="284.4" width="8" height="8" rx="2" fill="#9085e9"/>
+<text class="s-lbl" x="798.0" y="292.4">老師</text>
+<rect x="-16.4" y="20" width="144.8" height="294" fill="transparent" data-tip="fp32：老師 87.1　Simple 學生 50.4"/>
+<rect x="128.4" y="20" width="144.8" height="294" fill="transparent" data-tip="int8：老師 87.1　Simple 學生 49.9"/>
+<rect x="273.2" y="20" width="144.8" height="294" fill="transparent" data-tip="int6：老師 86.6　Simple 學生 50.1"/>
+<rect x="418.0" y="20" width="144.8" height="294" fill="transparent" data-tip="int4：老師 71.5　Simple 學生 42.4"/>
+<rect x="562.8" y="20" width="144.8" height="294" fill="transparent" data-tip="int3：老師 33.4　Simple 學生 34.2"/>
+<rect x="707.6" y="20" width="144.8" height="294" fill="transparent" data-tip="int2：老師 10.1　Simple 學生 12.1"/>
+</svg>
+<div class="legend"><span><i style="background:#9085e9"></i>老師</span><span><i style="background:#8b949e"></i>Simple 學生</span></div>
+<figcaption>圖 7.1　只量化權重、不重新訓練時，位元數對驗證準確率。滑過圖看數值。</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<thead><tr><th>權重位元</th><th class="num">每個通道的等級數</th><th class="num">老師</th><th class="num">Simple 學生</th></tr></thead>
+<tbody>
+<tr><td>fp32</td><td class="num">—</td><td class="num">0.87143</td><td class="num">0.50408</td></tr>
+<tr><td>8</td><td class="num">255</td><td class="num">0.87085</td><td class="num">0.49942</td></tr>
+<tr><td>6</td><td class="num">63</td><td class="num">0.86647</td><td class="num">0.50058</td></tr>
+<tr><td>4</td><td class="num">15</td><td class="num"><strong>0.71458</strong></td><td class="num">0.42420</td></tr>
+<tr><td>3</td><td class="num">7</td><td class="num">0.33382</td><td class="num">0.34198</td></tr>
+<tr><td>2</td><td class="num">3</td><td class="num">0.10146</td><td class="num">0.12128</td></tr>
+</tbody>
+</table></div>
+<p>8 位元與 6 位元幾乎沒有損失；4 位元時老師掉了 15.7 個百分點，3 位元以下就壞了。4 位元只有 15 個等級（−7 到 7），一個通道裡只要有一個特別大的權重，s 就被它撐大，其他大多數權重只能落在少數幾個等級上。這個簡單做法的極限大約就在 6 位元。</p>
+<div class="note"><h4>現在的做法：4 位元的 LLM 是怎麼做到的</h4>
+<p>今天在消費級顯示卡上跑的大型語言模型，常常是 4 位元權重（例如 GPTQ、AWQ、GGUF 的 Q4 格式），而且準確率只掉一點點。它們比本章的簡單做法多了幾件事：<strong>分組</strong>（group-wise，每 64 或 128 個權重共用一個 s，而不是一整個通道共用一個，大權重的影響被限制在一小組裡）；<strong>誤差補償</strong>（GPTQ 量化一個權重後，調整還沒量化的權重去抵銷誤差，用的是校正資料算出來的二階資訊）；<strong>保護重要的通道</strong>（AWQ 觀察到少數 activation 很大的通道對結果影響最大，先把它們放大再量化）。另一條路是訓練時就讓模型適應量化（quantization-aware training），或用 QLoRA 在 4 位元的模型上繼續微調。這些方法的共同前提，就是本章量到的事實：權重的位元數，在 8 位元附近幾乎是免費的，低於那裡就要靠更聰明的方法。</p>
+</div>
+
+<h2 id="dynamic">7.5　dynamic computation：讓簡單的輸入少算一點</h2>
+<p>投影片的第五種技術是 dynamic computation（動態計算）：模型根據輸入的難度或可用的資源，決定這一次要算多少。典型的做法是在網路中間接幾個額外的分類器（early exit）：如果淺層的分類器已經很有把握（例如最大機率超過某個門檻），就直接輸出，不再往下算；困難的輸入才走完整個網路。另一種是同一個模型可以用不同的寬度或深度執行，依手機的電量決定。李宏毅老師的 Network Compression 講義（tiny_v7.pdf）有完整的介紹。</p>
+<p>本書沒有實作這一類方法。不過<a href="ch03.html#acc">第 3 章</a>的數字可以看出它的潛力：老師在驗證集上有 70.55% 的圖片最大機率超過 0.99，這些「簡單」的圖片如果能在淺層就判斷完，平均計算量會大幅下降。代價是要訓練那些中間的分類器，而且要確定淺層的「有把握」真的可信。</p>
+
+<h2 id="kd-advanced">7.6　投影片 Boss 的進階蒸餾</h2>
+<p>投影片把以下方法列為 Boss 基準線（0.85159）的方向。本書都沒有實作，這裡說明它們和第 4 章的蒸餾差在哪裡，以及第 4、5 章的實驗對它們的啟示。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>方法</th><th>蒸餾什麼</th><th>和第 4 章的差別</th></tr></thead>
+<tbody>
+<tr><td><strong>FitNet</strong>（Romero 等，2014）</td><td>中間層的特徵圖</td><td>不只對齊最後的輸出分布，也讓學生某一層的特徵（經過一個小的轉接層）去貼近老師對應層的特徵。學生多了「怎麼看」的指導，而不只是「答案是什麼」。</td></tr>
+<tr><td><strong>Relational KD</strong>（Park 等，2019）</td><td>樣本之間的關係</td><td>讓學生學老師「兩張圖之間的距離、三張圖之間的角度」這類結構，而不是每張圖各自的輸出。學生的特徵空間形狀像老師即可，絕對位置可以不同。</td></tr>
+<tr><td><strong>DML</strong>（Deep Mutual Learning，Zhang 等，2018）</td><td>同儕的輸出分布</td><td>沒有預先訓練好的老師，幾個學生同時訓練，互相用對方的輸出分布當 soft target。</td></tr>
+<tr><td><strong>TAKD</strong>（Mirzadeh 等，2019）</td><td>經由助教的輸出分布</td><td>老師太大、學生太小時，先蒸餾出一個中等大小的「助教」模型，再由助教教學生。</td></tr>
+</tbody>
+</table></div>
+<p>第 3 章發現這個老師在訓練集上過度自信，第 4、5 章的蒸餾效果也一直在雜訊範圍內。從這個角度看，FitNet 與 Relational KD 比較有希望：它們不依賴輸出分布裡的 dark knowledge，而是傳遞中間特徵的資訊，老師把訓練集背得再熟，它的中間特徵仍然帶著豐富的結構。投影片的另一個建議「make your teacher much stronger」，對這個老師來說，也許應該讀成「讓老師在訓練集上不要那麼死背」，例如用更強的增強或 label smoothing 重新訓練老師。這些都是推論，本書沒有驗證。</p>
+
+<h2 id="summary">7.7　壓縮手段對照表</h2>
+<p>把第 4 到 7 章做過的事情放在一起（✔ 表示該項會變小或變快，數字是本書在老師或 Simple 學生上的實測）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>手段</th><th>參數數量</th><th>檔案大小</th><th>計算量</th><th>實際速度</th><th>需要重新訓練</th><th>本書的實測</th></tr></thead>
+<tbody>
+<tr><td>知識蒸餾（換成小學生）</td><td>✔</td><td>✔</td><td>看學生</td><td>看學生與硬體</td><td>要（訓練學生）</td><td>第 4、5 章：學生 0.80，老師 0.87；蒸餾本身的貢獻在雜訊內</td></tr>
+<tr><td>輕量架構（depthwise／pointwise）</td><td>✔</td><td>✔</td><td>✔</td><td>GPU 上不一定</td><td>要</td><td>第 5 章：同參數下沒有勝過一般卷積，GPU 上慢 2.2 倍</td></tr>
+<tr><td>非結構化剪枝（mask）</td><td>—</td><td>變大（×2）</td><td>—</td><td>變慢或不變</td><td>不剪多就不用</td><td>第 6 章：老師全域剪 50% 剩 0.749</td></tr>
+<tr><td>結構化剪枝（實體拿掉通道）</td><td>✔</td><td>✔</td><td>✔</td><td>✔</td><td>要</td><td>第 6 章：學生參數 ÷ 3.9、GPU 快 2.1 倍，微調後 0.544</td></tr>
+<tr><td>fp16／bf16</td><td>—</td><td>✔（÷ 2）</td><td>—（位元數減半）</td><td>✔（GPU 2.2 倍）</td><td>不用</td><td>本章：準確率不變</td></tr>
+<tr><td>靜態 int8</td><td>—</td><td>✔（÷ 4）</td><td>—（整數運算）</td><td>✔（CPU 2.5 倍）</td><td>不用（要校正）</td><td>本章：老師不變、學生 −0.85</td></tr>
+<tr><td>weight-only 4 位元（簡單做法）</td><td>—</td><td>✔（÷ 8）</td><td>—</td><td>要專用 kernel</td><td>不用</td><td>本章：老師掉 15.7 個百分點</td></tr>
+</tbody>
+</table></div>
+<p>作業的規則只看「參數數量」那一欄，所以只有前兩列與結構化剪枝能用來過 100,000 的上限；量化完全不改參數數量。實務上這些手段是疊加的：先用蒸餾或剪枝得到一個小的架構，再量化成 int8 或 fp16 部署。本書沒有實際疊加，但每一步的數字都在這張表裡。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>量化減少每個數的位元，不減少參數；整數量化需要比例 s（與零點 z），量化中間結果需要先用資料校正。</li>
+<li>fp16：準確率完全不變、檔案減半、老師在 GPU 上快 2.2 倍；bf16 只有幾張圖換了答案。</li>
+<li>動態 int8 只處理 <code>nn.Linear</code>，對 CNN 幾乎沒有作用；靜態 int8（FX）讓老師檔案剩四分之一、CPU 快 2.5 倍、準確率不變，學生掉 0.85 個百分點。<code>torch.ao.quantization</code> 已被宣告淘汰，未來要用 torchao。</li>
+<li>只量化權重：8、6 位元幾乎沒有損失，4 位元的簡單做法讓老師掉 15.7 個百分點；LLM 靠分組、誤差補償等方法才把 4 位元做好。</li>
+<li>dynamic computation 與進階蒸餾（FitNet、RKD、DML、TAKD）本書沒有實作；對這個過度自信的老師，傳遞中間特徵的方法也許比傳遞輸出分布更有希望（推論）。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 把學生量化成 int8 之後，torchsummary 數出來的參數會變少嗎？能不能靠量化讓一個 20 萬參數的學生符合作業規則？</summary>
+<p>不會變少，不能。量化改變的是每個參數用幾個位元存，參數的個數完全不變；作業的規則限制的是個數（用 torchsummary 數），不是 bytes。一個 20 萬參數的學生量化成 int8，檔案和一個 5 萬參數的 fp32 模型差不多大，但它仍然違反規則。</p></details>
+<details class="quiz"><summary>2. 為什麼動態量化對老師幾乎沒有作用，對 BERT 卻是常見的做法？</summary>
+<p>PyTorch 的動態量化只支援 <code>nn.Linear</code>、LSTM 等層。老師的參數 99.86% 在卷積裡，只有最後 512 → 11 的全連接層被換掉，檔案只小了 16 KB。BERT 這類 Transformer 的參數絕大部分在全連接層（注意力的投影與前饋層），動態量化就能涵蓋大部分的計算。</p></details>
+<details class="quiz"><summary>3. 靜態量化需要「校正資料」。如果校正時不小心用了測試集的圖片，算違反作業規則嗎？會影響準確率的可信度嗎？</summary>
+<p>規則說測試集只能用來推論（投影片 p.10）。校正只跑 forward、記錄數值範圍，不更新權重，可以說是推論；但它確實用測試集的資訊決定了模型的參數（s 與 z），嚴格來說是把測試資料用在了推論以外的地方，最好避免。本書用的是訓練集的 987 張圖。至於可信度：校正只決定數值範圍，很難藉此「記住」答案，對準確率的影響應該很小，但這是推論，本書沒有實際比較。</p></details>
+<details class="quiz"><summary>4. 只量化權重到 4 位元時，老師掉了 15.7 個百分點，學生只掉 8 個百分點。這代表學生比較耐量化嗎？</summary>
+<p>不能這樣解讀。學生的起點只有 0.504，掉 8 個百分點是相對損失 16%；老師從 0.871 掉到 0.715，相對損失 18%，兩者差不多。而且兩者的終點都還在亂猜（約 0.15）之上，掉的空間本來就不同。比較耐不耐量化，要看相對損失、或看位元數降到多少時開始崩潰：兩者都在 4 位元開始明顯下降、3 位元以下壞掉，行為相似。</p></details>
+<details class="quiz"><summary>5. fp16 讓老師在 GPU 上快 2.2 倍，學生只快 1.4 倍。用第 2、5 章學到的觀念解釋。</summary>
+<p>fp16 讓兩件事變快：乘加運算（Tensor Core 對 fp16 的吞吐量更高）與資料搬運（每個數只有一半大小）。老師的計算集中在小特徵圖、多通道的卷積，運算密集，最能受惠於更快的乘加；學生的計算集中在 220×220 的大特徵圖上，第 2 章量過它的中間結果比老師大，時間有很大一部分花在讀寫記憶體與逐層的固定開銷，乘加變快的好處就被稀釋了。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Benoit Jacob 等，<a href="https://arxiv.org/abs/1712.05877">Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference</a>（2017）：int8 量化中 s 與 z 的標準做法。</li>
+<li>Elias Frantar 等，<a href="https://arxiv.org/abs/2210.17323">GPTQ</a>（2022）；Ji Lin 等，<a href="https://arxiv.org/abs/2306.00978">AWQ</a>（2023）：LLM 的 4 位元權重量化。</li>
+<li>Tim Dettmers 等，<a href="https://arxiv.org/abs/2305.14314">QLoRA</a>（2023）：在 4 位元模型上微調。</li>
+<li>Adriana Romero 等，<a href="https://arxiv.org/abs/1412.6550">FitNets</a>（2014）；Wonpyo Park 等，<a href="https://arxiv.org/abs/1904.05068">Relational Knowledge Distillation</a>（2019）；Ying Zhang 等，<a href="https://openaccess.thecvf.com/content_cvpr_2018/papers/Zhang_Deep_Mutual_Learning_CVPR_2018_paper.pdf">Deep Mutual Learning</a>（2018）：投影片 p.15 列的三篇。</li>
+<li>PyTorch：<a href="https://github.com/pytorch/ao">torchao</a>，取代 <code>torch.ao.quantization</code> 的量化與稀疏化套件。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="ch08.html">第 8 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW13 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW13 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

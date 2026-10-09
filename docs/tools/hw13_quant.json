@@ -1,0 +1,40 @@
+{
+ "teacher": {
+  "fp32_gpu": 0.87143,
+  "fp32_file": 44800651,
+  "fp16_gpu": 0.87143,
+  "bf16_gpu": 0.87026,
+  "fp16_file": 22414667,
+  "fp32_cpu": 0.87143,
+  "dynamic_int8_cpu": 0.87143,
+  "dynamic_int8_file": 44784581,
+  "static_int8_cpu": 0.87201,
+  "static_int8_file": 11308361,
+  "weight_only_int8_gpu": 0.87085,
+  "weight_only_int6_gpu": 0.86647,
+  "weight_only_int4_gpu": 0.71458,
+  "weight_only_int3_gpu": 0.33382,
+  "weight_only_int2_gpu": 0.10146
+ },
+ "student": {
+  "fp32_gpu": 0.50408,
+  "fp32_file": 361765,
+  "fp16_gpu": 0.50408,
+  "bf16_gpu": 0.50496,
+  "fp16_file": 184613,
+  "fp32_cpu": 0.50408,
+  "dynamic_int8_cpu": 0.50437,
+  "dynamic_int8_file": 359325,
+  "static_int8_cpu": 0.49563,
+  "static_int8_file": 101085,
+  "weight_only_int8_gpu": 0.49942,
+  "weight_only_int6_gpu": 0.50058,
+  "weight_only_int4_gpu": 0.4242,
+  "weight_only_int3_gpu": 0.34198,
+  "weight_only_int2_gpu": 0.12128
+ },
+ "warnings": [
+  "Please use quant_min and quant_max to specify the range for observers.                     reduce_range will be deprecated in a future release of PyTorch.",
+  "torch.ao.quantization is deprecated and will be removed in 2.10. \nFor migrations of users: \n1. Eager mode quantization (torch.ao.quantization.quantize, torch.ao.quantization.quantize_dynamic), please "
+ ]
+}
