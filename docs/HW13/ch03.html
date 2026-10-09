@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 3 章　老師 — HW13 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW13 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「壓縮實驗台」——近黑的冷灰底、紙白的字、薄荷青只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：老師 紫、學生 CE 灰、學生 KD 藍、架構變體 橘／青、剪枝 洋紅、量化 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與 HW14 相同，色盤沿用 HW14 2026-10-08 的 validate_palette.js 結果）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #5cc9ae;      /* 薄荷青：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(92, 201, 174, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #5cc9ae;
+  /* 角色色 */
+  --r-teacher: #9085e9; --r-ce: #8b949e; --r-kd: #3987e5; --r-arch1: #d95926;
+  --r-arch2: #199e70; --r-prune: #d55181; --r-quant: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "老師 ResNet-18 11,182,155 參數　→　學生 ≤ 100,000　·　Food-11　224×224 → 11 類";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #f2fbf8; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #141c1f; border-color: rgba(92, 201, 174, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #0b1613; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.teacher { --rc: var(--r-teacher); } .role.ce { --rc: var(--r-ce); } .role.kd { --rc: var(--r-kd); }
+.role.arch1 { --rc: var(--r-arch1); } .role.arch2 { --rc: var(--r-arch2); } .role.prune { --rc: var(--r-prune); }
+.role.quant { --rc: var(--r-quant); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch02.html">← 第 2 章</a><a href="ch04.html">第 4 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW13 讀碼教材</p>
+  <h1>第 3 章　老師：ResNet-18 與它的輸出分布</h1>
+  <p class="chap-lead">知識蒸餾的效果，上限是老師給得出多少「標籤以外的資訊」。這一章在動手寫蒸餾之前，先把老師徹底量一遍：它的結構、它在驗證集上錯在哪裡、它的機率分布長什麼樣子，以及溫度 T 怎麼改變這個分布。途中會遇到兩件事：一個讓老師悄悄變笨的陷阱，和一個讓「T = 1 的蒸餾」幾乎等於沒蒸餾的事實。</p>
+</header>
+<main>
+
+<h2 id="arch">3.1　ResNet-18：殘差區塊疊四層</h2>
+<p>老師是 torchvision 內建的 ResNet-18（He 等，2015），只把最後的全連接層改成 11 類（<a href="ch00.html#teacher">第 0 章</a>）。它的主幹是 <code>_forward_impl</code>：</p>
+<figure class="listing"><figcaption>.venv/lib/python3.12/site-packages/torchvision/models/resnet.py:266–282 — ResNet._forward_impl()</figcaption>
+<pre class="py" data-hot="268,271,273,274,275,276,278"><code>    def _forward_impl(self, x: Tensor) -&gt; Tensor:
+        # See note [TorchScript super()]
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.fc(x)
+
+        return x</code></pre></figure>
+<p>先用一個步幅 2 的 7×7 卷積和一個步幅 2 的 max pooling，把 224×224 縮成 56×56（第 268–271 行）；接著是四個 stage（<code>layer1</code>–<code>layer4</code>），每個 stage 由兩個 <code>BasicBlock</code> 組成；最後全域平均池化、攤平、全連接。四個 stage 的通道數是 64、128、256、512，從 <code>layer2</code> 起每個 stage 的第一個區塊步幅為 2，邊長減半。第 2 章量過，這個「先縮小、再加通道」的設計讓三個 stage 的計算量剛好相同。</p>
+<figure class="listing"><figcaption>.venv/lib/python3.12/site-packages/torchvision/models/resnet.py:89–105 — BasicBlock.forward()</figcaption>
+<pre class="py" data-hot="90,100,102"><code>    def forward(self, x: Tensor) -&gt; Tensor:
+        identity = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out += identity
+        out = self.relu(out)
+
+        return out</code></pre></figure>
+<p><code>BasicBlock</code> 是兩個 3×3 卷積加上一條<strong>殘差連接</strong>（residual connection）：第 90 行先把輸入存成 <code>identity</code>，算完兩層卷積之後在第 102 行加回去，再過 ReLU。如果這個區塊改變了形狀（步幅 2 或通道加倍），<code>identity</code> 就要先經過 <code>downsample</code>（一個步幅 2 的 1×1 卷積加 BatchNorm，第 99–100 行）才能相加。殘差連接讓梯度可以繞過卷積直接往回傳，所以很深的網路也訓練得動；HW03 教材第 7 章做過的報告題就是在 HW03 的 CNN 上手動加這種連接。</p>
+<p>ResNet-18 的「18」是有權重的層數：第一個卷積 1 層、四個 stage 各 2 個區塊 × 2 層卷積共 16 層、最後的全連接 1 層。<code>downsample</code> 裡的 1×1 卷積不算在內。torchvision 的卷積都沒有 bias（後面緊接 BatchNorm，bias 會被 BN 的平均值抵消，放了也是白放），這也是老師的卷積參數裡沒有 bias 的原因（有 bias 的只有 BatchNorm 的 β 與最後的全連接層）。</p>
+<p>這個老師是助教自己訓練的，不是 ImageNet 預訓練的權重（規則禁止預訓練模型）。checkpoint 裡每個 BatchNorm 的 <code>num_batches_tracked</code> 都是 72,813，表示它被訓練了 72,813 步；如果 batch 是 64，大約是 470 個 epoch。訓練時用了什麼增強、什麼學習率，助教沒有公開。</p>
+
+<h2 id="acc">3.2　老師有多準</h2>
+<p>在驗證集上（<code>test_tfm</code>，3,430 張），老師答對 2,989 張，準確率 <strong>0.87143</strong>，cross entropy 0.59343。notebook 註解與投影片 p.7 說它的測試準確率約 0.899，那是 Kaggle 測試集上的數字，比驗證集高將近 3 個百分點；兩個資料集的難度本來就可能不同，本機無從驗證。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>類別</th><th class="num">驗證張數</th><th class="num">老師準確率</th><th>類別</th><th class="num">驗證張數</th><th class="num">老師準確率</th></tr></thead>
+<tbody>
+<tr><td>0 麵包</td><td class="num">362</td><td class="num"><strong>0.7762</strong></td><td>6 麵食</td><td class="num">147</td><td class="num">0.9592</td></tr>
+<tr><td>1 乳製品</td><td class="num">144</td><td class="num">0.7986</td><td>7 米飯</td><td class="num">96</td><td class="num">0.8958</td></tr>
+<tr><td>2 甜點</td><td class="num">500</td><td class="num">0.7980</td><td>8 海鮮</td><td class="num">347</td><td class="num">0.9078</td></tr>
+<tr><td>3 蛋</td><td class="num">327</td><td class="num">0.8654</td><td>9 湯</td><td class="num">500</td><td class="num">0.9540</td></tr>
+<tr><td>4 炸物</td><td class="num">326</td><td class="num">0.8466</td><td>10 蔬果</td><td class="num">232</td><td class="num">0.9397</td></tr>
+<tr><td>5 肉類</td><td class="num">449</td><td class="num">0.8864</td><td></td><td></td><td></td></tr>
+</tbody>
+</table></div>
+<p>老師最弱的是麵包、甜點、乳製品（都不到 0.80），最強的是麵食與湯（0.95 以上）。最常見的八種錯誤是：麵包→蛋 21 張、麵包→肉類 21、甜點→麵包 19、甜點→肉類 16、炸物→肉類 16、蛋→麵包 15、炸物→麵包 15、甜點→蛋 13。錯誤集中在麵包、甜點、蛋、肉類、炸物這一群：早餐盤、三明治、漢堡、炸雞排上桌時本來就常常同時出現好幾種，照片的「主角」不容易分辨。這群類別的混淆，3.4 節會在老師的機率分布裡再看到一次。</p>
+<p>和第 0 章的學生對照：學生的問題是少數類別（乳製品、麵食、米飯）幾乎不被預測；老師在麵食與米飯上反而很準。如果蒸餾有用，學生最該從老師身上學到的，正是這些類別。</p>
+
+<h2 id="trap">3.3　一個讓老師變笨的陷阱：在訓練模式下呼叫 summary</h2>
+<p>本書在 Phase 0 量老師的時候，得到的是 0.86093，比上面的數字低了 1 個百分點。原因是量之前，工具先對老師呼叫了 torchsummary 來數參數。<a href="ch02.html#rule">第 2 章</a>讀過，torchsummary 會餵一筆 <code>torch.rand(2, 3, 224, 224)</code> 的假資料跑一次 forward。剛從 <code>get_teacher_model()</code> 拿到的模型處在<strong>訓練模式</strong>（<code>model.training</code> 為 <code>True</code>，<code>nn.Module</code> 建立時的預設），而訓練模式下的 BatchNorm 每做一次 forward，就會用這一批資料的平均與變異數去更新 running mean 與 running var：</p>
+<div class="eq">running_mean ← 0.9 · running_mean + 0.1 · 這一批的平均<br>running_var ← 0.9 · running_var + 0.1 · 這一批的變異數</div>
+<p>那一批是 [0, 1) 的均勻亂數，和真正的照片（經過 ImageNet 正規化，大致落在 −2.1 到 2.6 之間）長得完全不一樣。老師 72,813 步累積出來的統計量，就這樣被一筆垃圾資料拉走了 10%。實測：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>做法</th><th class="num">驗證準確率</th><th>說明</th></tr></thead>
+<tbody>
+<tr><td>剛載入，直接 <code>eval()</code> 推論</td><td class="num"><strong>0.87143</strong>（2,989）</td><td>正確的數字</td></tr>
+<tr><td>剛載入，先 <code>summary(...)</code> 再 <code>eval()</code> 推論</td><td class="num">0.86327（2,961）</td><td><code>bn1</code> 的 running var 最多被改了 1.28，<code>num_batches_tracked</code> 從 72,813 變成 72,814</td></tr>
+<tr><td>本書 Phase 0 的第一版工具（同上，另一筆亂數）</td><td class="num">0.86093（2,953）</td><td>假資料不同，傷害也不同</td></tr>
+<tr><td>先 <code>eval()</code>，再 <code>summary(...)</code></td><td class="num">0.87143（2,989）</td><td>eval 模式的 BatchNorm 不更新統計量</td></tr>
+</tbody>
+</table></div>
+<p>這個陷阱就藏在範例程式裡。<a href="ch00.html#teacher">第 0 章</a>引用過的 <code>get_teacher_model()</code> 最後一行是一個被註解掉的 <code># summary(teacher_model, (3, 224, 224), device='cpu')</code>，旁邊寫著「You can also see the summary of teacher model」。好奇的學生把它打開，老師就被悄悄改壞了，之後拿它來蒸餾，學到的是一個比較差的老師，而且不會有任何錯誤訊息。本書已經回頭把第 0、1 章與目錄頁的老師準確率改成 0.87143。</p>
+<p>學生也被 summary 動過：<code>train.py</code> 第 63 行對剛建好的學生呼叫 summary，學生第一個 BatchNorm 的 running mean 從 0 變成 −0.04 附近、running var 從 1 變成 0.90 附近。這沒有實際傷害，因為訓練開始後 running 統計量會被真實資料不斷更新；而且參照版也做了同一件事，逐位元比對照樣成立。</p>
+<div class="warn"><h4>規則：對訓練好的模型做任何「檢查」之前，先 <code>eval()</code></h4>
+<p>任何會跑 forward 的工具——torchsummary、FLOPs 計數器、匯出 ONNX、畫計算圖——在訓練模式下都可能改到 BatchNorm 的統計量（Dropout 則會讓輸出帶隨機性）。對已經訓練好的模型，先 <code>model.eval()</code> 再檢查；或是檢查完重新載入權重。第 2 章的 <code>hw13_count.py</code> 量 MACs 時都先 <code>eval()</code>，所以那些數字不受影響；本書的實驗工具只對學生呼叫 summary，老師在蒸餾前就 <code>eval()</code>，A 組的蒸餾也不受影響。</p>
+</div>
+
+<h2 id="soft">3.4　老師的機率分布：label 沒說的事</h2>
+<p>分類模型的輸出是 11 個 logits（還沒經過 softmax 的分數），softmax 之後變成 11 個加總為 1 的機率。資料的 label 只說「這張是蛋」，等於一個 one-hot 向量：蛋 100%、其他 0%。老師的機率分布卻會說「這張 85% 是蛋，但有點像麵包」。這些分給錯誤類別的小機率，Hinton 等人（2015）稱為 <strong>dark knowledge</strong>：它反映了類別之間的相似性，是 label 沒有的資訊。知識蒸餾的出發點，就是讓學生去學這個分布，而不只是學 one-hot 的 label。</p>
+<p>把驗證集裡同一類的圖片的老師機率取平均（%，粗體是正確類別）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>真實類別</th><th class="num">麵包</th><th class="num">乳製品</th><th class="num">甜點</th><th class="num">蛋</th><th class="num">炸物</th><th class="num">肉類</th><th class="num">麵食</th><th class="num">米飯</th><th class="num">海鮮</th><th class="num">湯</th><th class="num">蔬果</th></tr></thead>
+<tbody>
+<tr><td>麵包</td><td class="num"><strong>75.68</strong></td><td class="num">0.56</td><td class="num">3.62</td><td class="num">6.27</td><td class="num">2.84</td><td class="num">5.70</td><td class="num">0.40</td><td class="num">0.06</td><td class="num">2.69</td><td class="num">1.74</td><td class="num">0.46</td></tr>
+<tr><td>乳製品</td><td class="num">2.97</td><td class="num"><strong>76.71</strong></td><td class="num">6.76</td><td class="num">2.58</td><td class="num">0.65</td><td class="num">0.75</td><td class="num">0.77</td><td class="num">0.80</td><td class="num">3.17</td><td class="num">3.30</td><td class="num">1.55</td></tr>
+<tr><td>甜點</td><td class="num">3.73</td><td class="num">2.48</td><td class="num"><strong>77.30</strong></td><td class="num">3.25</td><td class="num">1.32</td><td class="num">3.36</td><td class="num">0.25</td><td class="num">0.16</td><td class="num">2.92</td><td class="num">2.75</td><td class="num">2.49</td></tr>
+<tr><td>蛋</td><td class="num">5.02</td><td class="num">1.96</td><td class="num">1.50</td><td class="num"><strong>85.20</strong></td><td class="num">0.45</td><td class="num">1.56</td><td class="num">0.27</td><td class="num">0.54</td><td class="num">2.02</td><td class="num">1.36</td><td class="num">0.13</td></tr>
+<tr><td>炸物</td><td class="num">4.62</td><td class="num">0.58</td><td class="num">1.76</td><td class="num">1.71</td><td class="num"><strong>82.25</strong></td><td class="num">5.28</td><td class="num">0.39</td><td class="num">0.37</td><td class="num">1.56</td><td class="num">0.95</td><td class="num">0.52</td></tr>
+<tr><td>肉類</td><td class="num">2.42</td><td class="num">0.77</td><td class="num">1.66</td><td class="num">1.91</td><td class="num">1.79</td><td class="num"><strong>86.67</strong></td><td class="num">0.58</td><td class="num">0.52</td><td class="num">2.01</td><td class="num">0.96</td><td class="num">0.69</td></tr>
+<tr><td>麵食</td><td class="num">1.32</td><td class="num">0.00</td><td class="num">0.40</td><td class="num">0.36</td><td class="num">0.61</td><td class="num">0.14</td><td class="num"><strong>95.59</strong></td><td class="num">0.00</td><td class="num">0.25</td><td class="num">0.79</td><td class="num">0.53</td></tr>
+<tr><td>米飯</td><td class="num">3.21</td><td class="num">0.24</td><td class="num">0.90</td><td class="num">0.85</td><td class="num">0.65</td><td class="num">2.58</td><td class="num">0.39</td><td class="num"><strong>89.99</strong></td><td class="num">0.08</td><td class="num">1.08</td><td class="num">0.04</td></tr>
+<tr><td>海鮮</td><td class="num">2.04</td><td class="num">0.52</td><td class="num">1.48</td><td class="num">2.59</td><td class="num">0.35</td><td class="num">2.90</td><td class="num">0.38</td><td class="num">0.02</td><td class="num"><strong>89.15</strong></td><td class="num">0.31</td><td class="num">0.26</td></tr>
+<tr><td>湯</td><td class="num">0.42</td><td class="num">0.07</td><td class="num">1.53</td><td class="num">0.68</td><td class="num">0.77</td><td class="num">0.70</td><td class="num">0.05</td><td class="num">0.02</td><td class="num">0.54</td><td class="num"><strong>94.98</strong></td><td class="num">0.24</td></tr>
+<tr><td>蔬果</td><td class="num">0.26</td><td class="num">0.60</td><td class="num">0.42</td><td class="num">0.51</td><td class="num">2.19</td><td class="num">0.84</td><td class="num">0.19</td><td class="num">0.07</td><td class="num">2.07</td><td class="num">1.01</td><td class="num"><strong>91.83</strong></td></tr>
+</tbody>
+</table></div>
+<p>非對角線的數字就是 dark knowledge 的樣子。麵包的圖平均有 6.27% 給蛋、5.70% 給肉類；乳製品有 6.76% 給甜點（起司蛋糕、冰淇淋？）；炸物有 5.28% 給肉類。這和 3.2 節的混淆完全對得上：老師覺得像的類別，就是它常常搞錯的類別。反過來，麵食的圖幾乎不給乳製品與米飯任何機率（0.00%）。這張表就是老師「眼中的類別地圖」，one-hot 的 label 裡沒有這張地圖。</p>
+<p>不過這張表有一個問題：它是在<strong>驗證集</strong>上量的，老師沒看過這些圖。蒸餾的時候，老師是在<strong>訓練集</strong>上產生 soft label 給學生學的，那是它訓練了 470 個 epoch 的圖。</p>
+
+<h2 id="train">3.5　老師在訓練集上：幾乎全對、幾乎全有把握</h2>
+<p>同樣的量法換到訓練集（9,866 張，一樣用 <code>test_tfm</code>）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th class="num">驗證集</th><th class="num">訓練集</th></tr></thead>
+<tbody>
+<tr><td>準確率</td><td class="num">0.87143</td><td class="num"><strong>0.99980</strong>（9,866 張只錯 2 張）</td></tr>
+<tr><td>平均最大機率</td><td class="num">0.9418</td><td class="num"><strong>0.9986</strong></td></tr>
+<tr><td>最大機率超過 0.99 的比例</td><td class="num">70.55%</td><td class="num"><strong>97.89%</strong></td></tr>
+<tr><td>logits 的平均最大值</td><td class="num">10.73</td><td class="num">13.73</td></tr>
+<tr><td>平均放在「其他 10 類」的機率</td><td class="num">14.55%（= 1 − 0.8545）</td><td class="num"><strong>0.15%</strong></td></tr>
+</tbody>
+</table></div>
+<p>老師把訓練集背起來了。錯的兩張是 <code>2_111.jpg</code>（甜點，被認成海鮮）和 <code>5_1311.jpg</code>（肉類，也被認成海鮮）；其餘 9,864 張，老師平均只留 0.15% 的機率給其他類別。在訓練集上，老師的 soft label 和 one-hot 的 label 幾乎一模一樣：各類平均之後，正確類別的機率最低的是甜點，也有 99.54%。</p>
+<p>這對蒸餾的意思是：如果直接用老師的機率（也就是溫度 T = 1）去教學生，學生在訓練集上看到的幾乎就是原本的 label，多學不到什麼。<a href="ch01.html#time">第 1 章</a>看到的 A10 結果（KD 0.51720、CE 0.51545，在亂數雜訊之內）並不意外。報告第 2-1 題要求用 α = 0.5、T = 1.0 寫 loss，那正是一個幾乎沒有效果的設定。要讓 dark knowledge 浮出來，得把分布「軟化」，這就是溫度的工作。</p>
+
+<h2 id="temp">3.6　溫度 T：把分布變軟</h2>
+<p>溫度的作法很簡單：softmax 之前，把 logits 除以 T。</p>
+<div class="eq">p_i(T) = exp(z_i / T) / Σ_j exp(z_j / T)</div>
+<p>T = 1 就是原本的 softmax。T &gt; 1 時，logits 之間的差距被縮小，指數之後的差距也跟著縮小，機率就從最大的那一類往其他類「流」；T 趨近無限大時，每一類都是 1/11。T &lt; 1 則相反，分布變得更尖。順序不會變：最大的 logit 永遠是最大的機率，所以溫度不改變預測的答案，只改變「有多確定」。</p>
+<p>看一張訓練集的圖（<code>3_0.jpg</code>，蛋）。老師的 logits 是蛋 11.39、甜點 1.42、肉類 −1.20、麵食 −4.10、海鮮 −4.47……：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 290" role="img" aria-label="訓練集 3_0.jpg（蛋）在三種溫度下的老師機率。T=1 時蛋 99.99%，其他接近 0。T=4 時蛋 82.67%、甜點 6.85%、肉類 3.55%、麵食 1.72%、海鮮 1.57%。T=8 時蛋 44.21%、甜點 12.73%、肉類 9.17%、麵食 6.38%、海鮮 6.09%">
+  <g>
+    <text class="s-lbl" x="150" y="22" text-anchor="middle" font-weight="700">T = 1</text>
+    <line x1="20" y1="230" x2="285" y2="230" stroke="#2a343f"/>
+    <g data-tip="T=1 麵包 0.00%"><rect x="22" y="230" width="18" height="0" fill="#8b949e"/></g>
+    <g data-tip="T=1 乳製品 0.00%"><rect x="46" y="230" width="18" height="0" fill="#8b949e"/></g>
+    <g data-tip="T=1 甜點 0.00%"><rect x="70" y="230" width="18" height="0" fill="#8b949e"/></g>
+    <g data-tip="T=1 蛋 99.99%"><rect x="94" y="30" width="18" height="200" fill="#9085e9"/></g>
+    <g data-tip="T=1 其他類別都小於 0.01%"><rect x="118" y="229" width="162" height="1" fill="#8b949e"/></g>
+    <text class="s-mono" x="135" y="40" text-anchor="start">99.99</text>
+  </g>
+  <g>
+    <text class="s-lbl" x="450" y="22" text-anchor="middle" font-weight="700">T = 4</text>
+    <line x1="320" y1="230" x2="585" y2="230" stroke="#2a343f"/>
+    <g data-tip="T=4 麵包 0.25%"><rect x="322" y="229.5" width="18" height="0.5" fill="#8b949e"/></g>
+    <g data-tip="T=4 乳製品 0.88%"><rect x="346" y="228.2" width="18" height="1.8" fill="#8b949e"/></g>
+    <g data-tip="T=4 甜點 6.85%"><rect x="370" y="216.3" width="18" height="13.7" fill="#3987e5"/></g>
+    <g data-tip="T=4 蛋 82.67%"><rect x="394" y="64.7" width="18" height="165.3" fill="#9085e9"/></g>
+    <g data-tip="T=4 炸物 0.16%"><rect x="418" y="229.7" width="18" height="0.3" fill="#8b949e"/></g>
+    <g data-tip="T=4 肉類 3.55%"><rect x="442" y="222.9" width="18" height="7.1" fill="#3987e5"/></g>
+    <g data-tip="T=4 麵食 1.72%"><rect x="466" y="226.6" width="18" height="3.4" fill="#3987e5"/></g>
+    <g data-tip="T=4 米飯 0.68%"><rect x="490" y="228.6" width="18" height="1.4" fill="#8b949e"/></g>
+    <g data-tip="T=4 海鮮 1.57%"><rect x="514" y="226.9" width="18" height="3.1" fill="#3987e5"/></g>
+    <g data-tip="T=4 湯 1.30%"><rect x="538" y="227.4" width="18" height="2.6" fill="#8b949e"/></g>
+    <g data-tip="T=4 蔬果 0.36%"><rect x="562" y="229.3" width="18" height="0.7" fill="#8b949e"/></g>
+    <text class="s-mono" x="403" y="58" text-anchor="middle">82.67</text>
+    <text class="s-mono" x="379" y="210" text-anchor="middle">6.85</text>
+  </g>
+  <g>
+    <text class="s-lbl" x="750" y="22" text-anchor="middle" font-weight="700">T = 8</text>
+    <line x1="620" y1="230" x2="885" y2="230" stroke="#2a343f"/>
+    <g data-tip="T=8 麵包 2.45%"><rect x="622" y="225.1" width="18" height="4.9" fill="#8b949e"/></g>
+    <g data-tip="T=8 乳製品 4.55%"><rect x="646" y="220.9" width="18" height="9.1" fill="#8b949e"/></g>
+    <g data-tip="T=8 甜點 12.73%"><rect x="670" y="204.5" width="18" height="25.5" fill="#3987e5"/></g>
+    <g data-tip="T=8 蛋 44.21%"><rect x="694" y="141.6" width="18" height="88.4" fill="#9085e9"/></g>
+    <g data-tip="T=8 炸物 1.94%"><rect x="718" y="226.1" width="18" height="3.9" fill="#8b949e"/></g>
+    <g data-tip="T=8 肉類 9.17%"><rect x="742" y="211.7" width="18" height="18.3" fill="#3987e5"/></g>
+    <g data-tip="T=8 麵食 6.38%"><rect x="766" y="217.2" width="18" height="12.8" fill="#3987e5"/></g>
+    <g data-tip="T=8 米飯 4.02%"><rect x="790" y="222" width="18" height="8" fill="#8b949e"/></g>
+    <g data-tip="T=8 海鮮 6.09%"><rect x="814" y="217.8" width="18" height="12.2" fill="#3987e5"/></g>
+    <g data-tip="T=8 湯 5.54%"><rect x="838" y="218.9" width="18" height="11.1" fill="#8b949e"/></g>
+    <g data-tip="T=8 蔬果 2.93%"><rect x="862" y="224.1" width="18" height="5.9" fill="#8b949e"/></g>
+    <text class="s-mono" x="703" y="135" text-anchor="middle">44.21</text>
+    <text class="s-mono" x="688" y="198" text-anchor="end">12.73</text>
+    <text class="s-mono" x="751" y="205" text-anchor="middle">9.17</text>
+  </g>
+  <text class="s-mono" x="103" y="248" text-anchor="middle">蛋</text>
+  <text class="s-mono" x="403" y="248" text-anchor="middle">蛋</text>
+  <text class="s-mono" x="703" y="248" text-anchor="middle">蛋</text>
+  <text class="s-sm" x="450" y="276" text-anchor="middle">每組 11 根柱子依序是 麵包、乳製品、甜點、蛋、炸物、肉類、麵食、米飯、海鮮、湯、蔬果；高度 = 機率（200 px = 100%）。滑過柱子看數字。</text>
+</svg>
+<div class="legend"><span><i style="background:#9085e9"></i>正確類別（蛋）</span><span><i style="background:#3987e5"></i>本文提到的其他類別</span><span><i style="background:#8b949e"></i>其他</span></div>
+<figcaption>圖 3.1　同一張訓練圖片、同一組 logits，除以不同的 T 之後的老師機率。T = 1 時其他類別全部接近 0；T = 4 甜點、肉類開始浮現；T = 8 時蛋還是第一，但只剩 44%。</figcaption>
+</figure>
+<p>T = 1 時這張圖就是「蛋，99.99%」，和 label 沒有差別。T = 4 時，甜點（6.85%）、肉類（3.55%）、麵食（1.72%）、海鮮（1.57%）浮現出來：老師其實覺得這張蛋有一點像甜點、有一點像肉類。T = 8 時，蛋只剩 44.21%，排序不變，但其他類別的相對大小清楚多了。另一張圖 <code>7_0.jpg</code>（米飯）的 logits 是米飯 21.10、蔬果 3.27，差距大得多：T = 4 時米飯仍有 97.96%、蔬果 1.13%；要到 T = 8，蔬果才有 7.85%。每張圖需要的「軟化程度」不一樣，T 是一個全體共用的折衷。</p>
+<p>把整個資料集平均起來（熵以 nats 為單位，衡量分布有多分散；11 類均勻分布的熵是 ln 11 = 2.3979）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th class="num">T</th><th class="num">驗證集：熵</th><th class="num">驗證集：平均最大機率</th><th class="num">訓練集：熵</th><th class="num">訓練集：平均最大機率</th><th class="num">訓練集：給其他 10 類的機率</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td class="num">0.1598</td><td class="num">0.9418</td><td class="num">0.0062</td><td class="num">0.9986</td><td class="num">0.15%</td></tr>
+<tr><td class="num">2</td><td class="num">0.3998</td><td class="num">0.8707</td><td class="num">0.0843</td><td class="num">0.9832</td><td class="num">1.69%</td></tr>
+<tr><td class="num">4</td><td class="num">1.0101</td><td class="num">0.6999</td><td class="num">0.6283</td><td class="num">0.8546</td><td class="num">14.55%</td></tr>
+<tr><td class="num">8</td><td class="num">1.8349</td><td class="num">0.4288</td><td class="num">1.6736</td><td class="num">0.5255</td><td class="num">47.46%</td></tr>
+<tr><td class="num">20</td><td class="num">2.3175</td><td class="num">0.1938</td><td class="num">2.2992</td><td class="num">0.2193</td><td class="num">—</td></tr>
+</tbody>
+</table></div>
+<p>在訓練集上，T = 2 都還太硬（其他類只分到 1.69%）；T = 4 時其他 10 類合計分到 14.55%，大約是老師在驗證集上 T = 1 的軟硬程度；T = 8 時將近一半的機率給了其他類；T = 20 就接近均勻分布（熵 2.30，上限 2.40），資訊又被抹平了。所以「T 要多大」沒有固定答案，取決於老師在訓練集上有多自信。對這個背熟了訓練集的老師，第 4 章掃描的 T = 1、2、4、8 裡，T = 4 到 8 這一段最值得期待。</p>
+<p>報告第 2-2 題問：溫度 T 越高，分布是更軟還是更硬？答案是 (a)：T 越高，各類別之間的機率越平均，分布越<strong>軟</strong>（softer）。上表的熵隨 T 單調上升，就是這件事的實測。</p>
+<div class="note"><h4>溫度在 LLM 裡也是同一個東西</h4>
+<p>用過 ChatGPT API 的人都看過 <code>temperature</code> 這個參數，它做的事和這裡一模一樣：取樣下一個字之前，把 logits 除以 temperature。溫度高，機率分布軟，取樣出比較少見的字；溫度低，分布尖，幾乎總是選最可能的字（temperature 0 通常被實作成直接取最大值）。蒸餾裡的 T 是用來「讀出」老師的相似性資訊，取樣裡的 temperature 是用來控制多樣性，數學上是同一個除法。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>老師是 ResNet-18：7×7 步幅 2 的卷積加 max pooling 先縮到 56×56，四個 stage 各兩個 BasicBlock（兩個 3×3 卷積加殘差連接）。助教訓練了 72,813 步，不是預訓練權重。</li>
+<li>驗證準確率 0.87143（不是 Phase 0 量到的 0.86093）。最弱的是麵包、甜點、乳製品；錯誤集中在麵包、甜點、蛋、肉類、炸物這一群。</li>
+<li>在訓練模式下對老師呼叫 torchsummary，會用隨機輸入改掉 BatchNorm 的 running 統計量，準確率掉到 0.863 或 0.861。檢查訓練好的模型之前，先 <code>eval()</code>。</li>
+<li>老師的機率分布在驗證集上帶著類別相似性（麵包的圖有 6.27% 給蛋），這是 label 沒有的 dark knowledge。</li>
+<li>但在訓練集上，老師準確率 0.9998、97.89% 的圖信心超過 0.99，T = 1 時其他類只分到 0.15%：T = 1 的蒸餾幾乎等於用原本的 label 訓練。</li>
+<li>溫度 T 把 logits 除以 T，不改變排序、只改變軟硬。訓練集上 T = 4 時其他類分到 14.55%、T = 8 時 47.46%；T 越高越軟（報告 2-2 選 (a)）。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. ResNet-18 的卷積為什麼都設 <code>bias=False</code>？</summary>
+<p>每個卷積後面都緊接一個 BatchNorm。BatchNorm 會先減掉這一批的平均值，卷積的 bias 對每個位置都加同一個常數，減平均時就被抵消了；BatchNorm 自己還有一個平移參數 β，可以做 bias 能做的事。放了 bias 只是多了一些沒有作用的參數。範例學生的卷積後面也接 BatchNorm，卻保留了 bias，那 228 個 bias 參數其實是浪費的（在 100,000 的上限下，省下來可以拿去加寬別的層）。</p></details>
+<details class="quiz"><summary>2. 有人在蒸餾前加了一行 <code>summary(teacher_model, (3, 224, 224), device='cpu')</code> 想確認老師的參數量，之後才 <code>teacher_model.eval()</code>。蒸餾時用的老師會受影響嗎？</summary>
+<p>會。summary 執行時老師還在訓練模式，那一次 forward 已經用隨機輸入更新了每個 BatchNorm 的 running mean 與 running var；之後再 <code>eval()</code>，用的就是被改過的統計量。本章實測這樣的老師在驗證集上只有 0.863（原本 0.871）。要嘛先 <code>eval()</code> 再 summary，要嘛 summary 之後重新載入權重。</p></details>
+<details class="quiz"><summary>3. 老師在訓練集上的準確率是 0.9998，在驗證集上是 0.871。這代表老師過擬合了嗎？這對蒸餾是好事還是壞事？</summary>
+<p>訓練與驗證之間差了 13 個百分點，是過擬合的典型樣子（雖然驗證準確率仍然不錯）。對蒸餾來說是壞事：學生是在訓練集上向老師學的，而老師在訓練集上的輸出幾乎是 one-hot，dark knowledge 只剩 0.15%，要靠很高的 T 才能挖出來。一個在訓練集上「沒那麼有把握」的老師，例如訓練時用了較強的增強或 label smoothing，可能是更好的老師。投影片 Boss 的建議之一「make your teacher much stronger」，換個角度看也可以是「讓老師在訓練集上不要那麼死背」。這段是推論，本書沒有重新訓練老師來驗證。</p></details>
+<details class="quiz"><summary>4. 把 logits 除以 T = 4，會不會改變老師對驗證集的準確率？</summary>
+<p>不會。除以一個正數不改變 logits 的大小順序，softmax 又是單調的，所以最大機率的類別不變，argmax 得到的預測完全相同，準確率還是 0.87143。改變的只有機率的軟硬程度，例如驗證集的平均最大機率從 0.9418 降到 0.6999。</p></details>
+<details class="quiz"><summary>5. 為什麼 <code>7_0.jpg</code>（米飯）在 T = 4 時仍有 97.96% 是米飯，<code>3_0.jpg</code>（蛋）在 T = 4 時卻只剩 82.67%？</summary>
+<p>因為兩張圖的 logits 差距不同。米飯那張最大的 logit（21.10）比第二大的（3.27）多了將近 18，除以 4 之後仍差 4.5，exp(4.46) ≈ 86 倍；蛋那張最大（11.39）比第二大（1.42）只多了將近 10，除以 4 之後差 2.5，exp(2.5) ≈ 12 倍。同一個 T，對「老師很確定」的圖軟化得少，對「老師有點猶豫」的圖軟化得多。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Geoffrey Hinton、Oriol Vinyals、Jeff Dean，<a href="https://arxiv.org/abs/1503.02531">Distilling the Knowledge in a Neural Network</a>（2015）：投影片 p.17 引用的蒸餾原始論文，第 2 節講溫度與 dark knowledge。</li>
+<li>Kaiming He 等，<a href="https://arxiv.org/abs/1512.03385">Deep Residual Learning for Image Recognition</a>（2015）：ResNet 與 BasicBlock。</li>
+<li>Rafael Müller、Simon Kornblith、Geoffrey Hinton，<a href="https://arxiv.org/abs/1906.02629">When Does Label Smoothing Help?</a>（2019）：發現用 label smoothing 訓練的老師反而是比較差的蒸餾老師，因為它抹掉了類別之間的相似性資訊。和本章「太自信的老師」是同一個問題的另一面。</li>
+<li>PyTorch 文件：<a href="https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm2d.html">BatchNorm2d</a>，<code>momentum</code> 與 running 統計量在訓練、評估模式下的行為。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch02.html">← 第 2 章</a><a href="ch04.html">第 4 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW13 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW13 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

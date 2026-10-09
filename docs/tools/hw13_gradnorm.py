@@ -34,4 +34,4 @@ out = dict(steps=len(a), clipped=int((a > cfg['grad_norm_max']).sum()), max=floa
            median=float(np.median(a)), first10=[round(x, 3) for x in norms[:10]], per_epoch_max=[round(float(a[i*155:(i+1)*155].max()), 3) for i in range(cfg['n_epochs'])])
 print(out)
 json.dump(out, open(sys.argv[1], 'w'), indent=1)
-import os; os._exit(0)
+sys.stdout.flush(); import os; os._exit(0)
