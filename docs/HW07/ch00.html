@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 0 章　全貌 — HW07 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW07 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「閱讀理解」書桌——近黑的冷灰底、紙白的字、沙金色只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：原版 灰、LR 衰減 藍、隨機視窗 橘、換模型 綠／紫／洋紅／黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與 HW13、HW14 相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #e0a458;      /* 沙金：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(224, 164, 88, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #e0a458;
+  /* 角色色 */
+  --r-base: #8b949e; --r-decay: #3987e5; --r-window: #d95926; --r-m1: #199e70;
+  --r-m2: #9085e9; --r-m3: #d55181; --r-m4: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "[CLS] 問題 ≤40 [SEP] 文章視窗 150 [SEP]　→　BERT　→　start／end 位置　·　DRCD 繁中閱讀理解";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fbf4ea; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #1b1914; border-color: rgba(224, 164, 88, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1a1208; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.base { --rc: var(--r-base); } .role.decay { --rc: var(--r-decay); } .role.window { --rc: var(--r-window); }
+.role.m1 { --rc: var(--r-m1); } .role.m2 { --rc: var(--r-m2); } .role.m3 { --rc: var(--r-m3); }
+.role.m4 { --rc: var(--r-m4); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="index.html">← 目錄</a><a href="ch01.html">第 1 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW07 讀碼教材</p>
+  <h1>第 0 章　全貌：一篇文章、一個問題、兩排分數</h1>
+  <p class="chap-lead">這一章先把整份作業跑一遍：題目要什麼、資料長什麼樣子、模型由哪些零件組成、指令怎麼下、跑多久、印出什麼。讀完這章，你手上會有一個 101,678,594 個參數、在 dev 上答對四成多的模型，也會知道一件讓人不安的事：同一份程式、同一個種子，跑兩次分數就不一樣。後面八章會一層一層拆開這個模型為什麼答錯，以及怎麼讓它答對更多。</p>
+</header>
+<main>
+
+<h2 id="task">0.1　題目：從文章裡框出答案</h2>
+<p>HW07 的任務叫 <strong>extractive question answering</strong>（抽取式問答）。給模型一段文章和一個問題，答案保證是文章裡的一段連續文字，模型只要指出這段文字的起點和終點。投影片 p.8 的例子：</p>
+<div class="note"><h4>投影片 p.8 的例子</h4>
+<p>文章：新加坡、馬來西亞的華文學術界在 1970年代後開始統一使用簡體中文；然而繁體字在媒體中普遍存在著，例如華人商店的招牌、舊告示及許多非學術類中文書籍……</p>
+<p>問題：新加坡的華文學術界在哪個年代後開始使用簡體中文？　答案：1970<br>問題：馬來西亞的華人商店招牌主要使用什麼文字？　答案：繁體字</p>
+</div>
+<p>「抽取式」三個字限制了模型能做的事：它不能用自己的話回答，也不能回答「文章沒提到」；它輸出的永遠是原文的某一段。這讓問題變得很好定義。模型對文章的每一個位置打兩個分數：這裡是答案起點的分數（start），和這裡是答案終點的分數（end）。選出最好的一對起點與終點，中間的文字就是答案。整份作業從頭到尾都在處理這「兩排分數」：怎麼讓模型打出好的分數（第 3、5、6、7 章），以及怎麼從分數挑出答案（第 4 章）。</p>
+<p>評分用 <strong>Exact Match</strong>（EM，完全相符）：預測的字串和標準答案一個字都不差才算對，差一個字、多一個空白都算錯。投影片 p.26 把它稱為 accuracy，本書統一叫 EM。這個標準很嚴：標準答案是「64所」，回答「64」就是錯。</p>
+
+<h3 id="rules">規則、基準線與報告</h3>
+<p>Kaggle 的測試集有 4,957 題，public 與 private 排行榜各約一半（p.26），一天最多上傳 5 次（p.32）。只能用 Hugging Face 上公開的預訓練模型，不准用額外資料，也不准手動修改預測檔，違規的話學期成績乘 0.9（p.20、p.32）。評分共 10 分（p.25）：四條基準線各在 public、private 拿 0.5 分，共 4 分；程式碼 2 分；報告 4 分。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>基準線</th><th class="num">Kaggle EM</th><th>投影片的提示（p.16）</th><th>T4 估計時間（p.16）</th><th>本書</th></tr></thead>
+<tbody>
+<tr><td>Simple</td><td class="num">0.45139</td><td>照跑範例</td><td>20 分鐘（fp16 8 分鐘）</td><td>本章</td></tr>
+<tr><td>Medium</td><td class="num">0.65792</td><td>線性學習率衰減、調 <code>doc_stride</code></td><td>20 分鐘</td><td>第 2、4、5 章</td></tr>
+<tr><td>Strong</td><td class="num">0.78136</td><td>改善前處理、換預訓練模型</td><td>1 小時</td><td>第 6、7 章</td></tr>
+<tr><td>Boss</td><td class="num">0.84388</td><td>改善後處理，再把前面的提示做得更好</td><td>6 小時</td><td>第 4、7 章</td></tr>
+</tbody>
+</table></div>
+<p>報告有兩題（p.30），各 2 分。第 1 題：模型預測出起點、終點的分數之後，你用什麼規則決定最後的答案範圍，而且規則必須和範例不同（第 4 章）。第 2 題：換一個 Hugging Face 上的預訓練模型，例如從 BERT 換成 BERT-wwm-ext 或 RoBERTa，說明它的表現，以及它和 BERT 在架構、預訓練目標上的差別（第 7 章）。</p>
+<div class="warn"><h4>本書只報 dev 的 EM</h4>
+<p>測試集沒有答案（投影片 p.7：Testing: No answer!），本機算不出 Kaggle 分數。本書一律報 <strong>dev</strong>（4,131 題、有答案）上的 EM。dev 和測試集的組成不同：測試集有 1,464 題來自 ODSQA，是語音辨識轉出來的文字，帶著辨識錯字（例如把「梵語」辨識成「當犯人」），dev 裡沒有這種題目。所以本書不說「過了哪條基準線」，只說「dev 上到了多少」。</p>
+</div>
+
+<h2 id="data">0.2　資料：DRCD 與它的語音版</h2>
+<p>資料來自三個資料集（p.6）。<strong>DRCD</strong>（Delta Reading Comprehension Dataset，台達閱讀理解資料集）是台達電子整理的繁體中文閱讀理解資料，文章取自中文維基百科，問題由人工撰寫。<strong>DRCD-TTS</strong> 把 DRCD 的文章用語音合成（text-to-speech）念出來，再用語音辨識轉回文字，所以文字裡帶著辨識錯誤。<strong>ODSQA</strong>（Open-Domain Spoken Question Answering）是另一份語音問答資料。三個檔的組成與規模：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>檔案</th><th>來源（p.6）</th><th class="num">文章</th><th class="num">問題</th><th class="num">文章平均 token</th><th class="num">文章最長</th></tr></thead>
+<tbody>
+<tr><td><code>hw7_train.json</code></td><td>DRCD + DRCD-TTS</td><td class="num">10,524</td><td class="num">31,690</td><td class="num">390.2</td><td class="num">1,679</td></tr>
+<tr><td><code>hw7_dev.json</code></td><td>DRCD + DRCD-TTS</td><td class="num">1,490</td><td class="num">4,131</td><td class="num">414.4</td><td class="num">1,126</td></tr>
+<tr><td><code>hw7_test.json</code></td><td>DRCD + ODSQA</td><td class="num">1,586</td><td class="num">4,957</td><td class="num">416.7</td><td class="num">950</td></tr>
+</tbody>
+</table></div>
+<p>每個檔都是一個 JSON 物件，裡面有兩個清單：<code>paragraphs</code> 是文章字串，<code>questions</code> 是題目。一篇文章平均配 3 題左右，題目用 <code>paragraph_id</code> 指到文章。dev 的第 1 題長這樣：</p>
+<pre class="shell">{"id": 1, "paragraph_id": 428, "question_text": "1338年白蓮教徒起義的結果是?",
+ "answer_text": "失敗", "answer_start": 206, "answer_end": 207}</pre>
+<p><code>answer_start</code> 與 <code>answer_end</code> 是答案在文章字串裡的<strong>字元</strong>位置，兩端都包含：第 428 篇文章的第 206、207 個字就是「失敗」（原文：「1338年江西袁州彭和尚、周子旺等白蓮教徒起義失敗，彭和尚逃至淮西」）。實測三萬多題訓練資料，<code>answer_text</code> 和原文切片全部一致。測試集的這三欄是空的：前 3,493 題是 <code>null</code>，後 1,464 題是字串 <code>'null'</code>，這 1,464 題就是 ODSQA 的口語題。</p>
+<p>表中的 token 是 BERT 的 tokenizer 切出來的單位。中文幾乎是一個字一個 token，所以「文章平均 414 個 token」大約就是 414 個字。這個數字很關鍵：BERT 一次最多只能讀 512 個 token，範例程式更只給文章 150 個 token 的空間，所以<strong>幾乎每一篇文章都放不進模型</strong>（dev 100% 的文章超過 150 個 token），必須切成好幾段「視窗」分別處理。這是第 2 章的主題。</p>
+
+<h2 id="model">0.3　模型總覽：BERT-base 加一個 768→2 的線性層</h2>
+<p>模型在 <code>train.py</code> 的兩行裡建好：</p>
+<figure class="listing"><figcaption>train.py:36–37 — 載入預訓練的 BERT 與對應的 tokenizer</figcaption>
+<pre class="py" data-hot="36"><code>model = BertForQuestionAnswering.from_pretrained("bert-base-chinese").to(device)
+tokenizer = BertTokenizerFast.from_pretrained("bert-base-chinese")</code></pre></figure>
+<p><code>bert-base-chinese</code> 是 Google 在 2018 年隨 BERT 論文釋出的中文模型，用中文維基百科預訓練（簡體與繁體都有）。<code>BertForQuestionAnswering</code> 是 Hugging Face transformers 套件裡的一個類別：BERT 本體，加上一個把每個位置的 768 維向量變成 2 個數（start 分數、end 分數）的線性層。這個線性層在預訓練的權重裡不存在，所以載入時會被隨機初始化，transformers 也會印出一份報告提醒你（0.4 節）。整個模型的資料流：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 470" role="img" aria-label="BertForQuestionAnswering 的架構與每一步的張量形狀：輸入 input_ids、token_type_ids、attention_mask 三個形狀為 視窗數乘 193 的整數張量；經過 embeddings（詞嵌入、位置嵌入、句子類型嵌入相加再做 LayerNorm）得到 視窗數乘 193 乘 768；經過 12 層 Transformer encoder，形狀不變；最後的 qa_outputs 線性層 768 到 2，切成 start_logits 與 end_logits，各為 視窗數乘 193">
+  <defs>
+    <marker id="ar0" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#9aa5b1"/>
+    </marker>
+  </defs>
+  <rect x="20" y="18" width="860" height="70" rx="10" class="s-box"/>
+  <text class="s-lbl" x="40" y="46" font-weight="700">輸入（一題切成 W 個視窗，每個 193 個 token）</text>
+  <text class="s-mono" x="40" y="72">input_ids (W, 193)　·　token_type_ids (W, 193)　·　attention_mask (W, 193)</text>
+
+  <rect x="20" y="118" width="860" height="80" rx="10" class="s-box"/>
+  <text class="s-lbl" x="40" y="146" font-weight="700">embeddings　16,622,592 參數</text>
+  <text class="s-mono" x="40" y="172">詞嵌入 21128×768 ＋ 位置嵌入 512×768 ＋ 句子類型嵌入 2×768 → 相加 → LayerNorm</text>
+  <text class="s-mono" x="700" y="146">→ (W, 193, 768)</text>
+
+  <rect x="20" y="228" width="860" height="110" rx="10" class="s-box" stroke="#e0a458"/>
+  <text class="s-lbl" x="40" y="256" font-weight="700">encoder：12 層 Transformer　每層 7,087,872 參數，共 85,054,464</text>
+  <text class="s-mono" x="40" y="282">self-attention：Q、K、V、輸出 各 768×768（12 個頭，每頭 64 維）→ 殘差 → LayerNorm</text>
+  <text class="s-mono" x="40" y="306">feed-forward：768→3072→768（GELU）→ 殘差 → LayerNorm</text>
+  <text class="s-mono" x="700" y="256">→ (W, 193, 768)</text>
+  <text class="s-sm" x="40" y="328">每一層的輸入和輸出形狀相同；attention_mask 讓 padding 的位置不被注意到</text>
+
+  <rect x="20" y="368" width="420" height="90" rx="10" class="s-box"/>
+  <text class="s-lbl" x="40" y="396" font-weight="700">qa_outputs：Linear(768, 2)　1,538 參數</text>
+  <text class="s-mono" x="40" y="422">(W, 193, 768) → (W, 193, 2)</text>
+  <text class="s-sm" x="40" y="446">預訓練權重裡沒有，載入時隨機初始化</text>
+
+  <rect x="470" y="368" width="410" height="90" rx="10" class="s-box"/>
+  <text class="s-lbl" x="490" y="396" font-weight="700">切成兩排分數</text>
+  <text class="s-mono" x="490" y="422">start_logits (W, 193)</text>
+  <text class="s-mono" x="490" y="446">end_logits   (W, 193)</text>
+
+  <line x1="450" y1="90" x2="450" y2="112" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#ar0)"/>
+  <line x1="450" y1="200" x2="450" y2="222" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#ar0)"/>
+  <line x1="230" y1="340" x2="230" y2="362" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#ar0)"/>
+  <line x1="442" y1="413" x2="464" y2="413" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#ar0)"/>
+</svg>
+<figcaption>圖 0.1　<code>BertForQuestionAnswering</code>（bert-base-chinese）的架構與張量形狀。W 是視窗數：訓練時每題 1 個視窗、一個 batch 32 題，所以 W = 32；評估時一題切幾個視窗 W 就是幾（dev 平均 3.32、最多 8）。193 = 1（[CLS]）+ 40（問題）+ 1（[SEP]）+ 150（文章）+ 1（[SEP]），第 2 章細講。</figcaption>
+</figure>
+
+<p>參數可以手算。設定檔寫著詞表 21,128 個 token、隱藏維度 768、12 層、12 個注意力頭、feed-forward 中間層 3,072、位置上限 512、句子類型 2 種。一個線性層 <code>Linear(a, b)</code> 有 a·b 個權重加 b 個偏差；一個 LayerNorm 有 768 個縮放加 768 個平移。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>部分</th><th>手算</th><th class="num">參數</th><th class="num">佔比</th></tr></thead>
+<tbody>
+<tr><td>詞嵌入</td><td>21,128 × 768</td><td class="num">16,226,304</td><td class="num">16.0%</td></tr>
+<tr><td>位置嵌入、句子類型嵌入、LayerNorm</td><td>512 × 768 + 2 × 768 + 2 × 768</td><td class="num">396,288</td><td class="num">0.4%</td></tr>
+<tr><td>一層 self-attention</td><td>4 × (768 × 768 + 768) + 2 × 768</td><td class="num">2,363,904</td><td class="num"></td></tr>
+<tr><td>一層 feed-forward</td><td>(768 × 3,072 + 3,072) + (3,072 × 768 + 768) + 2 × 768</td><td class="num">4,723,968</td><td class="num"></td></tr>
+<tr><td>12 層 encoder</td><td>12 × (2,363,904 + 4,723,968) = 12 × 7,087,872</td><td class="num">85,054,464</td><td class="num">83.6%</td></tr>
+<tr><td>qa_outputs</td><td>768 × 2 + 2</td><td class="num">1,538</td><td class="num">0.0015%</td></tr>
+<tr><td><strong>合計</strong></td><td></td><td class="num"><strong>101,678,594</strong></td><td class="num">100%</td></tr>
+</tbody>
+</table></div>
+<p>用 <code>sum(p.numel() for p in model.parameters())</code> 實際數一次，得到的也是 101,678,594（工具 <code>docs/tools/hw07_ch00.py</code>，輸出在 <code>hw07_ch00.txt</code>）。這張表有兩件事值得記住。第一，<strong>真正為這份作業新學的參數只有 1,538 個</strong>，其他一億多個都是預訓練好的，微調只是在它們的基礎上小幅調整。第二，詞嵌入就佔了 16%：中文詞表有兩萬多個字，每個字一個 768 維的向量。常聽到的「BERT-base 有 1.1 億參數」是英文版（詞表 30,522）再加上 pooler 的數字；問答模型用不到 pooler（判斷兩句是否相連用的那一層），所以這裡沒有它。</p>
+
+<h2 id="run">0.4　跑一次：5 分半鐘、dev 0.416</h2>
+<p>在 <code>HW07/</code> 目錄下執行：</p>
+<pre class="shell cmd">$ cd HW07
+$ ../.venv/bin/python train.py
+$ ../.venv/bin/python test.py</pre>
+<p><code>train.py</code> 載入模型時，transformers 5 會先印一份載入報告（2022 年的 4.5.0 印的是一段 warning，意思相同）：</p>
+<pre class="shell">[transformers] BertForQuestionAnswering LOAD REPORT from: bert-base-chinese
+Key                                        | Status     |
+-------------------------------------------+------------+-
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |
+bert.pooler.dense.weight                   | UNEXPECTED |
+cls.predictions.transform.dense.weight     | UNEXPECTED |
+bert.pooler.dense.bias                     | UNEXPECTED |
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |
+cls.seq_relationship.weight                | UNEXPECTED |
+cls.predictions.transform.dense.bias       | UNEXPECTED |
+cls.predictions.bias                       | UNEXPECTED |
+cls.seq_relationship.bias                  | UNEXPECTED |
+qa_outputs.bias                            | MISSING    |
+qa_outputs.weight                          | MISSING    |</pre>
+<p>UNEXPECTED 是「預訓練檔裡有、但問答模型用不到」的權重：<code>cls.predictions</code> 是預訓練時猜被遮住的字用的頭，<code>cls.seq_relationship</code> 與 <code>bert.pooler</code> 是猜兩句是否相連用的。MISSING 是「問答模型需要、但檔裡沒有」的權重，就是上一節那 1,538 個 <code>qa_outputs</code> 參數，它們被隨機初始化。範例的註解說這段訊息可以放心忽略（<code>train.py:39</code>），確實如此：這正是「拿預訓練模型來微調」該有的樣子。</p>
+<p>接著是訓練。1 個 epoch 是 991 步（31,690 題 ÷ 32 題一批，無條件進位），每 100 步印一次這 100 步的平均 loss 與 acc；最後評估 dev，存檔。下面是決定性模式（0.5 節）下跑出來的完整輸出：</p>
+<pre class="shell">Start Training ...
+Epoch 1 | Step 100 | loss = 1.474, acc = 0.484
+Epoch 1 | Step 200 | loss = 0.834, acc = 0.674
+Epoch 1 | Step 300 | loss = 0.777, acc = 0.689
+Epoch 1 | Step 400 | loss = 0.686, acc = 0.719
+Epoch 1 | Step 500 | loss = 0.677, acc = 0.717
+Epoch 1 | Step 600 | loss = 0.664, acc = 0.726
+Epoch 1 | Step 700 | loss = 0.625, acc = 0.740
+Epoch 1 | Step 800 | loss = 0.589, acc = 0.747
+Epoch 1 | Step 900 | loss = 0.567, acc = 0.742
+Evaluating Dev Set ...
+Validation | Epoch 1 | acc = 0.416
+Saving Model ...</pre>
+<p>在本機的 RTX PRO 4000（24 GB）上，訓練 991 步花 4 分 26 秒（每秒 3.7 步），dev 4,131 題花 56 秒；<code>test.py</code> 對 4,957 題推論花 1 分 7 秒。投影片估計在 Colab 的 T4 上要 20 分鐘（p.16）。存下來的 <code>saved_model/model.safetensors</code> 是 406,737,656 bytes，正好是 101,678,594 個 32 位元浮點數（每個 4 bytes）再加一點檔頭。</p>
+<p>訓練的 acc 是「在含答案的那個視窗裡，start 和 end 兩個位置都猜對」的比例，最後幾百步在 0.74 左右；dev 的 acc（就是 EM）卻只有 0.416。差了三成多，不是因為過擬合（只看過每題一次），而是兩者量的根本不是同一件事：訓練時模型拿到的視窗保證含有答案，而且答案剛好在視窗正中央；dev 要在 3、4 個視窗裡自己找出答案在哪，還要把 token 正確地換回文字。這個落差是第 2、3、6 章的主線。</p>
+
+<h3 id="examples">打開預測看一看</h3>
+<p>投影片 p.21 的提示是「打開你的預測檔，看看哪裡錯了」。dev 前 8 題的預測：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>#</th><th>問題</th><th>標準答案</th><th>模型的回答</th><th>EM</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>福岡市的兩大中心地區指的是博多地區，還有哪一地區?</td><td>天神地區</td><td>（空字串）</td><td>✗</td></tr>
+<tr><td>1</td><td>1338年白蓮教徒起義的結果是?</td><td>失敗</td><td>失敗</td><td>✓</td></tr>
+<tr><td>2</td><td>世界摔角娛樂的主要營收來源是?</td><td>職業摔角比賽</td><td>職業摔角比賽</td><td>✓</td></tr>
+<tr><td>3</td><td>1960年的時候，當時中國有幾所全國重點大學?</td><td>64所</td><td>華南理工大學</td><td>✗</td></tr>
+<tr><td>4</td><td>中國權勢和財富的象徵指的是什麼?</td><td>納妾制度</td><td>中共將其看作統戰工作</td><td>✗</td></tr>
+<tr><td>5</td><td>中華民國的首都是哪一個城市?</td><td>臺北市</td><td>菲律賓</td><td>✗</td></tr>
+<tr><td>6</td><td>微積分學的醞釀時期指的哪一個世紀的前期?</td><td>17世紀</td><td>1670年</td><td>✗</td></tr>
+<tr><td>7</td><td>哪一個幕府擁立量仁親王即位?</td><td>鐮倉幕府</td><td>鐮倉幕府</td><td>✓</td></tr>
+</tbody>
+</table></div>
+<p>錯法各不相同。第 3、5、6 題的回答至少是對的「類型」（一個數量、一個地名、一個時間），只是挑錯了位置；第 4 題回答了一整個不相干的片段。最奇怪的是第 0 題：回答是空字串。拆開來看，這篇文章有 460 個 token，被切成 4 個視窗，答案「天神地區」在第 3 個視窗裡；但第 1 個視窗的 start 最高分在位置 44、end 最高分在位置 33，<strong>終點在起點之前</strong>，切出來是空的，而它的分數（−0.13）偏偏是四個視窗裡最高的，就被選中了。這是投影片 p.21 點名的 bug，第 4 章會修掉它，並量出它在 dev 上害了多少題。</p>
+
+<h2 id="nondeterminism">0.5　同一份程式跑兩次，分數就不一樣</h2>
+<p><code>train.py</code> 一開頭就固定了所有的亂數種子：</p>
+<figure class="listing"><figcaption>train.py:15–24 — 固定種子，並要求 cuDNN 用決定性的演算法</figcaption>
+<pre class="py" data-hot="22-23"><code>def same_seeds(seed):
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+same_seeds(0)</code></pre></figure>
+<p>照理說，種子固定，結果就應該固定。實際跑了四次：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>執行</th><th class="num">dev EM</th><th>說明</th></tr></thead>
+<tbody>
+<tr><td>notebook 原樣（參照版）</td><td class="num">0.445</td><td>一般模式</td></tr>
+<tr><td><code>train.py</code></td><td class="num">0.464</td><td>一般模式，和上一列是同一份程式碼</td></tr>
+<tr><td>notebook 原樣（參照版）</td><td class="num">0.416</td><td>決定性模式</td></tr>
+<tr><td><code>train.py</code></td><td class="num">0.416</td><td>決定性模式，和上一列逐位元相同</td></tr>
+</tbody>
+</table></div>
+<p>一般模式下，同樣的程式碼、同樣的種子，dev EM 一次 0.445、一次 0.464。再把同一支程式只跑 100 步、跑兩次，所有權重加總分別是 −12803.044 與 −12797.275，loss 也一個 1.474、一個 1.471：<strong>第 100 步就已經分岔了</strong>。原因不在種子，而在 GPU 上的某些運算本身就不保證每次結果相同。叫 PyTorch 自己指認：開 <code>torch.use_deterministic_algorithms(True, warn_only=True)</code> 訓練幾步，它只對一個運算發出警告：「Memory Efficient attention defaults to a non-deterministic algorithm」。transformers 5 的 BERT 預設用 PyTorch 內建的 <code>scaled_dot_product_attention</code> 算注意力，GPU 上會挑一個叫 memory-efficient attention 的快速實作；它在反向傳播時由許多執行緒同時把梯度加到同一塊記憶體，加法的先後順序每次不同，浮點數的捨入誤差就不同。誤差極小，但經過幾百步的訓練會被放大。<code>cudnn.deterministic = True</code> 只管 cuDNN 的運算（主要是卷積），管不到注意力。</p>
+<p>PyTorch 提供了全面的開關 <code>torch.use_deterministic_algorithms(True)</code>：所有運算都改用決定性的版本，沒有決定性版本的就直接報錯。本書寫了一個不改原檔就能套用的小工具 <code>docs/tools/hw07_det.py</code>：</p>
+<pre class="shell cmd">$ CUBLAS_WORKSPACE_CONFIG=:4096:8 PYTHONPATH=. ../.venv/bin/python ../docs/tools/hw07_det.py train.py</pre>
+<p>開了之後，跑兩次 100 步，權重加總都是 −12801.912，完全相同；完整跑完的 dev EM 是 0.416。代價是變慢一點（1 個 epoch 從 4 分 26 秒變成 4 分 31 秒）。<code>CUBLAS_WORKSPACE_CONFIG</code> 是 NVIDIA 的矩陣運算函式庫要求的設定，不設的話 PyTorch 會報錯提醒你。</p>
+<div class="warn"><h4>這件事改變了全書的讀法</h4>
+<p>只因為 GPU 的加法順序不同，dev EM 就在 0.416 到 0.464 之間跳了將近 5 個百分點。這比很多「改良」帶來的進步還大。所以本書所有的實驗都開決定性模式（同一個設定跑兩次結果相同），並且每個設定換 3 個種子各跑一次：種子之間的差距，就是判斷「這個改良是不是真的有用」的尺。差距比種子之間的差距還小，就不算數。第 3 章會再回來看非決定性從哪裡來，第 5 章會量出種子之間到底差多少。</p>
+</div>
+<p>順帶一提，dev 0.416 低於 Simple 基準線 0.45139，但這不代表範例「過不了 Simple」：一來 dev 和測試集不同（0.1 節），二來同一份程式在一般模式下也跑出過 0.445 與 0.464。這個 repo 之前用 bert-base-chinese 在 Kaggle 上交過一次，拿到 0.49495（記在舊版 <code>train.py</code> 的註解裡；當時用了幾個 epoch、哪個種子，沒有留下紀錄）。</p>
+
+<h2 id="split">0.6　notebook 拆成哪些檔</h2>
+<p>原版是一份 Colab notebook。本 repo 把它拆成五個檔（<a href="index.html#layer-env">目錄頁</a>有對照表）：<code>dataset.py</code>、<code>postprocess.py</code>、<code>legacy_adamw.py</code>、<code>train.py</code>、<code>test.py</code>。改動只有兩處：<code>from transformers import AdamW</code> 換成從 <code>legacy_adamw.py</code> 匯入同一份程式（transformers 5 已經刪掉它），<code>evaluate</code> 多一個 <code>tokenizer</code> 參數（原本讀全域變數）。</p>
+<p>拆完之後怎麼確定沒有改變結果？做法和前幾本書一樣：用 <code>docs/tools/hw07_make_ref.py</code> 把 notebook 的程式格原樣串成一支「參照」腳本（只註解掉 <code>!gdown</code>、<code>!pip</code> 這類 shell 指令，並改從 <code>legacy_adamw.py</code> 匯入 AdamW），跑一次；再跑拆好的 <code>train.py</code> 與 <code>test.py</code>，比對三樣東西：印出的每一行、存下的權重（每一個張量用 <code>torch.equal</code> 比）、<code>result.csv</code>（逐位元組比）。有了 0.5 節的教訓，這個比對必須在決定性模式下做；一般模式下，連參照版自己跑兩次都對不上。在決定性模式下，三樣全部相同。</p>
+<p>還有一個不影響結果、但讀程式時會看到的小改動：原版註解說存檔會得到 <code>pytorch_model.bin</code>，現在的 transformers 預設存成 <code>model.safetensors</code>。safetensors 只存張量、不存任何 Python 物件，載入時不會執行任意程式碼，比舊的 pickle 格式安全，這幾年已經是 Hugging Face 的標準格式。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>HW07 是抽取式問答：答案是文章裡的一段連續文字，模型對每個位置打 start、end 兩個分數。評分用 Exact Match，一字不差才算對。四條基準線 0.451／0.658／0.781／0.844 是 Kaggle 測試集的數字，本書只報 dev 的 EM。</li>
+<li>資料是繁體中文的 DRCD 加上語音版 DRCD-TTS；測試集另含 ODSQA 的口語題（1,464 題，dev 沒有）。文章平均 400 多個 token，幾乎全部放不進範例給的 150 個 token，必須切視窗。</li>
+<li>模型是 bert-base-chinese 加一個 <code>Linear(768, 2)</code>：101,678,594 個參數，其中 encoder 佔 83.6%、詞嵌入 16%，新學的問答頭只有 1,538 個。</li>
+<li>原版訓練 1 個 epoch（991 步）4 分半，dev 評估 1 分鐘。訓練 acc 0.74，dev EM 只有 0.416：兩者量的不是同一件事。</li>
+<li>固定了種子，GPU 的非決定性運算仍讓 dev EM 在 0.416–0.464 之間變動。開 <code>torch.use_deterministic_algorithms(True)</code> 才能逐位元重現；全書的實驗都這樣跑，並用 3 個種子量雜訊。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 文章是「福岡市的兩大中心地區是中央區的天神地區和博多站附近的博多地區」，標準答案是「天神地區」。下面哪些回答會被 Exact Match 判為正確：「天神地區」「天神」「中央區的天神地區」「天神地區 」（後面多一個空白）？</summary>
+<p>只有「天神地區」。EM 要求字串完全相同，少字（天神）、多字（中央區的天神地區）、多一個空白都算錯。這也是為什麼範例的 <code>evaluate</code> 最後要 <code>answer.replace(' ','')</code>：tokenizer 把 token 換回文字時會在 token 之間插入空白，不拿掉就全部判錯（第 1、4 章）。</p></details>
+<details class="quiz"><summary>2. 如果把 <code>bert-base-chinese</code> 換成一個 24 層、隱藏維度 1,024、feed-forward 中間層 4,096、詞表一樣是 21,128 的模型（例如第 7 章的 RoBERTa-large），問答頭會有多少參數？encoder 一層大約多少參數？</summary>
+<p>問答頭是 <code>Linear(1024, 2)</code>：1,024 × 2 + 2 = 2,050。encoder 一層：attention 4 × (1,024² + 1,024) + 2,048 = 4,200,448；feed-forward (1,024 × 4,096 + 4,096) + (4,096 × 1,024 + 1,024) + 2,048 = 8,395,776；合計 12,596,224，24 層 302,309,376，約 3.02 億。這是手算，第 7 章會用 PyTorch 實際數一次。</p></details>
+<details class="quiz"><summary>3. 訓練時印出的 acc 到最後是 0.74，dev EM 是 0.416。有人說「這是過擬合，應該加 dropout」。對嗎？</summary>
+<p>不對。只訓練了 1 個 epoch，每題只看過一次，談不上把訓練資料背起來。兩個數字量的是不同的事：訓練 acc 是在「保證含答案、答案還在正中央」的單一視窗裡猜 start 與 end；dev EM 要在多個視窗裡自己找答案、處理 end 在 start 之前之類的情況、再把 token 換回一字不差的文字。要比較是否過擬合，得在 dev 上用和訓練相同的方式量（第 3 章）。</p></details>
+<details class="quiz"><summary>4. 你改了一行程式，dev EM 從 0.430 變成 0.445。能說這個改動有用嗎？</summary>
+<p>不能。在一般（非決定性）模式下，連一行都不改，同一份程式就跑出過 0.445 與 0.464。至少要在決定性模式下比較，並且換幾個種子各跑一次，看改動帶來的差距是否明顯大於種子之間的差距。</p></details>
+<details class="quiz"><summary>5. <code>saved_model/model.safetensors</code> 是 406,737,656 bytes。用參數量估算，這個大小合理嗎？如果改存成 16 位元（fp16），大約會變多大？</summary>
+<p>合理：101,678,594 個參數 × 4 bytes = 406,714,376 bytes，剩下的 23,280 bytes 是檔頭（記錄每個張量的名稱、形狀、位置）。改成 fp16 每個參數 2 bytes，約 203 MB。這是推算，沒有實際存過。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Jacob Devlin 等，<a href="https://arxiv.org/abs/1810.04805">BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding</a>（2018）：投影片 p.4 指定的論文。第 4.2 節是 SQuAD 問答的做法，和本作業的模型完全相同：只加一組 start、end 向量。</li>
+<li>李宏毅，〈BERT 與它的家族〉（2021 課程投影片 <a href="https://speech.ee.ntu.edu.tw/~hylee/ml/ml2021-course-data/bert_v8.pdf#page=23">bert_v8.pdf</a> 第 23 頁起）：投影片 p.5 指定的抽取式問答講解。</li>
+<li>Chih Chieh Shao 等，<a href="https://arxiv.org/abs/1806.00920">DRCD: a Chinese Machine Reading Comprehension Dataset</a>（2018）：資料集的論文。</li>
+<li>PyTorch 文件 <a href="https://pytorch.org/docs/stable/notes/randomness.html">Reproducibility</a>：哪些運算不是決定性的，以及 <code>use_deterministic_algorithms</code> 的說明。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="index.html">← 目錄</a><a href="ch01.html">第 1 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW07 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW07 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 9391.47it/s]
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (546 > 512). Running this sequence through the model will result in indexing errors
+config: {'vocab_size': 21128, 'hidden_size': 768, 'num_hidden_layers': 12, 'num_attention_heads': 12, 'intermediate_size': 3072, 'max_position_embeddings': 512, 'type_vocab_size': 2}
+embeddings           16,622,592
+encoder.layer[*]     85,054,464
+qa_outputs           1,538
+total 101,678,594
+layer 0:
+   attention.self.query.weight                   (768, 768) 589,824
+   attention.self.query.bias                     (768,) 768
+   attention.self.key.weight                     (768, 768) 589,824
+   attention.self.key.bias                       (768,) 768
+   attention.self.value.weight                   (768, 768) 589,824
+   attention.self.value.bias                     (768,) 768
+   attention.output.dense.weight                 (768, 768) 589,824
+   attention.output.dense.bias                   (768,) 768
+   attention.output.LayerNorm.weight             (768,) 768
+   attention.output.LayerNorm.bias               (768,) 768
+   intermediate.dense.weight                     (3072, 768) 2,359,296
+   intermediate.dense.bias                       (3072,) 3,072
+   output.dense.weight                           (768, 3072) 2,359,296
+   output.dense.bias                             (768,) 768
+   output.LayerNorm.weight                       (768,) 768
+   output.LayerNorm.bias                         (768,) 768
+qa_outputs Linear(in_features=768, out_features=2, bias=True)
+--- dev 0: windows (1, 4, 193) start_logits (4, 193)
+   Q: 福岡市的兩大中心地區指的是博多地區，還有哪一地區?
+   gold: 天神地區 | pred:  | EM False
+   paragraph: 福岡市位於九州北部，大部分轄區位於福岡平原，市轄區北至伸入博多灣的沙洲海之中道及陸連島志賀島，西至糸島半島。福岡市還有能古島、玄界島、小呂島等離島。為獲得平地，福岡市自20世紀開始就進行過多次大規模填海，以提供港口、住宅和商務用地。現在福岡市內大部分海岸線均是人工海岸。福岡市還在博多灣東部填海修築了人工島。由於福岡市大部分地區位於福岡平原，因此地形較為平坦。但福岡市西部和西南部的部分地區屬於脊振山
+--- dev 1: windows (1, 4, 193) start_logits (4, 193)
+   Q: 1338年白蓮教徒起義的結果是?
+   gold: 失敗 | pred: 失敗 | EM True
+--- dev 2: windows (1, 3, 193) start_logits (3, 193)
+   Q: 世界摔角娛樂的主要營收來源是?
+   gold: 職業摔角比賽 | pred: 職業摔角比賽 | EM True
+--- dev 3: windows (1, 3, 193) start_logits (3, 193)
+   Q: 1960年的時候，當時中國有幾所全國重點大學?
+   gold: 64所 | pred: 華南理工大學 | EM False
+--- dev 4: windows (1, 4, 193) start_logits (4, 193)
+   Q: 中國權勢和財富的象徵指的是什麼?
+   gold: 納妾制度 | pred: 中共將其看作統戰工作 | EM False
+--- dev 5: windows (1, 4, 193) start_logits (4, 193)
+   Q: 中華民國的首都是哪一個城市?
+   gold: 臺北市 | pred: 菲律賓 | EM False
+--- dev 6: windows (1, 4, 193) start_logits (4, 193)
+   Q: 微積分學的醞釀時期指的哪一個世紀的前期?
+   gold: 17世紀 | pred: 1670年 | EM False
+--- dev 7: windows (1, 3, 193) start_logits (3, 193)
+   Q: 哪一個幕府擁立量仁親王即位?
+   gold: 鐮倉幕府 | pred: 鐮倉幕府 | EM True
