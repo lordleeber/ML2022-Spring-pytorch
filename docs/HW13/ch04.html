@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 4 章　知識蒸餾 — HW13 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW13 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「壓縮實驗台」——近黑的冷灰底、紙白的字、薄荷青只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：老師 紫、學生 CE 灰、學生 KD 藍、架構變體 橘／青、剪枝 洋紅、量化 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與 HW14 相同，色盤沿用 HW14 2026-10-08 的 validate_palette.js 結果）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #5cc9ae;      /* 薄荷青：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(92, 201, 174, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #5cc9ae;
+  /* 角色色 */
+  --r-teacher: #9085e9; --r-ce: #8b949e; --r-kd: #3987e5; --r-arch1: #d95926;
+  --r-arch2: #199e70; --r-prune: #d55181; --r-quant: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "老師 ResNet-18 11,182,155 參數　→　學生 ≤ 100,000　·　Food-11　224×224 → 11 類";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #f2fbf8; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #141c1f; border-color: rgba(92, 201, 174, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #0b1613; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.teacher { --rc: var(--r-teacher); } .role.ce { --rc: var(--r-ce); } .role.kd { --rc: var(--r-kd); }
+.role.arch1 { --rc: var(--r-arch1); } .role.arch2 { --rc: var(--r-arch2); } .role.prune { --rc: var(--r-prune); }
+.role.quant { --rc: var(--r-quant); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW13 讀碼教材</p>
+  <h1>第 4 章　知識蒸餾：寫對了，卻沒有變好</h1>
+  <p class="chap-lead">這一章完成作業唯一的 TODO：知識蒸餾的 loss。先逐行讀懂它，再處理三個容易寫錯的細節：KL divergence 的方向、<code>reduction</code> 的選擇、為什麼要乘 T²。接著是 11 組實驗：CE 與蒸餾，T 從 1 到 8，α 為 0.5 與 0.9。結果會讓人失望——在範例學生身上，蒸餾沒有勝過單純的 cross entropy。本章的後半段試著回答為什麼。</p>
+</header>
+<main>
+
+<h2 id="todo">4.1　TODO 逐行：loss_fn_kd</h2>
+<p>notebook 的 Knowledge_Distillation 一節給的公式是：</p>
+<div class="eq">Loss = α · T² · KL(p ‖ q) + (1 − α) · (Original Cross Entropy Loss)<br>p = softmax(student's logits / T)，q = softmax(teacher's logits / T)</div>
+<p>兩項加權平均：第一項讓學生的軟化分布去貼近老師的軟化分布（<a href="ch03.html#temp">第 3 章</a>的溫度 T），第二項是平常和真實 label 算的 cross entropy，α 決定兩者的比重。本 repo 補上的寫法：</p>
+<figure class="listing"><figcaption>kd.py:7–16 — loss_fn_kd()（TODO 已填）</figcaption>
+<pre class="py" data-hot="11,12,14,15,16"><code>def loss_fn_kd(student_logits, labels, teacher_logits, alpha=0.5, temperature=1.0):
+    # ------------TODO-------------
+    # Refer to the above formula and finish the loss function for knowkedge distillation using KL divergence loss and CE loss.
+    # If you have no idea, please take a look at the provided useful link above.
+    student_log_probs = F.log_softmax(student_logits / temperature, dim=-1)
+    teacher_probs = F.softmax(teacher_logits / temperature, dim=-1)
+    # kl_div(input, target) = sum target * (log target - input), averaged over the batch
+    kd_loss = F.kl_div(student_log_probs, teacher_probs, reduction='batchmean')
+    ce_loss = F.cross_entropy(student_logits, labels)
+    return alpha * temperature ** 2 * kd_loss + (1 - alpha) * ce_loss</code></pre></figure>
+<ul>
+<li>第 11 行：學生的 logits 除以 T，取 <strong>log</strong>_softmax。<code>F.kl_div</code> 規定第一個參數是對數機率，傳一般的機率進去不會報錯，只會算出錯的數字。用 <code>log_softmax</code> 而不是 <code>softmax(...).log()</code>，是因為前者在數值上穩定：機率很小時，先算 softmax 再取 log 會得到 <code>-inf</code>。</li>
+<li>第 12 行：老師的 logits 同樣除以 T，取一般的 softmax，當作目標分布。老師的 logits 是在 <code>train.py</code> 的 <code>torch.no_grad()</code> 底下算的（<a href="ch01.html#step">第 1 章 1.4 節</a>），所以這一項不會把梯度傳回老師。</li>
+<li>第 14 行：KL divergence，<code>reduction='batchmean'</code>。4.3 節解釋為什麼不用預設值。</li>
+<li>第 15 行：和真實 label 的 cross entropy，用的是<strong>沒除以 T</strong> 的原始 logits。</li>
+<li>第 16 行：加權相加，KL 那一項多乘 T²（4.4 節）。</li>
+</ul>
+<p>報告第 2-1 題要求把這個函式整段貼上，並以 α = 0.5、T = 1.0 為預設值，也就是第 7 行的函式簽名。第 3 章已經預告：對這個老師來說，T = 1 是一個幾乎沒有效果的設定，4.5 節會量給你看。</p>
+<p>怎麼確認寫對了？本書用 PyTorch 文件 <code>KLDivLoss</code> 的範例寫法（<code>nn.KLDivLoss(reduction='batchmean')(log_softmax(學生/T), softmax(老師/T))</code>）另外算一次，在驗證集前 64 張圖、四組 α 與 T 上，兩者的值完全相同（例如 α = 0.5、T = 1 時都是 1.166643；α = 0、T = 1 時退化成純 cross entropy 1.237240）。</p>
+
+<h2 id="direction">4.2　KL 的方向：notebook 的公式寫反了</h2>
+<p>KL divergence 不對稱：KL(P ‖ Q) = Σ P_i · (log P_i − log Q_i)，用 P 加權。誰放前面，結果就不同。notebook 的公式寫 KL(p ‖ q)，p 是學生、q 是老師，也就是「用學生的分布加權」。但 <code>F.kl_div(input, target)</code> 算的是 Σ target · (log target − input)：<strong>放在 target 的分布當加權</strong>。第 14 行把老師放在 target，算的是 KL(老師 ‖ 學生)，和公式的字面相反。</p>
+<p>notebook 附的「very useful link」正是 PyTorch 的 <code>KLDivLoss</code> 文件，照它的範例寫，就會寫成 KL(老師 ‖ 學生)；Hinton 等人（2015）的原始做法，用老師的軟化機率當目標去算 cross entropy，也等同這個方向（兩者只差一個和學生無關的常數：老師分布的熵）。所以程式是對的，公式的符號寫反了。兩個方向的數值差很多，用 Simple 的學生與老師在整個訓練集上量：</p>
+<div class="tablewrap"><table>
+<thead><tr><th class="num">T</th><th class="num"><code>F.kl_div</code>（第 14 行）</th><th class="num">KL(老師 ‖ 學生)</th><th class="num">KL(學生 ‖ 老師)</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td class="num">1.436162</td><td class="num">1.436162</td><td class="num">10.976600</td></tr>
+<tr><td class="num">4</td><td class="num">1.390786</td><td class="num">1.390786</td><td class="num">2.111768</td></tr>
+</tbody>
+</table></div>
+<p>T = 1 時反方向大了 7.6 倍。原因是老師在訓練集上幾乎是 one-hot（第 3 章），只要學生在某個老師認為「幾乎不可能」的類別放了一點機率，KL(學生 ‖ 老師) 裡的 log(老師的機率) 就是一個很大的負數，整項爆大。兩個方向的性質也不同：KL(老師 ‖ 學生) 懲罰的是「老師有、學生沒有」，學生會盡量把機率攤開去蓋住老師所有的可能（mass-covering）；KL(學生 ‖ 老師) 懲罰的是「學生有、老師沒有」，學生會傾向只押老師最有把握的那一類（mode-seeking）。蒸餾要傳的就是老師分給其他類別的那些小機率，所以用前者。</p>
+<div class="note"><h4>現在的做法：LLM 蒸餾裡兩個方向都有人用</h4>
+<p>大型語言模型的蒸餾把「11 類」換成「幾萬個詞」，每一步預測下一個詞的分布。傳統做法（例如 DistilBERT）用的就是本章的 KL(老師 ‖ 學生)。近年有研究主張生成任務改用反方向 KL(學生 ‖ 老師)（例如 MiniLLM，2023），理由正是上面的 mode-seeking：小模型容量有限，與其試圖蓋住老師所有可能的說法、結果生出四不像的句子，不如專心學好老師最確定的那幾種。方向的選擇取決於任務，但前提是要知道自己寫的是哪一個方向。</p>
+</div>
+
+<h2 id="reduction">4.3　batchmean，以及一個會變的預設值</h2>
+<p><code>F.kl_div</code> 與 <code>nn.KLDivLoss</code> 的 <code>reduction</code> 預設值是 <code>'mean'</code>，意思是把每張圖、每個類別的項全部平均，也就是除以「batch 大小 × 類別數」。KL divergence 的數學定義是對類別<strong>加總</strong>、再對樣本平均，所以正確的是 <code>'batchmean'</code>：只除以 batch 大小。實測（整個訓練集）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>reduction</th><th class="num">值</th><th>說明</th></tr></thead>
+<tbody>
+<tr><td><code>'batchmean'</code>（第 14 行）</td><td class="num">1.436162</td><td>KL 的正確數值</td></tr>
+<tr><td><code>'mean'</code>（預設）</td><td class="num">0.13056</td><td>恰好是上面的 1/11</td></tr>
+<tr><td><code>'sum'</code></td><td class="num">14169.1758</td><td>9,866 張的總和</td></tr>
+</tbody>
+</table></div>
+<p>用 <code>'mean'</code> 時 PyTorch 會發出警告：「reduction: 'mean' divides the total loss by both the batch size and the support size. 'batchmean' divides only by the batch size, and aligns with the KL div math definition. 'mean' will be changed to behave the same as 'batchmean' in the next major release.」也就是說，用預設值寫的蒸餾，KL 項被默默縮小成 1/11，等於把 α 調小了很多；而且未來版本的 PyTorch 改掉預設之後，同一份程式碼會跑出不同的結果。明確寫出 <code>reduction='batchmean'</code>，兩個問題都避開了。</p>
+
+<h2 id="t2">4.4　T² 從哪裡來</h2>
+<p>公式在 KL 前面乘了 T²。原因要看梯度。把學生的第 i 個 logit 記作 s_i，KL(老師 ‖ 學生) 對 s_i 的梯度是：</p>
+<div class="eq">∂ KL / ∂ s_i = (q_i − p_i) / T　　（q：學生在溫度 T 的機率，p：老師在溫度 T 的機率）</div>
+<p>除以 T 有兩層效果：分母多了一個 T；同時 T 越大，q 與 p 都越接近均勻分布，兩者的差 q_i − p_i 也跟著變小（大約也是 1/T 的速度）。合起來，梯度大約按 1/T² 縮小。如果不補償，T = 4 的蒸餾項梯度只剩 T = 1 的幾分之一，在和 cross entropy 相加時幾乎沒有聲音。乘 T² 就是把它拉回和 T 無關的量級（Hinton 等人，2015，第 2 節）。實測學生 logits 收到的梯度（KL 項，每張圖的 L2 範數平均）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th class="num">T</th><th class="num">KL 值</th><th class="num">梯度（不乘 T²）</th><th class="num">梯度 × T²</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td class="num">1.43616</td><td class="num">0.75147</td><td class="num">0.75147</td></tr>
+<tr><td class="num">2</td><td class="num">1.60408</td><td class="num">0.41101</td><td class="num">1.64402</td></tr>
+<tr><td class="num">4</td><td class="num">1.39079</td><td class="num">0.18699</td><td class="num">2.99186</td></tr>
+<tr><td class="num">8</td><td class="num">0.59988</td><td class="num">0.05463</td><td class="num">3.49654</td></tr>
+<tr><td class="num">20</td><td class="num">0.08267</td><td class="num">0.00669</td><td class="num">2.67601</td></tr>
+<tr><td>（對照）CE，硬 label</td><td class="num">1.44061</td><td class="num">0.75272</td><td></td></tr>
+</tbody>
+</table></div>
+<p>不乘 T² 的那一欄，從 T = 1 到 T = 8 掉了 14 倍；乘了之後落在 0.75 到 3.5 之間，量級大致穩住。不過「大致」兩個字要注意：在 T = 4、8 時，乘了 T² 的蒸餾梯度是 CE 梯度的 4 倍左右。α = 0.5 時，loss 的兩項名義上各佔一半，實際上蒸餾項在梯度上佔了八成。loss 的數值也一樣：T = 4、α = 0.5 時，<code>loss_fn_kd</code> = 0.5 × 16 × 1.39079 + 0.5 × 1.44061 = 11.84659，比 T = 1 的 1.43838 大了 8 倍。這也是為什麼 KD 模式下印出的驗證 loss（例如 T = 8 的 10.40）和 CE 模式的驗證 loss（1.5 左右）完全不能比：<code>train.py</code> 在 KD 模式下的驗證 loss 也是用 <code>loss_fn</code> 算的（第 184–185 行），它衡量的是另一個東西。本書比較不同設定時一律看驗證準確率，或工具另外記錄的驗證 cross entropy。</p>
+
+<h2 id="t1">4.5　T = 1：蒸餾等於 cross entropy</h2>
+<p>同一組資料、同一個學生，T = 1 時的 KL(老師 ‖ 學生) 是 1.43616，和硬 label 的 cross entropy 1.44061 只差 0.3%；兩者對學生 logits 的梯度 0.75147 與 0.75272，也只差 0.2%。這不是巧合。KL(老師 ‖ 學生) = H(老師, 學生) − H(老師)，前一項是用老師的分布當目標的 cross entropy，後一項是老師分布的熵，和學生無關。老師在訓練集上的分布幾乎就是 one-hot（平均 99.85% 在正確類別），熵趨近 0，cross entropy 的目標也幾乎就是 label。所以 T = 1 時，<code>loss_fn_kd</code> 的兩項幾乎是同一個東西，α 怎麼調都一樣。</p>
+<p>這解釋了<a href="ch01.html#time">第 1 章</a>看到的 10 個 epoch 結果：CE 0.51545、KD（T = 1、α = 0.5）0.51720，差距遠小於第 1 章量到的亂數雜訊（1–2 個百分點）。報告第 2-1 題要求的設定，在這個老師身上本來就不該期待效果。</p>
+
+<h2 id="sweep">4.6　掃描：50 個 epoch，T × α</h2>
+<p>投影片對 Medium 的建議是「完成 KD loss、控制 α 與 T、訓練更久」。本書的 A 組實驗把這三件事都做了：每組 50 個 epoch（範例的 5 倍），T ∈ {1, 2, 4, 8} × α ∈ {0.5, 0.9}，另加一組 50 個 epoch 的純 CE 當對照。全部用同一個種子、同樣 16 個 worker（<a href="ch01.html#time">第 1 章</a>的條件），命令是：</p>
+<pre class="shell cmd"><code>$ cd HW13
+$ ../.venv/bin/python ../docs/tools/hw13_exp.py --name A50_kd_T2_a0.5 --epochs 50 --loss KD --T 2 --alpha 0.5 --nw 16</code></pre>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th class="num">最佳驗證準確率</th><th class="num">最佳 epoch</th><th class="num">最後 5 個 epoch 平均</th><th class="num">最後一個 epoch 的訓練準確率</th></tr></thead>
+<tbody>
+<tr><td><span class="role ce">CE</span></td><td class="num">0.64286</td><td class="num">50</td><td class="num">0.5983</td><td class="num">0.69826</td></tr>
+<tr><td><span class="role kd">KD T=1 α=0.5</span></td><td class="num">0.63732</td><td class="num">50</td><td class="num">0.5974</td><td class="num">0.69785</td></tr>
+<tr><td><span class="role kd">KD T=2 α=0.5</span></td><td class="num"><strong>0.64840</strong></td><td class="num">50</td><td class="num">0.5985</td><td class="num">0.68113</td></tr>
+<tr><td><span class="role kd">KD T=4 α=0.5</span></td><td class="num">0.63032</td><td class="num">50</td><td class="num">0.6029</td><td class="num">0.66227</td></tr>
+<tr><td><span class="role kd">KD T=8 α=0.5</span></td><td class="num">0.61516</td><td class="num">50</td><td class="num">0.5801</td><td class="num">0.64413</td></tr>
+<tr><td><span class="role kd">KD T=1 α=0.9</span></td><td class="num">0.64023</td><td class="num">50</td><td class="num">0.5994</td><td class="num">0.69886</td></tr>
+<tr><td><span class="role kd">KD T=2 α=0.9</span></td><td class="num">0.63878</td><td class="num">50</td><td class="num">0.6048</td><td class="num">0.67697</td></tr>
+<tr><td><span class="role kd">KD T=4 α=0.9</span></td><td class="num">0.61691</td><td class="num">45</td><td class="num">0.5966</td><td class="num">0.66065</td></tr>
+<tr><td><span class="role kd">KD T=8 α=0.9</span></td><td class="num">0.61108</td><td class="num">45</td><td class="num">0.5490</td><td class="num">0.62913</td></tr>
+</tbody>
+</table></div>
+<figure class="fig">
+<svg viewBox="0 0 900 360" role="img" aria-label="50 個 epoch 的驗證準確率曲線：CE、KD T=2、KD T=8（α=0.5）。三條線都在上升且上下跳動，CE 最後 64.3%，T=2 最後 64.8%，T=8 最後 61.5%">
+<line x1="56" y1="314.0" x2="780" y2="314.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="318.0" text-anchor="end">30</text>
+<line x1="56" y1="240.5" x2="780" y2="240.5" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="244.5" text-anchor="end">40</text>
+<line x1="56" y1="167.0" x2="780" y2="167.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="171.0" text-anchor="end">50</text>
+<line x1="56" y1="93.5" x2="780" y2="93.5" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="97.5" text-anchor="end">60</text>
+<line x1="56" y1="20.0" x2="780" y2="20.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="24.0" text-anchor="end">70</text>
+<text class="s-mono" x="56.0" y="332" text-anchor="middle">1</text>
+<text class="s-mono" x="189.0" y="332" text-anchor="middle">10</text>
+<text class="s-mono" x="336.7" y="332" text-anchor="middle">20</text>
+<text class="s-mono" x="484.5" y="332" text-anchor="middle">30</text>
+<text class="s-mono" x="632.2" y="332" text-anchor="middle">40</text>
+<text class="s-mono" x="780.0" y="332" text-anchor="middle">50</text>
+<line x1="56" y1="314" x2="780" y2="314" stroke="#4a5562" stroke-width="1"/>
+<text class="s-sm" x="418.0" y="354" text-anchor="middle">epoch</text>
+<text class="s-sm" x="14" y="167.0" text-anchor="middle" transform="rotate(-90 14 167.0)">驗證準確率（%）</text>
+<polyline points="56.0,274.4 70.8,264.1 85.6,218.0 100.3,190.8 115.1,240.5 129.9,236.4 144.7,177.5 159.4,190.6 174.2,176.0 189.0,155.6 203.8,153.3 218.5,169.1 233.3,134.2 248.1,173.0 262.9,176.9 277.6,143.4 292.4,127.1 307.2,146.2 322.0,122.2 336.7,124.8 351.5,150.3 366.3,130.6 381.1,131.4 395.8,123.9 410.6,109.1 425.4,111.7 440.2,84.5 454.9,90.1 469.7,124.4 484.5,112.8 499.3,145.6 514.0,160.4 528.8,94.1 543.6,215.6 558.4,132.3 573.1,112.6 587.9,158.4 602.7,95.0 617.5,74.0 632.2,109.6 647.0,97.6 661.8,93.5 676.6,204.3 691.3,182.0 706.1,83.0 720.9,87.9 735.7,123.1 750.4,80.2 765.2,120.5 780.0,62.0" fill="none" stroke="#8b949e" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,280.1 70.8,263.9 85.6,224.2 100.3,200.0 115.1,227.9 129.9,240.9 144.7,187.1 159.4,198.3 174.2,181.4 189.0,162.9 203.8,171.5 218.5,179.0 233.3,139.4 248.1,176.6 262.9,178.8 277.6,147.7 292.4,130.6 307.2,168.9 322.0,139.6 336.7,143.9 351.5,145.4 366.3,131.2 381.1,145.4 395.8,123.5 410.6,132.9 425.4,112.6 440.2,98.4 454.9,88.6 469.7,124.4 484.5,103.4 499.3,142.1 514.0,127.6 528.8,98.9 543.6,174.9 558.4,113.9 573.1,105.1 587.9,168.5 602.7,116.0 617.5,81.7 632.2,84.3 647.0,102.7 661.8,89.2 676.6,180.3 691.3,166.6 706.1,71.2 720.9,100.8 735.7,133.8 750.4,93.7 765.2,86.6 780.0,57.9" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,295.8 70.8,263.2 85.6,241.4 100.3,239.4 115.1,230.2 129.9,238.8 144.7,215.2 159.4,225.5 174.2,213.7 189.0,201.5 203.8,202.8 218.5,180.9 233.3,183.3 248.1,219.3 262.9,200.9 277.6,170.6 292.4,207.9 307.2,162.1 322.0,160.4 336.7,163.6 351.5,147.9 366.3,168.7 381.1,167.0 395.8,173.2 410.6,175.6 425.4,118.4 440.2,127.4 454.9,126.1 469.7,158.9 484.5,141.5 499.3,155.9 514.0,131.6 528.8,130.1 543.6,145.4 558.4,153.3 573.1,100.4 587.9,137.2 602.7,117.5 617.5,122.2 632.2,105.7 647.0,142.1 661.8,97.6 676.6,166.4 691.3,123.3 706.1,83.0 720.9,128.9 735.7,122.4 750.4,87.7 765.2,119.4 780.0,82.4" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round"/>
+<rect x="786.0" y="53.9" width="8" height="8" rx="2" fill="#3987e5"/>
+<text class="s-lbl" x="798.0" y="61.9">KD T=2</text>
+<rect x="786.0" y="67.9" width="8" height="8" rx="2" fill="#8b949e"/>
+<text class="s-lbl" x="798.0" y="75.9">CE</text>
+<rect x="786.0" y="81.9" width="8" height="8" rx="2" fill="#d95926"/>
+<text class="s-lbl" x="798.0" y="89.9">KD T=8</text>
+<rect x="48.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 1：CE 35.4　KD T=2 34.6　KD T=8 32.5"/>
+<rect x="63.4" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 2：CE 36.8　KD T=2 36.8　KD T=8 36.9"/>
+<rect x="78.2" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 3：CE 43.1　KD T=2 42.2　KD T=8 39.9"/>
+<rect x="92.9" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 4：CE 46.8　KD T=2 45.5　KD T=8 40.1"/>
+<rect x="107.7" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 5：CE 40.0　KD T=2 41.7　KD T=8 41.4"/>
+<rect x="122.5" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 6：CE 40.6　KD T=2 39.9　KD T=8 40.2"/>
+<rect x="137.3" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 7：CE 48.6　KD T=2 47.3　KD T=8 43.4"/>
+<rect x="152.0" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 8：CE 46.8　KD T=2 45.7　KD T=8 42.0"/>
+<rect x="166.8" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 9：CE 48.8　KD T=2 48.0　KD T=8 43.6"/>
+<rect x="181.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 10：CE 51.5　KD T=2 50.6　KD T=8 45.3"/>
+<rect x="196.4" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 11：CE 51.9　KD T=2 49.4　KD T=8 45.1"/>
+<rect x="211.1" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 12：CE 49.7　KD T=2 48.4　KD T=8 48.1"/>
+<rect x="225.9" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 13：CE 54.5　KD T=2 53.8　KD T=8 47.8"/>
+<rect x="240.7" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 14：CE 49.2　KD T=2 48.7　KD T=8 42.9"/>
+<rect x="255.5" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 15：CE 48.7　KD T=2 48.4　KD T=8 45.4"/>
+<rect x="270.2" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 16：CE 53.2　KD T=2 52.6　KD T=8 49.5"/>
+<rect x="285.0" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 17：CE 55.4　KD T=2 55.0　KD T=8 44.4"/>
+<rect x="299.8" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 18：CE 52.8　KD T=2 49.7　KD T=8 50.7"/>
+<rect x="314.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 19：CE 56.1　KD T=2 53.7　KD T=8 50.9"/>
+<rect x="329.3" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 20：CE 55.7　KD T=2 53.1　KD T=8 50.5"/>
+<rect x="344.1" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 21：CE 52.3　KD T=2 52.9　KD T=8 52.6"/>
+<rect x="358.9" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 22：CE 55.0　KD T=2 54.9　KD T=8 49.8"/>
+<rect x="373.7" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 23：CE 54.8　KD T=2 52.9　KD T=8 50.0"/>
+<rect x="388.4" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 24：CE 55.9　KD T=2 55.9　KD T=8 49.2"/>
+<rect x="403.2" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 25：CE 57.9　KD T=2 54.6　KD T=8 48.8"/>
+<rect x="418.0" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 26：CE 57.5　KD T=2 57.4　KD T=8 56.6"/>
+<rect x="432.8" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 27：CE 61.2　KD T=2 59.3　KD T=8 55.4"/>
+<rect x="447.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 28：CE 60.5　KD T=2 60.7　KD T=8 55.6"/>
+<rect x="462.3" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 29：CE 55.8　KD T=2 55.8　KD T=8 51.1"/>
+<rect x="477.1" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 30：CE 57.4　KD T=2 58.7　KD T=8 53.5"/>
+<rect x="491.9" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 31：CE 52.9　KD T=2 53.4　KD T=8 51.5"/>
+<rect x="506.7" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 32：CE 50.9　KD T=2 55.4　KD T=8 54.8"/>
+<rect x="521.4" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 33：CE 59.9　KD T=2 59.3　KD T=8 55.0"/>
+<rect x="536.2" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 34：CE 43.4　KD T=2 48.9　KD T=8 52.9"/>
+<rect x="551.0" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 35：CE 54.7　KD T=2 57.2　KD T=8 51.9"/>
+<rect x="565.8" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 36：CE 57.4　KD T=2 58.4　KD T=8 59.1"/>
+<rect x="580.5" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 37：CE 51.2　KD T=2 49.8　KD T=8 54.1"/>
+<rect x="595.3" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 38：CE 59.8　KD T=2 56.9　KD T=8 56.7"/>
+<rect x="610.1" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 39：CE 62.7　KD T=2 61.6　KD T=8 56.1"/>
+<rect x="624.9" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 40：CE 57.8　KD T=2 61.3　KD T=8 58.3"/>
+<rect x="639.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 41：CE 59.4　KD T=2 58.7　KD T=8 53.4"/>
+<rect x="654.4" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 42：CE 60.0　KD T=2 60.6　KD T=8 59.4"/>
+<rect x="669.2" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 43：CE 44.9　KD T=2 48.2　KD T=8 50.1"/>
+<rect x="684.0" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 44：CE 48.0　KD T=2 50.1　KD T=8 55.9"/>
+<rect x="698.7" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 45：CE 61.4　KD T=2 63.0　KD T=8 61.4"/>
+<rect x="713.5" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 46：CE 60.8　KD T=2 59.0　KD T=8 55.2"/>
+<rect x="728.3" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 47：CE 56.0　KD T=2 54.5　KD T=8 56.1"/>
+<rect x="743.1" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 48：CE 61.8　KD T=2 60.0　KD T=8 60.8"/>
+<rect x="757.8" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 49：CE 56.3　KD T=2 60.9　KD T=8 56.5"/>
+<rect x="772.6" y="20" width="14.8" height="294" fill="transparent" data-tip="epoch 50：CE 64.3　KD T=2 64.8　KD T=8 61.5"/>
+</svg>
+<div class="legend"><span><i style="background:#8b949e"></i>CE</span><span><i style="background:#3987e5"></i>KD T=2</span><span><i style="background:#d95926"></i>KD T=8</span></div>
+<figcaption>圖 4.1　三組 50 個 epoch 的驗證準確率（α = 0.5）。滑過圖看每個 epoch 的數值。CE 與 T = 2 幾乎重疊：兩組看到的資料順序與翻轉完全相同（見下文），差別只在 loss；T = 8 在前 30 個 epoch 一直落後，後段才追上。</figcaption>
+</figure>
+<p>讀這張表要帶著第 1 章的尺：同樣的程式只換亂數流，10 個 epoch 的最佳準確率就差 1.3 個百分點。不過 A 組有一個好性質：老師的前向計算不用亂數，所以 A 組每一組的資料順序、每張圖翻不翻轉都和 CE 那組一模一樣，差別只剩 loss 本身。圖 4.1 裡 CE 與 T = 2 的曲線連起伏都對得上，就是這個原因。這種「成對」的比較比換種子的比較乾淨，但每個 epoch 的驗證準確率仍會上下跳 5 個百分點以上，挑「最佳 epoch」的數字依然帶著雜訊。用這把尺看：</p>
+<ul>
+<li><strong>訓練更久是最有效的一件事</strong>。純 CE 從 10 個 epoch 的 0.515 升到 50 個 epoch 的 0.643，而且第 50 個 epoch 還是最佳，曲線還沒停。</li>
+<li><strong>T = 1、T = 2 的蒸餾和 CE 分不出高下</strong>。最好的是 T = 2、α = 0.5 的 0.64840，比 CE 多 0.55 個百分點，在雜訊之內；看「最後 5 個 epoch 的平均」，三者都是 0.60 左右。附帶一提，0.64840 剛好等於 Medium 基準線的數字，這純屬巧合：一個是驗證集、一個是 Kaggle 測試集。</li>
+<li><strong>T = 4、8 明顯更差</strong>，而且 T 越高越差：α = 0.5 時 T = 8 比 CE 低 2.8 個百分點，α = 0.9 時低 3.2 個百分點。訓練準確率也一起降低（0.698 → 0.644 → 0.629）：學生在訓練集上學得更慢了。</li>
+<li><strong>α 的影響比 T 小</strong>，而且方向不一致。</li>
+</ul>
+<p>本書照規格，把 A 組最好的設定（T = 2、α = 0.5）帶進第 5 章的架構實驗。但要誠實地說：這個「最好」並不比 CE 好到看得出來，它是在雜訊範圍內挑出的一個名次。</p>
+
+<h2 id="who">4.7　誰受益、誰受害</h2>
+<p>只看整體準確率會漏掉分布的變化。用每組最佳 epoch 的驗證 logits，算各類別的準確率：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th class="num">麵包</th><th class="num">乳製品</th><th class="num">甜點</th><th class="num">蛋</th><th class="num">炸物</th><th class="num">肉類</th><th class="num">麵食</th><th class="num">米飯</th><th class="num">海鮮</th><th class="num">湯</th><th class="num">蔬果</th><th class="num">預測為甜點的比例</th></tr></thead>
+<tbody>
+<tr><td>CE</td><td class="num">0.304</td><td class="num">0.486</td><td class="num">0.512</td><td class="num">0.630</td><td class="num">0.531</td><td class="num">0.840</td><td class="num">0.714</td><td class="num">0.604</td><td class="num">0.718</td><td class="num">0.826</td><td class="num">0.810</td><td class="num">12.0%</td></tr>
+<tr><td>KD T=2</td><td class="num">0.265</td><td class="num">0.500</td><td class="num">0.660</td><td class="num">0.581</td><td class="num">0.586</td><td class="num">0.768</td><td class="num">0.673</td><td class="num">0.583</td><td class="num">0.703</td><td class="num">0.798</td><td class="num">0.871</td><td class="num">17.4%</td></tr>
+<tr><td>KD T=4</td><td class="num">0.276</td><td class="num">0.375</td><td class="num">0.694</td><td class="num">0.563</td><td class="num">0.558</td><td class="num">0.791</td><td class="num">0.456</td><td class="num">0.469</td><td class="num">0.671</td><td class="num">0.796</td><td class="num">0.849</td><td class="num">19.7%</td></tr>
+<tr><td>KD T=8</td><td class="num">0.279</td><td class="num">0.326</td><td class="num">0.702</td><td class="num">0.511</td><td class="num">0.567</td><td class="num">0.713</td><td class="num">0.571</td><td class="num"><strong>0.281</strong></td><td class="num">0.663</td><td class="num">0.798</td><td class="num">0.858</td><td class="num"><strong>21.6%</strong></td></tr>
+</tbody>
+</table></div>
+<p>（皆為 α = 0.5。驗證集中甜點真正的比例是 14.6%。）T 越高，學生越常把圖猜成甜點（12.0% → 21.6%），甜點的準確率跟著上升，少數類別卻被犧牲：米飯從 0.604 掉到 0.281，乳製品從 0.486 掉到 0.326。這和<a href="ch00.html#simple">第 0 章</a>的期待正好相反——原本希望老師的分布能幫學生認出少數類別。</p>
+<p>一個直覺的解釋是：「高 T 時老師的 soft label 把機率推給了大類別，學生跟著學偏」。這可以直接量：把老師在訓練集上的軟化機率對所有圖取平均，看每一類分到多少。結果推翻了這個解釋——T 越高，目標分布反而越偏向小類別：米飯在硬 label 裡佔 2.84%，T = 8 的平均 soft target 是 4.67%；乳製品從 4.35% 變成 6.18%；甜點從 15.20% 降到 10.63%。目標往小類別傾斜，學生的預測卻往大類別傾斜。為什麼會這樣，本書沒有查明；可以確定的是，「看 soft label 的形狀猜學生會學成什麼樣子」在這裡行不通，蒸餾的效果要實際訓練才知道。</p>
+
+<h2 id="why">4.8　為什麼這裡的蒸餾幫不上忙</h2>
+<p>知識蒸餾在文獻裡常常有效，在這份作業的範例學生身上卻沒有。本章的實驗指出了兩個原因，第三個是推論。</p>
+<ol>
+<li><strong>老師在訓練集上沒有多餘的資訊可給</strong>（第 3 章）。T = 1、2 時，soft label 和 hard label 幾乎相同，所以蒸餾 ≈ CE，結果也 ≈ CE。</li>
+<li><strong>要挖出資訊得用高 T，但高 T 讓學生學得更慢</strong>。T = 4、8 時老師的分布確實軟了，但學生的訓練準確率下降、驗證準確率也下降。乘了 T² 之後，蒸餾項的梯度是 CE 的 4 倍，學生的大部分力氣花在「把 11 類的相對大小調得像老師」，而不是「把正確的那一類拉高」。對一個在訓練集上都只有 0.70 準確率的學生，後者顯然更急迫。</li>
+<li><strong>學生的容量才是瓶頸</strong>（推論）。50 個 epoch 之後，學生的訓練準確率仍只有 0.70，驗證準確率還在上升：它連 hard label 都還沒學完。這和 Cho 與 Hariharan（2019）、Mirzadeh 等人（2019，投影片提到的 TAKD）的觀察一致：老師和學生差距太大時，蒸餾的效果會打折扣，有時不如直接訓練。範例學生有 87,907 個參數，卻把八成以上的計算花在前三個卷積、邊長 108 以上的大特徵圖上（<a href="ch02.html#where">第 2 章</a>），留給深層語意的容量很少。</li>
+</ol>
+<p>第三點把我們帶到第 5 章：在同樣 100,000 個參數的限制下，換一個把參數與計算用在對的地方的架構，再加上 HW03 的資料增強、訓練 200 個 epoch，看看蒸餾在一個「學得動」的學生身上會不會有不同的結果。投影片 Strong 基準線的做法，正是架構設計。</p>
+<div class="note"><h4>現在的做法：蒸餾是小型語言模型的標準配方</h4>
+<p>2022 年之後，蒸餾最大的舞台是語言模型。DistilBERT（2019）用本章的 logit 蒸餾把 BERT 縮小 40%；Google 的 Gemma 2（2024）的小尺寸模型在預訓練時就用大模型的下一個詞機率分布當目標，而不是只用語料裡實際出現的那個詞——論文的說法和第 3 章一樣：老師的分布比 one-hot 的「答案」提供了更多資訊。另一條路是「序列層級」的蒸餾：讓大模型生成大量回答，小模型直接用這些文字做監督式微調，許多開源的小型推理模型就是這樣做出來的。這兩種做法都碰到本章的老問題：老師太強、學生太小時，學生學不來；所以實務上常讓老師和學生的大小差距不要太大，或逐級蒸餾。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li><code>loss_fn_kd</code> = α · T² · KL(老師_T ‖ 學生_T) + (1 − α) · CE(學生, label)。學生用 <code>log_softmax</code>、老師用 <code>softmax</code>、<code>reduction='batchmean'</code>、CE 用原始 logits。</li>
+<li><code>F.kl_div(input, target)</code> 以 target 加權，所以算的是 KL(老師 ‖ 學生)；notebook 公式的 KL(p ‖ q)（p 是學生）寫反了。反方向在 T = 1 時大了 7.6 倍。</li>
+<li>預設的 <code>reduction='mean'</code> 多除了類別數（1/11），而且會在未來版本改變行為；要寫 <code>'batchmean'</code>。</li>
+<li>KL 項的梯度約按 1/T² 縮小，乘 T² 補回來；但補完後在 T = 4、8 時是 CE 梯度的 4 倍左右。KD 模式印出的驗證 loss 不能和 CE 的比。</li>
+<li>老師在訓練集上幾乎是 one-hot，T = 1 時 KL ≈ CE（1.436 對 1.441），蒸餾等於沒做。</li>
+<li>50 個 epoch 的掃描：訓練更久把 CE 從 0.515 推到 0.643；T = 1、2 的蒸餾與 CE 在雜訊內（最好 0.64840）；T = 4、8 更差，且少數類別受害最深。學生的容量才是瓶頸。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 把第 11 行改成 <code>F.softmax(student_logits / temperature, dim=-1)</code>（忘了取 log），程式會報錯嗎？會算出什麼？</summary>
+<p>不會報錯。<code>F.kl_div</code> 假設第一個參數已經是對數機率，直接拿它去算 Σ p · (log p − input)。input 換成機率（介於 0 與 1）之後，算出來的不是任何 KL divergence，而且數值可能是負的。訓練照樣能跑，只是學生在優化一個沒有意義的量。這是 PyTorch 蒸餾程式最常見的錯誤之一。本書沒有實際用這個錯誤版本訓練。</p></details>
+<details class="quiz"><summary>2. 為什麼 CE 那一項（第 15 行）用的是沒除以 T 的 logits？</summary>
+<p>CE 那一項是在對真實 label 做一般的分類訓練，推論時學生也是用 T = 1 的 logits 做預測。如果 CE 也用 logits / T，等於訓練學生在 T 倍的尺度上分類，推論時的 logits 就會偏大或偏小，和訓練時對不上。溫度只是用來「讀出」老師分布裡的資訊，只該用在 KL 那一項。</p></details>
+<details class="quiz"><summary>3. 有人說：「T 越高分布越軟，dark knowledge 越多，所以 T 越高越好。」用本章的數據反駁。</summary>
+<p>50 個 epoch 的實驗裡，α = 0.5 時 T = 1、2、4、8 的最佳驗證準確率是 0.637、0.648、0.630、0.615，T = 4 之後一路下降，訓練準確率也從 0.698 降到 0.644。T 太高時，老師的分布被抹平（T = 20 時熵已接近均勻分布的上限，第 3 章），而乘了 T² 的蒸餾項主導了梯度，學生花大部分力氣去模仿 11 類的相對大小，反而沒學好正確答案。T 是要調的，不是越大越好。</p></details>
+<details class="quiz"><summary>4. KD 模式下，T = 8 時印出的驗證 loss 是 10.4，CE 模式是 1.5 左右。能說「KD 的模型比較差」嗎？</summary>
+<p>不能。<code>train.py</code> 的驗證 loss 用的是同一個 <code>loss_fn</code>，KD 模式下就是 KD loss，其中 KL 項乘了 T² = 64，數值天生大得多。兩個 loss 衡量的是不同的東西。比較兩種設定要看驗證準確率，或是另外算一個共同的量，例如本書工具記錄的驗證 cross entropy。</p></details>
+<details class="quiz"><summary>5. 報告第 2-1 題要求以 α = 0.5、T = 1.0 為預設值。對這份作業的老師，這組設定和直接用 CE 訓練有多大差別？為什麼？</summary>
+<p>幾乎沒有差別。老師在訓練集上 97.9% 的圖信心超過 0.99，T = 1 時它的分布幾乎就是 label 的 one-hot，所以 KL(老師 ‖ 學生) ≈ CE(學生, label)（本章實測 1.436 對 1.441，梯度只差 0.2%）。兩項幾乎相同，加權平均之後也還是 CE。實驗上，10 個 epoch 時兩者是 0.517 對 0.515，50 個 epoch 時是 0.637 對 0.643，都在亂數雜訊之內。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Geoffrey Hinton、Oriol Vinyals、Jeff Dean，<a href="https://arxiv.org/abs/1503.02531">Distilling the Knowledge in a Neural Network</a>（2015）：第 2 節推導了梯度與 T² 的關係。</li>
+<li>PyTorch 文件：<a href="https://pytorch.org/docs/stable/generated/torch.nn.KLDivLoss.html">KLDivLoss</a>，notebook 推薦的連結，包含 <code>batchmean</code> 的說明與範例。</li>
+<li>Jang Hyun Cho、Bharath Hariharan，<a href="https://arxiv.org/abs/1910.01348">On the Efficacy of Knowledge Distillation</a>（2019）：老師越強不一定越好，學生容量不足時蒸餾效果打折。</li>
+<li>Seyed Iman Mirzadeh 等，<a href="https://arxiv.org/abs/1902.03393">Improved Knowledge Distillation via Teacher Assistant</a>（2019）：投影片 Boss 提到的 TAKD，用中間大小的「助教」模型逐級蒸餾。</li>
+<li>Yuxian Gu 等，<a href="https://arxiv.org/abs/2306.08543">MiniLLM: Knowledge Distillation of Large Language Models</a>（2023）：在 LLM 蒸餾中改用反向 KL 的論證。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW13 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW13 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

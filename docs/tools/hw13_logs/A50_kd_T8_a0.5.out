@@ -1,0 +1,102 @@
+A50_kd_T8_a0.5: Total params: 87,907
+[ Train | 001/050 ] loss = 22.51199, acc = 0.31614
+[ Valid | 001/050 ] loss = 16.55522, acc = 0.32478 -> best
+[ Train | 002/050 ] loss = 21.03221, acc = 0.36023
+[ Valid | 002/050 ] loss = 15.80969, acc = 0.36910 -> best
+[ Train | 003/050 ] loss = 20.18646, acc = 0.38445
+[ Valid | 003/050 ] loss = 15.14112, acc = 0.39883 -> best
+[ Train | 004/050 ] loss = 19.50865, acc = 0.40118
+[ Valid | 004/050 ] loss = 14.66037, acc = 0.40146 -> best
+[ Train | 005/050 ] loss = 19.00105, acc = 0.41658
+[ Valid | 005/050 ] loss = 14.50588, acc = 0.41399 -> best
+[ Train | 006/050 ] loss = 18.58128, acc = 0.42256
+[ Valid | 006/050 ] loss = 14.17962, acc = 0.40233
+[ Train | 007/050 ] loss = 18.20543, acc = 0.43493
+[ Valid | 007/050 ] loss = 13.54822, acc = 0.43440 -> best
+[ Train | 008/050 ] loss = 17.86830, acc = 0.44770
+[ Valid | 008/050 ] loss = 13.63055, acc = 0.42041
+[ Train | 009/050 ] loss = 17.58197, acc = 0.45996
+[ Valid | 009/050 ] loss = 13.39019, acc = 0.43644 -> best
+[ Train | 010/050 ] loss = 17.31474, acc = 0.46037
+[ Valid | 010/050 ] loss = 13.09655, acc = 0.45306 -> best
+[ Train | 011/050 ] loss = 17.07389, acc = 0.46969
+[ Valid | 011/050 ] loss = 13.01464, acc = 0.45131
+[ Train | 012/050 ] loss = 16.87206, acc = 0.46980
+[ Valid | 012/050 ] loss = 13.03065, acc = 0.48105 -> best
+[ Train | 013/050 ] loss = 16.55515, acc = 0.48480
+[ Valid | 013/050 ] loss = 12.67813, acc = 0.47784
+[ Train | 014/050 ] loss = 16.40350, acc = 0.48703
+[ Valid | 014/050 ] loss = 12.75830, acc = 0.42886
+[ Train | 015/050 ] loss = 16.18041, acc = 0.49716
+[ Valid | 015/050 ] loss = 12.47677, acc = 0.45394
+[ Train | 016/050 ] loss = 16.02691, acc = 0.50091
+[ Valid | 016/050 ] loss = 12.33360, acc = 0.49504 -> best
+[ Train | 017/050 ] loss = 15.86807, acc = 0.50973
+[ Valid | 017/050 ] loss = 12.69656, acc = 0.44431
+[ Train | 018/050 ] loss = 15.65088, acc = 0.51034
+[ Valid | 018/050 ] loss = 11.96911, acc = 0.50671 -> best
+[ Train | 019/050 ] loss = 15.48138, acc = 0.51703
+[ Valid | 019/050 ] loss = 11.88177, acc = 0.50904 -> best
+[ Train | 020/050 ] loss = 15.29338, acc = 0.52453
+[ Valid | 020/050 ] loss = 11.65745, acc = 0.50466
+[ Train | 021/050 ] loss = 15.13426, acc = 0.53243
+[ Valid | 021/050 ] loss = 11.41722, acc = 0.52595 -> best
+[ Train | 022/050 ] loss = 14.96222, acc = 0.54328
+[ Valid | 022/050 ] loss = 12.00195, acc = 0.49767
+[ Train | 023/050 ] loss = 14.81499, acc = 0.54358
+[ Valid | 023/050 ] loss = 11.72473, acc = 0.50000
+[ Train | 024/050 ] loss = 14.65885, acc = 0.54855
+[ Valid | 024/050 ] loss = 11.97626, acc = 0.49155
+[ Train | 025/050 ] loss = 14.57138, acc = 0.55179
+[ Valid | 025/050 ] loss = 11.33766, acc = 0.48834
+[ Train | 026/050 ] loss = 14.37644, acc = 0.55554
+[ Valid | 026/050 ] loss = 11.21770, acc = 0.56618 -> best
+[ Train | 027/050 ] loss = 14.22123, acc = 0.56274
+[ Valid | 027/050 ] loss = 11.11190, acc = 0.55394
+[ Train | 028/050 ] loss = 14.12738, acc = 0.56649
+[ Valid | 028/050 ] loss = 10.76468, acc = 0.55569
+[ Train | 029/050 ] loss = 13.92013, acc = 0.57075
+[ Valid | 029/050 ] loss = 12.40360, acc = 0.51108
+[ Train | 030/050 ] loss = 13.78859, acc = 0.58099
+[ Valid | 030/050 ] loss = 11.61005, acc = 0.53469
+[ Train | 031/050 ] loss = 13.62570, acc = 0.59092
+[ Valid | 031/050 ] loss = 11.19502, acc = 0.51516
+[ Train | 032/050 ] loss = 13.48903, acc = 0.58514
+[ Valid | 032/050 ] loss = 11.22961, acc = 0.54810
+[ Train | 033/050 ] loss = 13.45153, acc = 0.59163
+[ Valid | 033/050 ] loss = 11.77863, acc = 0.55015
+[ Train | 034/050 ] loss = 13.27404, acc = 0.59852
+[ Valid | 034/050 ] loss = 10.74343, acc = 0.52945
+[ Train | 035/050 ] loss = 13.17524, acc = 0.60146
+[ Valid | 035/050 ] loss = 11.12836, acc = 0.51866
+[ Train | 036/050 ] loss = 13.00796, acc = 0.60369
+[ Valid | 036/050 ] loss = 10.56435, acc = 0.59067 -> best
+[ Train | 037/050 ] loss = 12.91829, acc = 0.60602
+[ Valid | 037/050 ] loss = 10.96364, acc = 0.54052
+[ Train | 038/050 ] loss = 12.82810, acc = 0.61119
+[ Valid | 038/050 ] loss = 10.25722, acc = 0.56735
+[ Train | 039/050 ] loss = 12.71188, acc = 0.61322
+[ Valid | 039/050 ] loss = 10.16617, acc = 0.56093
+[ Train | 040/050 ] loss = 12.66738, acc = 0.61119
+[ Valid | 040/050 ] loss = 10.32673, acc = 0.58338
+[ Train | 041/050 ] loss = 12.54524, acc = 0.61818
+[ Valid | 041/050 ] loss = 11.28344, acc = 0.53382
+[ Train | 042/050 ] loss = 12.45496, acc = 0.62315
+[ Valid | 042/050 ] loss = 10.88202, acc = 0.59446 -> best
+[ Train | 043/050 ] loss = 12.42963, acc = 0.62609
+[ Valid | 043/050 ] loss = 11.50591, acc = 0.50087
+[ Train | 044/050 ] loss = 12.25187, acc = 0.62731
+[ Valid | 044/050 ] loss = 10.32177, acc = 0.55948
+[ Train | 045/050 ] loss = 12.19307, acc = 0.63045
+[ Valid | 045/050 ] loss = 10.15512, acc = 0.61429 -> best
+[ Train | 046/050 ] loss = 12.15558, acc = 0.62903
+[ Valid | 046/050 ] loss = 10.78200, acc = 0.55190
+[ Train | 047/050 ] loss = 12.01720, acc = 0.63714
+[ Valid | 047/050 ] loss = 10.40199, acc = 0.56064
+[ Train | 048/050 ] loss = 11.99967, acc = 0.63825
+[ Valid | 048/050 ] loss = 9.54207, acc = 0.60787
+[ Train | 049/050 ] loss = 11.95460, acc = 0.63501
+[ Valid | 049/050 ] loss = 10.62494, acc = 0.56472
+[ Train | 050/050 ] loss = 11.81946, acc = 0.64413
+[ Valid | 050/050 ] loss = 9.80260, acc = 0.61516 -> best
+A50_kd_T8_a0.5: best valid acc 0.61516 at epoch 50, 990.2 s

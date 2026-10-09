@@ -1,0 +1,25 @@
+09:52:46 start A10_ce --epochs 10
+Terminated
+09:58:00 FAILED A10_ce
+skip A10_ce
+09:58:12 start A10_kd_T1_a0.5 --epochs 10 --loss KD --T 1 --alpha 0.5
+10:01:35 done A10_kd_T1_a0.5: best valid acc 0.51720 at epoch 10, 200.5 s
+10:01:35 start A50_ce --epochs 50
+10:19:22 done A50_ce: best valid acc 0.64286 at epoch 50, 1066.0 s
+10:19:22 start A50_kd_T1_a0.5 --epochs 50 --loss KD --T 1 --alpha 0.5
+10:37:35 done A50_kd_T1_a0.5: best valid acc 0.63732 at epoch 50, 1092.5 s
+10:37:35 start A50_kd_T2_a0.5 --epochs 50 --loss KD --T 2 --alpha 0.5
+10:54:54 done A50_kd_T2_a0.5: best valid acc 0.64840 at epoch 50, 1037.2 s
+10:54:54 start A50_kd_T4_a0.5 --epochs 50 --loss KD --T 4 --alpha 0.5
+11:11:22 done A50_kd_T4_a0.5: best valid acc 0.63032 at epoch 50, 986.9 s
+11:11:22 start A50_kd_T8_a0.5 --epochs 50 --loss KD --T 8 --alpha 0.5
+11:27:54 done A50_kd_T8_a0.5: best valid acc 0.61516 at epoch 50, 990.2 s
+11:27:54 start A50_kd_T1_a0.9 --epochs 50 --loss KD --T 1 --alpha 0.9
+11:44:21 done A50_kd_T1_a0.9: best valid acc 0.64023 at epoch 50, 986.2 s
+11:44:21 start A50_kd_T2_a0.9 --epochs 50 --loss KD --T 2 --alpha 0.9
+12:00:51 done A50_kd_T2_a0.9: best valid acc 0.63878 at epoch 50, 989.4 s
+12:00:51 start A50_kd_T4_a0.9 --epochs 50 --loss KD --T 4 --alpha 0.9
+12:17:19 done A50_kd_T4_a0.9: best valid acc 0.61691 at epoch 45, 986.1 s
+12:17:19 start A50_kd_T8_a0.9 --epochs 50 --loss KD --T 8 --alpha 0.9
+12:33:48 done A50_kd_T8_a0.9: best valid acc 0.61108 at epoch 45, 987.9 s
+12:33:48 ALL DONE

@@ -1,0 +1,22 @@
+A10_kd_T1_a0.5: Total params: 87,907
+[ Train | 001/010 ] loss = 1.96566, acc = 0.32739
+[ Valid | 001/010 ] loss = 1.78794, acc = 0.35481 -> best
+[ Train | 002/010 ] loss = 1.79175, acc = 0.39043
+[ Valid | 002/010 ] loss = 1.69279, acc = 0.36822 -> best
+[ Train | 003/010 ] loss = 1.70610, acc = 0.41780
+[ Valid | 003/010 ] loss = 1.62133, acc = 0.43090 -> best
+[ Train | 004/010 ] loss = 1.62943, acc = 0.44770
+[ Valid | 004/010 ] loss = 1.54274, acc = 0.46851 -> best
+[ Train | 005/010 ] loss = 1.57656, acc = 0.46463
+[ Valid | 005/010 ] loss = 1.61835, acc = 0.40058
+[ Train | 006/010 ] loss = 1.53912, acc = 0.47892
+[ Valid | 006/010 ] loss = 1.60911, acc = 0.40466
+[ Train | 007/010 ] loss = 1.50299, acc = 0.49311
+[ Valid | 007/010 ] loss = 1.43621, acc = 0.48659 -> best
+[ Train | 008/010 ] loss = 1.46632, acc = 0.50365
+[ Valid | 008/010 ] loss = 1.51707, acc = 0.46851
+[ Train | 009/010 ] loss = 1.44783, acc = 0.51287
+[ Valid | 009/010 ] loss = 1.44708, acc = 0.48630
+[ Train | 010/010 ] loss = 1.41766, acc = 0.52240
+[ Valid | 010/010 ] loss = 1.36493, acc = 0.51720 -> best
+A10_kd_T1_a0.5: best valid acc 0.51720 at epoch 10, 200.5 s

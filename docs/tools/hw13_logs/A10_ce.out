@@ -1,0 +1,22 @@
+A10_ce: Total params: 87,907
+[ Train | 001/010 ] loss = 1.96848, acc = 0.32739
+[ Valid | 001/010 ] loss = 1.86017, acc = 0.35394 -> best
+[ Train | 002/010 ] loss = 1.79463, acc = 0.39114
+[ Valid | 002/010 ] loss = 1.75747, acc = 0.36793 -> best
+[ Train | 003/010 ] loss = 1.70871, acc = 0.41820
+[ Valid | 003/010 ] loss = 1.69183, acc = 0.43061 -> best
+[ Train | 004/010 ] loss = 1.63186, acc = 0.44780
+[ Valid | 004/010 ] loss = 1.61337, acc = 0.46764 -> best
+[ Train | 005/010 ] loss = 1.57891, acc = 0.46412
+[ Valid | 005/010 ] loss = 1.67959, acc = 0.40000
+[ Train | 006/010 ] loss = 1.54102, acc = 0.47963
+[ Valid | 006/010 ] loss = 1.67042, acc = 0.40554
+[ Train | 007/010 ] loss = 1.50523, acc = 0.49260
+[ Valid | 007/010 ] loss = 1.50080, acc = 0.48571 -> best
+[ Train | 008/010 ] loss = 1.46834, acc = 0.50395
+[ Valid | 008/010 ] loss = 1.57604, acc = 0.46793
+[ Train | 009/010 ] loss = 1.44980, acc = 0.51247
+[ Valid | 009/010 ] loss = 1.51104, acc = 0.48776 -> best
+[ Train | 010/010 ] loss = 1.41959, acc = 0.52210
+[ Valid | 010/010 ] loss = 1.43347, acc = 0.51545 -> best
+A10_ce: best valid acc 0.51545 at epoch 10, 163.5 s

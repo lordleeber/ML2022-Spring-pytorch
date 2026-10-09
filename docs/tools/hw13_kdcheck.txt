@@ -1,0 +1,17 @@
+images 9866 student acc 0.5099331140518188 teacher acc 0.9997972846031189
+== 1. direction: kl_div(input=log q_student, target=p_teacher) = KL(teacher || student)
+T=1: F.kl_div 1.436162  KL(teacher||student) 1.436162  KL(student||teacher) 10.976600
+T=4: F.kl_div 1.390786  KL(teacher||student) 1.390786  KL(student||teacher) 2.111768
+== 2. reduction
+mean 0.13056 warning: reduction: 'mean' divides the total loss by both the batch size and the support size.'batchmean' divides only by the batch size, and aligns with the KL div math
+batchmean 1.436162 sum 14169.1758 nn.KLDivLoss() default 0.13056
+== 3. gradient size of the KL term w.r.t. student logits, with and without T^2 (mean L2 norm per image)
+T= 1: KL 1.43616  grad norm 0.75147  x T^2 -> 0.75147
+T= 2: KL 1.60408  grad norm 0.41101  x T^2 -> 1.64402
+T= 4: KL 1.39079  grad norm 0.18699  x T^2 -> 2.99186
+T= 8: KL 0.59988  grad norm 0.05463  x T^2 -> 3.49654
+T=20: KL 0.08267  grad norm 0.00669  x T^2 -> 2.67601
+CE (hard labels): 1.44061 grad norm 0.75272
+== 4. loss_fn_kd terms at the report setting and at T=4, alpha=0.5
+T=1: loss_fn_kd 1.43838 = 0.5*1*1.43616 + 0.5*1.44061
+T=4: loss_fn_kd 11.84659 = 0.5*16*1.39079 + 0.5*1.44061
