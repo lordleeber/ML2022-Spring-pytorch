@@ -1,3 +1,4 @@
-## pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu116
-transformers==4.5.0
+# 2022 sample code: transformers==4.5.0 (from transformers import AdamW).
+# This repo runs it on the shared .venv (torch 2.11, transformers 5.x); AdamW is copied to legacy_adamw.py.
+transformers
 tqdm

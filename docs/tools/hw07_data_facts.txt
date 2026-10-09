@@ -1,0 +1,65 @@
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (570 > 512). Running this sequence through the model will result in indexing errors
+== train: paragraphs 10524, questions 31690, keys ['answer_end', 'answer_start', 'answer_text', 'id', 'paragraph_id', 'question_text']
+paragraph chars mean 401.8 p50=365 p90=584 p99=893 p100=1765
+paragraph tokens mean 390.2 p50=355 p90=563 p99=860 p100=1679; >150: 0.9999; >512: 1548
+question tokens mean 20.7 p50=20 p90=31 p99=44 p100=207; >40 (truncated): 596
+  stride 150: windows/question mean 3.17 max 12 total 100564
+  stride 100: windows/question mean 4.52 max 17 total 143206
+  stride 75: windows/question mean 5.88 max 23 total 186248
+  stride 50: windows/question mean 8.57 max 34 total 271731
+  stride 32: windows/question mean 13.11 max 53 total 415304
+[UNK] in question: 718, in paragraph: 2823
+answer chars mean 4.58 p50=4 p90=7 p99=18 p100=118
+answer_text != paragraph[start:end+1]: 0
+char_to_token None: 0; answer tokens mean 4.14 p50=3 p90=7 p99=17 p100=115; >150: 0
+decode(answer tokens) != answer_text: 311 (0.0098), with [UNK]: 235
+   '12' -> '128'
+   'PAL制' -> '[UNK]制'
+   '7' -> '70'
+   '《X博士》' -> '《[UNK]博士》'
+   '2' -> '23'
+   '「HD-Ready」' -> '「[UNK]-[UNK]」'
+   '幇' -> '[UNK]'
+   '1' -> '100'
+   '張騫' -> '張[UNK]'
+   '基於 PHP 實現的半開源模擬雲端運算操作系統' -> '基於[UNK]實現的半開源模擬雲端運算操作系統'
+   '白堊紀' -> '白[UNK]紀'
+   'HTTP' -> '[UNK]'
+answer not inside any eval window: stride 150: 431, stride 100: 0, stride 75: 1, stride 50: 0, stride 32: 0
+== dev: paragraphs 1490, questions 4131, keys ['answer_end', 'answer_start', 'answer_text', 'id', 'paragraph_id', 'question_text']
+paragraph chars mean 427.8 p50=420 p90=544 p99=757 p100=1132
+paragraph tokens mean 414.4 p50=407 p90=527 p99=708 p100=1126; >150: 1.0000; >512: 199
+question tokens mean 20.5 p50=19 p90=30 p99=47 p100=76; >40 (truncated): 114
+  stride 150: windows/question mean 3.32 max 8 total 13695
+  stride 100: windows/question mean 4.75 max 12 total 19619
+  stride 75: windows/question mean 6.17 max 16 total 25481
+  stride 50: windows/question mean 8.99 max 23 total 37151
+  stride 32: windows/question mean 13.79 max 36 total 56958
+[UNK] in question: 149, in paragraph: 473
+answer chars mean 5.55 p50=5 p90=10 p99=23 p100=52
+answer_text != paragraph[start:end+1]: 0
+char_to_token None: 0; answer tokens mean 5.04 p50=3 p90=10 p99=23 p100=52; >150: 0
+decode(answer tokens) != answer_text: 44 (0.0107), with [UNK]: 39
+   '李杲師' -> '李[UNK]師'
+   '在日治時代時因為奧運進場時「C」比「J」先進場' -> '在日治時代時因為奧運進場時「[UNK]」比「[UNK]」先進場'
+   '朱允炆' -> '朱允[UNK]'
+   '因與慕容廆雙方不和' -> '因與慕容[UNK]雙方不和'
+   'Duff Roblin' -> '[UNK][UNK]'
+   '對日本報紙的無恥造謠誣衊，進行了有力駁斥' -> '對日本報紙的無恥造謠誣[UNK]，進行了有力駁斥'
+   '杜恆-蒯因論題' -> '杜恆-[UNK]因論題'
+   'J·R·R·托爾金' -> '[UNK]·[UNK]·[UNK]·托爾金'
+   '青翁三足缶' -> '青翁三足[UNK]'
+   'OVA之作品在DVD/BD媒體販賣前，經常已在核心局深夜節目播放過' -> '[UNK]之作品在[UNK]/[UNK]媒體販賣前，經常已在核心局深夜節目播放過'
+   '因為OVA是作為個人動畫迷購買的作品' -> '因為[UNK]是作為個人動畫迷購買的作品'
+   'G·W·F·黑格爾' -> '[UNK]·[UNK]·[UNK]·黑格爾'
+answer not inside any eval window: stride 150: 74, stride 100: 0, stride 75: 0, stride 50: 0, stride 32: 0
+== test: paragraphs 1586, questions 4957, keys ['answer_end', 'answer_start', 'answer_text', 'id', 'paragraph_id', 'question_text']
+paragraph chars mean 430.3 p50=409 p90=594 p99=851 p100=992
+paragraph tokens mean 416.7 p50=396 p90=573 p99=828 p100=950; >150: 1.0000; >512: 294
+question tokens mean 22.3 p50=21 p90=33 p99=45 p100=58; >40 (truncated): 148
+  stride 150: windows/question mean 3.34 max 7 total 16550
+  stride 100: windows/question mean 4.77 max 10 total 23669
+  stride 75: windows/question mean 6.21 max 13 total 30766
+  stride 50: windows/question mean 9.07 max 19 total 44948
+  stride 32: windows/question mean 13.90 max 30 total 68881
+[UNK] in question: 104, in paragraph: 436

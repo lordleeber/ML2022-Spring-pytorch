@@ -1,8 +1,14 @@
+import json
+
 import torch
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
 
-"""## Dataset and Dataloader"""
+def read_data(file):
+    with open(file, 'r', encoding="utf-8") as reader:
+        data = json.load(reader)
+    return data["questions"], data["paragraphs"]
+
 
 class QA_Dataset(Dataset):
     def __init__(self, split, questions, tokenized_questions, tokenized_paragraphs):
@@ -50,8 +56,7 @@ class QA_Dataset(Dataset):
 
             # Pad sequence and obtain inputs to model
             input_ids, token_type_ids, attention_mask = self.padding(input_ids_question, input_ids_paragraph)
-            return torch.tensor(input_ids), torch.tensor(token_type_ids), torch.tensor \
-                (attention_mask), answer_start_token, answer_end_token
+            return torch.tensor(input_ids), torch.tensor(token_type_ids), torch.tensor(attention_mask), answer_start_token, answer_end_token
 
         # Validation/Testing
         else:
