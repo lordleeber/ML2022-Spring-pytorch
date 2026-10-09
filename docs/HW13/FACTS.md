@@ -97,3 +97,11 @@
 - `docs/tools/hw13_students.py`：`sample` 87,907；`dw`（MobileNet-v1 風格，stem 3→24 s2 + 9 個 dwpw 區塊，寬 32/64/64/96/96/128/128/128/144，步幅 1/2/1/2/1/2/1/1/2）**99,811**；`plain`（同步幅與深度、一般 3×3 卷積，stem 16，寬 16/24/24/32/32/40/44/48/56）**99,355**；`mbv2`（inverted residual，stem 16，(t,c,n,s) = (1,16,1,1)(4,24,2,2)(4,32,2,2)(4,48,2,2)(4,64,1,2)，最後 1×1 到 160）**96,651**。dw 區塊用 model.py 的 `dwpw_conv`（兩個卷積都有 bias）再各接 BN+ReLU。
 - `docs/tools/hw13_run_grid.sh`：A 組，16 workers，結果寫 `docs/tools/hw13_runs.jsonl`，log 在 `docs/tools/hw13_logs/`。
 - 圖書樣板：`docs/tools/hw13_book/`（`book.css`、`book.js`、`apply_template.py`、`fill_listings.py`），由 HW14 改：強調色薄荷青 #5cc9ae、標題 Noto Serif TC、等寬 JetBrains Mono；圖表底 #181e25 與 HW14 相同，角色色沿用 HW14 驗證過的色盤（老師 #9085e9、CE #8b949e、KD #3987e5、arch1 #d95926、arch2 #199e70、剪枝 #d55181、量化 #c98500）。
+
+## ch00 實測（全貌，2026-10-09）
+- 老師各段參數（torchvision resnet18, num_classes=11）：conv1 9,408；bn1 128；layer1 147,968；layer2 525,568；layer3 2,099,712；layer4 8,393,728（75.1%）；fc 5,643（512·11+11）。合計 11,182,155。
+- 老師各段輸出形狀（輸入 1×3×224×224）：conv1/bn1/relu (64,112,112)；maxpool (64,56,56)；layer1 (64,56,56)；layer2 (128,28,28)；layer3 (256,14,14)；layer4 (512,7,7)；avgpool (512,1,1)。
+- 老師 checkpoint：`OrderedDict`，122 個 key，參數 + buffer 共 11,191,775 個數，張量本身 44,767,180 bytes；檔案 44,806,605 bytes。
+- 學生 `student_best.ckpt`：30 個 key，88,367 個數（87,907 參數 + 456 個 running mean/var + 4 個 int64 `num_batches_tracked`），張量 353,484 bytes，檔案 363,645 bytes。老師 / 學生檔案大小 123 倍。
+- `submission.csv`（Simple，test.py）：3,348 行（表頭 + 3,347）；預測各類張數 0:636、1:38、2:531、3:331、4:263、5:202、6:50、7:21、8:303、9:734、10:238。訓練集比例（HW03 FACTS）第 1 類 4.3%、第 6 類 4.5%、第 7 類 2.8%；預測只佔 1.1%、1.5%、0.6%。
+- test.py 的 stdout：`One ./food11-hw13/evaluation sample ./food11-hw13/evaluation/0000.jpg`（tqdm 進度條在 stderr）。
