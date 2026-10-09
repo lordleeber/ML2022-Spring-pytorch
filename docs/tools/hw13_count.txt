@@ -1,0 +1,55 @@
+== 1. torchsummary uses the global RNG (torch.rand(2, ...) as input)
+state after model == after model+summary: False
+== 2. counting corner cases: numel vs torchsummary
+Shared: numel 128  torchsummary {'total': '212', 'trainable': '212', 'non_trainable': '0', 'fb_mb': '2.30'}
+TopLevelParam: numel 50,044  torchsummary {'total': '44', 'trainable': '44', 'non_trainable': '0', 'fb_mb': '0.00'}
+Unused: numel 90,344  torchsummary {'total': '44', 'trainable': '44', 'non_trainable': '0', 'fb_mb': '0.00'}
+Frozen: numel 87,907  torchsummary {'total': '87,907', 'trainable': '87,011', 'non_trainable': '896', 'fb_mb': '99.72'}
+student BN affine=False on cnn[1]: numel 87,843  torchsummary {'total': '87,843', 'trainable': '87,843', 'non_trainable': '0', 'fb_mb': '99.72'}
+== 3. FLOPs (torch.utils.flop_counter) per layer, one 224x224 image; MACs = FLOPs / 2
+student total FLOPs 1,718,756,248  MACs 859,378,124
+   StudentNet.cnn.0 42,581,376 MACs
+   StudentNet.cnn.3 446,054,400 MACs
+   StudentNet.cnn.7 214,990,848 MACs
+   StudentNet.cnn.11 155,750,400 MACs
+   StudentNet.fc.0 1,100 MACs
+dw: params 99,811 MACs 66,033,200
+plain: params 99,355 MACs 84,333,928
+mbv2: params 96,651 MACs 79,502,496
+teacher total MACs 1,813,566,976
+   ResNet.conv1 118,013,952 MACs
+   ResNet.layer1 462,422,016 MACs
+   ResNet.layer2 411,041,792 MACs
+   ResNet.layer3 411,041,792 MACs
+   ResNet.layer4 411,041,792 MACs
+   ResNet.fc 5,632 MACs
+== 4. activation sizes of the sample student (floats per image, forward only)
+  cnn.0 Conv2d             (32, 222, 222) 1,577,088
+  cnn.1 BatchNorm2d        (32, 222, 222) 1,577,088
+  cnn.2 ReLU               (32, 222, 222) 1,577,088
+  cnn.3 Conv2d             (32, 220, 220) 1,548,800
+  cnn.4 BatchNorm2d        (32, 220, 220) 1,548,800
+  cnn.5 ReLU               (32, 220, 220) 1,548,800
+  cnn.6 MaxPool2d          (32, 110, 110) 387,200
+  cnn.7 Conv2d             (64, 108, 108) 746,496
+  cnn.8 BatchNorm2d        (64, 108, 108) 746,496
+  cnn.9 ReLU               (64, 108, 108) 746,496
+  cnn.10 MaxPool2d          (64, 54, 54) 186,624
+  cnn.11 Conv2d             (100, 52, 52) 270,400
+  cnn.12 BatchNorm2d        (100, 52, 52) 270,400
+  cnn.13 ReLU               (100, 52, 52) 270,400
+  cnn.14 MaxPool2d          (100, 26, 26) 67,600
+  cnn.15 AdaptiveAvgPool2d  (100, 1, 1) 100
+sample torchsummary {'total': '87,907', 'trainable': '87,907', 'non_trainable': '0', 'fb_mb': '99.72'}
+dw torchsummary {'total': '99,811', 'trainable': '99,811', 'non_trainable': '0', 'fb_mb': '48.97'}
+plain torchsummary {'total': '99,355', 'trainable': '99,355', 'non_trainable': '0', 'fb_mb': '14.44'}
+mbv2 torchsummary {'total': '96,651', 'trainable': '96,651', 'non_trainable': '0', 'fb_mb': '79.28'}
+teacher torchsummary {'total': '11,182,155', 'trainable': '11,182,155', 'non_trainable': '0', 'fb_mb': '62.79'}
+== 5. what is inside student_best.ckpt
+  weight                 torch.float32  87,440 numbers   349,760 bytes
+  bias                   torch.float32     467 numbers     1,868 bytes
+  running_mean           torch.float32     228 numbers       912 bytes
+  running_var            torch.float32     228 numbers       912 bytes
+  num_batches_tracked    torch.int64        4 numbers        32 bytes
+  file 363645 bytes
+  fp16 copy file 186257 bytes

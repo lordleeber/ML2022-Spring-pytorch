@@ -121,3 +121,15 @@
 - **不建老師、完整重跑**（scratchpad 複本，`train.py` 第 68 行照字面註解掉，其餘不變，nw=0，`OMP_NUM_THREADS=4`，與 A 組並行）：10:01:39–10:11:07。逐 epoch 驗證準確率 0.35423 0.38455 0.44023 0.43673 0.46589 0.47609 0.47464 0.46297 0.48105 **0.51720**（第 10 個 epoch 最佳；原版 0.50408 在第 9 個）。第 1 個 epoch 驗證 loss 1.85076（原版 1.86308）。（0.51720 = 1774/3430，和 A10_kd 的最佳值相同，巧合。）
 - **梯度範數**（`docs/tools/hw13_gradnorm.py` → `hw13_gradnorm.json`；Simple 設定、nw=16，所以和 train.py 的亂數流不同）：1,550 步，clip 前的總範數 > 10 只有 **6 步**（0.39%）；平均 4.061、中位數 4.059、最大 16.875；前 10 步 2.788 1.89 2.206 2.293 2.183 1.67 1.811 1.829 1.522 1.628；每個 epoch 的最大值 4.634 5.717 10.108 11.067 8.042 13.159 14.741 16.875 9.891 12.628。
 - A10_kd_T1_a0.5（nw=16）：最佳 0.51720（第 10 個 epoch），200.5 s（A10_ce 163.5 s，多 23%）。
+
+## ch02 實測（參數怎麼數，2026-10-09；`docs/tools/hw13_count.py` → `hw13_count.txt`）
+- torchsummary 1.5.1 原始碼（`torchsummary.py`）：對每個不是 `nn.Sequential`／`nn.ModuleList`、也不是 model 本身的模組註冊 forward hook（37–42 行）；hook 裡只數 `module.weight` 與 `module.bias` 的元素數（29–35 行）；trainable 只看 `weight.requires_grad`（32 行）；用 `torch.rand(2, *in_size)` 當輸入跑一次 forward（60、72 行）；Forward/backward pass size = 所有 hook 到的輸出元素數 × 2（梯度）× 4 bytes（101 行）；Params size = 參數 × 4 bytes。
+- **summary 會用掉全域亂數**：`manual_seed(0)` 後「建學生」與「建學生 + summary」的 RNG 狀態不同（`torch.equal` False）。
+- 邊角案例（numel vs torchsummary Total）：同一個 Conv2d(3,3,3) 呼叫兩次 + Linear(3,11)：128 vs **212**（重複算）；模型本身掛 `nn.Parameter(torch.ones(50_000))` + Linear(3,11)：50,044 vs **44**；定義了沒呼叫的 Linear(300,300)：90,344 vs **44**；學生第一個卷積 `requires_grad=False`：Total 87,907、Trainable 87,011、Non-trainable **896**；學生 `cnn[1]` 換 `BatchNorm2d(32, affine=False)`：87,843 vs 87,843（少 64 個 γβ，兩邊一致）。
+- **計算量**（`torch.utils.flop_counter.FlopCounterMode`，一張 224×224，只數卷積與全連接；MACs = FLOPs/2）：
+  - 範例學生 **859,378,124 MACs**（FLOPs 1,718,756,248）：cnn.0 42,581,376；**cnn.3 446,054,400（51.9%）**；cnn.7 214,990,848；cnn.11 155,750,400；fc 1,100。前兩層合計 488.6M（56.9%）。手算 cnn.3 = 32·32·9·220·220 = 446,054,400。
+  - 老師 **1,813,566,976 MACs**：conv1 118,013,952；layer1 462,422,016；layer2/3/4 各 411,041,792；fc 5,632。學生／老師 = 47.4%（參數只有 1/127）。
+  - dw 66,033,200（範例的 7.7%）；plain 84,333,928；mbv2 79,502,496。
+- 範例學生每層輸出元素（一張圖）：cnn.0–2 各 1,577,088；cnn.3–5 各 1,548,800；pool 387,200；cnn.7–9 各 746,496；pool 186,624；cnn.11–13 各 270,400；pool 67,600；GAP 100。torchsummary 的 Forward/backward：sample 99.72 MB、dw 48.97、plain 14.44、mbv2 79.28、老師 62.79。
+- `student_best.ckpt` 內容：weight 87,440 個（349,760 bytes）、bias 467（1,868）、running_mean 228（912）、running_var 228（912）、num_batches_tracked 4 個 int64（32）；檔案 363,645 bytes（張量 353,484，其餘約 10 KB 是 zip/pickle 格式）。轉 fp16 另存 186,257 bytes。
+- 推論時間沒有在 ch02 量（A 組在跑，GPU 不乾淨）；移到第 6 章與剪枝的計時一起量。
