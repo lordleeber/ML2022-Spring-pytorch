@@ -40,3 +40,15 @@
 3. 跑 Simple、計時；確認驗證指標沒有偏差（HW01、HW04 的教訓）。
 4. 老師模型在驗證集上的準確率、參數量；學生模型的參數量用 torchsummary 驗證。
 5. 寫大綱，等使用者核可。
+
+## 狀態（2026-10-09 09:50）
+- 範例程式：投影片的 Colab 連結匿名下載成功（使用者同意），`HW13/HW13.ipynb`、`HW13/HW13_pruning_example.ipynb`。torchsummary 1.5.1 裝進共用 .venv（使用者決定）。
+- 現行 skill 與 HW14 時相同（mySkills 27d96f9）：不寫附錄、最後一章是總結章、樣板自己設計寫在 index.html、不冷讀（照前幾本）。
+- notebook 拆成 `config.py`、`dataset.py`、`model.py`、`kd.py`、`train.py`、`test.py`；參照版（`docs/tools/hw13_make_ref.py`）8 分 19 秒，train.py 與它逐位元一致。
+- 事實在 `docs/HW13/FACTS.md`：學生 87,907 參數、老師 11,182,155；老師驗證 0.86093；Simple 驗證 0.50408；指標無偏差；資料與 HW03 相同（只有測試集重新編號）。
+- 下一步：大綱與實驗規格給使用者核可。
+
+## 使用者決定（2026-10-09 09:55）
+- 大綱核可：index、ch00 全貌／ch01 程式與訓練迴圈／ch02 參數怎麼數／ch03 老師／ch04 知識蒸餾／ch05 架構設計／ch06 剪枝／ch07 量化與其他／ch08 總結；不寫附錄、不冷讀、樣板自己設計。
+- 實驗 A+B+C+D：A KD（10 epoch CE vs KD；50 epoch T∈{1,2,4,8}×α∈{0.5,0.9} + CE）、B 架構（兩種 ≤100k 學生 × CE／最佳 KD，200 epoch + HW03 增強，加同參數對照）、C 剪枝、D 量化。實驗工具先在 nw=0 驗證與 train.py 逐位元一致，正式實驗用 16 workers；一組一組依序跑。
+- 節奏照 HW14：每章寫完驗證就推、接著寫下一章；需要 GPU 實驗就直接做。長任務每 30 分鐘回報。
