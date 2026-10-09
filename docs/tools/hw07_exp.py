@@ -24,6 +24,7 @@ p.add_argument('--tag', required=True)
 p.add_argument('--seed', type=int, default=0)
 p.add_argument('--model', default='bert-base-chinese')
 p.add_argument('--tokenizer', default=None, help='default: same as --model')
+p.add_argument('--lower', choices=['default', 'true', 'false'], default='default', help='override the tokenizer do_lower_case')
 p.add_argument('--epochs', type=int, default=1)
 p.add_argument('--lr', type=float, default=1e-4)
 p.add_argument('--batch', type=int, default=32)
@@ -84,7 +85,8 @@ same_seeds(args.seed)
 
 t0 = time.time()
 model = AutoModelForQuestionAnswering.from_pretrained(args.model).to(device)
-tokenizer = BertTokenizerFast.from_pretrained(args.tokenizer or args.model)
+tok_kwargs = {} if args.lower == 'default' else {'do_lower_case': args.lower == 'true'}
+tokenizer = BertTokenizerFast.from_pretrained(args.tokenizer or args.model, **tok_kwargs)
 n_params = sum(p.numel() for p in model.parameters())
 
 train_questions, train_paragraphs = read_data("hw7_train.json")
@@ -191,7 +193,7 @@ if args.save:
     print("Saving Model ...")
     model.save_pretrained(args.save)
 
-rec = dict(tag=args.tag, seed=args.seed, model=args.model, epochs=args.epochs, lr=args.lr, batch=args.batch, accum=args.accum,
+rec = dict(tag=args.tag, seed=args.seed, model=args.model, lower=args.lower, do_lower_case=tokenizer.do_lower_case, epochs=args.epochs, lr=args.lr, batch=args.batch, accum=args.accum,
            decay=args.decay, warmup=args.warmup, optim=args.optim, stride=args.stride, window=args.window, amp=args.amp,
            zero_shot=args.zero_shot, params=n_params, dev_em=dev_by_epoch[-1], dev_correct=dev_correct, dev_by_epoch=dev_by_epoch,
            train_s=round(t_train, 1), dev_s=round(t_dev, 1), total_s=round(time.time() - t0, 1),

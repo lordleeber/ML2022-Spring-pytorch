@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 1 章　Tokenizer — HW07 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW07 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「閱讀理解」書桌——近黑的冷灰底、紙白的字、沙金色只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：原版 灰、LR 衰減 藍、隨機視窗 橘、換模型 綠／紫／洋紅／黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與 HW13、HW14 相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #e0a458;      /* 沙金：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(224, 164, 88, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #e0a458;
+  /* 角色色 */
+  --r-base: #8b949e; --r-decay: #3987e5; --r-window: #d95926; --r-m1: #199e70;
+  --r-m2: #9085e9; --r-m3: #d55181; --r-m4: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "[CLS] 問題 ≤40 [SEP] 文章視窗 150 [SEP]　→　BERT　→　start／end 位置　·　DRCD 繁中閱讀理解";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fbf4ea; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #1b1914; border-color: rgba(224, 164, 88, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1a1208; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.base { --rc: var(--r-base); } .role.decay { --rc: var(--r-decay); } .role.window { --rc: var(--r-window); }
+.role.m1 { --rc: var(--r-m1); } .role.m2 { --rc: var(--r-m2); } .role.m3 { --rc: var(--r-m3); }
+.role.m4 { --rc: var(--r-m4); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW07 讀碼教材</p>
+  <h1>第 1 章　Tokenizer：中文被切成什麼</h1>
+  <p class="chap-lead">模型讀不了文字，只讀得了整數。把文字變成整數的是 tokenizer。這一章看 bert-base-chinese 的 tokenizer 怎麼處理中文、英文與數字，詞表裡裝了什麼，哪些字會變成「看不懂」的 [UNK]，以及最要緊的一件事：模型指出的是第幾個 token，可是 Exact Match 比的是原文。從 token 走回原文的那一步，範例用 <code>decode</code>，在 dev 上就有 44 題走不回去。</p>
+</header>
+<main>
+
+<h2 id="split">1.1　從字到整數</h2>
+<p>投影片 p.10 用一句話示範 tokenization（斷詞）。在本機跑同一句，結果和投影片一模一樣：</p>
+<pre class="shell">'李宏毅教授2022機器學習'
+   tokens  ['李', '宏', '毅', '教', '授', '2022', '機', '器', '學', '習']
+   ids     [3330, 2131, 3675, 3136, 2956, 10550, 3582, 1690, 2119, 5424]
+   offsets [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 9), (9, 10), (10, 11), (11, 12), (12, 13)]</pre>
+<p>三行分別是：切出來的 <strong>token</strong>（模型處理的最小單位）、每個 token 在詞表裡的編號（<strong>id</strong>，模型真正讀到的整數），以及每個 token 對應原文的哪一段（<strong>offset</strong>，起點與終點的字元位置，含起點不含終點）。中文每個字是一個 token；「2022」是一個 token，因為詞表裡剛好有這個字串，它對應原文的第 5 到第 8 個字元，所以 offset 是 (5, 9)。</p>
+<p>這個「中文一字一個 token」的規則不是學出來的，是寫死的。BERT 的 tokenizer 在切詞之前，會先在每一個中日韓文字的前後插入空白，所以中文永遠被拆成單字，不會出現「機器」「學習」這種詞。英文與數字則用 <strong>WordPiece</strong> 演算法切：先按空白與標點切開，每一段再從左邊開始，貪心地找詞表裡最長的前綴，剩下的部分加上 <code>##</code> 前綴繼續找。dev 第 1 題的問題就是一例：</p>
+<pre class="shell">'1338年白蓮教徒起義的結果是?'
+   tokens  ['133', '##8', '年', '白', '蓮', '教', '徒', '起', '義', '的', '結', '果', '是', '?']</pre>
+<p>詞表裡沒有「1338」，最長的前綴是「133」，剩下的「8」變成「##8」，<code>##</code> 表示「這一段接在前一個 token 後面，中間沒有空白」。這種切法對中文影響不大，但對數字有一個副作用，1.5 節會看到。</p>
+<p><code>train.py</code> 把問題和文章分開斷詞：</p>
+<figure class="listing"><figcaption>train.py:47–51 — 問題與文章各自斷詞，先不加特殊符號</figcaption>
+<pre class="py" data-hot="47,50"><code>train_questions_tokenized = tokenizer([train_question["question_text"] for train_question in train_questions], add_special_tokens=False)
+dev_questions_tokenized = tokenizer([dev_question["question_text"] for dev_question in dev_questions], add_special_tokens=False)
+
+train_paragraphs_tokenized = tokenizer(train_paragraphs, add_special_tokens=False)
+dev_paragraphs_tokenized = tokenizer(dev_paragraphs, add_special_tokens=False)</code></pre></figure>
+<p>把一整個 list 交給 tokenizer，它會一次處理全部。<code>BertTokenizerFast</code> 的 Fast 指的是用 Rust 寫的 tokenizers 函式庫，10,524 篇訓練文章（420 萬字）斷完只要 0.55 秒。斷詞結果是一個 <code>BatchEncoding</code> 物件，用索引取出單篇（例如 <code>train_paragraphs_tokenized[428]</code>）會得到一個 <code>Encoding</code>，裡面有 <code>ids</code>、<code>offsets</code>，以及 1.4 節要用的 <code>char_to_token</code> 方法。斷詞時會看到一行警告「Token indices sequence length is longer than the specified maximum sequence length for this model (570 &gt; 512)」，意思是有文章超過 512 個 token；這裡只是先斷詞，切視窗是下一章的事，所以範例說可以忽略（<code>train.py:53</code>）。</p>
+
+<h2 id="vocab">1.2　詞表裡有什麼</h2>
+<p>bert-base-chinese 的詞表有 21,128 個 token。分類數一數：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>類別</th><th class="num">個數</th><th>例子</th></tr></thead>
+<tbody>
+<tr><td>特殊符號</td><td class="num">5</td><td><code>[PAD]</code> 0、<code>[UNK]</code> 100、<code>[CLS]</code> 101、<code>[SEP]</code> 102、<code>[MASK]</code> 103</td></tr>
+<tr><td>保留位置 <code>[unusedN]</code></td><td class="num">99</td><td>預留給使用者自己加新 token</td></tr>
+<tr><td>單一中日韓文字</td><td class="num">7,321</td><td>台、臺、灣、学、學（簡繁都有）</td></tr>
+<tr><td><code>##</code> 開頭的片段</td><td class="num">9,614</td><td>##8、##ing；其中 7,321 個是 <code>##</code> 加一個中文字</td></tr>
+<tr><td>小寫英文字</td><td class="num">2,084</td><td>http、gdp、the</td></tr>
+<tr><td>純數字字串</td><td class="num">873</td><td>2022、1993、3400、128</td></tr>
+</tbody>
+</table></div>
+<p>表中有兩件事值得留意。第一，<code>##</code> 加中文字的 7,321 個 token 在這裡永遠用不到：中文在切詞前就被空白隔開，每個字都是一段的開頭，不會出現「接在前一個 token 後面」的中文。這是 Google 用同一套程式產生多語言詞表留下的痕跡，佔了詞表三分之一。第二，詞表裡的英文<strong>全是小寫</strong>，這件事和下一節直接相關。</p>
+<p>中文字的覆蓋率很高。訓練資料裡出現了 5,804 種不同的中文字，其中 842 種不在詞表裡，但它們合計只出現 3,175 次，佔全部 425 萬個中文字的 0.075%。最常見的是「鄴」（68 次）、「麪」（58 次）、「鈽」（49 次）、「滎」（47 次）、「犛」（46 次）這類罕用字或異體字。</p>
+
+<h2 id="unk">1.3　[UNK]：模型看不見的字</h2>
+<p>詞表裡找不到的字或詞，會變成 <code>[UNK]</code>（unknown），id 100。所有看不懂的東西都共用這一個 id，所以對模型來說，「張騫」的「騫」、「朱允炆」的「炆」、「HTTP」、「GDP」全都是同一個符號。幾個例子：</p>
+<pre class="shell">'Duff Roblin'   → ['[UNK]', '[UNK]']
+'HTTP'          → ['[UNK]']
+'PAL制'         → ['[UNK]', '制']
+'iPhone 13'     → ['[UNK]', '13']
+'張騫'          → ['張', '[UNK]']
+'「HD-Ready」'  → ['「', '[UNK]', '-', '[UNK]', '」']
+'１２３ＡＢＣ'  → ['[UNK]']          （全形字元）
+'J·R·R·托爾金'  → ['[UNK]', '·', '[UNK]', '·', '[UNK]', '·', '托', '爾', '金']</pre>
+<p>英文為什麼這麼慘？詞表有 2,084 個英文字，「http」「gdp」都在裡面，但只有小寫版本。而 bert-base-chinese 在 Hugging Face 上的 tokenizer 設定檔只有一行：</p>
+<pre class="shell">{"do_lower_case": false, "model_max_length": 512}</pre>
+<p><code>do_lower_case</code> 是 false，tokenizer 不會先把字母轉成小寫，「HTTP」在詞表裡找不到，連拆成片段都找不到（詞表沒有大寫的片段），整個變成 <code>[UNK]</code>。把它改成 true 再斷一次：「HTTP」→ <code>http</code>、「GDP」→ <code>gdp</code>、「Duff Roblin」→ <code>du ##ff ro ##b ##lin</code>。在 dev 的文章裡數 <code>[UNK]</code>：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>dev 文章裡的 [UNK]</th><th class="num">不轉小寫（範例）</th><th class="num">轉小寫</th></tr></thead>
+<tbody>
+<tr><td>個數</td><td class="num">1,346</td><td class="num">564</td></tr>
+<tr><td>其中來自拉丁字母</td><td class="num">779</td><td class="num">—</td></tr>
+<tr><td>其中來自中日韓字</td><td class="num">430</td><td class="num">—</td></tr>
+<tr><td>其中來自其他符號</td><td class="num">137</td><td class="num">—</td></tr>
+</tbody>
+</table></div>
+<p>最常變成 <code>[UNK]</code> 的原文依序是：破折號「—」97 次、NHL 32 次、GDP 27 次、「韃」23 次、刪節號「…」22 次、「閭」17 次、OVA 16 次。轉小寫能救回一半以上。但要不要轉，不能只看 tokenizer：模型在預訓練時看到的是哪一種輸入，微調時就該給它同一種。詞表裡只有小寫英文，代表 Google 當初預訓練時多半是轉了小寫的；設定檔寫 false，可能讓模型在微調時面對它幾乎沒見過的大量 <code>[UNK]</code>。這是「前處理」可以改進的一個點。還有一個伏筆：第 7 章要換的 hfl 與 luhua 模型，詞表和 bert-base-chinese 一模一樣（五個模型的 <code>vocab.txt</code> 逐位元組相同），但它們的 tokenizer 設定檔沒有寫 <code>do_lower_case</code>，預設就是轉小寫。換模型時順便換了這個前處理，所以第 7 章會加跑一組「bert-base-chinese 加轉小寫」的對照，把兩者的貢獻分開。轉小寫對答案還原的影響，在 1.5 節先量。</p>
+
+<h2 id="special">1.4　特殊符號：為什麼要 add_special_tokens=False</h2>
+<p>BERT 的輸入有固定的格式：開頭放 <code>[CLS]</code>，兩段文字之間與結尾各放一個 <code>[SEP]</code>。如果直接把問題和文章一起交給 tokenizer，它會自動加好：</p>
+<pre class="shell">tokenizer('哪一地區?', '天神地區')
+   tokens          ['[CLS]', '哪', '一', '地', '區', '?', '[SEP]', '天', '神', '地', '區', '[SEP]']
+   token_type_ids  [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1]</pre>
+<p><code>token_type_ids</code> 標記每個 token 屬於第一段（0，問題）還是第二段（1，文章），模型靠它分辨哪裡是問題、哪裡是文章（投影片 p.11）。既然 tokenizer 會自動處理，範例為什麼要 <code>add_special_tokens=False</code>，再自己手動加？因為文章太長，要先切成視窗，每個視窗再各自接上問題與特殊符號。如果斷詞時就加了 <code>[CLS]</code> 與 <code>[SEP]</code>，切出來的視窗中間會夾著它們，位置也會錯開。所以範例先斷「純文字」，在 <code>QA_Dataset</code> 裡切好視窗才補上：</p>
+<figure class="listing"><figcaption>dataset.py:49–51 — 切好視窗後，手動補上 [CLS]（101）與 [SEP]（102）</figcaption>
+<pre class="py" data-hot="50-51"><code>            # Slice question/paragraph and add special tokens (101: CLS, 102: SEP)
+            input_ids_question = [101] + tokenized_question.ids[:self.max_question_len] + [102]
+            input_ids_paragraph = tokenized_paragraph.ids[paragraph_start : paragraph_end] + [102]</code></pre></figure>
+<p>101 與 102 是寫死的數字。對 bert-base-chinese 沒有問題，第 7 章換模型時就要確認：新模型的詞表裡，<code>[CLS]</code> 和 <code>[SEP]</code> 也是 101 和 102 嗎？（本書用到的五個中文模型都用同一份 21,128 個 token 的詞表，<code>[CLS]</code>、<code>[SEP]</code> 都是 101、102，實測過。）比較穩當的寫法是 <code>tokenizer.cls_token_id</code> 與 <code>tokenizer.sep_token_id</code>。同一行還有一個截斷：問題只取前 40 個 token（<code>[:self.max_question_len]</code>），dev 有 114 題的問題超過 40 個 token，後半截被丟掉。</p>
+
+<h2 id="offsets">1.5　字與 token 的對應</h2>
+<p>資料給的答案位置是<strong>字元</strong>位置（<code>answer_start</code>、<code>answer_end</code>），模型要預測的是 <strong>token</strong> 位置。訓練時要把前者換成後者：</p>
+<figure class="listing"><figcaption>dataset.py:41–42 — 把答案的字元位置換成 token 位置</figcaption>
+<pre class="py"><code>            answer_start_token = tokenized_paragraph.char_to_token(question["answer_start"])
+            answer_end_token = tokenized_paragraph.char_to_token(question["answer_end"])</code></pre></figure>
+<p><code>char_to_token(i)</code> 回傳「原文第 i 個字元落在第幾個 token 裡」，靠的就是 1.1 節的 offsets。中文一字一個 token，所以幾乎是一一對應；數字和英文則是好幾個字元對到同一個 token。實測三萬多題訓練資料，<code>char_to_token</code> 沒有一次回傳 <code>None</code>（字元落在空白上時會回傳 None），答案的字元範圍也都能對到 token。</p>
+<p>反方向（從 token 走回文字）才是問題所在。模型在評估時指出「答案是這個視窗的第 a 到第 b 個 token」，範例這樣換回文字：</p>
+<figure class="listing"><figcaption>postprocess.py:24–28 — 用 decode 把 token 換回文字，再拿掉空白</figcaption>
+<pre class="py" data-hot="25,28"><code>            # Convert tokens to chars (e.g. [1920, 7032] --&gt; "大 金")
+            answer = tokenizer.decode(data[0][0][k][start_index : end_index + 1])
+
+    # Remove spaces in answer (e.g. "大 金" --&gt; "大金")
+    return answer.replace(' ','')</code></pre></figure>
+<p><code>decode</code> 把 id 查回 token 字串，在 token 之間插入空白（「李 宏 毅 教 授 2022 機 器 學 習」），最後 <code>replace(' ','')</code> 把空白全部拿掉。對純中文的答案這樣做沒問題，但有三種答案會走不回原文：</p>
+<ul>
+<li><strong>含 [UNK] 的答案</strong>：<code>[UNK]</code> 會被 decode 成字面上的「[UNK]」五個字元。「朱允炆」會變成「朱允[UNK]」。</li>
+<li><strong>原文本來有空白的答案</strong>：「基於 PHP 實現的……」的空白會被一起拿掉（而且 PHP 本身是 [UNK]）。</li>
+<li><strong>答案只是某個 token 的一部分</strong>：原文「……128……」被切成一個 token「128」，如果標準答案是「12」，模型最多只能指到整個「128」。</li>
+</ul>
+<p>假設模型把每一題的 start、end 都指得完全正確，再用 decode 換回文字，還有多少題對不上？這是一個不必訓練就能算的「EM 上限」：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>答案換回文字的方法</th><th class="num">dev 對不上</th><th class="num">train 對不上</th></tr></thead>
+<tbody>
+<tr><td><code>decode</code> 再拿掉空白（範例）</td><td class="num">44（1.07%）</td><td class="num">311（0.98%）</td></tr>
+<tr><td>　其中含 [UNK]</td><td class="num">39</td><td class="num">235</td></tr>
+<tr><td>轉小寫 + <code>decode</code></td><td class="num">44</td><td class="num">309</td></tr>
+<tr><td>用 offsets 從原文切出來</td><td class="num">1</td><td class="num">73</td></tr>
+</tbody>
+</table></div>
+<p>轉小寫減少了 <code>[UNK]</code>（含 [UNK] 的從 39 題降到 19 題），但對不上的總數沒變：decode 出來的是小寫的「gdp」，標準答案是「GDP」，一樣不相同。真正的解法是不要 decode：每個 token 都帶著 offset，start token 的起點到 end token 的終點，直接從原文字串切出來，原文長什麼樣子答案就是什麼樣子，大寫、空白、罕用字全部保留。dev 只剩 1 題救不回：答案「1953年」在原文裡緊接在一個「1」後面，WordPiece 把「11953」切成「119」和「##53」，答案的起點落在 token 中間。訓練集剩下的 73 題也都是這種數字被併進大 token 的情況（「12」→「128」、「32」→「3200」）。</p>
+<p>換句話說，光是換一種「token 換回文字」的方法，就有 43 題（dev 的 1.04%）從「不可能答對」變成「有機會答對」。範例 <code>evaluate</code> 的 TODO 寫著「There is a bug」，這是其中之一。不過 dev 上的 EM 實際能漲多少，取決於模型在這些題目上有沒有指對位置；問題又出在評估時的資料只有 token id，沒有 offsets，要改寫哪些地方才能用上它，第 4 章會實作並在同一個模型上量。</p>
+
+<h2 id="lengths">1.6　斷完之後有多長</h2>
+<p>斷詞之後才能談長度，因為模型的上限（512）、範例給的空間（問題 40、文章 150）都是以 token 計算。三個檔的統計（工具 <code>docs/tools/hw07_data_facts.py</code>）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th class="num">文章字數平均</th><th class="num">文章 token 平均</th><th class="num">中位數</th><th class="num">第 99 百分位</th><th class="num">最長</th><th class="num">問題 token 平均</th><th class="num">問題超過 40</th></tr></thead>
+<tbody>
+<tr><td>train</td><td class="num">401.8</td><td class="num">390.2</td><td class="num">355</td><td class="num">860</td><td class="num">1,679</td><td class="num">20.7</td><td class="num">596</td></tr>
+<tr><td>dev</td><td class="num">427.8</td><td class="num">414.4</td><td class="num">407</td><td class="num">708</td><td class="num">1,126</td><td class="num">20.5</td><td class="num">114</td></tr>
+<tr><td>test</td><td class="num">430.3</td><td class="num">416.7</td><td class="num">396</td><td class="num">828</td><td class="num">950</td><td class="num">22.3</td><td class="num">148</td></tr>
+</tbody>
+</table></div>
+<p>token 數比字數略少（dev 每篇平均 427.8 字、414.4 個 token），差的就是被 WordPiece 併在一起的數字與英文：「2022」四個字元只算一個 token。對中文來說，「一個 token 約等於一個字」是很好用的估計，後面的章節會直接用它換算。</p>
+<p>從這張表可以先看出下一章要處理的兩個問題。第一，文章遠比 150 長：dev 的中位數是 407 個 token，一篇文章平均要切成 3 段以上才能看完；最長的訓練文章有 1,679 個 token，連 BERT 的 512 上限都超過三倍。第二，問題的 40 個 token 大致夠用（平均約 21 個），但訓練集還是有 596 題、dev 有 114 題被截掉後半，最長的一題訓練問題有 207 個 token。截掉的通常是問題的結尾，而中文問句的關鍵詞（「哪一年」「是誰」）常常就在結尾，這些題目等於只給模型看了半個問題。</p>
+
+<div class="note"><h4>現在的做法：byte-level BPE 沒有 [UNK]</h4>
+<p>2019 年的 GPT-2 開始，大型語言模型多半改用 <strong>byte-level BPE</strong> 的 tokenizer：最底層的單位是位元組（byte），任何文字都能拆成 UTF-8 位元組，所以沒有「詞表裡找不到」這回事，也就沒有 <code>[UNK]</code>。代價是罕用字會被拆成好幾個位元組 token，一個中文字可能佔 2 到 3 個 token。另一個改變是 tokenizer 本身不再丟失資訊：好的 tokenizer 要能「decode 回一模一樣的原文」（lossless），空白與大小寫都保留，這正是本節 decode 做不到的事。此外，今天的中文模型多半有自己的大詞表，常用詞會合成一個 token，不再固定一字一個。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>bert-base-chinese 的 tokenizer 把中文固定切成單字，英文與數字用 WordPiece 切（「1338」→「133」「##8」）。詞表 21,128 個 token，其中 7,321 個中文單字；<code>##</code> 加中文字的 7,321 個永遠用不到。</li>
+<li><code>[UNK]</code>（id 100）把所有不認識的東西都變成同一個符號。設定檔 <code>do_lower_case: false</code>，詞表卻只有小寫英文，所以大寫英文幾乎全成了 <code>[UNK]</code>；dev 文章的 <code>[UNK]</code> 有 1,346 個，轉小寫剩 564 個。</li>
+<li>範例先 <code>add_special_tokens=False</code> 斷純文字，切好視窗才補 <code>[CLS]</code>（101）與 <code>[SEP]</code>（102）；問題截到 40 個 token（dev 114 題被截）。</li>
+<li><code>char_to_token</code> 把答案的字元位置換成 token 位置；反方向用 <code>decode</code> 時，dev 有 44 題就算位置全對也還原不了答案。改用 offsets 從原文切，只剩 1 題。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 「iPhone 13 於 2021 年發表」會被切成哪些 token？哪些部分模型看不見？</summary>
+<p>實測：<code>['[UNK]', '13', '於', '2021', '年', '發', '表']</code>。「iPhone」含大寫字母，詞表裡沒有，連片段都找不到，整段變 <code>[UNK]</code>；「13」與「2021」剛好都在詞表裡，各是一個 token；中文一字一個。模型看不見的只有「iPhone」，但這恰好是這句話最重要的詞。</p></details>
+<details class="quiz"><summary>2. 把 <code>dataset.py</code> 裡的 <code>[101]</code> 改成 <code>[tokenizer.cls_token_id]</code>，對 bert-base-chinese 的結果有沒有影響？為什麼還是值得改？</summary>
+<p>沒有影響：bert-base-chinese 的 <code>cls_token_id</code> 就是 101（實測）。值得改是因為換模型時，有些模型的特殊符號不在同一個位置（例如英文 RoBERTa 的 <code>&lt;s&gt;</code> 是 0），寫死的 101 會讓模型讀到一個完全不相干的 token，而且不會報錯，只會默默變差。</p></details>
+<details class="quiz"><summary>3. 標準答案是「GDP」。模型在 token 層級指對了位置，範例的 <code>evaluate</code> 會回答什麼？把 tokenizer 改成轉小寫呢？改用 offsets 呢？</summary>
+<p>範例：「GDP」是 <code>[UNK]</code>，decode 出「[UNK]」，錯。轉小寫：「GDP」變成 token <code>gdp</code>，decode 出「gdp」，和「GDP」大小寫不同，還是錯。用 offsets：從原文切出「GDP」，對。這就是 1.5 節表中「轉小寫」那一列的對不上題數沒有減少的原因。</p></details>
+<details class="quiz"><summary>4. 為什麼範例要把問題和文章分開斷詞，而不是用 <code>tokenizer(question, paragraph)</code> 一次處理？</summary>
+<p>因為文章要切成好幾個視窗，每個視窗都要重複接上同一個問題。分開斷詞後，文章的 token 可以任意切片，再和問題、特殊符號組合；一次處理的話，特殊符號與 <code>token_type_ids</code> 都已經固定，切開就亂了。（transformers 其實也提供一次處理加切視窗的參數 <code>stride</code> 與 <code>return_overflowing_tokens</code>，範例選擇自己寫，方便學生看清楚每一步。）</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Hugging Face，<a href="https://huggingface.co/learn/llm-course/chapter6/6">WordPiece tokenization</a>：WordPiece 的訓練與切詞演算法，附程式。</li>
+<li>Hugging Face tokenizers 文件，<a href="https://huggingface.co/docs/tokenizers/api/encoding">Encoding</a>：<code>offsets</code>、<code>char_to_token</code>、<code>token_to_chars</code> 等對應方法的說明。</li>
+<li>Google Research BERT 的 <a href="https://github.com/google-research/bert/blob/master/multilingual.md">multilingual.md</a>：說明中文模型如何在中日韓字元前後加空白、為什麼中文是逐字切。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW07 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW07 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

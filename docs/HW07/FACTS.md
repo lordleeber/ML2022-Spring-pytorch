@@ -54,3 +54,18 @@
 - dev 前 8 題（seed 0 決定性 checkpoint）：0 福岡（gold 天神地區，預測**空字串**）；1 白蓮教 失敗 ✓；2 摔角 職業摔角比賽 ✓；3 1960 重點大學（gold 64所，預測 華南理工大學）；4 權勢象徵（gold 納妾制度，預測 中共將其看作統戰工作）；5 中華民國首都（gold 臺北市，預測 菲律賓）；6 微積分（gold 17世紀，預測 1670年）；7 幕府（鐮倉幕府 ✓）。dev 每題 3–4 個視窗，start_logits 形狀 (視窗數, 193)。
 - dev 第 0 題拆解（同一個 checkpoint）：文章 460 token → 4 個視窗（[0,150)、[150,300)、[300,450)、[450,460)，最後一個只有 10 個文章 token）；答案「天神地區」在 token 337–340，落在第 3 個視窗（k=2）。各視窗 (start, end, start_logit, end_logit, 和)：k=0 (44, 33, 1.82, −1.95, −0.13) → end < start，decode 出空字串；k=1 (42, 43, −1.34, −3.98, −5.31)「福岡」；k=2 (103, 104, −0.81, −3.15, −3.96)「填海」；k=3 (14, 35, −0.07, −1.48, −1.55) 跨進問題與 [SEP]。最大和是 k=0 的 −0.13，所以答案是空字串。原文：「福岡市的兩大中心地區是中央區的天神地區和博多站附近的博多地區」。
 - 非決定性的來源（`torch.use_deterministic_algorithms(True, warn_only=True)`，bert-base QA 跑 3 步隨機輸入）：只有一個警告「Memory Efficient attention defaults to a non-deterministic algorithm」（`torch/autograd/graph.py`，觸發於 `attention_backward.cu:900`）。transformers 5 的 BERT 預設用 SDPA，GPU 上選 memory-efficient attention，反向是非決定性的。（2022 的 transformers 4.5 是手寫的 eager attention。）
+
+## ch01 實測（`docs/tools/hw07_ch01.py`、`hw07_ch01b.py` → `.txt`，CPU）
+- 詞表 21,128：[PAD] 0、[UNK] 100、[CLS] 101、[SEP] 102、[MASK] 103；單一中日韓字 7,321 個、`##` 開頭 9,614 個（其中 `##`+單字 7,321 個，中文用不到）、[unusedN] 99 個、小寫英文字 2,084 個、純數字串 873 個（如 2022、1993、3400）。
+- **bert-base-chinese 的 tokenizer_config.json 是 `{"do_lower_case": false, "model_max_length": 512}`**：不轉小寫，而詞表裡的英文字全是小寫，所以大寫英文幾乎都變 [UNK]（HTTP、GDP、NHL、Duff Roblin → [UNK] [UNK]）。改 `do_lower_case=True`：HTTP → http、GDP → gdp、Duff Roblin → du ##ff ro ##b ##lin。
+- 切法例：'李宏毅教授2022機器學習' → 李 宏 毅 教 授 2022 機 器 學 習（與投影片 p.10 的 id 完全相同）；'1338年…' → 133 ##8 年 …；'128所' → 128 所；'iPhone 13' → [UNK] 13；'張騫' → 張 [UNK]；'朱允炆' → 朱 允 [UNK]；'「HD-Ready」' → 「 [UNK] - [UNK] 」；全形 '１２３ＡＢＣ' → 一個 [UNK]；'台灣臺灣' → 台 灣 臺 灣（繁簡異體都在詞表）；decode 一律在 token 之間插空白（'李 宏 毅 教 授 2022 機 器 學 習'）。
+- offsets：每個 token 對應原文的 (起, 迄) 字元位置，[UNK] 也有（'Duff Roblin' → (0,4)、(5,11)）。
+- 加特殊符號：'哪一地區?' + '天神地區' → [CLS] 哪 一 地 區 ? [SEP] 天 神 地 區 [SEP]，token_type_ids 0×7、1×5。
+- train 不同的中日韓字 5,804 個，不在詞表 842 個，出現 3,175 次（總 4,252,213 字的 0.075%）；最常見：鄴 68、麪 58、鈽 49、滎 47、犛 46、紇 42、煬 37、牀 34、覈 32、堊 30。
+- dev 文章的 [UNK] token 1,346 個（來源 644 種）：拉丁字母 779、中日韓字 430、其他 137；最多：「—」97、NHL 32、GDP 27、韃 23、「…」22、閭 17、OVA 16。
+- 轉小寫：dev [UNK] 1,346 → 564、train 8,278 → 4,051；但 decode 還原不了的答案 dev 仍 44（含 [UNK] 39 → 19，其餘變成大小寫不符）、train 311 → 309。
+- **改用 offsets 從原文切答案**：還原不了的只剩 dev 1 題（id 3528：'1953年' → '11953年'，token 119 ##53 年，前面緊接一個 1）、train 73 題（都是數字併進大 token：'12' → '128'、'7' → '70'、'32' → '3200'）。
+- 10,524 篇訓練文章斷詞 0.55 秒（Rust 寫的 fast tokenizer）。
+- 五個中文模型（bert-base-chinese、ckiplab、hfl roberta-wwm-ext、hfl macbert-base、luhua large）的 vocab.txt md5 全是 3b5b76c4aef48ecf8cb3abaafe960f09；cls／sep 都是 101／102。
+- **tokenizer 預設是否轉小寫**：bert-base-chinese、ckiplab（tokenizer_config `do_lower_case: false`）不轉；hfl roberta-wwm-ext、hfl macbert-base、luhua large 沒有設定 → 預設 True，'HTTP GDP' → ['http', 'gdp']。
+- 'iPhone 13 於 2021 年發表' → ['[UNK]', '13', '於', '2021', '年', '發', '表']。

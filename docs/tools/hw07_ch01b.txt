@@ -1,0 +1,6 @@
+== do_lower_case=False: HTTP -> ['[UNK]'], Duff Roblin -> ['[UNK]', '[UNK]'], GDP -> ['[UNK]']
+  train: paragraph [UNK] tokens 8278; decode != answer 311 (with [UNK] 235); offsets != answer 73
+  dev: paragraph [UNK] tokens 1346; decode != answer 44 (with [UNK] 39); offsets != answer 1
+== do_lower_case=True: HTTP -> ['http'], Duff Roblin -> ['du', '##ff', 'ro', '##b', '##lin'], GDP -> ['gdp']
+  train: paragraph [UNK] tokens 4051; decode != answer 309 (with [UNK] 148); offsets != answer 70
+  dev: paragraph [UNK] tokens 564; decode != answer 44 (with [UNK] 19); offsets != answer 1
