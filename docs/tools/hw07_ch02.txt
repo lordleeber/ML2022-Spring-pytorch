@@ -1,0 +1,18 @@
+max_seq_len 193
+train[1] question: 百濟國在哪一年建國? | answer: 公元前18年
+  shapes (193,) (193,) (193,) start/end 85 89
+  answer tokens ['公', '元', '前', '18', '年']
+  question part length (with CLS/SEP) 12 | token_type 0s 42 1s 151 | attention 1s 163 padding 30
+  first 12 tokens ['[CLS]', '百', '濟', '國', '在', '哪', '一', '年', '建', '國', '?', '[SEP]']
+train windows: answer mid at paragraph position 75 exactly: 0.5237; within 70..80: 0.5485
+  window pushed by paragraph start: 10762 (0.3396), by paragraph end: 4331 (0.1367), paragraph shorter than 150: 1
+  answer-mid position histogram [0,15,30,45,60,75,76,90,105,120,135,150): [3894, 2102, 1700, 1647, 1419, 16597, 896, 932, 901, 906, 696]
+dev windows per question: mean 3.32, counts [(2, 310), (3, 2389), (4, 1312), (5, 81), (6, 21), (7, 15), (8, 3)], total 13695
+dev padding share 0.2151; last window paragraph tokens: mean 78.0, <=20: 0.1201, <=10: 258
+dev answer window index counts (stride 150, uncut only): [(0, 2194), (1, 1188), (2, 571), (3, 93), (4, 8), (5, 3)]
+dev answer-mid position in its window histogram [0,30,60,90,120,150): [1251, 882, 717, 702, 505]
+stride 150: dev windows 13695, answers not inside any window 74
+stride 128: dev windows 15844, answers not inside any window 3
+stride 100: dev windows 19619, answers not inside any window 0
+stride 75: dev windows 25481, answers not inside any window 0
+stride 50: dev windows 37151, answers not inside any window 0

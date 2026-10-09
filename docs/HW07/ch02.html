@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 2 章　Dataset 與視窗 — HW07 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW07 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「閱讀理解」書桌——近黑的冷灰底、紙白的字、沙金色只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：原版 灰、LR 衰減 藍、隨機視窗 橘、換模型 綠／紫／洋紅／黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與 HW13、HW14 相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #e0a458;      /* 沙金：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(224, 164, 88, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #e0a458;
+  /* 角色色 */
+  --r-base: #8b949e; --r-decay: #3987e5; --r-window: #d95926; --r-m1: #199e70;
+  --r-m2: #9085e9; --r-m3: #d55181; --r-m4: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "[CLS] 問題 ≤40 [SEP] 文章視窗 150 [SEP]　→　BERT　→　start／end 位置　·　DRCD 繁中閱讀理解";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fbf4ea; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #1b1914; border-color: rgba(224, 164, 88, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1a1208; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.base { --rc: var(--r-base); } .role.decay { --rc: var(--r-decay); } .role.window { --rc: var(--r-window); }
+.role.m1 { --rc: var(--r-m1); } .role.m2 { --rc: var(--r-m2); } .role.m3 { --rc: var(--r-m3); }
+.role.m4 { --rc: var(--r-m4); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch01.html">← 第 1 章</a><a href="ch03.html">第 3 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW07 讀碼教材</p>
+  <h1>第 2 章　Dataset：一篇文章切成幾個視窗</h1>
+  <p class="chap-lead">文章平均 414 個 token，範例只給模型 150 個 token 的文章空間。<code>QA_Dataset</code> 用兩種完全不同的方式切文章：訓練時知道答案在哪，只切一個包住答案的視窗；評估時不知道，只好從頭到尾每隔 <code>doc_stride</code> 切一個。這一章逐行讀這個類別，量出兩種切法各自的副作用：訓練視窗的答案位置有一半以上固定在同一格，評估視窗則把 74 題的答案切成兩半。</p>
+</header>
+<main>
+
+<h2 id="why">2.1　為什麼要切視窗</h2>
+<p>BERT 的位置嵌入只有 512 個（第 0 章的 <code>512 × 768</code>），所以一次最多讀 512 個 token。投影片 p.12 還給了另一個理由：self-attention 讓每個 token 都和其他所有 token 計算一次關聯，計算量和序列長度的平方成正比，序列長兩倍，注意力的計算就變四倍。範例選了一個比 512 小很多的長度：</p>
+<figure class="listing"><figcaption>dataset.py:14–26 — 長度設定：問題 40、文章 150、doc_stride 150</figcaption>
+<pre class="py" data-hot="19-20,23,26"><code>    def __init__(self, split, questions, tokenized_questions, tokenized_paragraphs):
+        self.split = split
+        self.questions = questions
+        self.tokenized_questions = tokenized_questions
+        self.tokenized_paragraphs = tokenized_paragraphs
+        self.max_question_len = 40
+        self.max_paragraph_len = 150
+
+        ##### TODO: Change value of doc_stride #####
+        self.doc_stride = 150
+
+        # Input sequence length = [CLS] + question + [SEP] + paragraph + [SEP]
+        self.max_seq_len = 1 + self.max_question_len + 1 + self.max_paragraph_len + 1</code></pre></figure>
+<p>一個輸入序列 = <code>[CLS]</code> + 問題（最多 40）+ <code>[SEP]</code> + 文章（最多 150）+ <code>[SEP]</code>，總長 193。dev 的文章中位數是 407 個 token，一篇文章要切 3 段左右；同時塞得下問題與整篇文章的題目幾乎沒有。範例沒有說明為什麼選 150。可以確定的是代價的方向：序列短，訓練快、記憶體省（注意力的計算和長度平方成正比），但每個視窗看到的文章少，切出的視窗多。</p>
+
+<h2 id="train-item">2.2　一筆訓練資料</h2>
+<p><code>__getitem__</code> 依 <code>split</code> 分兩支。訓練那一支：</p>
+<figure class="listing"><figcaption>dataset.py:39–59 — 訓練：切一個以答案為中心的視窗</figcaption>
+<pre class="py" data-hot="45-47,54-55"><code>        if self.split == "train":
+            # Convert answer's start/end positions in paragraph_text to start/end positions in tokenized_paragraph
+            answer_start_token = tokenized_paragraph.char_to_token(question["answer_start"])
+            answer_end_token = tokenized_paragraph.char_to_token(question["answer_end"])
+
+            # A single window is obtained by slicing the portion of paragraph containing the answer
+            mid = (answer_start_token + answer_end_token) // 2
+            paragraph_start = max(0, min(mid - self.max_paragraph_len // 2, len(tokenized_paragraph) - self.max_paragraph_len))
+            paragraph_end = paragraph_start + self.max_paragraph_len
+
+            # Slice question/paragraph and add special tokens (101: CLS, 102: SEP)
+            input_ids_question = [101] + tokenized_question.ids[:self.max_question_len] + [102]
+            input_ids_paragraph = tokenized_paragraph.ids[paragraph_start : paragraph_end] + [102]
+
+            # Convert answer's start/end positions in tokenized_paragraph to start/end positions in the window
+            answer_start_token += len(input_ids_question) - paragraph_start
+            answer_end_token += len(input_ids_question) - paragraph_start
+
+            # Pad sequence and obtain inputs to model
+            input_ids, token_type_ids, attention_mask = self.padding(input_ids_question, input_ids_paragraph)
+            return torch.tensor(input_ids), torch.tensor(token_type_ids), torch.tensor(attention_mask), answer_start_token, answer_end_token</code></pre></figure>
+<p>五個步驟。（1）第 41–42 行用第 1 章的 <code>char_to_token</code> 把答案的字元位置換成文章裡的 token 位置。（2）第 45 行算答案的中點 <code>mid</code>。（3）第 46 行讓視窗從 <code>mid - 75</code> 開始，也就是把答案放在 150 個 token 的正中央；外面那層 <code>max(0, min(..., len - 150))</code> 是邊界保護：答案太靠近文章開頭時視窗從 0 開始，太靠近結尾時視窗對齊文章最後 150 個 token。（4）第 50–51 行切出文章片段，接上問題與特殊符號。（5）第 54–55 行把答案位置從「文章裡的第幾個 token」換成「這個輸入序列裡的第幾個 token」：減掉視窗起點，再加上前面問題部分的長度。</p>
+<p>實際取一筆看。訓練集第 1 題「百濟國在哪一年建國?」，答案「公元前18年」：</p>
+<pre class="shell">train_set[1]
+   input_ids, token_type_ids, attention_mask 的形狀都是 (193,)
+   start = 85, end = 89 → ['公', '元', '前', '18', '年']
+   前 12 個 token：['[CLS]', '百', '濟', '國', '在', '哪', '一', '年', '建', '國', '?', '[SEP]']
+   token_type_ids：0 有 42 個、1 有 151 個
+   attention_mask：1 有 163 個、0（padding）有 30 個</pre>
+<p>問題「百濟國在哪一年建國?」斷成 10 個 token（「?」是一個），加上 <code>[CLS]</code>、<code>[SEP]</code> 共 12 個；文章 150 個加結尾的 <code>[SEP]</code> 是 151 個，合計 163，剩下 30 個位置補 0。這裡有一個容易誤會的細節：<code>token_type_ids</code> 的 0 有 42 個，不是 12 個，因為 padding 的位置也填 0（2.6 節）。答案「公元前18年」的 5 個 token 在序列的第 85–89 個位置；扣掉問題部分的 12 個，是文章視窗裡的第 73–77 個，中點 75，正好是正中央。DataLoader 每次取 32 筆，疊成 <code>(32, 193)</code> 的張量，start、end 疊成 <code>(32,)</code>，這就是第 0 章圖 0.1 裡訓練時的 W = 32。</p>
+
+<h2 id="center">2.3　訓練視窗：答案真的都在正中央嗎</h2>
+<p>投影片 p.13 解釋了這樣切的理由：訓練時我們知道答案在哪，而回答問題需要的資訊通常就在答案附近，所以在答案周圍畫一個盡量大的視窗即可。但投影片 p.19 的 Strong 提示又說：「如何避免模型學到不該學的東西？（答案不總是在視窗中央附近）」。先量一量訓練集裡答案到底落在視窗的哪裡。把 31,690 題的答案中點在「文章視窗」（150 個 token）裡的位置分組：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>答案中點在視窗的位置</th><th class="num">題數</th><th class="num">比例</th></tr></thead>
+<tbody>
+<tr><td>0–14</td><td class="num">3,894</td><td class="num">12.3%</td></tr>
+<tr><td>15–29</td><td class="num">2,102</td><td class="num">6.6%</td></tr>
+<tr><td>30–44</td><td class="num">1,700</td><td class="num">5.4%</td></tr>
+<tr><td>45–59</td><td class="num">1,647</td><td class="num">5.2%</td></tr>
+<tr><td>60–74</td><td class="num">1,419</td><td class="num">4.5%</td></tr>
+<tr><td><strong>正好 75</strong></td><td class="num"><strong>16,597</strong></td><td class="num"><strong>52.4%</strong></td></tr>
+<tr><td>76–89</td><td class="num">896</td><td class="num">2.8%</td></tr>
+<tr><td>90–104</td><td class="num">932</td><td class="num">2.9%</td></tr>
+<tr><td>105–119</td><td class="num">901</td><td class="num">2.8%</td></tr>
+<tr><td>120–134</td><td class="num">906</td><td class="num">2.9%</td></tr>
+<tr><td>135–149</td><td class="num">696</td><td class="num">2.2%</td></tr>
+</tbody>
+</table></div>
+<p>結果不是「全部在中央」，而是兩種情況疊在一起。一半多一點（52.4%）的答案，中點正好在第 75 個位置，一格不差。其餘的是被邊界擋住的：答案在文章的前 75 個 token 內時，視窗只能從 0 開始，答案就落在視窗的前半（這種有 10,762 題，佔 34.0%，而且越靠前越多，0–14 這一格就有 12.3%）；答案在文章最後 75 個 token 內時，視窗對齊文章結尾，答案落在後半（4,331 題，13.7%）。</p>
+<p>這對模型意味著什麼？一個只會說「答案在第 75 個位置」的模型，在訓練資料上就能猜對一半以上題目的大致位置。模型不必理解問題，只要學會這個位置的規律，loss 就能降很多。到了評估時，視窗是從文章開頭依序切的，答案在視窗裡的位置和「75」毫無關係（下一節）。這個捷徑能讓模型偏差多少，要看模型在 dev 上預測的位置分布，第 6 章會量，並試試把訓練視窗的位置隨機化。</p>
+
+<h2 id="eval-windows">2.4　評估視窗：每隔 doc_stride 切一個</h2>
+<p>評估時不知道答案在哪，只能把整篇文章切開，每一段都問一次：</p>
+<figure class="listing"><figcaption>dataset.py:61–79 — 評估：從頭開始，每隔 doc_stride 切一個視窗</figcaption>
+<pre class="py" data-hot="66,70,79"><code>        # Validation/Testing
+        else:
+            input_ids_list, token_type_ids_list, attention_mask_list = [], [], []
+
+            # Paragraph is split into several windows, each with start positions separated by step "doc_stride"
+            for i in range(0, len(tokenized_paragraph), self.doc_stride):
+
+                # Slice question/paragraph and add special tokens (101: CLS, 102: SEP)
+                input_ids_question = [101] + tokenized_question.ids[:self.max_question_len] + [102]
+                input_ids_paragraph = tokenized_paragraph.ids[i : i + self.max_paragraph_len] + [102]
+
+                # Pad sequence and obtain inputs to model
+                input_ids, token_type_ids, attention_mask = self.padding(input_ids_question, input_ids_paragraph)
+
+                input_ids_list.append(input_ids)
+                token_type_ids_list.append(token_type_ids)
+                attention_mask_list.append(attention_mask)
+
+            return torch.tensor(input_ids_list), torch.tensor(token_type_ids_list), torch.tensor(attention_mask_list)</code></pre></figure>
+<p>第 66 行的 <code>range(0, len(tokenized_paragraph), self.doc_stride)</code> 產生每個視窗的起點：0、150、300……，直到超過文章長度。每個視窗都接上同一個問題，最後疊成 <code>(視窗數, 193)</code> 的張量回傳。所以評估時的一「筆」資料不是一個視窗，而是一題的所有視窗，視窗數每題不同。這就是 <code>train.py</code> 裡那段大寫警告的原因：</p>
+<figure class="listing"><figcaption>train.py:60–63 — dev 的 batch_size 必須是 1</figcaption>
+<pre class="py" data-hot="60-61,63"><code># Note: Do NOT change batch size of dev_loader / test_loader !
+# Although batch size=1, it is actually a batch consisting of several windows from the same QA pair
+train_loader = DataLoader(train_set, batch_size=train_batch_size, shuffle=True, pin_memory=True)
+dev_loader = DataLoader(dev_set, batch_size=1, shuffle=False, pin_memory=True)</code></pre></figure>
+<p>batch_size 為 1 時，DataLoader 會在最前面多加一個長度 1 的維度，張量變成 <code>(1, 視窗數, 193)</code>；<code>train.py</code> 在呼叫模型前用 <code>squeeze(dim=0)</code> 把它拿掉，<code>postprocess.py</code> 則用 <code>data[0][0][k]</code> 取第 k 個視窗。如果把 batch_size 改成 2，兩題的視窗數不同，DataLoader 疊不起來，會直接報錯。dev 4,131 題的視窗數：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>每題視窗數</th><th class="num">2</th><th class="num">3</th><th class="num">4</th><th class="num">5</th><th class="num">6</th><th class="num">7</th><th class="num">8</th><th class="num">合計</th></tr></thead>
+<tbody>
+<tr><td>題數</td><td class="num">310</td><td class="num">2,389</td><td class="num">1,312</td><td class="num">81</td><td class="num">21</td><td class="num">15</td><td class="num">3</td><td class="num">4,131 題、13,695 個視窗</td></tr>
+</tbody>
+</table></div>
+<p>最後一個視窗常常很短：它裝的是「文章剩下的部分」，平均 78 個 token，其中 12% 不到 20 個 token，258 題的最後一個視窗不到 10 個 token。第 0 章的 dev 第 0 題就是這樣：460 個 token 的文章，第 4 個視窗只有 10 個 token 的文章，其餘全是 padding。這種視窗幾乎沒有內容，模型卻照樣要在裡面指出一個答案，而且它的分數會和其他視窗放在一起比（第 4 章）。</p>
+<p>答案落在哪個視窗也不平均。在沒有被切斷的 4,057 題裡，答案在第 1 個視窗的有 2,194 題（54%）、第 2 個 1,188 題、第 3 個 571 題，第 4 個以後只有 104 題；答案在所在視窗裡的位置也偏前（前 30 個 token 有 1,251 題，最後 30 個只有 505 題）。出題的人傾向從文章前段出題，這個規律對訓練和評估是一致的，不算捷徑。</p>
+
+<h2 id="stride">2.5　doc_stride = 150：被切成兩半的答案</h2>
+<p>範例的 <code>doc_stride</code> 和視窗長度都是 150，所以視窗首尾相接、沒有重疊。答案如果剛好跨在第 149 和第 150 個 token 之間，前半在一個視窗、後半在下一個視窗，<strong>沒有任何一個視窗包含完整的答案</strong>，模型怎麼預測都不可能答對。投影片 p.18 畫的就是這個情況，提示用重疊的視窗。實測 dev 有幾題被切斷，以及代價是多少個視窗：</p>
+<div class="tablewrap"><table>
+<thead><tr><th class="num">doc_stride</th><th class="num">重疊</th><th class="num">dev 視窗總數</th><th class="num">相對 150</th><th class="num">答案不完整在任何視窗內</th></tr></thead>
+<tbody>
+<tr><td class="num">150（範例）</td><td class="num">0</td><td class="num">13,695</td><td class="num">1.00×</td><td class="num">74（1.79%）</td></tr>
+<tr><td class="num">128</td><td class="num">22</td><td class="num">15,844</td><td class="num">1.16×</td><td class="num">3</td></tr>
+<tr><td class="num">100</td><td class="num">50</td><td class="num">19,619</td><td class="num">1.43×</td><td class="num">0</td></tr>
+<tr><td class="num">75</td><td class="num">75</td><td class="num">25,481</td><td class="num">1.86×</td><td class="num">0</td></tr>
+<tr><td class="num">50</td><td class="num">100</td><td class="num">37,151</td><td class="num">2.71×</td><td class="num">0</td></tr>
+</tbody>
+</table></div>
+<p>道理很簡單：相鄰視窗重疊 r 個 token 時，長度不超過 r + 1 的答案一定能完整落在某個視窗裡。重疊 50 保證救回 51 個 token 以內的答案；dev 最長的答案有 52 個 token，超過一點，但它沒有剛好落在最壞的位置，所以實測 stride 100 時一題都沒有被切斷。重疊 22 時還剩 3 題長答案被切斷。代價是視窗變多，評估時間大致跟著視窗數成正比，stride 100 要多算 43% 的視窗。</p>
+<p>74 題佔 dev 的 1.79%，也就是說，光是 stride 這一個數字，就讓 EM 的上限少了將近 2 個百分點。但上限不等於實際：把 stride 調小之後，模型要在更多視窗之間挑答案，挑錯的機會也多了。實際能漲多少，第 4 章在同一個模型上量。另外要注意，<code>doc_stride</code> 只影響評估：訓練時每題只切一個視窗，根本用不到它。所以它不必重新訓練就能調，這是 Medium 的兩個提示裡最便宜的一個。</p>
+
+<h2 id="padding">2.6　padding、token_type_ids 與 attention_mask</h2>
+<figure class="listing"><figcaption>dataset.py:81–91 — 補齊到 193，並產生 token_type_ids 與 attention_mask</figcaption>
+<pre class="py" data-hot="85,87,89"><code>    def padding(self, input_ids_question, input_ids_paragraph):
+        # Pad zeros if sequence length is shorter than max_seq_len
+        padding_len = self.max_seq_len - len(input_ids_question) - len(input_ids_paragraph)
+        # Indices of input sequence tokens in the vocabulary
+        input_ids = input_ids_question + input_ids_paragraph + [0] * padding_len
+        # Segment token indices to indicate first and second portions of the inputs. Indices are selected in [0, 1]
+        token_type_ids = [0] * len(input_ids_question) + [1] * len(input_ids_paragraph) + [0] * padding_len
+        # Mask to avoid performing attention on padding token indices. Mask values selected in [0, 1]
+        attention_mask = [1] * (len(input_ids_question) + len(input_ids_paragraph)) + [0] * padding_len
+
+        return input_ids, token_type_ids, attention_mask</code></pre></figure>
+<p>三個串列長度都是 193，對應投影片 p.11 的圖：</p>
+<ul>
+<li><code>input_ids</code>：問題、文章之後補 0 到滿 193。0 是 <code>[PAD]</code> 的 id。</li>
+<li><code>token_type_ids</code>：問題部分（含 <code>[CLS]</code> 與第一個 <code>[SEP]</code>）是 0，文章部分（含結尾的 <code>[SEP]</code>）是 1，padding 又是 0。模型把它查表成「句子類型嵌入」加到每個 token 上（第 0 章的 <code>2 × 768</code>）。</li>
+<li><code>attention_mask</code>：真的 token 是 1，padding 是 0。注意力計算時，mask 為 0 的位置會被加上一個極大的負數，softmax 之後權重是 0，其他 token 完全不會「看到」它們。</li>
+</ul>
+<p>padding 浪費多少計算？dev 的 13,695 個視窗裡，padding 佔了所有位置的 21.5%。來源有兩個：問題不到 40 個 token 的空位（問題平均 21 個，每個視窗大約空出 19 個），以及最後一個視窗的文章不滿 150。這 21.5% 的位置照樣要算過 12 層 Transformer，只是結果不被使用。今天的做法是讓每個 batch 只補到該 batch 最長的那一筆（dynamic padding），或把多個短序列接成一條（packing）。</p>
+
+<div class="note"><h4>現在的做法：讓 tokenizer 切視窗，或乾脆用更長的模型</h4>
+<p>範例手寫的切視窗邏輯，transformers 早就內建：<code>tokenizer(question, paragraph, truncation="only_second", max_length=..., stride=..., return_overflowing_tokens=True, return_offsets_mapping=True)</code> 會自動切出互相重疊的視窗，每個視窗都帶著 offsets，答案可以直接從原文切出來（第 1 章的解法）。注意它的 <code>stride</code> 參數意思是「重疊多少個 token」，和範例的 <code>doc_stride</code>（相鄰視窗起點的距離）剛好相反。另一條路是用能讀長序列的模型：2024 年的 ModernBERT 可以一次讀 8,192 個 token，本作業任何一篇文章都塞得進去，視窗問題就消失了。在 RAG 系統裡，「把文件切成有重疊的塊」（chunking with overlap）仍然是標準做法，理由和本節一樣：怕重要的句子剛好被切在兩塊之間。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>一個輸入是 <code>[CLS]</code> + 問題 ≤ 40 + <code>[SEP]</code> + 文章 ≤ 150 + <code>[SEP]</code>，共 193 個 token；文章平均 400 多個 token，必須切視窗。</li>
+<li>訓練時每題只切一個包住答案的視窗：52.4% 的答案中點正好在第 75 個位置，34.0% 因為靠近文章開頭而落在前半，13.7% 落在後半。模型可以學到「答案在中間」的捷徑（第 6 章）。</li>
+<li>評估時每隔 <code>doc_stride</code> 切一個視窗，一題就是一筆 <code>(視窗數, 193)</code>，所以 dev 的 batch_size 必須是 1。dev 平均每題 3.32 個視窗，最後一個常常只有幾個 token。</li>
+<li><code>doc_stride = 150</code> 讓視窗互不重疊，dev 有 74 題（1.79%）的答案被切斷、不可能答對；stride 100 時為 0，代價是多 43% 的視窗。stride 只影響評估，不必重新訓練。</li>
+<li>padding 佔 dev 視窗位置的 21.5%；<code>token_type_ids</code> 區分問題與文章，<code>attention_mask</code> 讓模型忽略 padding。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 一篇文章 460 個 token，<code>doc_stride</code> 是 150，會切成幾個視窗？各涵蓋文章的哪些 token？改成 100 呢？</summary>
+<p>stride 150：起點 0、150、300、450，共 4 個，涵蓋 [0,150)、[150,300)、[300,450)、[450,460)，最後一個只有 10 個 token（就是第 0 章 dev 第 0 題）。stride 100：起點 0、100、200、300、400，共 5 個，最後一個 [400,460) 有 60 個 token。注意 <code>range</code> 只看起點有沒有超過文章長度，所以最後一個視窗可能很短，但不會漏掉文章結尾。</p></details>
+<details class="quiz"><summary>2. 訓練集第 1 題的答案在序列的第 85–89 個位置。如果把 <code>max_question_len</code> 從 40 改成 60，這一筆的 start、end 會變嗎？</summary>
+<p>不會。start、end 是「問題部分的實際長度 + 答案在文章視窗裡的位置」，問題只有 10 個 token，上限是 40 還是 60 都不會截，問題部分仍是 12；視窗的起點只和答案位置與 <code>max_paragraph_len</code> 有關。會變的是 <code>max_seq_len</code>（變成 213），padding 多出 20 個位置。這是依程式推論，沒有實際跑。</p></details>
+<details class="quiz"><summary>3. 有人把 dev 的 DataLoader 改成 <code>batch_size=4</code> 想加速評估，會發生什麼事？</summary>
+<p>多半會報錯。每一筆是 <code>(視窗數, 193)</code>，視窗數每題不同（2 到 8），DataLoader 預設的 collate 要把 4 筆疊成一個張量，形狀不一致就疊不起來。即使碰巧 4 題的視窗數相同，<code>postprocess.py</code> 也只看 <code>data[0][0]</code>，也就是 batch 裡的第一題，其他三題會被忽略。要加速，得自己把多題的視窗攤平成一批送進模型，再按題分回去。</p></details>
+<details class="quiz"><summary>4. 為什麼把 <code>doc_stride</code> 調小不需要重新訓練？有什麼「訓練時的設定」是必須和它一起考慮的嗎？</summary>
+<p>因為訓練分支只切一個以答案為中心的視窗，完全沒用到 <code>doc_stride</code>（它只出現在第 66 行的評估分支）。要一起考慮的是視窗長度 <code>max_paragraph_len</code>：它同時決定訓練視窗與評估視窗的大小，改了它就要重新訓練，因為模型學到的是在 150 個 token 的範圍內找答案。</p></details>
+<details class="quiz"><summary>5. 訓練時，答案在文章前 75 個 token 的題目有 34%。這些題目的視窗都從文章的第 0 個 token 開始。這對模型可能有什麼影響？</summary>
+<p>這些視窗裡，文章的開頭總是緊接在問題的 <code>[SEP]</code> 之後，答案又集中在視窗前段。模型可能學到「答案常在文章開頭附近」，而評估時第 1 個視窗正好是文章開頭，dev 也有 54% 的答案在第 1 個視窗裡，所以這個傾向和評估資料大致吻合，不像「正好在第 75 個位置」那樣是純粹的捷徑。兩種偏差各有多大影響，要看模型預測位置的分布（第 6 章）。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Hugging Face LLM Course，<a href="https://huggingface.co/learn/llm-course/chapter7/7">Question answering</a>：用 <code>return_overflowing_tokens</code> 與 offsets 處理長文章的標準寫法，可以和本章的手寫版本對照。</li>
+<li>Benjamin Warner 等，<a href="https://arxiv.org/abs/2412.13663">Smarter, Better, Faster, Longer: A Modern Bidirectional Encoder</a>（2024）：ModernBERT 的論文，8,192 個 token 的 encoder。</li>
+<li>投影片 p.12–14、p.18–19：視窗的動機、訓練與測試的切法、doc_stride 與前處理的提示。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch01.html">← 第 1 章</a><a href="ch03.html">第 3 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW07 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW07 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

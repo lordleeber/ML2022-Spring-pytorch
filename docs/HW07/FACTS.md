@@ -69,3 +69,10 @@
 - 五個中文模型（bert-base-chinese、ckiplab、hfl roberta-wwm-ext、hfl macbert-base、luhua large）的 vocab.txt md5 全是 3b5b76c4aef48ecf8cb3abaafe960f09；cls／sep 都是 101／102。
 - **tokenizer 預設是否轉小寫**：bert-base-chinese、ckiplab（tokenizer_config `do_lower_case: false`）不轉；hfl roberta-wwm-ext、hfl macbert-base、luhua large 沒有設定 → 預設 True，'HTTP GDP' → ['http', 'gdp']。
 - 'iPhone 13 於 2021 年發表' → ['[UNK]', '13', '於', '2021', '年', '發', '表']。
+
+## ch02 實測（`docs/tools/hw07_ch02.py` → `hw07_ch02.txt`，CPU）
+- max_seq_len 193。train[1]（百濟國在哪一年建國? → 公元前18年）：三個張量都是 (193,)；start/end 85/89（公 元 前 18 年）；問題部分含 CLS/SEP 12 個 token；token_type_ids 0 有 42 個（問題 12 + padding 30）、1 有 151 個（文章 150 + 結尾 SEP）；attention_mask 1 有 163 個、padding 30。
+- **訓練視窗的答案位置**：答案中點正好在文章部分第 75 個 token 的 52.37%（70–80 之間 54.85%）；視窗被文章開頭擋住（答案在前 75 token）33.96%（10,762 題）、被文章結尾擋住 13.67%（4,331 題）；短於 150 的文章 1 篇。中點位置直方圖 [0,15,30,45,60,75,76,90,105,120,135,150)：3894、2102、1700、1647、1419、16597、896、932、901、906、696。
+- dev 視窗：每題平均 3.32（2 個 310 題、3 個 2,389、4 個 1,312、5 個 81、6 個 21、7 個 15、8 個 3），共 13,695；padding 佔 21.51%；最後一個視窗的文章 token 平均 78.0，≤ 20 的 12.01%，≤ 10 的 258 題。
+- dev 答案落在哪個視窗（stride 150，未被切斷的 4,057 題）：第 0 個 2,194（54%）、第 1 個 1,188、第 2 個 571、第 3 個 93、第 4 個 8、第 5 個 3。答案在所在視窗內的中點位置 [0,30,60,90,120,150)：1251、882、717、702、505（偏前）。
+- 被切斷的答案 vs stride（dev 視窗總數）：150 → 74（13,695）；128 → 3（15,844）；100 → 0（19,619）；75 → 0（25,481）；50 → 0（37,151）。
