@@ -1,0 +1,18 @@
+# queue 2: S (ch06) random training windows; D (ch07) other pretrained models; all 1 epoch with linear decay, seeds 0-2
+win1_s0 --window random --decay linear --seed 0
+win1_s1 --window random --decay linear --seed 1
+win1_s2 --window random --decay linear --seed 2
+ckipz --model ckiplab/bert-base-chinese-qa --tokenizer bert-base-chinese --zero_shot
+luhuaz --model luhua/chinese_pretrain_mrc_roberta_wwm_ext_large --zero_shot
+rwe1_s0 --model hfl/chinese-roberta-wwm-ext --decay linear --seed 0
+rwe1_s1 --model hfl/chinese-roberta-wwm-ext --decay linear --seed 1
+rwe1_s2 --model hfl/chinese-roberta-wwm-ext --decay linear --seed 2
+mac1_s0 --model hfl/chinese-macbert-base --decay linear --seed 0
+mac1_s1 --model hfl/chinese-macbert-base --decay linear --seed 1
+mac1_s2 --model hfl/chinese-macbert-base --decay linear --seed 2
+ckip1_s0 --model ckiplab/bert-base-chinese-qa --tokenizer bert-base-chinese --decay linear --seed 0
+ckip1_s1 --model ckiplab/bert-base-chinese-qa --tokenizer bert-base-chinese --decay linear --seed 1
+ckip1_s2 --model ckiplab/bert-base-chinese-qa --tokenizer bert-base-chinese --decay linear --seed 2
+luhua1_s0 --model luhua/chinese_pretrain_mrc_roberta_wwm_ext_large --decay linear --seed 0
+luhua1_s1 --model luhua/chinese_pretrain_mrc_roberta_wwm_ext_large --decay linear --seed 1
+luhua1_s2 --model luhua/chinese_pretrain_mrc_roberta_wwm_ext_large --decay linear --seed 2

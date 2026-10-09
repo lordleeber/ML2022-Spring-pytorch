@@ -76,3 +76,45 @@
 - dev 視窗：每題平均 3.32（2 個 310 題、3 個 2,389、4 個 1,312、5 個 81、6 個 21、7 個 15、8 個 3），共 13,695；padding 佔 21.51%；最後一個視窗的文章 token 平均 78.0，≤ 20 的 12.01%，≤ 10 的 258 題。
 - dev 答案落在哪個視窗（stride 150，未被切斷的 4,057 題）：第 0 個 2,194（54%）、第 1 個 1,188、第 2 個 571、第 3 個 93、第 4 個 8、第 5 個 3。答案在所在視窗內的中點位置 [0,30,60,90,120,150)：1251、882、717、702、505（偏前）。
 - 被切斷的答案 vs stride（dev 視窗總數）：150 → 74（13,695）；128 → 3（15,844）；100 → 0（19,619）；75 → 0（25,481）；50 → 0（37,151）。
+
+## ch03 實測（`docs/tools/hw07_ch03.py` → `hw07_ch03.txt`；決定性 base 種子 0 的 checkpoint，eval 模式）
+- **訓練的量法（一個以答案為中心的視窗、start 與 end 都對）**：dev 4,131 題 start 0.7981、end 0.8383、兩者都對 **0.7492**、loss 0.5598；train 抽 4,131 題（random.Random(0)）start 0.9199、end 0.9099、兩者 **0.8722**、loss 0.2868。→ 訓練最後幾百步印的 acc ≈ 0.74 和 dev 的同一量法相同；訓練題目高 12 點。
+- **dev EM 的去向（評估視窗 stride 150，範例 evaluate）**：EM 1,718；答案被切斷 72（另 2 題被切斷卻答對：答案文字在別處也出現）；選錯視窗 1,215；視窗對、位置錯 1,116；位置對、文字還原不了 10；回答空字串 135（全部是選中視窗 end < start）；選中的 span 起點在問題區 17。
+- 來源：`modeling_bert.py`（transformers 5.18.0）1291 起 `BertForQuestionAnswering`：`BertModel(config, add_pooling_layer=False)`、`qa_outputs = nn.Linear(hidden, num_labels=2)`；loss 在 1340–1347：位置 clamp 到 [0, 序列長]、`CrossEntropyLoss(ignore_index=序列長)`、`(start_loss + end_loss) / 2`。
+- **非決定性不只 SDPA**（`docs/tools/hw07_eager_det.py` → `hw07_eager_det.txt`；訓練 100 步後的權重總和）：eager attention（2022 的寫法）兩次 −12787.717／−12787.707（不同）；eager＋`CUBLAS_WORKSPACE_CONFIG=:4096:8` 兩次 −12787.710／−12787.703（仍不同）；eager＋`use_deterministic_algorithms(True)` 兩次都是 −12787.694937936982（相同）。`warn_only=True` 對 eager 不發任何警告 → 有些運算在開關打開時被默默換成決定性的版本，PyTorch 不會提醒；本書沒有逐一找出是哪個運算。SDPA 一次 −12808.497。
+- 未訓練的問答頭（`torch.manual_seed(0)` 後 from_pretrained，CPU、eval 模式，訓練集前 256 題的訓練視窗）：loss 5.2214，ln(193) = 5.2627；start_logits 標準差 0.356；qa_outputs 權重標準差 0.0206、偏差 [0, 0]（initializer_range 0.02）。
+- 訓練迴圈的小毛病（讀程式）：`step` 從 1 開始、每批之後才加 1，`step % 100 == 0` 時印出 → 第一次印出只累積了 99 批、卻除以 100；之後每次 100 批；最後印在第 899 批之後，第 900–991 批（92 批）從來沒印。`train_loss += output.loss` 累加的是帶計算圖的張量（印的時候才 `.item()`）。
+- `tokenizer.decode` 不略過特殊符號：decode([0,0,0]) = '[PAD] [PAD] [PAD]'、decode([1921,4868,0,0]) = '天 神 [PAD] [PAD]'、decode([101,1921]) = '[CLS] 天'。
+- transformers 5.18 `TrainingArguments` 預設：lr_scheduler_type "linear"、weight_decay 0.0、adam_epsilon 1e-8、full_determinism False；建立時需要 accelerate>=1.1.0（本機沒裝，會 ImportError）。
+
+## ch04 實測：後處理與評估 stride（`docs/tools/hw07_post.py` → `hw07_post.jsonl`；決定性 base 種子 0 的 checkpoint，不重新訓練）
+規則：sample＝範例 evaluate；sample_off＝同樣的選擇、用 offsets 從原文切；valid＝每個視窗在文章範圍內取 i ≤ j 的最佳一對（start logit + end logit）、decode；valid_len＝再加答案 ≤ 30 token；valid_len_off＝再用 offsets；valid_len_off_lp＝視窗之間改比 log_softmax(start)+log_softmax(end)。工具一次推論整批 256 個視窗，sample 在 stride 150 得 0.41588，和 train.py 相同。
+
+| stride | 視窗數 | sample | sample_off | valid | valid_len | valid_len_off | valid_len_off_lp |
+|---|---|---|---|---|---|---|---|
+| 150 | 13,695 | 0.41588 | 0.41854 | 0.42242 | 0.42411 | 0.42677 | 0.37570 |
+| 100 | 19,619 | 0.46720 | 0.46962 | 0.47543 | 0.47785 | 0.48027 | 0.40644 |
+| 75 | 25,481 | 0.49455 | 0.49746 | 0.49867 | 0.49964 | 0.50278 | 0.42290 |
+| 50 | 37,151 | 0.52602 | 0.52893 | 0.53086 | 0.53280 | 0.53571 | 0.43210 |
+| 32 | 56,958 | 0.56306 | 0.56596 | 0.56669 | 0.56863 | 0.57153 | 0.44275 |
+
+- 速度：stride 150 全部 6 種規則一次 1 分 04 秒（推論＋規則）。
+
+## 位置偏差（`docs/tools/hw07_pos.py` → `hw07_pos.jsonl`；同一個 checkpoint）
+直方圖分組 [0,15,30,45,60,70,81,90,105,120,135,150)（文章部分的位置；[70,81) 寬 11 是中央）。
+- 每個 dev 視窗的預測中點（(argmax start + argmax end)//2 − 問題長，只計落在文章部分的）：stride 150 → 2593、1535、1392、1219、1106、**4023**、684、428、237、85、24；stride 32 → 7519、5619、5194、5067、4895、**19759**、3319、2059、1112、457、135。中央每格密度約為左鄰的 3.3 倍（150）、3.7 倍（32）；90 以後很少。
+- 範例規則選中的視窗含答案的題數：stride 150 → 2,734；32 → 3,213。選中視窗裡答案中點的分布：150 → 627、355、356、286、191、235、134、203、145、125、77；32 → 594、455、290、346、314、**654**、185、161、89、94、31。
+- 視窗分數（max start + max end）平均：含答案的視窗 8.086（150）／6.260（32），不含答案的 0.757／0.278。
+- 逐步加規則（stride 150，與前一列相比 修好／弄壞）：sample → sample_off 11／0；sample → valid 27／0；valid → valid_len 7／0；valid_len → valid_len_off 11／0；sample → valid_len_off 45／0。修好的 45 題：原本空字串 27、含 [UNK] 9、超過 40 字 6、其他 3。範例回答 stride 150：空字串 135（valid_len_off 0）、含 [UNK] 42、含 [SEP]/[CLS]/[PAD] 0、超過 30 字 79。stride 150 → 32（valid_len_off）：修好 842、弄壞 244。
+- stride 8：視窗 221,409；sample 0.62672、sample_off 0.63036、valid 0.62794、valid_len 0.62842、valid_len_off 0.63205、valid_len_off_lp 0.45050。
+- stride 16（同一個 checkpoint）：視窗 111,762；sample 0.60881、sample_off 0.61220、valid 0.61051、valid_len 0.61196、valid_len_off 0.61535、valid_len_off_lp 0.44977。
+- 可讀版 `docs/tools/hw07_postprocess_v2.py`（evaluate_v2，逐題、DataLoader batch 1）stride 150：0.42677（1763/4131），與 hw07_post.py 的 valid_len_off 相同。
+- 注意：M、O 組（nd3、lin*、optt*、low1*）訓練時 GPU 上同時跑過推論工具（hw07_post、hw07_pos、hw07_ch03 等），jsonl 裡的 train_s／dev_s 不是乾淨的計時；只用在決定性結果，不用來比速度。速度另外在乾淨的 GPU 上量。
+
+## O 組：兩種 AdamW（1 epoch、其他照範例；`hw07_runs.jsonl` 的 optt1_s*）
+- torch.optim.AdamW（預設 eps 1e-8、weight_decay 0.01）：種子 0／1／2 = 0.45243、0.47785、0.44372，平均 0.458。舊版（nd3_s* 的第 1 個 epoch）：0.41588、0.48221、0.43888，平均 0.446。
+
+## M 組（`hw07_runs.jsonl`）
+- 不衰減 3 epoch（nd3）dev_by_epoch：種子 0 [0.41588, 0.43282, 0.47301]；種子 1 [0.48221, 0.47906, 0.51053]；種子 2 [0.43888, 0.47107, 0.51440]。第 1 個 epoch 平均 0.446（範圍 0.416–0.482，差 6.6 點）。
+- 線性衰減 1 epoch（lin1）：0.52820、0.56621、0.56161，平均 0.552。
+- 後處理在其他 checkpoint（`hw07_post.jsonl`；valid_len_off）：lin1_s0 stride 150／100／32／16 = 0.54636／0.60809／0.67514／0.69838（sample 0.5282／0.59283／0.66449／0.68821）；lin1_s1 = 0.58533／0.65263／0.69886／0.70709（sample 0.56621／0.63568／0.68773／0.69547）。

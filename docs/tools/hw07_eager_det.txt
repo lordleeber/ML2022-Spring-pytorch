@@ -1,0 +1,7 @@
+eager eager W -12787.717171464108
+eager eager W -12787.706797597732
+sdpa sdpa W -12808.496504930537
+cublas-config eager eager W -12787.709531165092
+cublas-config eager eager W -12787.703252730067
+det-flag eager eager W -12787.694937936982
+det-flag eager eager W -12787.694937936982

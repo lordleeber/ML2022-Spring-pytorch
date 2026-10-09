@@ -1,0 +1,19 @@
+# queue 1 (21:50): O optimizer runs first (ch03), then the rest of M, then the lowercase control; done tags are skipped
+optt1_s0 --optim torch --seed 0
+optt1_s1 --optim torch --seed 1
+optt1_s2 --optim torch --seed 2
+nd3_s0 --epochs 3 --seed 0
+nd3_s1 --epochs 3 --seed 1
+nd3_s2 --epochs 3 --seed 2
+lin1_s0 --epochs 1 --decay linear --seed 0
+lin1_s1 --epochs 1 --decay linear --seed 1
+lin1_s2 --epochs 1 --decay linear --seed 2
+lin2_s0 --epochs 2 --decay linear --seed 0
+lin2_s1 --epochs 2 --decay linear --seed 1
+lin2_s2 --epochs 2 --decay linear --seed 2
+lin3_s0 --epochs 3 --decay linear --seed 0
+lin3_s1 --epochs 3 --decay linear --seed 1
+lin3_s2 --epochs 3 --decay linear --seed 2
+low1_s0 --lower true --seed 0
+low1_s1 --lower true --seed 1
+low1_s2 --lower true --seed 2

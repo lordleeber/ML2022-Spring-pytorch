@@ -1,5 +1,5 @@
-"""SVG charts for the HW13 book, generated from docs/tools/hw13_runs.jsonl and the other hw13_*.json files.
-(Copied from docs/tools/hw14_book/charts.py; task_lines now defaults to False.)
+"""SVG charts for the HW07 book, generated from docs/tools/hw07_runs.jsonl and the other hw07_*.jsonl files.
+(Copied from docs/tools/hw13_book/charts.py; dot_rows takes a number format.)
 
 Follows the dataviz skill: thin 2px lines, recessive grid, one y axis, direct labels at the
 line ends plus a legend, and a hover layer (each x has an invisible band whose data-tip lists
@@ -88,7 +88,7 @@ def legend(series):
   return f'<div class="legend">{items}</div>'
 
 
-def dot_rows(rows, x0, x1, xticks, *, xlabel, aria, row_h=40, label_w=150, unit=''):
+def dot_rows(rows, x0, x1, xticks, *, xlabel, aria, row_h=40, label_w=150, unit='', vfmt='{:.2f}'):
   """rows: list of {label, color, values (list), mean (optional)}; one row per item, dots per value."""
   W2 = 900
   mr, mt, mb = 30, 16, 44
@@ -111,13 +111,13 @@ def dot_rows(rows, x0, x1, xticks, *, xlabel, aria, row_h=40, label_w=150, unit=
     if len(vals) > 1:
       out.append(f'<line x1="{X(min(vals)):.1f}" y1="{yc:.1f}" x2="{X(max(vals)):.1f}" y2="{yc:.1f}" stroke="{r["color"]}" stroke-width="2" opacity="0.6"/>')
     for v in vals:
-      out.append(f'<circle cx="{X(v):.1f}" cy="{yc:.1f}" r="5" fill="{r["color"]}" stroke="#181e25" stroke-width="2" data-tip="{_esc(r["label"])}：{v:.2f}{unit}"/>')
+      out.append(f'<circle cx="{X(v):.1f}" cy="{yc:.1f}" r="5" fill="{r["color"]}" stroke="#181e25" stroke-width="2" data-tip="{_esc(r["label"])}：{vfmt.format(v)}{unit}"/>')
     if r.get('mean') is not None:
       xm = X(r['mean'])
       out.append(f'<line x1="{xm:.1f}" y1="{yc - 11:.1f}" x2="{xm:.1f}" y2="{yc + 11:.1f}" stroke="#e4e8ec" stroke-width="2"/>')
-      out.append(f'<text class="s-mono" x="{X(max(vals)) + 12:.1f}" y="{yc + 4:.1f}">{r["mean"]:.2f}</text>')
+      out.append(f'<text class="s-mono" x="{X(max(vals)) + 12:.1f}" y="{yc + 4:.1f}">{vfmt.format(r["mean"])}</text>')
     elif len(vals) == 1:
-      out.append(f'<text class="s-mono" x="{X(vals[0]) + 12:.1f}" y="{yc + 4:.1f}">{vals[0]:.2f}</text>')
-    out.append(f'<rect x="0" y="{yc - row_h / 2:.1f}" width="{W2}" height="{row_h}" fill="transparent" data-tip="{_esc(r["label"])}：' + _esc('、'.join(f'{v:.2f}' for v in vals)) + (f'（平均 {r["mean"]:.2f}）' if r.get('mean') is not None else '') + '"/>')
+      out.append(f'<text class="s-mono" x="{X(vals[0]) + 12:.1f}" y="{yc + 4:.1f}">{vfmt.format(vals[0])}</text>')
+    out.append(f'<rect x="0" y="{yc - row_h / 2:.1f}" width="{W2}" height="{row_h}" fill="transparent" data-tip="{_esc(r["label"])}：' + _esc('、'.join(vfmt.format(v) for v in vals)) + (f'（平均 {vfmt.format(r["mean"])}）' if r.get('mean') is not None else '') + '"/>')
   out.append('</svg>')
   return '\n'.join(out)

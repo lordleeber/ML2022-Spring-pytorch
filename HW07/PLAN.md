@@ -46,3 +46,4 @@
 - 實驗：決定性模式、種子 0/1/2。N 原版×3；P 後處理與評估 stride（用現成 checkpoint）；M LR 衰減、1/2/3 epoch ×3 種子；S 隨機視窗 ×3 種子；D 換模型。
 - D 組可下載：hfl/chinese-roberta-wwm-ext、hfl/chinese-macbert-base、ckiplab/bert-base-chinese-qa（加上快取裡的 luhua large）。
 - 21:00 加跑（使用者核可）：bert-base-chinese ＋ `do_lower_case=True` ×3 種子（D 組的對照）。原因：hfl／luhua 的 tokenizer 預設轉小寫，bert-base-chinese、ckiplab 不轉；五個模型的 vocab.txt 完全相同（md5 3b5b76c4…）。
+- 21:50 佇列（規格內）：queue1 = AdamW 對照 ×3 → 其餘 M → 轉小寫對照 ×3；queue2 = S 隨機視窗（線性衰減 1 epoch ×3）、D 零樣本（ckiplab、luhua）與四個模型 × 線性衰減 1 epoch ×3。佇列檔 `docs/tools/hw07_grid_queue{1,2}.txt`。

@@ -1,0 +1,4 @@
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 9168.53it/s]
+dev (4131 questions), one centred window, eval mode: start acc 0.7981, end acc 0.8383, both 0.7492, loss 0.5598
+train (4131 questions), one centred window, eval mode: start acc 0.9199, end acc 0.9099, both 0.8722, loss 0.2868
+dev with evaluation windows (stride 150): {'em': 1718, 'cut': 72, 'wrong_window': 1215, 'right_window_wrong_span': 1116, 'right_span_text_mismatch': 10, 'empty': 135, 'end_before_start': 135, 'span_in_question': 17} total 4131

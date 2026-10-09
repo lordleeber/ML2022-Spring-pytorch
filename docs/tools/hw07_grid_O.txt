@@ -1,0 +1,8 @@
+# ch03: torch.optim.AdamW defaults (eps 1e-8, weight decay 0.01) vs the legacy AdamW, 1 epoch; seeds 0-2
+optt1_s0 --optim torch --seed 0
+optt1_s1 --optim torch --seed 1
+optt1_s2 --optim torch --seed 2
+# ch07 control (user-approved 21:00): bert-base-chinese with do_lower_case=True, 1 epoch; seeds 0-2
+low1_s0 --lower true --seed 0
+low1_s1 --lower true --seed 1
+low1_s2 --lower true --seed 2
