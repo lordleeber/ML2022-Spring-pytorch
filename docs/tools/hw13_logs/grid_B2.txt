@@ -1,0 +1,5 @@
+15:40:47 start B200_sample_kd --student sample --loss KD --T 2 --alpha 0.5
+16:46:50 done B200_sample_kd: best valid acc 0.73440 at epoch 194, 3962.4 s
+16:46:50 start B200_sample_ce --student sample
+17:41:03 done B200_sample_ce: best valid acc 0.73411 at epoch 194, 3251.8 s
+17:41:03 ALL DONE

@@ -1,0 +1,71 @@
+== sample: params 87,907  conv MACs 859,377,024  conv layers 4
+   kxk        layers  4  params  86,340 ( 98.2%)  MACs  859,377,024 (100.0%)  MACs per number moved   131.6
+     3x3        (3, 224, 224)    -> (32, 222, 222)   params     896  MACs   42,581,376  intensity    24.6
+     3x3        (32, 222, 222)   -> (32, 220, 220)   params   9,248  MACs  446,054,400  intensity   142.3
+     3x3        (32, 110, 110)   -> (64, 108, 108)   params  18,496  MACs  214,990,848  intensity   186.6
+     3x3        (64, 54, 54)     -> (100, 52, 52)    params  57,700  MACs  155,750,400  intensity   302.6
+== dw: params 99,811  conv MACs 66,031,616  conv layers 19
+   kxk        layers  1  params     648 (  0.6%)  MACs    8,128,512 ( 12.3%)  MACs per number moved    18.0
+   depthwise  layers  9  params   7,600 (  7.6%)  MACs    7,225,344 ( 10.9%)  MACs per number moved     3.4
+   pointwise  layers  9  params  86,640 ( 86.8%)  MACs   50,677,760 ( 76.7%)  MACs per number moved    26.3
+     3x3        (3, 224, 224)    -> (24, 112, 112)   params     648  MACs    8,128,512  intensity    18.0
+     depthwise  (24, 112, 112)   -> (24, 112, 112)   params     240  MACs    2,709,504  intensity     4.5
+     pointwise  (24, 112, 112)   -> (32, 112, 112)   params     800  MACs    9,633,792  intensity    13.7
+     depthwise  (32, 112, 112)   -> (32, 56, 56)     params     320  MACs      903,168  intensity     1.8
+     pointwise  (32, 56, 56)     -> (64, 56, 56)     params   2,112  MACs    6,422,528  intensity    21.2
+     depthwise  (64, 56, 56)     -> (64, 56, 56)     params     640  MACs    1,806,336  intensity     4.5
+     pointwise  (64, 56, 56)     -> (64, 56, 56)     params   4,160  MACs   12,845,056  intensity    31.7
+     depthwise  (64, 56, 56)     -> (64, 28, 28)     params     640  MACs      451,584  intensity     1.8
+     pointwise  (64, 28, 28)     -> (96, 28, 28)     params   6,240  MACs    4,816,896  intensity    36.6
+     depthwise  (96, 28, 28)     -> (96, 28, 28)     params     960  MACs      677,376  intensity     4.5
+     pointwise  (96, 28, 28)     -> (96, 28, 28)     params   9,312  MACs    7,225,344  intensity    45.2
+     depthwise  (96, 28, 28)     -> (96, 14, 14)     params     960  MACs      169,344  intensity     1.8
+     pointwise  (96, 14, 14)     -> (128, 14, 14)    params  12,416  MACs    2,408,448  intensity    42.9
+     depthwise  (128, 14, 14)    -> (128, 14, 14)    params   1,280  MACs      225,792  intensity     4.4
+     pointwise  (128, 14, 14)    -> (128, 14, 14)    params  16,512  MACs    3,211,264  intensity    48.2
+     depthwise  (128, 14, 14)    -> (128, 14, 14)    params   1,280  MACs      225,792  intensity     4.4
+     pointwise  (128, 14, 14)    -> (128, 14, 14)    params  16,512  MACs    3,211,264  intensity    48.2
+     depthwise  (128, 14, 14)    -> (128, 7, 7)      params   1,280  MACs       56,448  intensity     1.7
+     pointwise  (128, 7, 7)      -> (144, 7, 7)      params  18,576  MACs      903,168  intensity    28.4
+== plain: params 99,355  conv MACs 84,333,312  conv layers 10
+   kxk        layers 10  params  98,064 ( 98.7%)  MACs   84,333,312 (100.0%)  MACs per number moved    55.9
+     3x3        (3, 224, 224)    -> (16, 112, 112)   params     432  MACs    5,419,008  intensity    15.4
+     3x3        (16, 112, 112)   -> (16, 112, 112)   params   2,304  MACs   28,901,376  intensity    71.6
+     3x3        (16, 112, 112)   -> (24, 56, 56)     params   3,456  MACs   10,838,016  intensity    38.8
+     3x3        (24, 56, 56)     -> (24, 56, 56)     params   5,184  MACs   16,257,024  intensity   104.4
+     3x3        (24, 56, 56)     -> (32, 28, 28)     params   6,912  MACs    5,419,008  intensity    50.5
+     3x3        (32, 28, 28)     -> (32, 28, 28)     params   9,216  MACs    7,225,344  intensity   121.7
+     3x3        (32, 28, 28)     -> (40, 14, 14)     params  11,520  MACs    2,257,920  intensity    50.8
+     3x3        (40, 14, 14)     -> (44, 14, 14)     params  15,840  MACs    3,104,640  intensity    96.1
+     3x3        (44, 14, 14)     -> (48, 14, 14)     params  19,008  MACs    3,725,568  intensity   100.6
+     3x3        (48, 14, 14)     -> (56, 7, 7)       params  24,192  MACs    1,185,408  intensity    32.6
+== mbv2: params 96,651  conv MACs 79,500,736  conv layers 26
+   kxk        layers  1  params     432 (  0.4%)  MACs    5,419,008 (  6.8%)  MACs per number moved    15.4
+   pointwise  layers 17  params  81,664 ( 84.5%)  MACs   65,529,856 ( 82.4%)  MACs per number moved    16.5
+   depthwise  layers  8  params   8,208 (  8.5%)  MACs    8,551,872 ( 10.8%)  MACs per number moved     3.0
+     3x3        (3, 224, 224)    -> (16, 112, 112)   params     432  MACs    5,419,008  intensity    15.4
+     pointwise  (16, 112, 112)   -> (16, 112, 112)   params     256  MACs    3,211,264  intensity     8.0
+     depthwise  (16, 112, 112)   -> (16, 112, 112)   params     144  MACs    1,806,336  intensity     4.5
+     pointwise  (16, 112, 112)   -> (16, 112, 112)   params     256  MACs    3,211,264  intensity     8.0
+     pointwise  (16, 112, 112)   -> (64, 112, 112)   params   1,024  MACs   12,845,056  intensity    12.8
+     depthwise  (64, 112, 112)   -> (64, 56, 56)     params     576  MACs    1,806,336  intensity     1.8
+     pointwise  (64, 56, 56)     -> (24, 56, 56)     params   1,536  MACs    4,816,896  intensity    17.4
+     pointwise  (24, 56, 56)     -> (96, 56, 56)     params   2,304  MACs    7,225,344  intensity    19.1
+     depthwise  (96, 56, 56)     -> (96, 56, 56)     params     864  MACs    2,709,504  intensity     4.5
+     pointwise  (96, 56, 56)     -> (24, 56, 56)     params   2,304  MACs    7,225,344  intensity    19.1
+     pointwise  (24, 56, 56)     -> (96, 56, 56)     params   2,304  MACs    7,225,344  intensity    19.1
+     depthwise  (96, 56, 56)     -> (96, 28, 28)     params     864  MACs      677,376  intensity     1.8
+     pointwise  (96, 28, 28)     -> (32, 28, 28)     params   3,072  MACs    2,408,448  intensity    23.3
+     pointwise  (32, 28, 28)     -> (128, 28, 28)    params   4,096  MACs    3,211,264  intensity    24.8
+     depthwise  (128, 28, 28)    -> (128, 28, 28)    params   1,152  MACs      903,168  intensity     4.5
+     pointwise  (128, 28, 28)    -> (32, 28, 28)     params   4,096  MACs    3,211,264  intensity    24.8
+     pointwise  (32, 28, 28)     -> (128, 28, 28)    params   4,096  MACs    3,211,264  intensity    24.8
+     depthwise  (128, 28, 28)    -> (128, 14, 14)    params   1,152  MACs      225,792  intensity     1.8
+     pointwise  (128, 14, 14)    -> (48, 14, 14)     params   6,144  MACs    1,204,224  intensity    29.6
+     pointwise  (48, 14, 14)     -> (192, 14, 14)    params   9,216  MACs    1,806,336  intensity    32.1
+     depthwise  (192, 14, 14)    -> (192, 14, 14)    params   1,728  MACs      338,688  intensity     4.4
+     pointwise  (192, 14, 14)    -> (48, 14, 14)     params   9,216  MACs    1,806,336  intensity    32.1
+     pointwise  (48, 14, 14)     -> (192, 14, 14)    params   9,216  MACs    1,806,336  intensity    32.1
+     depthwise  (192, 14, 14)    -> (192, 7, 7)      params   1,728  MACs       84,672  intensity     1.7
+     pointwise  (192, 7, 7)      -> (64, 7, 7)       params  12,288  MACs      602,112  intensity    24.2
+     pointwise  (64, 7, 7)       -> (160, 7, 7)      params  10,240  MACs      501,760  intensity    23.7

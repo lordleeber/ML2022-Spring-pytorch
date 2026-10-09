@@ -92,6 +92,9 @@ STUDENTS = {
     'dw': dw_net,
     'plain': plain_net,
     'mbv2': mbv2_net,
+    # ch06 controls: the sample layout with the channel counts left after removing 25% / 50% of the channels
+    'narrow75': lambda: __import__('hw13_shrink').narrow_student([24, 24, 48, 75]),
+    'narrow50': lambda: __import__('hw13_shrink').narrow_student([16, 16, 32, 50]),
 }
 
 if __name__ == '__main__':

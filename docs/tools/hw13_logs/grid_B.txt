@@ -1,1 +1,11 @@
 12:34:04 start B200_dw_kd --student dw --loss KD --T 2 --alpha 0.5
+13:11:02 done B200_dw_kd: best valid acc 0.78513 at epoch 198, 2216.9 s
+13:11:02 start B200_dw_ce --student dw
+13:37:46 done B200_dw_ce: best valid acc 0.77201 at epoch 195, 1602.9 s
+13:37:46 start B200_mbv2_kd --student mbv2 --loss KD --T 2 --alpha 0.5
+14:20:30 done B200_mbv2_kd: best valid acc 0.80000 at epoch 195, 2562.1 s
+14:20:30 start B200_mbv2_ce --student mbv2
+14:52:27 done B200_mbv2_ce: best valid acc 0.80437 at epoch 188, 1916.4 s
+14:52:27 start B200_plain_kd --student plain --loss KD --T 2 --alpha 0.5
+15:23:02 done B200_plain_kd: best valid acc 0.79125 at epoch 187, 1833.6 s
+15:23:02 ALL DONE

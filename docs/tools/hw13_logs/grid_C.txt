@@ -1,0 +1,9 @@
+15:23:12 start C20_ft_keep75 --keep 0.75 --init_ckpt outputs/simple_baseline/student_best.ckpt
+15:27:38 done C20_ft_keep75: best valid acc 0.57843 at epoch 20, 264.8 s
+15:27:38 start C20_ft_keep50 --keep 0.5 --init_ckpt outputs/simple_baseline/student_best.ckpt
+15:31:05 done C20_ft_keep50: best valid acc 0.54373 at epoch 19, 205.7 s
+15:31:05 start C20_scratch_keep75 --student narrow75
+15:35:29 done C20_scratch_keep75: best valid acc 0.53324 at epoch 20, 262.7 s
+15:35:29 start C20_scratch_keep50 --student narrow50
+15:38:56 done C20_scratch_keep50: best valid acc 0.48601 at epoch 15, 205.4 s
+15:38:56 ALL DONE

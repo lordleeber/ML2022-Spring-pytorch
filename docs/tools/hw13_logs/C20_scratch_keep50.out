@@ -1,0 +1,42 @@
+C20_scratch_keep50: Total params: 22,647
+[ Train | 001/020 ] loss = 2.09454, acc = 0.28289
+[ Valid | 001/020 ] loss = 1.97983, acc = 0.29446 -> best
+[ Train | 002/020 ] loss = 1.92700, acc = 0.33925
+[ Valid | 002/020 ] loss = 1.88560, acc = 0.32945 -> best
+[ Train | 003/020 ] loss = 1.86152, acc = 0.36307
+[ Valid | 003/020 ] loss = 1.82629, acc = 0.35277 -> best
+[ Train | 004/020 ] loss = 1.80856, acc = 0.37442
+[ Valid | 004/020 ] loss = 1.78634, acc = 0.39096 -> best
+[ Train | 005/020 ] loss = 1.75506, acc = 0.39499
+[ Valid | 005/020 ] loss = 1.76418, acc = 0.39417 -> best
+[ Train | 006/020 ] loss = 1.71161, acc = 0.41415
+[ Valid | 006/020 ] loss = 1.69493, acc = 0.42041 -> best
+[ Train | 007/020 ] loss = 1.67937, acc = 0.42277
+[ Valid | 007/020 ] loss = 1.67657, acc = 0.43411 -> best
+[ Train | 008/020 ] loss = 1.64129, acc = 0.43868
+[ Valid | 008/020 ] loss = 1.65563, acc = 0.42799
+[ Train | 009/020 ] loss = 1.61592, acc = 0.44902
+[ Valid | 009/020 ] loss = 1.65748, acc = 0.43936 -> best
+[ Train | 010/020 ] loss = 1.58714, acc = 0.46432
+[ Valid | 010/020 ] loss = 1.61194, acc = 0.44023 -> best
+[ Train | 011/020 ] loss = 1.56714, acc = 0.46909
+[ Valid | 011/020 ] loss = 1.64503, acc = 0.42332
+[ Train | 012/020 ] loss = 1.55198, acc = 0.47101
+[ Valid | 012/020 ] loss = 1.59618, acc = 0.44665 -> best
+[ Train | 013/020 ] loss = 1.52810, acc = 0.48257
+[ Valid | 013/020 ] loss = 1.59673, acc = 0.45977 -> best
+[ Train | 014/020 ] loss = 1.52424, acc = 0.48165
+[ Valid | 014/020 ] loss = 1.52257, acc = 0.46822 -> best
+[ Train | 015/020 ] loss = 1.49634, acc = 0.49240
+[ Valid | 015/020 ] loss = 1.52428, acc = 0.48601 -> best
+[ Train | 016/020 ] loss = 1.47850, acc = 0.50193
+[ Valid | 016/020 ] loss = 1.53858, acc = 0.48076
+[ Train | 017/020 ] loss = 1.46976, acc = 0.50324
+[ Valid | 017/020 ] loss = 1.52850, acc = 0.47376
+[ Train | 018/020 ] loss = 1.45813, acc = 0.50821
+[ Valid | 018/020 ] loss = 1.52770, acc = 0.48222
+[ Train | 019/020 ] loss = 1.45287, acc = 0.51034
+[ Valid | 019/020 ] loss = 1.52000, acc = 0.47347
+[ Train | 020/020 ] loss = 1.43596, acc = 0.51490
+[ Valid | 020/020 ] loss = 1.60164, acc = 0.45335
+C20_scratch_keep50: best valid acc 0.48601 at epoch 15, 205.4 s

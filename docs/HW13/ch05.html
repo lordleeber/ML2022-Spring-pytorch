@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 5 章　架構設計 — HW13 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW13 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「壓縮實驗台」——近黑的冷灰底、紙白的字、薄荷青只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：老師 紫、學生 CE 灰、學生 KD 藍、架構變體 橘／青、剪枝 洋紅、量化 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與 HW14 相同，色盤沿用 HW14 2026-10-08 的 validate_palette.js 結果）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #5cc9ae;      /* 薄荷青：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(92, 201, 174, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #5cc9ae;
+  /* 角色色 */
+  --r-teacher: #9085e9; --r-ce: #8b949e; --r-kd: #3987e5; --r-arch1: #d95926;
+  --r-arch2: #199e70; --r-prune: #d55181; --r-quant: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "老師 ResNet-18 11,182,155 參數　→　學生 ≤ 100,000　·　Food-11　224×224 → 11 類";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #f2fbf8; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #141c1f; border-color: rgba(92, 201, 174, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #0b1613; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.teacher { --rc: var(--r-teacher); } .role.ce { --rc: var(--r-ce); } .role.kd { --rc: var(--r-kd); }
+.role.arch1 { --rc: var(--r-arch1); } .role.arch2 { --rc: var(--r-arch2); } .role.prune { --rc: var(--r-prune); }
+.role.quant { --rc: var(--r-quant); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch04.html">← 第 4 章</a><a href="ch06.html">第 6 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW13 讀碼教材</p>
+  <h1>第 5 章　架構設計：depthwise 與 pointwise 卷積</h1>
+  <p class="chap-lead">投影片給 Strong 基準線的建議是「用 depthwise 與 pointwise 卷積設計架構」。這一章先算清楚這種卷積怎麼省參數，再在 100,000 個參數以內設計三個學生，其中一個是參數量相同、只用一般卷積的對照組。七組 200 個 epoch 的實驗會回答兩個問題：架構和訓練方式各貢獻了多少？depthwise 卷積真的比較好嗎？第二個問題的答案，在這份作業的條件下是否定的。</p>
+</header>
+<main>
+
+<h2 id="dwpw">5.1　depthwise 與 pointwise：把一個卷積拆成兩個</h2>
+<p>一個一般的 k×k 卷積，輸入 I 個通道、輸出 O 個通道，要做兩件事：在空間上看鄰近的 k×k 個像素，同時在通道之間做組合。它的每一個輸出通道都有一個 I×k×k 的濾波器，所以參數是 <strong>I·O·k²</strong>。</p>
+<p>depthwise separable convolution 把這兩件事拆開：</p>
+<ul>
+<li><strong>depthwise 卷積</strong>：每個輸入通道各自用一個 k×k 濾波器，只在空間上看，不跨通道。在 PyTorch 裡就是 <code>groups=in_channels</code> 的 <code>Conv2d</code>，參數 <strong>I·k²</strong>。</li>
+<li><strong>pointwise 卷積</strong>：1×1 的卷積，只在通道之間組合，不看鄰居，等於對每個像素做一次全連接。參數 <strong>I·O</strong>。</li>
+</ul>
+<p>範例程式在 <code>model.py</code> 給了一個實作，但範例學生並沒有用到它：</p>
+<figure class="listing"><figcaption>model.py:9–13 — dwpw_conv()</figcaption>
+<pre class="py" data-hot="11,12"><code>def dwpw_conv(in_channels, out_channels, kernel_size, stride=1, padding=0):
+    return nn.Sequential(
+        nn.Conv2d(in_channels, in_channels, kernel_size, stride=stride, padding=padding, groups=in_channels), #depthwise convolution
+        nn.Conv2d(in_channels, out_channels, 1), # pointwise convolution
+    )</code></pre></figure>
+<p>兩者的參數比是 (I·k² + I·O) / (I·O·k²) = 1/O + 1/k²。k = 3 時，1/k² 是 1/9，所以通道數夠多時，參數大約只剩一般卷積的九分之一。以 64 進、96 出的 3×3 卷積為例：一般卷積 64·96·9 = 55,296 個權重；拆開之後 64·9 + 64·96 = 576 + 6,144 = 6,720 個，少了 8.2 倍。投影片 p.8 的「IOkk vs Ikk+IO」說的就是這個算式。計算量也按同樣的比例下降，因為兩者作用在同樣大小的特徵圖上。</p>
+<p>省下來的參數，可以拿去把網路加深、加寬。這就是 MobileNet（2017）的出發點；它的後繼 MobileNetV2（2018）再加上兩個設計：先用 pointwise 把通道放大（expand）、做完 depthwise 再縮回來（project），以及在輸入輸出形狀相同時加上殘差連接，稱為 <strong>inverted residual</strong>。</p>
+
+<h2 id="students">5.2　三個學生</h2>
+<p>本書在 <code>docs/tools/hw13_students.py</code> 設計了三個學生。共同的原則來自第 2 章的教訓：<strong>第一層就用步幅 2 把解析度減半</strong>，之後每隔幾層再減半，把計算量留給低解析度、多通道的深層；最後都接全域平均池化與一個全連接層。三者的參數量都壓在 10 萬附近，讓比較只剩「架構」一個變數。</p>
+<figure class="listing"><figcaption>docs/tools/hw13_students.py:12–19 — conv_bn() 與 dw_block()</figcaption>
+<pre class="py" data-hot="13,18,19"><code>def conv_bn(cin, cout, k=3, stride=1):
+    return nn.Sequential(nn.Conv2d(cin, cout, k, stride, k // 2, bias=False), nn.BatchNorm2d(cout), nn.ReLU(inplace=True))
+
+
+def dw_block(cin, cout, stride):
+    # dwpw_conv from model.py, with BN + ReLU after each of its two convolutions
+    dw, pw = dwpw_conv(cin, cout, 3, stride=stride, padding=1)
+    return nn.Sequential(dw, nn.BatchNorm2d(cin), nn.ReLU(inplace=True), pw, nn.BatchNorm2d(cout), nn.ReLU(inplace=True))</code></pre></figure>
+<p><code>dw_block</code> 直接用 <code>model.py</code> 的 <code>dwpw_conv</code>，在 depthwise 與 pointwise 後面各接 BatchNorm 與 ReLU，這是 MobileNet 的標準區塊。要注意 <code>dwpw_conv</code> 的兩個卷積都保留了 bias，後面又接 BatchNorm，那些 bias 是多餘的（<a href="ch03.html#arch">第 3 章</a>自我測驗第 1 題）；本書為了直接沿用範例的函式，照原樣保留。<code>conv_bn</code> 則用了 <code>bias=False</code>。</p>
+<figure class="listing"><figcaption>docs/tools/hw13_students.py:33–55 — dw 與 plain 的設定</figcaption>
+<pre class="py" data-hot="34,35,46,47"><code># (out_channels, stride) after the stem; the stem is 3 -&gt; STEM, stride 2 (224 -&gt; 112)
+DW_STEM = 24
+DW_CFG = [(32, 1), (64, 2), (64, 1), (96, 2), (96, 1), (128, 2), (128, 1), (128, 1), (144, 2)]
+
+
+def dw_net():
+    layers, c = [conv_bn(3, DW_STEM, 3, 2)], DW_STEM
+    for cout, s in DW_CFG:
+        layers.append(dw_block(c, cout, s))
+        c = cout
+    return Head(nn.Sequential(*layers), c)
+
+
+PLAIN_STEM = 16
+PLAIN_CFG = [(16, 1), (24, 2), (24, 1), (32, 2), (32, 1), (40, 2), (44, 1), (48, 1), (56, 2)]
+
+
+def plain_net():
+    layers, c = [conv_bn(3, PLAIN_STEM, 3, 2)], PLAIN_STEM
+    for cout, s in PLAIN_CFG:
+        layers.append(conv_bn(c, cout, 3, s))
+        c = cout
+    return Head(nn.Sequential(*layers), c)</code></pre></figure>
+<ul>
+<li><strong><code>dw</code></strong>（MobileNet 風格）：3×3、步幅 2 的 stem 把 224 變成 112，接 9 個 depthwise separable 區塊，通道從 24 加到 144，步幅 2 出現四次，最後特徵圖是 7×7。參數 99,811，離上限只差 189 個。</li>
+<li><strong><code>plain</code></strong>（對照組）：和 <code>dw</code> 完全相同的層數、步幅、BatchNorm 與 ReLU，只是每個區塊換成一個一般的 3×3 卷積。因為一般卷積貴得多，通道只能從 16 加到 56；寬度是調過的，讓參數量（99,355）和 <code>dw</code> 只差 0.5%。這一組的用意，是回答「同樣 10 萬個參數，depthwise separable 是不是比較好」。</li>
+</ul>
+<figure class="listing"><figcaption>docs/tools/hw13_students.py:58–87 — InvertedResidual 與 mbv2</figcaption>
+<pre class="py" data-hot="61,62,64,65,66,71,76,77"><code>class InvertedResidual(nn.Module):
+    def __init__(self, cin, cout, stride, expand):
+        super().__init__()
+        mid = cin * expand
+        self.use_skip = stride == 1 and cin == cout
+        self.block = nn.Sequential(
+            conv_bn(cin, mid, 1),
+            nn.Conv2d(mid, mid, 3, stride, 1, groups=mid, bias=False), nn.BatchNorm2d(mid), nn.ReLU(inplace=True),
+            nn.Conv2d(mid, cout, 1, bias=False), nn.BatchNorm2d(cout),   # linear bottleneck: no ReLU
+        )
+
+    def forward(self, x):
+        out = self.block(x)
+        return x + out if self.use_skip else out
+
+
+MB_STEM = 16
+# (expand, out_channels, repeats, first stride)
+MB_CFG = [(1, 16, 1, 1), (4, 24, 2, 2), (4, 32, 2, 2), (4, 48, 2, 2), (4, 64, 1, 2)]
+MB_LAST = 160
+
+
+def mbv2_net():
+    layers, c = [conv_bn(3, MB_STEM, 3, 2)], MB_STEM
+    for t, cout, n, s in MB_CFG:
+        for i in range(n):
+            layers.append(InvertedResidual(c, cout, s if i == 0 else 1, t))
+            c = cout
+    layers.append(conv_bn(c, MB_LAST, 1))
+    return Head(nn.Sequential(*layers), MB_LAST)</code></pre></figure>
+<ul>
+<li><strong><code>mbv2</code></strong>（MobileNetV2 風格）：每個區塊先用 1×1 把通道放大 <code>expand</code> 倍（第 64 行，多數區塊是 4 倍），再做 depthwise（第 65 行），最後 1×1 投影回輸出通道；投影之後<strong>不接 ReLU</strong>（第 66 行的 linear bottleneck，MobileNetV2 論文的論點是窄的表示經過 ReLU 會損失資訊）。步幅為 1 且通道不變時加上殘差連接（第 62、71 行）。9 個區塊之後再用 1×1 卷積放大到 160 個通道。參數 96,651。</li>
+</ul>
+<p>三個學生的參數都花在哪裡？用 <code>docs/tools/hw13_arch.py</code> 按層的種類分：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>學生</th><th>層的種類</th><th class="num">層數</th><th class="num">參數</th><th class="num">MACs</th><th class="num">每搬一個數做幾次乘加</th></tr></thead>
+<tbody>
+<tr><td rowspan="3"><span class="role arch1">dw</span></td><td>stem 3×3</td><td class="num">1</td><td class="num">648（0.6%）</td><td class="num">8,128,512（12.3%）</td><td class="num">18.0</td></tr>
+<tr><td>depthwise 3×3</td><td class="num">9</td><td class="num">7,600（7.6%）</td><td class="num">7,225,344（10.9%）</td><td class="num"><strong>3.4</strong></td></tr>
+<tr><td>pointwise 1×1</td><td class="num">9</td><td class="num">86,640（86.8%）</td><td class="num">50,677,760（76.7%）</td><td class="num">26.3</td></tr>
+<tr><td><span class="role extra">plain</span></td><td>3×3</td><td class="num">10</td><td class="num">98,064（98.7%）</td><td class="num">84,333,312（100%）</td><td class="num">55.9</td></tr>
+<tr><td rowspan="3"><span class="role arch2">mbv2</span></td><td>stem 3×3</td><td class="num">1</td><td class="num">432（0.4%）</td><td class="num">5,419,008（6.8%）</td><td class="num">15.4</td></tr>
+<tr><td>pointwise 1×1</td><td class="num">17</td><td class="num">81,664（84.5%）</td><td class="num">65,529,856（82.4%）</td><td class="num">16.5</td></tr>
+<tr><td>depthwise 3×3</td><td class="num">8</td><td class="num">8,208（8.5%）</td><td class="num">8,551,872（10.8%）</td><td class="num"><strong>3.0</strong></td></tr>
+<tr><td><span class="role ce">範例學生</span></td><td>3×3</td><td class="num">4</td><td class="num">86,340（98.2%）</td><td class="num">859,377,024（100%）</td><td class="num">131.6</td></tr>
+</tbody>
+</table></div>
+<p>兩件事值得注意。第一，depthwise separable 的網路裡，參數和計算幾乎都在 pointwise（1×1）卷積上，depthwise 本身很便宜。第二，最後一欄「每搬一個數做幾次乘加」：每一層要從記憶體讀進輸入與權重、寫出輸出，這一欄是乘加次數除以這些數字的總量。depthwise 卷積每個輸出只用到 9 個輸入，算得少、搬得多，比值只有 3 左右；一般 3×3 卷積的比值高一個數量級。這個比值會在 5.5 節解釋一個意外的計時結果。</p>
+
+<h2 id="recipe">5.3　訓練方式：200 個 epoch 與 HW03 的資料增強</h2>
+<p><a href="ch04.html#why">第 4 章</a>的結論是範例學生在 50 個 epoch 時還在欠擬合，所以 B 組實驗一次改兩件事：訓練 200 個 epoch，並換上 HW03 教材用過的較強增強：</p>
+<figure class="listing"><figcaption>docs/tools/hw13_exp.py:68–78 — 訓練時的資料增強</figcaption>
+<pre class="py" data-hot="71,73,74"><code>AUG = {
+    'sample': train_tfm,
+    'hw03': transforms.Compose([
+        transforms.RandomResizedCrop(224, scale=(0.5, 1.0)),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(15),
+        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3),
+        transforms.ToTensor(),
+        normalize,
+    ]),
+}</code></pre></figure>
+<p>隨機裁切（保留原圖 50%–100% 的面積，再縮放成 224×224）、水平翻轉、±15° 旋轉、亮度／對比／飽和度各 ±30% 的抖動，最後一樣用 ImageNet 的正規化。輸出仍是 224×224，所以老師照樣能看同一批圖（<a href="ch01.html#data">第 1 章 1.3 節</a>提過的限制）。其餘設定與 A 組相同：Adam、學習率固定 3e-4（沒有排程）、16 個 worker、同一個種子；蒸餾用 A 組最好的 T = 2、α = 0.5。</p>
+<p>增強對蒸餾還有一個附帶效果。<a href="ch03.html#train">第 3 章</a>量過，老師把原始的訓練圖背熟了，T = 2 時只把 1.7% 的機率分給其他類別。換成增強過的圖，老師沒見過這些裁切與色偏的組合，準確率從 0.9996 降到 0.9918，T = 2 時分給其他類別的機率變成 <strong>6.39%</strong>，將近 4 倍。也就是說，在 B 組的條件下，老師能給的 dark knowledge 比 A 組多。</p>
+<p>這一章原本只規劃了三個新學生。三組結果出來後，「進步到底來自架構還是來自訓練方式」分不開，所以又加跑了兩組：範例學生在同樣的 200 個 epoch 與增強下，KD 與 CE 各一組。命令的樣子：</p>
+<pre class="shell cmd"><code>$ cd HW13
+$ ../.venv/bin/python ../docs/tools/hw13_exp.py --name B200_mbv2_ce --student mbv2 --epochs 200 --aug hw03 --nw 16
+$ ../.venv/bin/python ../docs/tools/hw13_exp.py --name B200_dw_kd --student dw --loss KD --T 2 --alpha 0.5 --epochs 200 --aug hw03 --nw 16</code></pre>
+
+<h2 id="results">5.4　結果：架構與訓練方式各貢獻多少</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>學生</th><th class="num">參數</th><th class="num">MACs</th><th class="num">KD 最佳</th><th class="num">CE 最佳</th><th class="num">KD 最後 10 個 epoch 平均</th><th class="num">KD 最後的訓練準確率</th><th class="num">每 epoch 訓練秒數（KD）</th></tr></thead>
+<tbody>
+<tr><td><span class="role ce">範例學生</span></td><td class="num">87,907</td><td class="num">8.59 億</td><td class="num">0.73440</td><td class="num">0.73411</td><td class="num">0.6999</td><td class="num">0.7423</td><td class="num">15.8</td></tr>
+<tr><td><span class="role arch1">dw</span></td><td class="num">99,811</td><td class="num">6,603 萬</td><td class="num">0.78513</td><td class="num">0.77201</td><td class="num">0.7746</td><td class="num">0.8873</td><td class="num">7.7</td></tr>
+<tr><td><span class="role extra">plain</span></td><td class="num">99,355</td><td class="num">8,433 萬</td><td class="num">0.79125</td><td class="num">—</td><td class="num">0.7699</td><td class="num">0.8511</td><td class="num">6.0</td></tr>
+<tr><td><span class="role arch2">mbv2</span></td><td class="num">96,651</td><td class="num">7,950 萬</td><td class="num">0.80000</td><td class="num"><strong>0.80437</strong></td><td class="num">0.7902</td><td class="num">0.8740</td><td class="num">9.4</td></tr>
+</tbody>
+</table></div>
+<figure class="fig">
+<svg viewBox="0 0 900 360" role="img" aria-label="四種學生在同樣訓練方式下（200 epoch、HW03 增強、KD T=2 α=0.5）的驗證準確率，5 個 epoch 移動平均。mbv2、plain、dw 三條線很接近，最後在 77 到 79% 附近；範例學生一路落後，最後約 70%">
+<line x1="56" y1="314.0" x2="780" y2="314.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="318.0" text-anchor="end">30</text>
+<line x1="56" y1="260.5" x2="780" y2="260.5" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="264.5" text-anchor="end">40</text>
+<line x1="56" y1="207.1" x2="780" y2="207.1" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="211.1" text-anchor="end">50</text>
+<line x1="56" y1="153.6" x2="780" y2="153.6" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="157.6" text-anchor="end">60</text>
+<line x1="56" y1="100.2" x2="780" y2="100.2" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="104.2" text-anchor="end">70</text>
+<line x1="56" y1="46.7" x2="780" y2="46.7" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="50.7" text-anchor="end">80</text>
+<text class="s-mono" x="56.0" y="332" text-anchor="middle">1</text>
+<text class="s-mono" x="234.3" y="332" text-anchor="middle">50</text>
+<text class="s-mono" x="416.2" y="332" text-anchor="middle">100</text>
+<text class="s-mono" x="598.1" y="332" text-anchor="middle">150</text>
+<text class="s-mono" x="780.0" y="332" text-anchor="middle">200</text>
+<line x1="56" y1="314" x2="780" y2="314" stroke="#4a5562" stroke-width="1"/>
+<text class="s-sm" x="418.0" y="354" text-anchor="middle">epoch</text>
+<text class="s-sm" x="14" y="167.0" text-anchor="middle" transform="rotate(-90 14 167.0)">驗證準確率（%，5 個 epoch 移動平均）</text>
+<polyline points="56.0,299.7 59.6,285.1 63.3,278.2 66.9,271.1 70.6,264.5 74.2,250.1 77.8,243.0 81.5,233.1 85.1,225.4 88.7,217.4 92.4,209.3 96.0,197.7 99.7,191.5 103.3,186.4 106.9,181.0 110.6,177.4 114.2,176.9 117.8,172.7 121.5,166.8 125.1,163.5 128.8,160.3 132.4,154.4 136.0,152.1 139.7,150.1 143.3,146.7 147.0,143.6 150.6,147.0 154.2,145.3 157.9,144.4 161.5,143.4 165.1,142.0 168.8,135.8 172.4,134.8 176.1,131.3 179.7,129.8 183.3,129.9 187.0,130.2 190.6,127.5 194.3,125.6 197.9,124.3 201.5,124.4 205.2,120.6 208.8,117.7 212.4,117.6 216.1,118.0 219.7,116.0 223.4,116.5 227.0,117.9 230.6,117.1 234.3,115.7 237.9,112.5 241.5,110.6 245.2,108.0 248.8,108.5 252.5,105.7 256.1,106.5 259.7,105.2 263.4,106.0 267.0,103.2 270.7,102.9 274.3,98.6 277.9,97.8 281.6,94.9 285.2,93.5 288.8,93.4 292.5,94.6 296.1,92.3 299.8,90.9 303.4,90.0 307.0,88.5 310.7,87.7 314.3,88.1 317.9,87.7 321.6,87.6 325.2,86.3 328.9,86.1 332.5,86.0 336.1,85.0 339.8,83.3 343.4,83.3 347.1,82.8 350.7,82.7 354.3,83.7 358.0,84.9 361.6,83.7 365.2,82.7 368.9,80.9 372.5,79.4 376.2,78.6 379.8,79.0 383.4,77.8 387.1,76.9 390.7,77.9 394.4,77.7 398.0,77.9 401.6,77.2 405.3,77.9 408.9,76.7 412.5,76.2 416.2,75.4 419.8,75.5 423.5,74.2 427.1,72.9 430.7,70.6 434.4,69.1 438.0,69.5 441.6,69.8 445.3,70.7 448.9,70.7 452.6,71.1 456.2,69.1 459.8,67.7 463.5,66.3 467.1,67.4 470.8,65.8 474.4,66.2 478.0,65.9 481.7,65.0 485.3,63.9 488.9,64.0 492.6,63.7 496.2,64.1 499.9,64.8 503.5,64.3 507.1,65.3 510.8,64.8 514.4,63.5 518.1,62.7 521.7,63.5 525.3,62.7 529.0,62.8 532.6,63.2 536.2,63.6 539.9,62.4 543.5,61.6 547.2,60.7 550.8,61.1 554.4,61.0 558.1,60.7 561.7,62.4 565.3,61.8 569.0,60.8 572.6,59.5 576.3,59.5 579.9,58.1 583.5,59.3 587.2,59.5 590.8,59.8 594.5,60.3 598.1,59.3 601.7,58.5 605.4,59.3 609.0,59.4 612.6,59.0 616.3,59.2 619.9,59.7 623.6,58.7 627.2,58.9 630.8,58.5 634.5,59.6 638.1,58.6 641.7,57.5 645.4,57.2 649.0,56.5 652.7,55.3 656.3,56.0 659.9,57.6 663.6,56.6 667.2,56.7 670.9,56.2 674.5,56.3 678.1,55.6 681.8,55.4 685.4,54.6 689.0,55.8 692.7,56.1 696.3,56.1 700.0,55.7 703.6,55.9 707.2,55.6 710.9,54.4 714.5,53.4 718.2,54.5 721.8,54.5 725.4,52.1 729.1,51.8 732.7,52.3 736.3,51.9 740.0,52.3 743.6,52.6 747.3,52.6 750.9,52.8 754.5,52.3 758.2,51.8 761.8,51.4 765.4,51.8 769.1,51.5 772.7,51.5 776.4,52.0 780.0,52.6" fill="none" stroke="#199e70" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,298.6 59.6,290.2 63.3,278.7 66.9,273.9 70.6,267.9 74.2,256.4 77.8,246.2 81.5,244.3 85.1,233.9 88.7,226.3 92.4,219.4 96.0,212.4 99.7,203.5 103.3,201.3 106.9,194.3 110.6,193.0 114.2,189.7 117.8,186.7 121.5,178.7 125.1,188.6 128.8,178.9 132.4,177.0 136.0,177.1 139.7,178.2 143.3,162.9 147.0,168.5 150.6,160.7 154.2,149.5 157.9,143.2 161.5,141.0 165.1,131.4 168.8,136.2 172.4,135.4 176.1,136.2 179.7,132.9 183.3,136.9 187.0,133.4 190.6,134.5 194.3,133.2 197.9,137.9 201.5,132.8 205.2,136.4 208.8,131.6 212.4,132.1 216.1,129.1 219.7,127.9 223.4,120.0 227.0,122.3 230.6,117.8 234.3,117.9 237.9,117.4 241.5,117.0 245.2,113.1 248.8,111.8 252.5,111.3 256.1,108.3 259.7,104.2 263.4,103.4 267.0,104.0 270.7,96.7 274.3,95.3 277.9,95.3 281.6,99.8 285.2,97.5 288.8,103.7 292.5,104.0 296.1,102.7 299.8,98.8 303.4,97.9 307.0,91.5 310.7,91.5 314.3,94.9 317.9,91.4 321.6,95.7 325.2,105.1 328.9,101.5 332.5,96.5 336.1,99.3 339.8,93.6 343.4,84.9 347.1,84.8 350.7,85.9 354.3,82.3 358.0,83.0 361.6,79.5 365.2,78.2 368.9,79.0 372.5,80.1 376.2,80.5 379.8,83.3 383.4,84.4 387.1,81.5 390.7,81.1 394.4,79.5 398.0,76.5 401.6,78.0 405.3,80.6 408.9,79.1 412.5,81.4 416.2,80.2 419.8,79.3 423.5,76.8 427.1,78.1 430.7,80.0 434.4,81.9 438.0,82.5 441.6,85.2 445.3,90.2 448.9,84.1 452.6,89.6 456.2,86.2 459.8,84.3 463.5,77.8 467.1,78.2 470.8,77.4 474.4,80.2 478.0,78.7 481.7,76.5 485.3,76.5 488.9,70.5 492.6,70.9 496.2,69.0 499.9,69.0 503.5,67.6 507.1,67.9 510.8,65.4 514.4,68.4 518.1,71.9 521.7,71.5 525.3,71.4 529.0,71.3 532.6,69.0 536.2,66.1 539.9,66.3 543.5,66.9 547.2,65.6 550.8,65.9 554.4,66.6 558.1,67.3 561.7,66.7 565.3,66.7 569.0,65.8 572.6,67.2 576.3,69.0 579.9,68.9 583.5,69.2 587.2,69.3 590.8,67.7 594.5,64.2 598.1,65.0 601.7,66.6 605.4,68.7 609.0,69.2 612.6,68.7 616.3,67.6 619.9,66.1 623.6,65.0 627.2,65.2 630.8,68.0 634.5,66.5 638.1,65.0 641.7,66.0 645.4,65.5 649.0,65.2 652.7,65.5 656.3,65.6 659.9,65.7 663.6,63.5 667.2,65.2 670.9,66.3 674.5,68.7 678.1,65.2 681.8,66.6 685.4,64.3 689.0,63.8 692.7,61.3 696.3,62.2 700.0,64.9 703.6,62.4 707.2,61.9 710.9,63.6 714.5,64.9 718.2,63.5 721.8,63.7 725.4,62.8 729.1,62.8 732.7,59.7 736.3,57.1 740.0,59.4 743.6,58.8 747.3,58.5 750.9,59.4 754.5,59.0 758.2,56.4 761.8,59.2 765.4,58.9 769.1,60.4 772.7,62.0 776.4,65.2 780.0,66.4" fill="none" stroke="#008300" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,327.9 59.6,313.1 63.3,300.6 66.9,292.9 70.6,284.9 74.2,267.8 77.8,253.7 81.5,244.2 85.1,235.3 88.7,226.6 92.4,220.2 96.0,215.0 99.7,211.4 103.3,205.4 106.9,201.3 110.6,196.4 114.2,191.6 117.8,186.1 121.5,181.4 125.1,177.0 128.8,173.2 132.4,171.2 136.0,165.7 139.7,162.2 143.3,159.8 147.0,156.6 150.6,153.2 154.2,151.3 157.9,148.5 161.5,147.2 165.1,144.2 168.8,142.9 172.4,140.9 176.1,139.0 179.7,135.6 183.3,133.4 187.0,129.4 190.6,128.2 194.3,125.8 197.9,123.8 201.5,123.5 205.2,122.9 208.8,120.9 212.4,120.1 216.1,120.7 219.7,119.0 223.4,117.9 227.0,116.9 230.6,116.0 234.3,113.0 237.9,111.5 241.5,108.8 245.2,107.2 248.8,106.2 252.5,105.1 256.1,103.5 259.7,103.1 263.4,101.9 267.0,101.1 270.7,100.6 274.3,100.2 277.9,99.7 281.6,99.6 285.2,98.9 288.8,99.3 292.5,98.4 296.1,97.4 299.8,97.3 303.4,97.4 307.0,95.3 310.7,94.9 314.3,95.8 317.9,93.8 321.6,92.9 325.2,91.8 328.9,93.4 332.5,91.5 336.1,90.8 339.8,90.5 343.4,91.0 347.1,87.1 350.7,86.0 354.3,85.6 358.0,84.9 361.6,85.7 365.2,86.7 368.9,87.3 372.5,88.2 376.2,87.0 379.8,84.8 383.4,85.0 387.1,82.7 390.7,81.1 394.4,81.5 398.0,82.1 401.6,80.1 405.3,82.2 408.9,82.6 412.5,80.4 416.2,77.6 419.8,77.5 423.5,76.7 427.1,75.2 430.7,74.6 434.4,77.0 438.0,76.3 441.6,75.9 445.3,76.3 448.9,77.1 452.6,76.9 456.2,79.3 459.8,77.3 463.5,76.5 467.1,75.8 470.8,74.8 474.4,72.4 478.0,71.5 481.7,71.8 485.3,72.4 488.9,70.7 492.6,70.6 496.2,72.0 499.9,72.0 503.5,70.1 507.1,70.6 510.8,70.4 514.4,69.7 518.1,68.2 521.7,68.5 525.3,67.4 529.0,67.5 532.6,67.4 536.2,68.0 539.9,68.1 543.5,68.8 547.2,67.7 550.8,67.3 554.4,65.9 558.1,65.4 561.7,64.2 565.3,64.1 569.0,64.5 572.6,65.4 576.3,65.6 579.9,66.1 583.5,65.3 587.2,65.8 590.8,65.8 594.5,67.1 598.1,67.3 601.7,66.6 605.4,67.4 609.0,67.5 612.6,66.7 616.3,66.4 619.9,67.3 623.6,64.8 627.2,63.9 630.8,63.4 634.5,63.9 638.1,63.9 641.7,64.2 645.4,64.5 649.0,64.0 652.7,62.0 656.3,61.3 659.9,61.6 663.6,60.9 667.2,60.9 670.9,62.1 674.5,62.4 678.1,62.2 681.8,63.9 685.4,64.0 689.0,64.2 692.7,63.7 696.3,64.7 700.0,63.5 703.6,62.9 707.2,62.5 710.9,62.5 714.5,60.3 718.2,60.9 721.8,61.4 725.4,60.4 729.1,60.3 732.7,61.6 736.3,59.8 740.0,59.5 743.6,59.7 747.3,62.0 750.9,61.8 754.5,62.8 758.2,62.1 761.8,61.7 765.4,59.8 769.1,59.9 772.7,58.5 776.4,58.7 780.0,58.9" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,296.4 59.6,286.1 63.3,278.1 66.9,272.0 70.6,268.0 74.2,260.8 77.8,253.2 81.5,250.5 85.1,243.6 88.7,237.9 92.4,230.8 96.0,224.5 99.7,217.5 103.3,216.2 106.9,212.9 110.6,209.8 114.2,206.5 117.8,205.4 121.5,205.3 125.1,202.2 128.8,198.6 132.4,198.1 136.0,197.2 139.7,195.2 143.3,196.6 147.0,193.4 150.6,189.5 154.2,183.4 157.9,179.9 161.5,177.8 165.1,180.9 168.8,184.3 172.4,181.0 176.1,184.4 179.7,185.0 183.3,181.0 187.0,175.9 190.6,180.9 194.3,170.7 197.9,162.3 201.5,160.9 205.2,161.7 208.8,164.8 212.4,173.6 216.1,172.4 219.7,170.6 223.4,172.4 227.0,163.6 230.6,155.0 234.3,154.5 237.9,156.3 241.5,156.4 245.2,152.5 248.8,148.4 252.5,159.3 256.1,155.1 259.7,152.5 263.4,152.8 267.0,156.9 270.7,146.6 274.3,144.3 277.9,141.0 281.6,140.0 285.2,136.2 288.8,133.8 292.5,138.1 296.1,138.4 299.8,137.8 303.4,140.0 307.0,144.0 310.7,145.4 314.3,143.8 317.9,145.3 321.6,142.9 325.2,140.5 328.9,135.4 332.5,136.2 336.1,139.0 339.8,137.7 343.4,136.3 347.1,137.0 350.7,132.1 354.3,127.3 358.0,131.5 361.6,138.8 365.2,142.4 368.9,146.3 372.5,144.6 376.2,142.3 379.8,137.7 383.4,132.1 387.1,134.0 390.7,135.0 394.4,156.3 398.0,159.2 401.6,155.3 405.3,157.2 408.9,158.3 412.5,136.7 416.2,126.1 419.8,140.0 423.5,150.7 427.1,147.7 430.7,143.8 434.4,164.0 438.0,150.0 441.6,130.9 445.3,133.1 448.9,131.8 452.6,121.8 456.2,124.3 459.8,129.7 463.5,134.2 467.1,140.5 470.8,133.4 474.4,135.1 478.0,134.3 481.7,129.5 485.3,134.7 488.9,136.7 492.6,137.3 496.2,133.5 499.9,134.6 503.5,125.2 507.1,126.8 510.8,125.1 514.4,128.0 518.1,122.7 521.7,119.8 525.3,111.9 529.0,119.8 532.6,113.8 536.2,116.6 539.9,118.8 543.5,119.4 547.2,114.9 550.8,120.6 554.4,127.2 558.1,128.3 561.7,131.7 565.3,125.6 569.0,120.5 572.6,114.6 576.3,112.9 579.9,108.9 583.5,105.8 587.2,104.9 590.8,104.0 594.5,100.8 598.1,104.1 601.7,110.1 605.4,118.0 609.0,117.1 612.6,116.7 616.3,117.3 619.9,129.8 623.6,129.4 627.2,137.6 630.8,143.2 634.5,142.9 638.1,128.3 641.7,131.9 645.4,128.1 649.0,123.7 652.7,121.5 656.3,124.4 659.9,118.1 663.6,124.8 667.2,122.8 670.9,118.1 674.5,110.6 678.1,112.1 681.8,98.6 685.4,100.9 689.0,103.4 692.7,105.2 696.3,103.6 700.0,105.3 703.6,109.2 707.2,117.7 710.9,119.9 714.5,114.8 718.2,113.9 721.8,114.5 725.4,108.2 729.1,108.5 732.7,111.9 736.3,111.2 740.0,108.4 743.6,113.3 747.3,110.7 750.9,115.3 754.5,114.1 758.2,108.7 761.8,106.3 765.4,106.4 769.1,97.6 772.7,99.8 776.4,102.1 780.0,94.2" fill="none" stroke="#8b949e" stroke-width="2" stroke-linejoin="round"/>
+<rect x="786.0" y="48.6" width="8" height="8" rx="2" fill="#199e70"/>
+<text class="s-lbl" x="798.0" y="56.6">mbv2</text>
+<rect x="786.0" y="62.6" width="8" height="8" rx="2" fill="#d95926"/>
+<text class="s-lbl" x="798.0" y="70.6">dw</text>
+<rect x="786.0" y="76.6" width="8" height="8" rx="2" fill="#008300"/>
+<text class="s-lbl" x="798.0" y="84.6">plain</text>
+<rect x="786.0" y="90.6" width="8" height="8" rx="2" fill="#8b949e"/>
+<text class="s-lbl" x="798.0" y="98.6">範例學生</text>
+<rect x="54.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 1：mbv2 32.7　plain 32.9　dw 27.4　範例學生 33.3"/>
+<rect x="57.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 2：mbv2 35.4　plain 34.4　dw 30.2　範例學生 35.2"/>
+<rect x="61.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 3：mbv2 36.7　plain 36.6　dw 32.5　範例學生 36.7"/>
+<rect x="65.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 4：mbv2 38.0　plain 37.5　dw 34.0　範例學生 37.9"/>
+<rect x="68.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 5：mbv2 39.3　plain 38.6　dw 35.4　範例學生 38.6"/>
+<rect x="72.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 6：mbv2 42.0　plain 40.8　dw 38.6　範例學生 39.9"/>
+<rect x="76.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 7：mbv2 43.3　plain 42.7　dw 41.3　範例學生 41.4"/>
+<rect x="79.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 8：mbv2 45.1　plain 43.0　dw 43.1　範例學生 41.9"/>
+<rect x="83.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 9：mbv2 46.6　plain 45.0　dw 44.7　範例學生 43.2"/>
+<rect x="86.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 10：mbv2 48.1　plain 46.4　dw 46.3　範例學生 44.2"/>
+<rect x="90.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 11：mbv2 49.6　plain 47.7　dw 47.6　範例學生 45.6"/>
+<rect x="94.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 12：mbv2 51.7　plain 49.0　dw 48.5　範例學生 46.7"/>
+<rect x="97.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 13：mbv2 52.9　plain 50.7　dw 49.2　範例學生 48.1"/>
+<rect x="101.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 14：mbv2 53.9　plain 51.1　dw 50.3　範例學生 48.3"/>
+<rect x="105.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 15：mbv2 54.9　plain 52.4　dw 51.1　範例學生 48.9"/>
+<rect x="108.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 16：mbv2 55.6　plain 52.6　dw 52.0　範例學生 49.5"/>
+<rect x="112.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 17：mbv2 55.6　plain 53.3　dw 52.9　範例學生 50.1"/>
+<rect x="116.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 18：mbv2 56.4　plain 53.8　dw 53.9　範例學生 50.3"/>
+<rect x="119.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 19：mbv2 57.5　plain 55.3　dw 54.8　範例學生 50.3"/>
+<rect x="123.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 20：mbv2 58.2　plain 53.5　dw 55.6　範例學生 50.9"/>
+<rect x="126.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 21：mbv2 58.8　plain 55.3　dw 56.3　範例學生 51.6"/>
+<rect x="130.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 22：mbv2 59.9　plain 55.6　dw 56.7　範例學生 51.7"/>
+<rect x="134.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 23：mbv2 60.3　plain 55.6　dw 57.7　範例學生 51.8"/>
+<rect x="137.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 24：mbv2 60.7　plain 55.4　dw 58.4　範例學生 52.2"/>
+<rect x="141.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 25：mbv2 61.3　plain 58.3　dw 58.8　範例學生 52.0"/>
+<rect x="145.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 26：mbv2 61.9　plain 57.2　dw 59.4　範例學生 52.6"/>
+<rect x="148.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 27：mbv2 61.2　plain 58.7　dw 60.1　範例學生 53.3"/>
+<rect x="152.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 28：mbv2 61.6　plain 60.8　dw 60.4　範例學生 54.4"/>
+<rect x="156.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 29：mbv2 61.7　plain 62.0　dw 61.0　範例學生 55.1"/>
+<rect x="159.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 30：mbv2 61.9　plain 62.4　dw 61.2　範例學生 55.5"/>
+<rect x="163.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 31：mbv2 62.2　plain 64.2　dw 61.8　範例學生 54.9"/>
+<rect x="167.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 32：mbv2 63.3　plain 63.3　dw 62.0　範例學生 54.3"/>
+<rect x="170.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 33：mbv2 63.5　plain 63.4　dw 62.4　範例學生 54.9"/>
+<rect x="174.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 34：mbv2 64.2　plain 63.3　dw 62.7　範例學生 54.2"/>
+<rect x="177.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 35：mbv2 64.5　plain 63.9　dw 63.4　範例學生 54.1"/>
+<rect x="181.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 36：mbv2 64.4　plain 63.1　dw 63.8　範例學生 54.9"/>
+<rect x="185.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 37：mbv2 64.4　plain 63.8　dw 64.5　範例學生 55.8"/>
+<rect x="188.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 38：mbv2 64.9　plain 63.6　dw 64.8　範例學生 54.9"/>
+<rect x="192.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 39：mbv2 65.2　plain 63.8　dw 65.2　範例學生 56.8"/>
+<rect x="196.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 40：mbv2 65.5　plain 63.0　dw 65.6　範例學生 58.4"/>
+<rect x="199.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 41：mbv2 65.5　plain 63.9　dw 65.6　範例學生 58.6"/>
+<rect x="203.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 42：mbv2 66.2　plain 63.2　dw 65.7　範例學生 58.5"/>
+<rect x="207.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 43：mbv2 66.7　plain 64.1　dw 66.1　範例學生 57.9"/>
+<rect x="210.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 44：mbv2 66.7　plain 64.0　dw 66.3　範例學生 56.3"/>
+<rect x="214.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 45：mbv2 66.7　plain 64.6　dw 66.2　範例學生 56.5"/>
+<rect x="217.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 46：mbv2 67.0　plain 64.8　dw 66.5　範例學生 56.8"/>
+<rect x="221.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 47：mbv2 66.9　plain 66.3　dw 66.7　範例學生 56.5"/>
+<rect x="225.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 48：mbv2 66.7　plain 65.9　dw 66.9　範例學生 58.1"/>
+<rect x="228.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 49：mbv2 66.8　plain 66.7　dw 67.0　範例學生 59.7"/>
+<rect x="232.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 50：mbv2 67.1　plain 66.7　dw 67.6　範例學生 59.8"/>
+<rect x="236.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 51：mbv2 67.7　plain 66.8　dw 67.9　範例學生 59.5"/>
+<rect x="239.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 52：mbv2 68.0　plain 66.8　dw 68.4　範例學生 59.5"/>
+<rect x="243.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 53：mbv2 68.5　plain 67.6　dw 68.7　範例學生 60.2"/>
+<rect x="247.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 54：mbv2 68.4　plain 67.8　dw 68.9　範例學生 61.0"/>
+<rect x="250.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 55：mbv2 69.0　plain 67.9　dw 69.1　範例學生 58.9"/>
+<rect x="254.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 56：mbv2 68.8　plain 68.5　dw 69.4　範例學生 59.7"/>
+<rect x="257.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 57：mbv2 69.1　plain 69.2　dw 69.5　範例學生 60.2"/>
+<rect x="261.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 58：mbv2 68.9　plain 69.4　dw 69.7　範例學生 60.2"/>
+<rect x="265.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 59：mbv2 69.4　plain 69.3　dw 69.8　範例學生 59.4"/>
+<rect x="268.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 60：mbv2 69.5　plain 70.7　dw 69.9　範例學生 61.3"/>
+<rect x="272.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 61：mbv2 70.3　plain 70.9　dw 70.0　範例學生 61.7"/>
+<rect x="276.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 62：mbv2 70.4　plain 70.9　dw 70.1　範例學生 62.4"/>
+<rect x="279.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 63：mbv2 71.0　plain 70.1　dw 70.1　範例學生 62.5"/>
+<rect x="283.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 64：mbv2 71.3　plain 70.5　dw 70.2　範例學生 63.3"/>
+<rect x="287.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 65：mbv2 71.3　plain 69.3　dw 70.2　範例學生 63.7"/>
+<rect x="290.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 66：mbv2 71.0　plain 69.3　dw 70.3　範例學生 62.9"/>
+<rect x="294.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 67：mbv2 71.5　plain 69.5　dw 70.5　範例學生 62.9"/>
+<rect x="297.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 68：mbv2 71.7　plain 70.3　dw 70.5　範例學生 63.0"/>
+<rect x="301.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 69：mbv2 71.9　plain 70.4　dw 70.5　範例學生 62.5"/>
+<rect x="305.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 70：mbv2 72.2　plain 71.6　dw 70.9　範例學生 61.8"/>
+<rect x="308.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 71：mbv2 72.3　plain 71.6　dw 71.0　範例學生 61.5"/>
+<rect x="312.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 72：mbv2 72.3　plain 71.0　dw 70.8　範例學生 61.8"/>
+<rect x="316.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 73：mbv2 72.3　plain 71.6　dw 71.2　範例學生 61.6"/>
+<rect x="319.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 74：mbv2 72.3　plain 70.8　dw 71.4　範例學生 62.0"/>
+<rect x="323.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 75：mbv2 72.6　plain 69.1　dw 71.6　範例學生 62.5"/>
+<rect x="327.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 76：mbv2 72.6　plain 69.8　dw 71.3　範例學生 63.4"/>
+<rect x="330.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 77：mbv2 72.6　plain 70.7　dw 71.6　範例學生 63.3"/>
+<rect x="334.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 78：mbv2 72.8　plain 70.2　dw 71.8　範例學生 62.7"/>
+<rect x="338.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 79：mbv2 73.2　plain 71.2　dw 71.8　範例學生 63.0"/>
+<rect x="341.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 80：mbv2 73.2　plain 72.9　dw 71.7　範例學生 63.2"/>
+<rect x="345.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 81：mbv2 73.2　plain 72.9　dw 72.5　範例學生 63.1"/>
+<rect x="348.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 82：mbv2 73.3　plain 72.7　dw 72.7　範例學生 64.0"/>
+<rect x="352.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 83：mbv2 73.1　plain 73.3　dw 72.7　範例學生 64.9"/>
+<rect x="356.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 84：mbv2 72.9　plain 73.2　dw 72.9　範例學生 64.1"/>
+<rect x="359.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 85：mbv2 73.1　plain 73.9　dw 72.7　範例學生 62.8"/>
+<rect x="363.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 86：mbv2 73.3　plain 74.1　dw 72.5　範例學生 62.1"/>
+<rect x="367.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 87：mbv2 73.6　plain 74.0　dw 72.4　範例學生 61.4"/>
+<rect x="370.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 88：mbv2 73.9　plain 73.8　dw 72.2　範例學生 61.7"/>
+<rect x="374.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 89：mbv2 74.0　plain 73.7　dw 72.5　範例學生 62.1"/>
+<rect x="378.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 90：mbv2 74.0　plain 73.2　dw 72.9　範例學生 63.0"/>
+<rect x="381.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 91：mbv2 74.2　plain 73.0　dw 72.8　範例學生 64.0"/>
+<rect x="385.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 92：mbv2 74.4　plain 73.5　dw 73.3　範例學生 63.7"/>
+<rect x="388.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 93：mbv2 74.2　plain 73.6　dw 73.6　範例學生 63.5"/>
+<rect x="392.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 94：mbv2 74.2　plain 73.9　dw 73.5　範例學生 59.5"/>
+<rect x="396.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 95：mbv2 74.2　plain 74.4　dw 73.4　範例學生 59.0"/>
+<rect x="399.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 96：mbv2 74.3　plain 74.2　dw 73.8　範例學生 59.7"/>
+<rect x="403.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 97：mbv2 74.2　plain 73.7　dw 73.4　範例學生 59.3"/>
+<rect x="407.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 98：mbv2 74.4　plain 73.9　dw 73.3　範例學生 59.1"/>
+<rect x="410.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 99：mbv2 74.5　plain 73.5　dw 73.7　範例學生 63.2"/>
+<rect x="414.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 100：mbv2 74.6　plain 73.7　dw 74.2　範例學生 65.1"/>
+<rect x="418.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 101：mbv2 74.6　plain 73.9　dw 74.2　範例學生 62.6"/>
+<rect x="421.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 102：mbv2 74.9　plain 74.4　dw 74.4　範例學生 60.5"/>
+<rect x="425.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 103：mbv2 75.1　plain 74.1　dw 74.7　範例學生 61.1"/>
+<rect x="428.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 104：mbv2 75.5　plain 73.8　dw 74.8　範例學生 61.8"/>
+<rect x="432.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 105：mbv2 75.8　plain 73.4　dw 74.3　範例學生 58.1"/>
+<rect x="436.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 106：mbv2 75.7　plain 73.3　dw 74.5　範例學生 60.7"/>
+<rect x="439.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 107：mbv2 75.7　plain 72.8　dw 74.5　範例學生 64.3"/>
+<rect x="443.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 108：mbv2 75.5　plain 71.9　dw 74.5　範例學生 63.8"/>
+<rect x="447.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 109：mbv2 75.5　plain 73.0　dw 74.3　範例學生 64.1"/>
+<rect x="450.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 110：mbv2 75.4　plain 72.0　dw 74.3　範例學生 65.9"/>
+<rect x="454.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 111：mbv2 75.8　plain 72.6　dw 73.9　範例學生 65.5"/>
+<rect x="458.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 112：mbv2 76.1　plain 73.0　dw 74.3　範例學生 64.5"/>
+<rect x="461.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 113：mbv2 76.3　plain 74.2　dw 74.4　範例學生 63.6"/>
+<rect x="465.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 114：mbv2 76.1　plain 74.1　dw 74.6　範例學生 62.5"/>
+<rect x="468.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 115：mbv2 76.4　plain 74.3　dw 74.7　範例學生 63.8"/>
+<rect x="472.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 116：mbv2 76.4　plain 73.7　dw 75.2　範例學生 63.5"/>
+<rect x="476.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 117：mbv2 76.4　plain 74.0　dw 75.4　範例學生 63.6"/>
+<rect x="479.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 118：mbv2 76.6　plain 74.4　dw 75.3　範例學生 64.5"/>
+<rect x="483.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 119：mbv2 76.8　plain 74.4　dw 75.2　範例學生 63.5"/>
+<rect x="487.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 120：mbv2 76.8　plain 75.5　dw 75.5　範例學生 63.2"/>
+<rect x="490.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 121：mbv2 76.8　plain 75.5　dw 75.5　範例學生 63.0"/>
+<rect x="494.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 122：mbv2 76.8　plain 75.8　dw 75.3　範例學生 63.8"/>
+<rect x="498.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 123：mbv2 76.6　plain 75.8　dw 75.3　範例學生 63.6"/>
+<rect x="501.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 124：mbv2 76.7　plain 76.1　dw 75.6　範例學生 65.3"/>
+<rect x="505.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 125：mbv2 76.5　plain 76.0　dw 75.5　範例學生 65.0"/>
+<rect x="509.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 126：mbv2 76.6　plain 76.5　dw 75.6　範例學生 65.3"/>
+<rect x="512.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 127：mbv2 76.9　plain 76.0　dw 75.7　範例學生 64.8"/>
+<rect x="516.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 128：mbv2 77.0　plain 75.3　dw 76.0　範例學生 65.8"/>
+<rect x="519.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 129：mbv2 76.9　plain 75.4　dw 75.9　範例學生 66.3"/>
+<rect x="523.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 130：mbv2 77.0　plain 75.4　dw 76.1　範例學生 67.8"/>
+<rect x="527.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 131：mbv2 77.0　plain 75.4　dw 76.1　範例學生 66.3"/>
+<rect x="530.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 132：mbv2 76.9　plain 75.8　dw 76.1　範例學生 67.5"/>
+<rect x="534.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 133：mbv2 76.8　plain 76.4　dw 76.0　範例學生 66.9"/>
+<rect x="538.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 134：mbv2 77.1　plain 76.3　dw 76.0　範例學生 66.5"/>
+<rect x="541.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 135：mbv2 77.2　plain 76.2　dw 75.9　範例學生 66.4"/>
+<rect x="545.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 136：mbv2 77.4　plain 76.5　dw 76.1　範例學生 67.2"/>
+<rect x="549.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 137：mbv2 77.3　plain 76.4　dw 76.2　範例學生 66.2"/>
+<rect x="552.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 138：mbv2 77.3　plain 76.3　dw 76.4　範例學生 64.9"/>
+<rect x="556.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 139：mbv2 77.4　plain 76.2　dw 76.5　範例學生 64.7"/>
+<rect x="559.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 140：mbv2 77.1　plain 76.3　dw 76.7　範例學生 64.1"/>
+<rect x="563.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 141：mbv2 77.2　plain 76.3　dw 76.7　範例學生 65.2"/>
+<rect x="567.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 142：mbv2 77.4　plain 76.4　dw 76.7　範例學生 66.2"/>
+<rect x="570.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 143：mbv2 77.6　plain 76.2　dw 76.5　範例學生 67.3"/>
+<rect x="574.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 144：mbv2 77.6　plain 75.8　dw 76.5　範例學生 67.6"/>
+<rect x="578.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 145：mbv2 77.9　plain 75.9　dw 76.4　範例學生 68.4"/>
+<rect x="581.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 146：mbv2 77.7　plain 75.8　dw 76.5　範例學生 68.9"/>
+<rect x="585.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 147：mbv2 77.6　plain 75.8　dw 76.4　範例學生 69.1"/>
+<rect x="589.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 148：mbv2 77.5　plain 76.1　dw 76.4　範例學生 69.3"/>
+<rect x="592.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 149：mbv2 77.5　plain 76.7　dw 76.2　範例學生 69.9"/>
+<rect x="596.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 150：mbv2 77.6　plain 76.6　dw 76.2　範例學生 69.3"/>
+<rect x="599.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 151：mbv2 77.8　plain 76.3　dw 76.3　範例學生 68.1"/>
+<rect x="603.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 152：mbv2 77.7　plain 75.9　dw 76.1　範例學生 66.7"/>
+<rect x="607.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 153：mbv2 77.6　plain 75.8　dw 76.1　範例學生 66.8"/>
+<rect x="610.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 154：mbv2 77.7　plain 75.9　dw 76.3　範例學生 66.9"/>
+<rect x="614.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 155：mbv2 77.7　plain 76.1　dw 76.3　範例學生 66.8"/>
+<rect x="618.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 156：mbv2 77.6　plain 76.4　dw 76.2　範例學生 64.5"/>
+<rect x="621.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 157：mbv2 77.8　plain 76.6　dw 76.6　範例學生 64.5"/>
+<rect x="625.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 158：mbv2 77.7　plain 76.5　dw 76.8　範例學生 63.0"/>
+<rect x="629.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 159：mbv2 77.8　plain 76.0　dw 76.9　範例學生 62.0"/>
+<rect x="632.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 160：mbv2 77.6　plain 76.3　dw 76.8　範例學生 62.0"/>
+<rect x="636.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 161：mbv2 77.8　plain 76.6　dw 76.8　範例學生 64.7"/>
+<rect x="639.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 162：mbv2 78.0　plain 76.4　dw 76.7　範例學生 64.1"/>
+<rect x="643.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 163：mbv2 78.0　plain 76.5　dw 76.7　範例學生 64.8"/>
+<rect x="647.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 164：mbv2 78.2　plain 76.5　dw 76.8　範例學生 65.6"/>
+<rect x="650.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 165：mbv2 78.4　plain 76.5　dw 77.1　範例學生 66.0"/>
+<rect x="654.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 166：mbv2 78.3　plain 76.5　dw 77.3　範例學生 65.5"/>
+<rect x="658.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 167：mbv2 78.0　plain 76.4　dw 77.2　範例學生 66.6"/>
+<rect x="661.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 168：mbv2 78.2　plain 76.9　dw 77.3　範例學生 65.4"/>
+<rect x="665.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 169：mbv2 78.1　plain 76.5　dw 77.4　範例學生 65.8"/>
+<rect x="669.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 170：mbv2 78.2　plain 76.3　dw 77.1　範例學生 66.6"/>
+<rect x="672.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 171：mbv2 78.2　plain 75.9　dw 77.1　範例學生 68.1"/>
+<rect x="676.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 172：mbv2 78.3　plain 76.5　dw 77.1　範例學生 67.8"/>
+<rect x="679.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 173：mbv2 78.4　plain 76.3　dw 76.8　範例學生 70.3"/>
+<rect x="683.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 174：mbv2 78.5　plain 76.7　dw 76.8　範例學生 69.9"/>
+<rect x="687.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 175：mbv2 78.3　plain 76.8　dw 76.7　範例學生 69.4"/>
+<rect x="690.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 176：mbv2 78.2　plain 77.3　dw 76.8　範例學生 69.1"/>
+<rect x="694.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 177：mbv2 78.2　plain 77.1　dw 76.6　範例學生 69.4"/>
+<rect x="698.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 178：mbv2 78.3　plain 76.6　dw 76.9　範例學生 69.0"/>
+<rect x="701.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 179：mbv2 78.3　plain 77.1　dw 77.0　範例學生 68.3"/>
+<rect x="705.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 180：mbv2 78.3　plain 77.2　dw 77.0　範例學生 66.7"/>
+<rect x="709.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 181：mbv2 78.6　plain 76.8　dw 77.1　範例學生 66.3"/>
+<rect x="712.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 182：mbv2 78.8　plain 76.6　dw 77.5　範例學生 67.3"/>
+<rect x="716.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 183：mbv2 78.5　plain 76.9　dw 77.4　範例學生 67.4"/>
+<rect x="720.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 184：mbv2 78.6　plain 76.8　dw 77.3　範例學生 67.3"/>
+<rect x="723.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 185：mbv2 79.0　plain 77.0　dw 77.4　範例學生 68.5"/>
+<rect x="727.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 186：mbv2 79.0　plain 77.0　dw 77.5　範例學生 68.4"/>
+<rect x="730.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 187：mbv2 79.0　plain 77.6　dw 77.2　範例學生 67.8"/>
+<rect x="734.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 188：mbv2 79.0　plain 78.1　dw 77.5　範例學生 67.9"/>
+<rect x="738.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 189：mbv2 79.0　plain 77.6　dw 77.6　範例學生 68.5"/>
+<rect x="741.8" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 190：mbv2 78.9　plain 77.7　dw 77.6　範例學生 67.6"/>
+<rect x="745.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 191：mbv2 78.9　plain 77.8　dw 77.1　範例學生 68.0"/>
+<rect x="749.1" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 192：mbv2 78.9　plain 77.6　dw 77.2　範例學生 67.2"/>
+<rect x="752.7" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 193：mbv2 79.0　plain 77.7　dw 77.0　範例學生 67.4"/>
+<rect x="756.4" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 194：mbv2 79.0　plain 78.2　dw 77.1　範例學生 68.4"/>
+<rect x="760.0" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 195：mbv2 79.1　plain 77.7　dw 77.2　範例學生 68.9"/>
+<rect x="763.6" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 196：mbv2 79.0　plain 77.7　dw 77.6　範例學生 68.8"/>
+<rect x="767.3" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 197：mbv2 79.1　plain 77.4　dw 77.5　範例學生 70.5"/>
+<rect x="770.9" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 198：mbv2 79.1　plain 77.1　dw 77.8　範例學生 70.1"/>
+<rect x="774.5" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 199：mbv2 79.0　plain 76.5　dw 77.8　範例學生 69.6"/>
+<rect x="778.2" y="20" width="3.6" height="294" fill="transparent" data-tip="epoch 200：mbv2 78.9　plain 76.3　dw 77.7　範例學生 71.1"/>
+</svg>
+<div class="legend"><span><i style="background:#199e70"></i>mbv2</span><span><i style="background:#008300"></i>plain</span><span><i style="background:#d95926"></i>dw</span><span><i style="background:#8b949e"></i>範例學生</span></div>
+<figcaption>圖 5.1　四個學生在同樣的訓練方式下（200 epoch、HW03 增強、KD T = 2 α = 0.5）的驗證準確率。每個 epoch 的值上下跳動好幾個百分點，這裡畫的是 5 個 epoch 的移動平均；滑過圖看數值。三個新學生一路緊貼；範例學生從第 10 個 epoch 左右開始落後，之後一直差 5 到 9 個百分點，沒有追上。</figcaption>
+</figure>
+<p>把範例學生從第 4 章到這裡的路徑排起來（都看蒸餾版的最佳驗證準確率）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>步驟</th><th class="num">驗證準確率</th><th class="num">增加</th></tr></thead>
+<tbody>
+<tr><td>範例學生，10 epoch，CE（Simple，<code>train.py</code>）</td><td class="num">0.50408</td><td></td></tr>
+<tr><td>範例學生，50 epoch，KD T = 2（第 4 章）</td><td class="num">0.64840</td><td class="num">+14.4</td></tr>
+<tr><td>範例學生，200 epoch ＋ HW03 增強（訓練方式）</td><td class="num">0.73440</td><td class="num">+8.6</td></tr>
+<tr><td>換架構：dw／plain／mbv2</td><td class="num">0.78513／0.79125／0.80000</td><td class="num">+5.1～+6.6</td></tr>
+</tbody>
+</table></div>
+<p>訓練更久、增強更強，這兩件「不改模型」的事情貢獻最多；換架構再多 5 到 7 個百分點。這個順序本身就是一個教訓：如果沒有加跑範例學生那兩組，0.648 到 0.800 的 15 個百分點會被整個算到架構頭上。</p>
+<p>新學生不但準確率高，訓練也快得多：範例學生每個 epoch 要 15.8 秒（KD），<code>dw</code> 只要 7.7 秒、<code>plain</code> 6.0 秒。原因是第 2 章量過的計算量，範例學生 8.59 億 MACs，新學生只有它的一成左右。而且新學生的訓練準確率到了 0.85–0.89，範例學生只有 0.74：同樣的資料、同樣的時間，新架構學得動得多。</p>
+<p>和投影片的基準線比：Strong 是 Kaggle 測試集上的 0.82370，最好的 <code>mbv2</code> 在驗證集上是 0.80437。兩者不是同一個資料集，本書不能說過了沒過；能說的是，在這個訓練方式下，三種新學生都在 0.77 到 0.80 之間，離投影片說的 8–12 小時的 Strong 做法大概還差一些調整（5.7 節）。</p>
+
+<h2 id="dwvsplain">5.5　depthwise 比較好嗎？和同參數的一般卷積比</h2>
+<p>這是本章最重要的對照。<code>dw</code> 和 <code>plain</code> 的層數、步幅、BatchNorm、ReLU、參數量都相同，唯一的差別是卷積的種類。結果是 <code>plain</code> 0.79125、<code>dw</code> 0.78513，一般卷積反而高 0.6 個百分點。看最後 10 個 epoch 的平均則是 0.7699 對 0.7746，反過來 <code>dw</code> 高 0.5 個百分點。兩種看法的差距都在<a href="ch01.html#time">第 1 章</a>量過的雜訊之內：在 10 萬個參數、200 個 epoch 的條件下，<strong>depthwise separable 並沒有比一般卷積好</strong>。</p>
+<p>為什麼 MobileNet 的論文說它好？因為 MobileNet 比的是「同樣的寬度與深度」：一般卷積版的參數與計算量是它的 8 到 9 倍。本章比的是「同樣的參數量」：<code>plain</code> 為了塞進 10 萬個參數，通道只有 <code>dw</code> 的三分之一到二分之一（最後 56 對 144）。省參數的好處被拿去換寬度，寬度在這裡沒有換來更高的準確率。兩種比較都合理，但回答的是不同的問題。</p>
+<p>速度的比較更出人意料。第 6 章會在 GPU 沒有其他工作時量推論時間，這裡先引用三個學生的數字（batch 64，fp32，RTX PRO 4000 Blackwell）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>學生</th><th class="num">MACs</th><th class="num">GPU batch 64</th><th class="num">GPU batch 1</th><th class="num">CPU batch 1（4 執行緒）</th></tr></thead>
+<tbody>
+<tr><td><span class="role extra">plain</span></td><td class="num">8,433 萬</td><td class="num"><strong>2.90 ms</strong></td><td class="num">0.46 ms</td><td class="num">0.93 ms</td></tr>
+<tr><td><span class="role arch1">dw</span></td><td class="num">6,603 萬</td><td class="num">6.37 ms</td><td class="num">0.73 ms</td><td class="num">1.63 ms</td></tr>
+<tr><td><span class="role arch2">mbv2</span></td><td class="num">7,950 萬</td><td class="num">8.92 ms</td><td class="num">0.89 ms</td><td class="num">2.04 ms</td></tr>
+<tr><td><span class="role ce">範例學生</span></td><td class="num">8.59 億</td><td class="num">22.37 ms</td><td class="num">0.30 ms</td><td class="num">5.70 ms</td></tr>
+</tbody>
+</table></div>
+<p><code>dw</code> 的計算量比 <code>plain</code> 少 22%，在 GPU 上卻慢了 2.2 倍。5.2 節的最後一欄就是原因：depthwise 卷積每搬一個數只做 3.4 次乘加，GPU 的算力用不滿，時間花在讀寫記憶體上；一般 3×3 卷積的比值是 55.9，GPU 有大量高度最佳化的卷積實作（cuDNN）可以發揮。MobileNet 原本是為手機 CPU 設計的，那裡算力少、記憶體頻寬相對充裕，計算量少就真的快；在 GPU 上，計算量不是時間的好代理。這和<a href="ch02.html#where">第 2 章</a>的結論同一件事：參數、計算量、時間是三個量，換了硬體，它們之間的關係也跟著換。</p>
+<p>範例學生在 batch 1 時反而最快（0.30 ms），因為它只有 4 個卷積層；一張圖的工作量太小時，GPU 的時間主要花在逐層啟動運算的固定開銷上，層數少的模型佔便宜。<code>mbv2</code> 有 26 個卷積層，batch 1 時就是最慢的新學生。</p>
+
+<h2 id="kd">5.6　在學得動的學生身上，蒸餾有沒有用</h2>
+<p>第 4 章的推論是：範例學生容量不夠，蒸餾幫不上忙。現在有了學得動的學生，老師給的 dark knowledge 也因為增強變多了，結果是：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>學生</th><th class="num">KD − CE（最佳）</th></tr></thead>
+<tbody>
+<tr><td>範例學生</td><td class="num">+0.03</td></tr>
+<tr><td>dw</td><td class="num">+1.31</td></tr>
+<tr><td>mbv2</td><td class="num">−0.44</td></tr>
+</tbody>
+</table></div>
+<p>還是沒有一致的方向。<code>dw</code> 上多了 1.3 個百分點，<code>mbv2</code> 上少了 0.4，範例學生幾乎相同，全部在雜訊之內。所以第 4 章的推論只對了一半：容量確實是準確率的瓶頸（換了架構就多 5 到 7 個百分點），但容量變大之後，T = 2 的蒸餾仍然沒有明確的效果。可能的原因有三個，本書都沒有驗證：T = 2 是在範例學生上挑出來的，未必適合新學生；Hinton 的原始論文在大得多的資料上才看到明顯的蒸餾效果；這個老師在訓練集上過度自信（第 3 章），給的資訊本來就有限。要分辨哪一個，需要在新學生上重新掃描 T 與 α、並跑多個種子。</p>
+<p>值得一提的是蒸餾的代價：每個 epoch 老師都要對每一批增強過的圖做一次前向計算。<code>dw</code> 的訓練從每 epoch 5.3 秒變成 7.7 秒（+45%），<code>mbv2</code> 從 6.8 秒變成 9.4 秒。效果不明確時，這個成本就不划算。</p>
+
+<h2 id="next">5.7　離 Strong 還差什麼</h2>
+<p>本書的實驗刻意只改架構與訓練方式，學習率固定、單一種子、蒸餾設定沿用第 4 章。若目標是把分數推高，以下是還沒做的事，按本書的判斷排列：</p>
+<ul>
+<li><strong>學習率排程</strong>。200 個 epoch 都用 3e-4，最後幾十個 epoch 的驗證準確率還在上下跳 2–3 個百分點（圖 5.1 的原始值）。餘弦退火之類的排程讓學習率逐漸降到接近 0，通常能把結尾穩住、多拿一兩個百分點。本書的實驗工具有 <code>--sched cos</code> 選項，但沒有實際跑。</li>
+<li><strong>更長的訓練</strong>。新學生的訓練準確率還不到 0.89，驗證準確率在第 200 個 epoch 前後仍是最佳：還沒學完。</li>
+<li><strong>重新調蒸餾</strong>，或換投影片 Boss 提到的進階方法（第 7 章）。</li>
+<li><strong>把參數用滿</strong>：<code>mbv2</code> 還有 3,349 個參數的空間，<code>dw</code> 的 bias 是多餘的。</li>
+</ul>
+<div class="note"><h4>現在的做法：架構搜尋與「同成本」的比較</h4>
+<p>2019 年之後，小模型的架構大多不是手工設計，而是用 neural architecture search（NAS）在一個成本限制下搜出來的，例如 MobileNetV3、EfficientNet；而且搜尋時的成本直接用<strong>目標硬體上的實測延遲</strong>，不再只看 FLOPs，原因正是 5.5 節看到的現象。另一個變化是：在 GPU 上，ConvNeXt（2022）、RepVGG（2021）這類「回到一般大卷積」的設計重新流行，因為它們對 GPU 友善。比較兩個架構時，現在的論文習慣同時報參數、FLOPs 與實測延遲，並說明是「同參數」、「同 FLOPs」還是「同延遲」的比較——本章的 <code>plain</code> 對照組就是在做這件事。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>depthwise separable 把 k×k 卷積拆成 depthwise（I·k²）與 pointwise（I·O），參數比是 1/O + 1/k²，3×3 時約剩九分之一；參數與計算主要落在 pointwise 上。</li>
+<li>三個學生：<code>dw</code>（MobileNet 風格，99,811）、<code>mbv2</code>（inverted residual，96,651）、<code>plain</code>（同步幅同深度的一般卷積，99,355，對照組）。都在第一層就把解析度減半。</li>
+<li>200 epoch ＋ HW03 增強：範例學生 0.648 → 0.734（訓練方式 +8.6），換架構再到 0.785–0.804（+5～7）。最好的是 <code>mbv2</code> CE 0.80437。</li>
+<li>同參數量下，<code>plain</code>（0.791）和 <code>dw</code>（0.785）在雜訊內；depthwise separable 沒有比較好。GPU 上 <code>plain</code> 2.9 ms、<code>dw</code> 6.4 ms：depthwise 每搬一個數只算 3.4 次，計算量少不等於快。</li>
+<li>增強讓老師的 dark knowledge 變多（T = 2 時 1.7% → 6.4%），但 KD 與 CE 的差距仍在雜訊內（+1.3、−0.4、+0.03），且每個 epoch 的訓練時間多 38–45%。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 一個 3×3 卷積，128 進、128 出（不計 bias）。換成 depthwise separable 之後參數剩多少？比例和 1/O + 1/k² 吻合嗎？</summary>
+<p>一般卷積 128·128·9 = 147,456。depthwise 128·9 = 1,152，pointwise 128·128 = 16,384，合計 17,536。比例 17,536 / 147,456 = 0.119；公式 1/128 + 1/9 = 0.0078 + 0.1111 = 0.119，吻合。</p></details>
+<details class="quiz"><summary>2. 為什麼本章要設計 <code>plain</code> 這個對照組？如果沒有它，只比較 <code>dw</code> 與範例學生，會得到什麼錯誤的結論？</summary>
+<p>只比 <code>dw</code>（0.785）與範例學生（0.734），會以為「換成 depthwise separable 多了 5 個百分點」。但 <code>dw</code> 和範例學生的差別不只卷積種類：層數（19 對 4）、第一層就降解析度、通道寬度都不同。<code>plain</code> 保留了這些差異、只把卷積換回一般卷積，結果 0.791：多出來的 5 個百分點來自「更深、先降解析度」的整體設計，不是來自 depthwise。</p></details>
+<details class="quiz"><summary>3. <code>dw</code> 的 MACs 比 <code>plain</code> 少 22%，GPU 上卻慢了 2.2 倍。如果換成一顆算力很弱、記憶體頻寬相對充裕的手機 CPU，你預期兩者的速度關係會怎樣？</summary>
+<p>算力成為瓶頸時，時間大致跟著計算量走，<code>dw</code> 應該會和 <code>plain</code> 差不多或更快。本書在 4 執行緒的桌機 CPU 上量到 <code>dw</code> 1.63 ms、<code>plain</code> 0.93 ms，<code>dw</code> 仍然比較慢，可見這顆 CPU 的卷積實作對一般卷積也最佳化得很好；手機上的結果本書沒有量，要在目標硬體上實測才算數。</p></details>
+<details class="quiz"><summary>4. B2 加跑的兩組改變了本章的結論嗎？</summary>
+<p>改變了對「進步從哪裡來」的解釋。沒有 B2 時，範例學生的最好成績是第 4 章的 0.648，新學生是 0.80，看起來架構貢獻了 15 個百分點。B2 顯示範例學生在同樣訓練方式下就有 0.734，所以 15 個百分點裡，有 8.6 個來自訓練更久與更強的增強，架構只佔 5 到 7 個。比較兩個模型時，訓練方式必須相同。</p></details>
+<details class="quiz"><summary>5. <code>mbv2</code> 的 inverted residual 在投影（第 66 行）之後不接 ReLU。如果加上 ReLU，參數量會改變嗎？</summary>
+<p>不會。ReLU 沒有參數，加不加只影響計算的非線性。MobileNetV2 論文的實驗顯示，在窄的投影輸出上加 ReLU 會損失資訊、準確率變差；本書沒有在這份作業上實際比較。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Andrew G. Howard 等，<a href="https://arxiv.org/abs/1704.04861">MobileNets</a>（2017）：depthwise separable 卷積與寬度、解析度乘數。</li>
+<li>Mark Sandler 等，<a href="https://arxiv.org/abs/1801.04381">MobileNetV2: Inverted Residuals and Linear Bottlenecks</a>（2018）。</li>
+<li>Xiaohan Ding 等，<a href="https://arxiv.org/abs/2101.03697">RepVGG</a>（2021）：論證在 GPU 上，簡單的 3×3 卷積堆疊比 depthwise 更快。</li>
+<li>Zhuang Liu 等，<a href="https://arxiv.org/abs/2201.03545">A ConvNet for the 2020s</a>（2022）：ConvNeXt。</li>
+<li>投影片 p.8 引用的 <a href="https://towardsdatascience.com/a-basic-introduction-to-separable-convolutions-b99ec3102728">A Basic Introduction to Separable Convolutions</a>，以及李宏毅老師的 <a href="https://speech.ee.ntu.edu.tw/~hylee/ml/ml2021-course-data/tiny_v7.pdf">Network Compression 講義</a> p.24–30。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch04.html">← 第 4 章</a><a href="ch06.html">第 6 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW13 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW13 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

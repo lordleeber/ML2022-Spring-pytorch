@@ -1,0 +1,42 @@
+C20_ft_keep50: Total params: 22,647
+[ Train | 001/020 ] loss = 1.78177, acc = 0.39428
+[ Valid | 001/020 ] loss = 1.69936, acc = 0.43294 -> best
+[ Train | 002/020 ] loss = 1.65531, acc = 0.44952
+[ Valid | 002/020 ] loss = 1.66313, acc = 0.42216
+[ Train | 003/020 ] loss = 1.60510, acc = 0.46513
+[ Valid | 003/020 ] loss = 1.63844, acc = 0.42682
+[ Train | 004/020 ] loss = 1.57212, acc = 0.47446
+[ Valid | 004/020 ] loss = 1.56308, acc = 0.47405 -> best
+[ Train | 005/020 ] loss = 1.53005, acc = 0.48358
+[ Valid | 005/020 ] loss = 1.58211, acc = 0.45131
+[ Train | 006/020 ] loss = 1.50528, acc = 0.49564
+[ Valid | 006/020 ] loss = 1.52764, acc = 0.48688 -> best
+[ Train | 007/020 ] loss = 1.48656, acc = 0.50395
+[ Valid | 007/020 ] loss = 1.49473, acc = 0.47988
+[ Train | 008/020 ] loss = 1.45566, acc = 0.51125
+[ Valid | 008/020 ] loss = 1.55314, acc = 0.45918
+[ Train | 009/020 ] loss = 1.43996, acc = 0.51622
+[ Valid | 009/020 ] loss = 1.47021, acc = 0.50175 -> best
+[ Train | 010/020 ] loss = 1.42113, acc = 0.52818
+[ Valid | 010/020 ] loss = 1.43234, acc = 0.51312 -> best
+[ Train | 011/020 ] loss = 1.40146, acc = 0.53020
+[ Valid | 011/020 ] loss = 1.58975, acc = 0.46676
+[ Train | 012/020 ] loss = 1.39397, acc = 0.53122
+[ Valid | 012/020 ] loss = 1.51085, acc = 0.48513
+[ Train | 013/020 ] loss = 1.37242, acc = 0.53841
+[ Valid | 013/020 ] loss = 1.45599, acc = 0.50554
+[ Train | 014/020 ] loss = 1.37038, acc = 0.54024
+[ Valid | 014/020 ] loss = 1.39391, acc = 0.52770 -> best
+[ Train | 015/020 ] loss = 1.34352, acc = 0.54713
+[ Valid | 015/020 ] loss = 1.39844, acc = 0.52945 -> best
+[ Train | 016/020 ] loss = 1.32995, acc = 0.55483
+[ Valid | 016/020 ] loss = 1.41726, acc = 0.51370
+[ Train | 017/020 ] loss = 1.31785, acc = 0.55605
+[ Valid | 017/020 ] loss = 1.35278, acc = 0.53178 -> best
+[ Train | 018/020 ] loss = 1.31184, acc = 0.56163
+[ Valid | 018/020 ] loss = 1.41152, acc = 0.52566
+[ Train | 019/020 ] loss = 1.30167, acc = 0.56507
+[ Valid | 019/020 ] loss = 1.34626, acc = 0.54373 -> best
+[ Train | 020/020 ] loss = 1.28576, acc = 0.57379
+[ Valid | 020/020 ] loss = 1.37448, acc = 0.52303
+C20_ft_keep50: best valid acc 0.54373 at epoch 19, 205.7 s

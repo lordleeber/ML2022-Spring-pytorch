@@ -16,6 +16,7 @@ Variants:
   --aug hw03                  stronger train_tfm (HW03's augmentation A at 224, plus normalize)
   --sched cos                 cosine learning-rate decay over all epochs (default: constant)
   --nw N                      DataLoader workers (changes the RNG stream: compare runs with equal N)
+  --keep K --init_ckpt P      load the sample student from P, physically remove channels (hw13_shrink.py, keep K), train
 """
 import argparse, io, json, os, random, sys, time
 from contextlib import redirect_stdout
@@ -49,6 +50,8 @@ ap.add_argument('--epochs', type=int, default=cfg['n_epochs'])
 ap.add_argument('--lr', type=float, default=cfg['lr'])
 ap.add_argument('--seed', type=int, default=cfg['seed'])
 ap.add_argument('--nw', type=int, default=0)
+ap.add_argument('--keep', type=float, default=0)
+ap.add_argument('--init_ckpt', default='')
 ap.add_argument('--save', default='')   # directory for best.ckpt and best_valid_logits.pt
 ap.add_argument('--jsonl', default='')
 a = ap.parse_args()
@@ -81,7 +84,13 @@ pw = a.nw > 0
 train_loader = DataLoader(train_set, batch_size=cfg['batch_size'], shuffle=True, num_workers=a.nw, pin_memory=True, persistent_workers=pw)
 valid_loader = DataLoader(valid_set, batch_size=cfg['batch_size'], shuffle=False, num_workers=a.nw, pin_memory=True, persistent_workers=pw)
 
-student = STUDENTS[a.student]()
+if a.keep:
+    from hw13_shrink import shrink_student
+    base = STUDENTS['sample']()
+    base.load_state_dict(torch.load(a.init_ckpt, map_location='cpu'))
+    student = shrink_student(base, a.keep).train()
+else:
+    student = STUDENTS[a.student]()
 with redirect_stdout(io.StringIO()) as buf:
     summary(student, (3, 224, 224), device='cpu')
 total_params = [l for l in buf.getvalue().splitlines() if l.startswith('Total params')][0]
@@ -163,7 +172,7 @@ for epoch in range(a.epochs):
             torch.save(student.state_dict(), os.path.join(a.save, 'best.ckpt'))
             torch.save(torch.cat(logits_all), os.path.join(a.save, 'best_valid_logits.pt'))
 
-rec = dict(name=a.name, loss=a.loss, alpha=a.alpha, T=a.T, student=a.student, aug=a.aug, sched=a.sched,
+rec = dict(name=a.name, keep=a.keep, loss=a.loss, alpha=a.alpha, T=a.T, student=a.student, aug=a.aug, sched=a.sched,
            epochs=a.epochs, lr=a.lr, seed=a.seed, nw=a.nw, params=n_params, best_acc=round(best_acc.item(), 5),
            best_epoch=best_epoch, total_secs=round(time.time() - t_start, 1), curve=curve)
 print(f"{a.name}: best valid acc {best_acc:.5f} at epoch {best_epoch}, {rec['total_secs']} s")
