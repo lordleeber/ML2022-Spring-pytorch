@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 5 章　學習率與訓練長度 — HW07 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW07 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「閱讀理解」書桌——近黑的冷灰底、紙白的字、沙金色只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：原版 灰、LR 衰減 藍、隨機視窗 橘、換模型 綠／紫／洋紅／黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與 HW13、HW14 相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #e0a458;      /* 沙金：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(224, 164, 88, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #e0a458;
+  /* 角色色 */
+  --r-base: #8b949e; --r-decay: #3987e5; --r-window: #d95926; --r-m1: #199e70;
+  --r-m2: #9085e9; --r-m3: #d55181; --r-m4: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "[CLS] 問題 ≤40 [SEP] 文章視窗 150 [SEP]　→　BERT　→　start／end 位置　·　DRCD 繁中閱讀理解";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fbf4ea; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #1b1914; border-color: rgba(224, 164, 88, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1a1208; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.base { --rc: var(--r-base); } .role.decay { --rc: var(--r-decay); } .role.window { --rc: var(--r-window); }
+.role.m1 { --rc: var(--r-m1); } .role.m2 { --rc: var(--r-m2); } .role.m3 { --rc: var(--r-m3); }
+.role.m4 { --rc: var(--r-m4); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch04.html">← 第 4 章</a><a href="ch06.html">第 6 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW07 讀碼教材</p>
+  <h1>第 5 章　Medium：學習率衰減，以及訓練更久有沒有用</h1>
+  <p class="chap-lead">投影片給 Medium 的第一個提示是線性學習率衰減，只要加兩行程式。這一章把它加上去，和「不衰減」各用 3 個種子比較，再看訓練 1、2、3 個 epoch 的差別。結果是：衰減讓 dev EM 平均漲了 10 個百分點，遠大於種子之間的差距；訓練更久則幾乎沒有幫助，模型在訓練集上越來越準，dev 卻停在原地。最後用一組固定學習率的對照，拆開「學習率變小」與「最後降到 0」各自的作用。</p>
+</header>
+<main>
+
+<h2 id="todo">5.1　TODO：兩行程式</h2>
+<p><code>train.py</code> 的訓練迴圈裡，<code>optimizer.zero_grad()</code> 之後留著一行 TODO：「Apply linear learning rate decay」（第 3 章 3.3 節，<code>train.py:107</code>）。投影片 p.17 給了兩種做法：每一步手動把 <code>optimizer.param_groups[0]["lr"]</code> 減掉一點，或者用現成的 scheduler（排程器），並推薦 Hugging Face 的版本。本書的實驗工具用的是後者：</p>
+<figure class="listing"><figcaption>docs/tools/hw07_exp.py:112–115 — 建立線性衰減的 scheduler（--decay linear 時）</figcaption>
+<pre class="py" data-hot="115"><code>total_updates = (len(train_loader) * args.epochs) // args.accum
+scheduler = None
+if args.decay == 'linear':
+    scheduler = get_linear_schedule_with_warmup(optimizer, int(args.warmup * total_updates), total_updates)</code></pre></figure>
+<figure class="listing"><figcaption>docs/tools/hw07_exp.py:168–176 — 每次更新參數之後，scheduler 往前走一步</figcaption>
+<pre class="py" data-hot="175-176"><code>        if step % args.accum == 0:
+            if scaler is not None:
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                optimizer.step()
+            optimizer.zero_grad()
+            if scheduler is not None:
+                scheduler.step()</code></pre></figure>
+<p>放進 <code>train.py</code> 的話，就是在建立 optimizer 之後加一行 <code>scheduler = get_linear_schedule_with_warmup(optimizer, 0, len(train_loader) * num_epoch)</code>，在 TODO 那一行寫 <code>scheduler.step()</code>，再從 transformers 匯入這個函式。<code>get_linear_schedule_with_warmup</code> 的三個參數是：優化器、warmup（熱身）的步數、總步數。warmup 是在一開始讓學習率從 0 慢慢升到設定值，本書設成 0，也就是從 1e-4 開始直線降到 0。實驗工具多處理了梯度累積（第 7 章），所以總步數要除以 <code>accum</code>，而且 scheduler 只在真正更新參數時才前進。</p>
+
+<h2 id="schedule">5.2　學習率怎麼變</h2>
+<p>投影片 p.17 特別叮嚀：訓練結束時，檢查學習率是不是非常接近 0。把同一個 scheduler 單獨拿出來，走完 991 步看看：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>第幾步</th><th class="num">1</th><th class="num">100</th><th class="num">496</th><th class="num">900</th><th class="num">991（最後一步）</th><th class="num">訓練結束後</th></tr></thead>
+<tbody>
+<tr><td>這一步用的學習率</td><td class="num">1.0e-4</td><td class="num">9.0e-5</td><td class="num">5.0e-5</td><td class="num">9.3e-6</td><td class="num">1.0e-7</td><td class="num">0.0</td></tr>
+</tbody>
+</table></div>
+<p>每走一步，學習率減少 1e-4 / 991。最後一步用的是 1.0e-7，走完之後恰好是 0。整個 epoch 的平均學習率是 5.0e-5，正好是起點的一半。這個數字在 5.5 節會用到。</p>
+<p>要注意兩個常見的錯誤。第一，總步數要給「整個訓練」的步數，而不是一個 epoch 的步數；如果訓練 3 個 epoch 卻給 991，學習率在第 1 個 epoch 結束時就降到 0，後面兩個 epoch 等於白跑。第二，<code>scheduler.step()</code> 要放在迴圈裡、每一步呼叫一次，放到 epoch 的迴圈外面就變成每個 epoch 才降一次。檢查的方法就是投影片說的：印出最後的學習率。</p>
+
+<h2 id="decay">5.3　衰減 vs 不衰減：一個 epoch</h2>
+<p>只改這一件事，其他都照範例（1 個 epoch、舊版 AdamW、stride 150、範例的 <code>evaluate</code>），每種各跑 3 個種子：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>1 個 epoch</th><th class="num">種子 0</th><th class="num">種子 1</th><th class="num">種子 2</th><th class="num">平均</th></tr></thead>
+<tbody>
+<tr><td><span class="role base">不衰減（範例）</span></td><td class="num">0.416</td><td class="num">0.482</td><td class="num">0.439</td><td class="num">0.446</td></tr>
+<tr><td><span class="role decay">線性衰減</span></td><td class="num">0.528</td><td class="num">0.566</td><td class="num">0.562</td><td class="num">0.552</td></tr>
+</tbody>
+</table></div>
+<p>平均漲了 10.6 個百分點，而且衰減的三個種子全部高於不衰減的三個種子，兩組的範圍完全沒有重疊。這是第 3 章那把尺量得出來的進步：種子之間差 6.6 個百分點，衰減帶來的差距比它大得多。同一個訓練時間（991 步、大約 4 分半），換來的是第 0 章那條 Simple 基準線到 Medium 基準線之間的一大段（dev 與 Kaggle 不能直接比，見第 0 章）。</p>
+<p>訓練時印出的 loss 也看得出差別。三個種子平均的訓練 loss，每 100 步一個點：</p>
+<figure class="fig">
+<!-- CHART:ch05_loss -->
+<div class="legend"><span><i style="background:#8b949e"></i>不衰減</span><span><i style="background:#3987e5"></i>線性衰減</span></div>
+<svg viewBox="0 0 900 360" role="img" aria-label="第 1 個 epoch 的訓練 loss，三個種子的平均：不衰減與線性衰減在前 200 步接近，之後線性衰減一路較低，最後 100 步約 0.46，不衰減約 0.58">
+<line x1="56" y1="314.0" x2="780" y2="314.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="318.0" text-anchor="end">0.4</text>
+<line x1="56" y1="265.0" x2="780" y2="265.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="269.0" text-anchor="end">0.6</text>
+<line x1="56" y1="216.0" x2="780" y2="216.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="220.0" text-anchor="end">0.8</text>
+<line x1="56" y1="167.0" x2="780" y2="167.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="171.0" text-anchor="end">1.0</text>
+<line x1="56" y1="118.0" x2="780" y2="118.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="122.0" text-anchor="end">1.2</text>
+<line x1="56" y1="69.0" x2="780" y2="69.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="73.0" text-anchor="end">1.4</text>
+<line x1="56" y1="20.0" x2="780" y2="20.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="24.0" text-anchor="end">1.6</text>
+<text class="s-mono" x="56.0" y="332" text-anchor="middle">100</text>
+<text class="s-mono" x="146.5" y="332" text-anchor="middle">200</text>
+<text class="s-mono" x="237.0" y="332" text-anchor="middle">300</text>
+<text class="s-mono" x="327.5" y="332" text-anchor="middle">400</text>
+<text class="s-mono" x="418.0" y="332" text-anchor="middle">500</text>
+<text class="s-mono" x="508.5" y="332" text-anchor="middle">600</text>
+<text class="s-mono" x="599.0" y="332" text-anchor="middle">700</text>
+<text class="s-mono" x="689.5" y="332" text-anchor="middle">800</text>
+<text class="s-mono" x="780.0" y="332" text-anchor="middle">900</text>
+<line x1="56" y1="314" x2="780" y2="314" stroke="#4a5562" stroke-width="1"/>
+<text class="s-sm" x="418.0" y="354" text-anchor="middle">訓練步數（第 1 個 epoch）</text>
+<text class="s-sm" x="14" y="167.0" text-anchor="middle" transform="rotate(-90 14 167.0)">最近 100 步的平均 loss</text>
+<polyline points="56.0,37.5 146.5,191.8 237.0,223.1 327.5,237.4 418.0,247.2 508.5,248.3 599.0,262.8 689.5,265.5 780.0,269.9" fill="none" stroke="#8b949e" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,39.1 146.5,205.1 237.0,234.8 327.5,254.9 418.0,265.7 508.5,274.7 599.0,290.1 689.5,296.7 780.0,298.2" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+<rect x="786.0" y="265.9" width="8" height="8" rx="2" fill="#8b949e"/>
+<text class="s-lbl" x="798.0" y="273.9">不衰減</text>
+<rect x="786.0" y="294.2" width="8" height="8" rx="2" fill="#3987e5"/>
+<text class="s-lbl" x="798.0" y="302.2">線性衰減</text>
+<rect x="10.8" y="20" width="90.5" height="294" fill="transparent" data-tip="第 100 步：不衰減 1.528　線性衰減 1.522"/>
+<rect x="101.2" y="20" width="90.5" height="294" fill="transparent" data-tip="第 200 步：不衰減 0.899　線性衰減 0.845"/>
+<rect x="191.8" y="20" width="90.5" height="294" fill="transparent" data-tip="第 300 步：不衰減 0.771　線性衰減 0.723"/>
+<rect x="282.2" y="20" width="90.5" height="294" fill="transparent" data-tip="第 400 步：不衰減 0.713　線性衰減 0.641"/>
+<rect x="372.8" y="20" width="90.5" height="294" fill="transparent" data-tip="第 500 步：不衰減 0.673　線性衰減 0.597"/>
+<rect x="463.2" y="20" width="90.5" height="294" fill="transparent" data-tip="第 600 步：不衰減 0.668　線性衰減 0.560"/>
+<rect x="553.8" y="20" width="90.5" height="294" fill="transparent" data-tip="第 700 步：不衰減 0.609　線性衰減 0.498"/>
+<rect x="644.2" y="20" width="90.5" height="294" fill="transparent" data-tip="第 800 步：不衰減 0.598　線性衰減 0.470"/>
+<rect x="734.8" y="20" width="90.5" height="294" fill="transparent" data-tip="第 900 步：不衰減 0.580　線性衰減 0.464"/>
+</svg>
+<!-- /CHART:ch05_loss -->
+<figcaption>圖 5.1　第 1 個 epoch 的訓練 loss（最近 100 步的平均，3 個種子再取平均）。前 200 步學習率差不多，兩條線接近；之後衰減那條的學習率越來越小，loss 一路較低，最後 100 步約 0.46，不衰減約 0.58。</figcaption>
+</figure>
+<p>為什麼衰減有用？一個直觀的說法：學習率大的時候，每一步更新都很粗，參數在 loss 的谷底附近來回跳，停在哪裡帶有很大的隨機性；學習率慢慢降到 0，最後幾百步的更新越來越細，參數能穩穩地停在谷底附近。範例的 1e-4 對微調 BERT 來說偏大（BERT 論文建議的微調學習率是 5e-5、3e-5、2e-5），不衰減的話，訓練結束的那一刻參數還在大步移動。這個解釋還有一個漏洞：衰減也讓平均學習率變成一半。到底是「平均學習率變小」還是「最後降到 0」起作用？5.5 節用一組對照拆開。</p>
+
+<h2 id="epochs">5.4　訓練更久</h2>
+<p>投影片沒有規定訓練幾個 epoch，範例是 1 個。把不衰減的訓練延長到 3 個 epoch，並在每個 epoch 結束時評估 dev；衰減則分別以 1、2、3 個 epoch 為總長度各訓練一次（學習率在各自的最後一步降到 0）。每種設定 3 個種子：</p>
+<figure class="fig">
+<!-- CHART:ch05_em -->
+<svg viewBox="0 0 900 340" role="img" aria-label="各訓練設定的 dev EM，每個設定 3 個種子各一點、直線是平均：不衰減 1、2、3 epoch 平均 0.446、0.461、0.499；線性衰減 1、2、3 epoch 平均 0.552、0.550、0.546">
+<line x1="170.0" y1="16" x2="170.0" y2="296" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="170.0" y="314" text-anchor="middle">0.4</text>
+<line x1="345.0" y1="16" x2="345.0" y2="296" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="345.0" y="314" text-anchor="middle">0.45</text>
+<line x1="520.0" y1="16" x2="520.0" y2="296" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="520.0" y="314" text-anchor="middle">0.5</text>
+<line x1="695.0" y1="16" x2="695.0" y2="296" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="695.0" y="314" text-anchor="middle">0.55</text>
+<line x1="870.0" y1="16" x2="870.0" y2="296" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="870.0" y="314" text-anchor="middle">0.6</text>
+<text class="s-sm" x="520.0" y="334" text-anchor="middle">dev EM（範例的評估，stride 150）</text>
+<text class="s-lbl" x="158" y="40.0" text-anchor="end">不衰減 1 epoch</text>
+<line x1="225.6" y1="36.0" x2="457.7" y2="36.0" stroke="#8b949e" stroke-width="2" opacity="0.6"/>
+<circle cx="225.6" cy="36.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="不衰減 1 epoch：0.416"/>
+<circle cx="457.7" cy="36.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="不衰減 1 epoch：0.482"/>
+<circle cx="306.1" cy="36.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="不衰減 1 epoch：0.439"/>
+<line x1="329.8" y1="25.0" x2="329.8" y2="47.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="469.7" y="40.0">0.446</text>
+<rect x="0" y="16.0" width="900" height="40" fill="transparent" data-tip="不衰減 1 epoch：0.416、0.482、0.439（平均 0.446）"/>
+<text class="s-lbl" x="158" y="80.0" text-anchor="end">不衰減 2 epoch</text>
+<line x1="284.9" y1="76.0" x2="446.7" y2="76.0" stroke="#8b949e" stroke-width="2" opacity="0.6"/>
+<circle cx="284.9" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="不衰減 2 epoch：0.433"/>
+<circle cx="446.7" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="不衰減 2 epoch：0.479"/>
+<circle cx="418.7" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="不衰減 2 epoch：0.471"/>
+<line x1="383.4" y1="65.0" x2="383.4" y2="87.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="458.7" y="80.0">0.461</text>
+<rect x="0" y="56.0" width="900" height="40" fill="transparent" data-tip="不衰減 2 epoch：0.433、0.479、0.471（平均 0.461）"/>
+<text class="s-lbl" x="158" y="120.0" text-anchor="end">不衰減 3 epoch</text>
+<line x1="425.5" y1="116.0" x2="570.4" y2="116.0" stroke="#8b949e" stroke-width="2" opacity="0.6"/>
+<circle cx="425.5" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="不衰減 3 epoch：0.473"/>
+<circle cx="556.9" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="不衰減 3 epoch：0.511"/>
+<circle cx="570.4" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="不衰減 3 epoch：0.514"/>
+<line x1="517.6" y1="105.0" x2="517.6" y2="127.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="582.4" y="120.0">0.499</text>
+<rect x="0" y="96.0" width="900" height="40" fill="transparent" data-tip="不衰減 3 epoch：0.473、0.511、0.514（平均 0.499）"/>
+<text class="s-lbl" x="158" y="160.0" text-anchor="end">固定 lr 5e-5</text>
+<line x1="589.9" y1="156.0" x2="627.2" y2="156.0" stroke="#c98500" stroke-width="2" opacity="0.6"/>
+<circle cx="627.2" cy="156.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="固定 lr 5e-5：0.531"/>
+<circle cx="591.6" cy="156.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="固定 lr 5e-5：0.520"/>
+<circle cx="589.9" cy="156.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="固定 lr 5e-5：0.520"/>
+<line x1="602.9" y1="145.0" x2="602.9" y2="167.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="639.2" y="160.0">0.524</text>
+<rect x="0" y="136.0" width="900" height="40" fill="transparent" data-tip="固定 lr 5e-5：0.531、0.520、0.520（平均 0.524）"/>
+<text class="s-lbl" x="158" y="200.0" text-anchor="end">線性衰減 1 epoch</text>
+<line x1="618.7" y1="196.0" x2="751.7" y2="196.0" stroke="#3987e5" stroke-width="2" opacity="0.6"/>
+<circle cx="618.7" cy="196.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="線性衰減 1 epoch：0.528"/>
+<circle cx="751.7" cy="196.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="線性衰減 1 epoch：0.566"/>
+<circle cx="735.6" cy="196.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="線性衰減 1 epoch：0.562"/>
+<line x1="702.0" y1="185.0" x2="702.0" y2="207.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="763.7" y="200.0">0.552</text>
+<rect x="0" y="176.0" width="900" height="40" fill="transparent" data-tip="線性衰減 1 epoch：0.528、0.566、0.562（平均 0.552）"/>
+<text class="s-lbl" x="158" y="240.0" text-anchor="end">線性衰減 2 epoch</text>
+<line x1="672.1" y1="236.0" x2="738.2" y2="236.0" stroke="#3987e5" stroke-width="2" opacity="0.6"/>
+<circle cx="672.1" cy="236.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="線性衰減 2 epoch：0.543"/>
+<circle cx="677.2" cy="236.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="線性衰減 2 epoch：0.545"/>
+<circle cx="738.2" cy="236.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="線性衰減 2 epoch：0.562"/>
+<line x1="695.8" y1="225.0" x2="695.8" y2="247.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="750.2" y="240.0">0.550</text>
+<rect x="0" y="216.0" width="900" height="40" fill="transparent" data-tip="線性衰減 2 epoch：0.543、0.545、0.562（平均 0.550）"/>
+<text class="s-lbl" x="158" y="280.0" text-anchor="end">線性衰減 3 epoch</text>
+<line x1="643.3" y1="276.0" x2="744.1" y2="276.0" stroke="#3987e5" stroke-width="2" opacity="0.6"/>
+<circle cx="744.1" cy="276.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="線性衰減 3 epoch：0.564"/>
+<circle cx="658.5" cy="276.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="線性衰減 3 epoch：0.540"/>
+<circle cx="643.3" cy="276.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="線性衰減 3 epoch：0.535"/>
+<line x1="682.0" y1="265.0" x2="682.0" y2="287.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="756.1" y="280.0">0.546</text>
+<rect x="0" y="256.0" width="900" height="40" fill="transparent" data-tip="線性衰減 3 epoch：0.564、0.540、0.535（平均 0.546）"/>
+</svg>
+<!-- /CHART:ch05_em -->
+<figcaption>圖 5.2　各訓練設定的 dev EM（範例的評估、stride 150）。每個點是一個種子，橫線範圍是三個種子的最小到最大，短直線是平均。灰色是不衰減，藍色是線性衰減，黃色是 5.5 節的固定學習率對照。</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th class="num">種子 0</th><th class="num">種子 1</th><th class="num">種子 2</th><th class="num">平均</th></tr></thead>
+<tbody>
+<tr><td>不衰減，1 epoch</td><td class="num">0.416</td><td class="num">0.482</td><td class="num">0.439</td><td class="num">0.446</td></tr>
+<tr><td>不衰減，2 epoch</td><td class="num">0.433</td><td class="num">0.479</td><td class="num">0.471</td><td class="num">0.461</td></tr>
+<tr><td>不衰減，3 epoch</td><td class="num">0.473</td><td class="num">0.511</td><td class="num">0.514</td><td class="num">0.499</td></tr>
+<tr><td>線性衰減，1 epoch</td><td class="num">0.528</td><td class="num">0.566</td><td class="num">0.562</td><td class="num">0.552</td></tr>
+<tr><td>線性衰減，2 epoch</td><td class="num">0.543</td><td class="num">0.545</td><td class="num">0.562</td><td class="num">0.550</td></tr>
+<tr><td>線性衰減，3 epoch</td><td class="num">0.564</td><td class="num">0.540</td><td class="num">0.535</td><td class="num">0.546</td></tr>
+</tbody>
+</table></div>
+<p>（不衰減的 2、3 epoch 是同一次 3 epoch 訓練在第 2、3 個 epoch 結束時的評估：不衰減時，學習率固定，前 k 個 epoch 和「只訓練 k 個 epoch」完全相同。衰減就不同了，總長度不同，每一步的學習率都不同，所以要分開訓練。）</p>
+<p>兩件事。第一，不衰減時，訓練越久越好，3 個 epoch 平均 0.499，但仍比衰減 1 個 epoch 的 0.552 低。第二，有衰減時，訓練 1、2、3 個 epoch 的平均分別是 0.552、0.550、0.546，差距不到 1 個百分點，比種子之間的差距小得多：<strong>多訓練的 epoch 沒有換來任何進步</strong>。訓練時間卻是 2 倍、3 倍。</p>
+<p>多出來的訓練去了哪裡？看訓練集上的表現。衰減 3 個 epoch（種子 0）每個 epoch 最後 100 步的平均 loss 與 acc：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>線性衰減 3 epoch，種子 0</th><th class="num">第 1 個 epoch</th><th class="num">第 2 個 epoch</th><th class="num">第 3 個 epoch</th></tr></thead>
+<tbody>
+<tr><td>訓練 loss（第 800–899 批）</td><td class="num">0.526</td><td class="num">0.252</td><td class="num">0.084</td></tr>
+<tr><td>訓練 acc（第 800–899 批）</td><td class="num">0.763</td><td class="num">0.876</td><td class="num">0.954</td></tr>
+<tr><td>dev EM（epoch 結束時）</td><td class="num">0.507</td><td class="num">0.547</td><td class="num">0.564</td></tr>
+</tbody>
+</table></div>
+<p>到第 3 個 epoch，訓練集上的 loss 掉到 0.084、acc 95%，模型幾乎把訓練題目都背起來了；dev 的進步卻遠小於此，換其他種子甚至在第 3 個 epoch 下降（種子 1：0.545 → 0.540；種子 2：0.547 → 0.535）。這就是過擬合：從第 2 個 epoch 開始，模型看到的是已經見過的題目，它學到的越來越多是「這些題目的答案」，而不是「怎麼找答案」。第 6、7 章會換一個角度：與其讓模型重複看同一批題目，不如改變題目的呈現方式（隨機視窗），或從一個更懂中文閱讀理解的起點出發（換預訓練模型）。</p>
+<p>這個結論會不會只是評估方式造成的？第 4 章發現，範例的評估（stride 150）會把很多本來能答對的題目弄丟。用第 4 章最好的評估（<code>evaluate_v2</code>、stride 16）重新評估同樣的 checkpoint：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>線性衰減</th><th class="num">種子 0</th><th class="num">種子 1</th><th class="num">種子 2</th><th class="num">平均</th></tr></thead>
+<tbody>
+<tr><td>1 epoch</td><td class="num">0.698</td><td class="num">0.707</td><td class="num">0.706</td><td class="num">0.704</td></tr>
+<tr><td>2 epoch</td><td class="num">0.712</td><td class="num">0.700</td><td class="num">0.713</td><td class="num">0.709</td></tr>
+<tr><td>3 epoch</td><td class="num">0.713</td><td class="num">0.705</td><td class="num">0.700</td><td class="num">0.706</td></tr>
+</tbody>
+</table></div>
+<p>評估改好之後，三種長度都到了 0.70 左右，彼此的差距仍然不到 1 個百分點。結論不變：在這份資料上，用 1e-4 加線性衰減微調 bert-base-chinese，1 個 epoch 就夠了。也順帶看到第 4 章的改進有多大：同一個衰減 1 epoch 的模型，範例的評估是 0.552，改好的評估是 0.704，差了 15 個百分點，比衰減本身帶來的 10.6 還多。</p>
+
+<h2 id="why">5.5　平均學習率，還是最後降到 0</h2>
+<p>線性衰減同時改了兩件事：平均學習率從 1e-4 變成 5e-5，而且最後降到 0。拆開的方法是加一組對照：學習率固定在 5e-5（衰減的平均值），不衰減，其他都一樣。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>1 個 epoch</th><th class="num">平均學習率</th><th class="num">最後的學習率</th><th class="num">種子 0</th><th class="num">種子 1</th><th class="num">種子 2</th><th class="num">平均</th></tr></thead>
+<tbody>
+<tr><td><span class="role base">固定 1e-4（範例）</span></td><td class="num">1e-4</td><td class="num">1e-4</td><td class="num">0.416</td><td class="num">0.482</td><td class="num">0.439</td><td class="num">0.446</td></tr>
+<tr><td><span class="role m4">固定 5e-5</span></td><td class="num">5e-5</td><td class="num">5e-5</td><td class="num">0.531</td><td class="num">0.520</td><td class="num">0.520</td><td class="num">0.524</td></tr>
+<tr><td><span class="role decay">線性衰減 1e-4 → 0</span></td><td class="num">5e-5</td><td class="num">0</td><td class="num">0.528</td><td class="num">0.566</td><td class="num">0.562</td><td class="num">0.552</td></tr>
+</tbody>
+</table></div>
+<p>從 0.446 到 0.552 的 10.6 個百分點，可以拆成兩段：學習率固定在一半（5e-5），就拿到了 7.8 個百分點；再把「固定」換成「從 1e-4 降到 0」，多拿 2.8 個百分點。所以範例最主要的問題是<strong>學習率太大</strong>，1e-4 對微調 BERT 偏高；衰減到 0 的收尾有幫助，但貢獻小得多，而且兩組的範圍有一點重疊（固定 5e-5 最高 0.531，衰減最低 0.528），只能說「大概有幫助」。</p>
+<p>這也提醒我們讀投影片的提示時要多想一步：「加線性衰減」有用，不代表「衰減」是有用的那個部分。同一個改動常常同時改了好幾件事，就像第 3 章的兩種 AdamW 同時改了 eps、weight decay 與 eps 的位置。拆開它們要靠對照組，而對照組的設計，就是問「還有哪個更簡單的改動，也能達到一樣的效果」。</p>
+
+<h2 id="noise">5.6　種子之間差多少，也會變</h2>
+<p>第 0、3 章一再強調種子雜訊，而本章的實驗顯示，雜訊的大小本身也跟設定有關。把每個設定三個種子的最高減最低列出來：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定（範例的評估、stride 150）</th><th class="num">最低</th><th class="num">最高</th><th class="num">差距（百分點）</th></tr></thead>
+<tbody>
+<tr><td>固定 1e-4，1 epoch（範例）</td><td class="num">0.416</td><td class="num">0.482</td><td class="num">6.6</td></tr>
+<tr><td>固定 1e-4，2 epoch</td><td class="num">0.433</td><td class="num">0.479</td><td class="num">4.6</td></tr>
+<tr><td>固定 1e-4，3 epoch</td><td class="num">0.473</td><td class="num">0.514</td><td class="num">4.1</td></tr>
+<tr><td>固定 5e-5，1 epoch</td><td class="num">0.520</td><td class="num">0.531</td><td class="num">1.1</td></tr>
+<tr><td>線性衰減，1 epoch</td><td class="num">0.528</td><td class="num">0.566</td><td class="num">3.8</td></tr>
+<tr><td>線性衰減，2 epoch</td><td class="num">0.543</td><td class="num">0.562</td><td class="num">1.9</td></tr>
+<tr><td>線性衰減，3 epoch</td><td class="num">0.535</td><td class="num">0.564</td><td class="num">2.9</td></tr>
+</tbody>
+</table></div>
+<p>範例的設定（學習率 1e-4、不衰減、1 個 epoch）恰好是雜訊最大的一個：6.6 個百分點。學習率小一點、或在結束前降下來，種子之間的差距就縮小到 1 到 4 個百分點。這和 5.3 節的直觀說法一致：學習率大，參數停在哪裡隨機性大，換一個種子（資料順序與問答頭的初始值不同）就停在別處。三個種子只能粗略估計雜訊，但這個趨勢說明了一件實務上的事：<strong>在一個雜訊很大的設定上比較改良，需要更多種子才看得出差別</strong>；先把學習率調到合理範圍，後面的比較會可靠得多。這也是本書之後的實驗（第 6、7 章）都以「線性衰減 1 個 epoch」為基礎的原因。</p>
+<p>3 個 epoch 的衰減訓練中，每個 epoch 結束時的 dev EM 也畫成曲線，和不衰減的訓練放在一起：</p>
+<figure class="fig">
+<!-- CHART:ch05_epochs -->
+<div class="legend"><span><i style="background:#8b949e"></i>不衰減</span><span><i style="background:#3987e5"></i>線性衰減（3 epoch）</span></div>
+<svg viewBox="0 0 900 300" role="img" aria-label="每個 epoch 結束時的 dev EM：不衰減 0.446、0.461、0.499；3 個 epoch 的線性衰減 0.502、0.547、0.546">
+<line x1="56" y1="254.0" x2="780" y2="254.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="258.0" text-anchor="end">0.4</text>
+<line x1="56" y1="195.5" x2="780" y2="195.5" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="199.5" text-anchor="end">0.45</text>
+<line x1="56" y1="137.0" x2="780" y2="137.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="141.0" text-anchor="end">0.5</text>
+<line x1="56" y1="78.5" x2="780" y2="78.5" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="82.5" text-anchor="end">0.55</text>
+<line x1="56" y1="20.0" x2="780" y2="20.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="24.0" text-anchor="end">0.6</text>
+<text class="s-mono" x="56.0" y="272" text-anchor="middle">1</text>
+<text class="s-mono" x="418.0" y="272" text-anchor="middle">2</text>
+<text class="s-mono" x="780.0" y="272" text-anchor="middle">3</text>
+<line x1="56" y1="254" x2="780" y2="254" stroke="#4a5562" stroke-width="1"/>
+<text class="s-sm" x="418.0" y="294" text-anchor="middle">epoch</text>
+<text class="s-sm" x="14" y="137.0" text-anchor="middle" transform="rotate(-90 14 137.0)">dev EM（3 個種子平均）</text>
+<polyline points="56.0,200.5 418.0,182.6 780.0,137.8" fill="none" stroke="#8b949e" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,134.4 418.0,82.6 780.0,82.8" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+<rect x="786.0" y="78.8" width="8" height="8" rx="2" fill="#3987e5"/>
+<text class="s-lbl" x="798.0" y="86.8">線性衰減（3 epoch）</text>
+<rect x="786.0" y="133.8" width="8" height="8" rx="2" fill="#8b949e"/>
+<text class="s-lbl" x="798.0" y="141.8">不衰減</text>
+<rect x="-125.0" y="20" width="362.0" height="234" fill="transparent" data-tip="epoch 1：不衰減 0.446　線性衰減（3 epoch） 0.502"/>
+<rect x="237.0" y="20" width="362.0" height="234" fill="transparent" data-tip="epoch 2：不衰減 0.461　線性衰減（3 epoch） 0.546"/>
+<rect x="599.0" y="20" width="362.0" height="234" fill="transparent" data-tip="epoch 3：不衰減 0.499　線性衰減（3 epoch） 0.546"/>
+</svg>
+<!-- /CHART:ch05_epochs -->
+<figcaption>圖 5.3　每個 epoch 結束時的 dev EM（3 個種子平均）。不衰減的模型逐 epoch 上升（0.446、0.461、0.499）；總長 3 個 epoch 的衰減，第 1 個 epoch 結束時學習率還高（0.502），第 2 個 epoch 結束時已達 0.547，第 3 個 epoch 沒有再進步（0.546）。</figcaption>
+</figure>
+
+<div class="note"><h4>現在的做法：warmup 加衰減，學習率小一點</h4>
+<p>今天微調預訓練模型，學習率排程幾乎都是「warmup 加衰減」：前幾百步（常見是總步數的 5% 到 10%）從 0 線性升到設定值，再線性或依餘弦曲線（cosine）降到 0。warmup 的用意是避免一開始問答頭還是隨機的時候，大的梯度把預訓練好的權重打亂。Hugging Face 的 <code>Trainer</code> 預設就是線性衰減（第 3 章 3.6 節的框）。微調 BERT 大小的模型，學習率多在 1e-5 到 5e-5 之間，比範例的 1e-4 小；微調大型語言模型時更小，用 LoRA 這類只訓練少量參數的方法時則常用 1e-4 左右。不管哪一種，訓練結束時學習率接近 0 是共通的做法。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>線性學習率衰減只要兩行：建立 <code>get_linear_schedule_with_warmup</code>，每次更新後 <code>scheduler.step()</code>。總步數要給整個訓練的步數；結束時學習率應該是 0。</li>
+<li>1 個 epoch：不衰減平均 0.446，線性衰減平均 0.552，3 個種子的範圍完全不重疊。這是種子雜訊（6.6 個百分點）也蓋不住的進步。</li>
+<li>有衰減時，訓練 1、2、3 個 epoch 的 dev EM 平均是 0.552、0.550、0.546：多訓練沒有用。第 3 個 epoch 的訓練 loss 只剩 0.084、acc 95%，是典型的過擬合。</li>
+<li>不衰減時訓練越久越好（3 epoch 平均 0.499），但仍不如衰減 1 個 epoch。用第 4 章的評估（stride 16）重評，衰減 1、2、3 個 epoch 是 0.704、0.709、0.706，結論不變。</li>
+<li>固定學習率 5e-5 就有 0.524：衰減的 10.6 個百分點裡，7.8 來自平均學習率減半，2.8 來自最後降到 0。範例的主要問題是學習率 1e-4 太大。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 訓練 3 個 epoch，卻把 <code>get_linear_schedule_with_warmup</code> 的總步數寫成 991（一個 epoch 的步數），會發生什麼事？</summary>
+<p>學習率在第 1 個 epoch 結束時就降到 0，而 transformers 的線性排程在超過總步數後會一直維持 0（它的公式取 <code>max(0, ...)</code>），所以第 2、3 個 epoch 的每一步更新都是 0，參數不再改變。結果會和「衰減 1 個 epoch」幾乎一樣，只是多花了兩個 epoch 的時間。這是依程式推論，本書沒有實際跑。</p></details>
+<details class="quiz"><summary>2. 不衰減訓練 3 個 epoch 時，第 1 個 epoch 結束的 dev EM 為什麼可以直接當成「只訓練 1 個 epoch」的結果？衰減時為什麼不行？</summary>
+<p>不衰減時，每一步的學習率都是 1e-4，前 991 步做的事和「只訓練 1 個 epoch」一模一樣（第 2 章：資料順序由同一個種子決定；第 3 章：決定性模式），所以結果逐位元相同。實測 3 epoch 那次在第 1 個 epoch 的 dev EM 是 0.41588，和範例完全相同。衰減時，總長度 3 個 epoch 的排程在第 991 步的學習率還有 6.7e-5，而 1 個 epoch 的排程已經降到 0，兩者在第 1 步之後就不同了。</p></details>
+<details class="quiz"><summary>3. 衰減 3 個 epoch 的第 1 個 epoch 結束時，dev 平均只有 0.502，比「衰減 1 個 epoch」的 0.552 低。為什麼？</summary>
+<p>因為那時的學習率還很高（3 個 epoch 的排程走了三分之一，學習率還有 6.7e-5），而且沒有經過「最後一段小學習率」的收尾。這和不衰減的模型處境類似。換句話說，衰減的好處主要在最後那一段，中途評估看不到。</p></details>
+<details class="quiz"><summary>4. 有人說：「既然 3 個 epoch 的訓練 acc 有 95%，dev 才 0.546，加大 dropout 應該能改善。」這個方向合理嗎？本章的數據支持什麼結論？</summary>
+<p>方向合理：訓練與 dev 差距大是過擬合，正則化（dropout、weight decay）是標準的對策。但本章的數據顯示更省事的做法是「不要訓練那麼久」：衰減 1 個 epoch 的 dev 和 3 個 epoch 一樣好，訓練時間只要三分之一。加 dropout 能不能讓 3 個 epoch 超過 1 個 epoch，本書沒有實驗。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Hugging Face 文件，<a href="https://huggingface.co/docs/transformers/main_classes/optimizer_schedules">Optimization</a>：<code>get_linear_schedule_with_warmup</code>、<code>get_cosine_schedule_with_warmup</code> 等排程函式。</li>
+<li>Jacob Devlin 等，<a href="https://arxiv.org/abs/1810.04805">BERT</a> 附錄 A.3：微調時建議的學習率（5e-5、3e-5、2e-5）與 epoch 數（2 到 4）。</li>
+<li>Marius Mosbach 等，<a href="https://arxiv.org/abs/2006.04884">On the Stability of Fine-tuning BERT</a>（2020）：微調 BERT 時種子之間的差異、warmup 與偏差修正（第 3 章的 AdamW）的影響。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch04.html">← 第 4 章</a><a href="ch06.html">第 6 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW07 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW07 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

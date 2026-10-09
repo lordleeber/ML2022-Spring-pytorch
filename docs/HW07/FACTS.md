@@ -118,3 +118,16 @@
 - 不衰減 3 epoch（nd3）dev_by_epoch：種子 0 [0.41588, 0.43282, 0.47301]；種子 1 [0.48221, 0.47906, 0.51053]；種子 2 [0.43888, 0.47107, 0.51440]。第 1 個 epoch 平均 0.446（範圍 0.416–0.482，差 6.6 點）。
 - 線性衰減 1 epoch（lin1）：0.52820、0.56621、0.56161，平均 0.552。
 - 後處理在其他 checkpoint（`hw07_post.jsonl`；valid_len_off）：lin1_s0 stride 150／100／32／16 = 0.54636／0.60809／0.67514／0.69838（sample 0.5282／0.59283／0.66449／0.68821）；lin1_s1 = 0.58533／0.65263／0.69886／0.70709（sample 0.56621／0.63568／0.68773／0.69547）。
+
+## ch07 背景（模型卡，2026-10-09 讀取）
+- hfl/chinese-roberta-wwm-ext：README 指向論文 Pre-Training with Whole Word Masking for Chinese BERT（arXiv 1906.08101）與 Revisiting Pre-Trained Models for Chinese NLP（arXiv 2004.13922，EMNLP 2020 Findings）；「Please use 'Bert' related functions to load this model」。config architectures = BertForMaskedLM（沒有問答頭）。
+- hfl/chinese-macbert-base：MLM as correction（用 Synonyms 工具找相似詞取代 [MASK]，沒有相似詞時用隨機詞）＋ whole word masking、N-gram masking、Sentence-Order Prediction；「can be directly replaced with the original BERT as there is no differences in the main neural architecture」。BertForMaskedLM。
+- ckiplab/bert-base-chinese-qa：config architectures = BertForQuestionAnswering（有問答頭）；README 要求 tokenizer 用 bert-base-chinese 的 BertTokenizerFast；ckip-transformers GitHub：語言模型以 ZhWiki（20200801，用 OpenCC 轉繁體）與 Chinese Gigaword 5th 的 CNA（中央社）訓練；README 沒有提 QA 模型用什麼資料訓練、也沒有 QA 分數。
+- luhua/chinese_pretrain_mrc_roberta_wwm_ext_large：模型卡「使用大量中文MRC数据训练的roberta_wwm_ext_large模型」，GitHub basketballandlearn/MRC_Competition_Dureader：「网上收集的大量中文MRC数据（其中包括公开的MRC数据集以及自己爬取的网页数据等，囊括了医疗、教育、娱乐、百科、军事、法律、等领域。）」。沒有點名 DRCD；表格是 DuReader-2021 與 tencentmedical 的評估。config = BertForQuestionAnswering、24 層、hidden 1024、16 頭、intermediate 4096。→ 是否看過 DRCD 無法從文件確認，用 zero-shot dev EM 間接判斷。
+- 位置偏差（`hw07_pos.jsonl`）中央格（70–80）每位置密度 ÷ 左鄰格（60–69）：base1_s0 3.31（150）／3.67（32）；lin1_s0 2.05／2.14；lin1_s1 2.00／2.03；lin1_s2 1.97／1.91。選中視窗含答案：base1_s0 2,734／3,213；lin1_s0 3,111／3,507；lin1_s1 3,235／3,574；lin1_s2 3,253／3,622。視窗分數平均（含答案／不含）：lin1_s0 11.64／2.26（150）。→ 線性衰減的模型中央偏好較弱（約 2 倍）但仍在。
+- M 組：lin2_s0 dev_by_epoch [0.51513, 0.54345]。nd3_s0 後處理 valid_len_off：stride 100／32／16 = 0.53038／0.59477／0.62600（sample 0.51949／0.58557／0.61801）。
+- M 組完成：lin2 dev_by_epoch 種子 0 [0.51513, 0.54345]、1 [0.53716, 0.54490]、2 [0.49915, 0.56233]（最終平均 0.550）；lin3 種子 0 [0.50666, 0.54733, 0.56403]、1 [0.50884, 0.54539, 0.53958]、2 [0.49116, 0.54684, 0.53522]（最終平均 0.546）。lin1 平均 0.552。不衰減：1 epoch 0.446、2 epoch 0.461（0.43282、0.47906、0.47107）、3 epoch 0.499（0.47301、0.51053、0.51440）。
+- 乾淨時（GPU 只有訓練）的速度：lin3_s0 3 個 epoch 含每個 epoch 的 dev 評估 16 分 42 秒（00:03:14–00:19:56）。
+- 固定 lr 5e-5（lr5，1 epoch、不衰減）：0.53062、0.52046、0.51997，平均 0.524。
+- 衰減 lin2／lin3 checkpoint 的後處理 valid_len_off stride 150／16：lin2_s0 0.55967／0.71242、lin2_s1 0.56040／0.70031、lin2_s2 0.58243／0.71290；lin3_s0 0.58170／0.71339、lin3_s1 0.55265／0.70467、lin3_s2 0.54975／0.70007；lin1_s2 stride 16 = 0.70564。stride 16 平均：lin1 0.704、lin2 0.709、lin3 0.706。
+- 轉小寫（low1，1 epoch、不衰減，範例評估）：0.47470、0.47035、0.41927，平均 0.455（基準 0.446）。
