@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 4 章　評估與後處理 — HW07 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW07 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「閱讀理解」書桌——近黑的冷灰底、紙白的字、沙金色只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：原版 灰、LR 衰減 藍、隨機視窗 橘、換模型 綠／紫／洋紅／黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與 HW13、HW14 相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #e0a458;      /* 沙金：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(224, 164, 88, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #e0a458;
+  /* 角色色 */
+  --r-base: #8b949e; --r-decay: #3987e5; --r-window: #d95926; --r-m1: #199e70;
+  --r-m2: #9085e9; --r-m3: #d55181; --r-m4: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "[CLS] 問題 ≤40 [SEP] 文章視窗 150 [SEP]　→　BERT　→　start／end 位置　·　DRCD 繁中閱讀理解";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fbf4ea; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #1b1914; border-color: rgba(224, 164, 88, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1a1208; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.base { --rc: var(--r-base); } .role.decay { --rc: var(--r-decay); } .role.window { --rc: var(--r-window); }
+.role.m1 { --rc: var(--r-m1); } .role.m2 { --rc: var(--r-m2); } .role.m3 { --rc: var(--r-m3); }
+.role.m4 { --rc: var(--r-m4); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW07 讀碼教材</p>
+  <h1>第 4 章　評估與後處理：同一個模型，只改挑答案的規則</h1>
+  <p class="chap-lead">模型輸出的只是每個視窗的兩排分數，「答案」是後處理的規則挑出來的。這一章全部用同一個訓練好的模型（第 0 章那個 dev 0.416 的 checkpoint），一次訓練都不重跑，只改挑答案的方式：先修掉範例的 bug，再改評估視窗的 <code>doc_stride</code>。前者讓 EM 漲了 1 個百分點，後者讓 EM 從 0.416 漲到 0.6 以上，原因又回到第 2 章的「答案總在中央」。</p>
+</header>
+<main>
+
+<h2 id="sample">4.1　範例的 evaluate</h2>
+<figure class="listing"><figcaption>postprocess.py:4–28 — 範例的後處理：每個視窗各取最大的 start、end，比分數，decode</figcaption>
+<pre class="py" data-hot="15-16,19,22,25"><code>def evaluate(data, output, tokenizer):
+    ##### TODO: Postprocessing #####
+    # There is a bug and room for improvement in postprocessing
+    # Hint: Open your prediction file to see what is wrong
+
+    answer = ''
+    max_prob = float('-inf')
+    num_of_windows = data[0].shape[1]
+
+    for k in range(num_of_windows):
+        # Obtain answer by choosing the most probable start position / end position
+        start_prob, start_index = torch.max(output.start_logits[k], dim=0)
+        end_prob, end_index = torch.max(output.end_logits[k], dim=0)
+
+        # Probability of answer is calculated as sum of start_prob and end_prob
+        prob = start_prob + end_prob
+
+        # Replace answer if calculated probability is larger than previous windows
+        if prob &gt; max_prob:
+            max_prob = prob
+            # Convert tokens to chars (e.g. [1920, 7032] --&gt; "大 金")
+            answer = tokenizer.decode(data[0][0][k][start_index : end_index + 1])
+
+    # Remove spaces in answer (e.g. "大 金" --&gt; "大金")
+    return answer.replace(' ','')</code></pre></figure>
+<p>規則只有三步：每個視窗裡，start 分數最高的位置當起點、end 分數最高的位置當終點（第 15–16 行）；兩個分數相加當這個視窗的分數（第 19 行）；所有視窗裡分數最高的那個，用 <code>decode</code> 把起點到終點的 token 換回文字（第 22–25 行）。這就是投影片 p.14 的表：window 1 總分 0.9、window 2 總分 1.0，選 window 2。</p>
+<p>第 6 行的註解說這裡「有一個 bug，還有改進空間」，第 7 行提示「打開預測檔看看哪裡錯了」。順帶一提，第 10 行的變數叫 <code>max_prob</code>、第 18 行的註解說「答案的機率」，但 <code>output.start_logits</code> 是 logits（沒有經過 softmax），兩個 logits 相加也不是機率。這不只是命名問題，4.5 節會看到，改成真正的機率反而會更差。</p>
+
+<h2 id="errors">4.2　打開預測檔</h2>
+<p>照提示做：把第 0 章那個模型對 dev 的預測逐題攤開（stride 150，範例規則，EM 0.416），找出規則本身造成的錯誤。有四種：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>錯誤</th><th class="num">題數</th><th>例子（題號：標準答案 → 範例的回答）</th></tr></thead>
+<tbody>
+<tr><td>回答空字串：選中的視窗裡終點在起點之前</td><td class="num">135</td><td>144：日本 → （空）；203：黑龍江省 → （空）</td></tr>
+<tr><td>答案太長（超過 30 個字）</td><td class="num">79</td><td>60：穩定經濟發展 → 石油危機帶來的全球經濟不景氣，1973年11月行政院院長蔣經國推動十大建設及十二……</td></tr>
+<tr><td>答案的起點落在問題裡</td><td class="num">17</td><td>第 0 章 dev 第 0 題的第 4 個視窗（沒被選中）就是這種：「博多地區，還有哪一地區?[SEP]高層建築均位於郊區」</td></tr>
+<tr><td>含 <code>[UNK]</code>，還原不了原文</td><td class="num">42</td><td>389：朱允炆 → 朱允[UNK]；841：杜恆-蒯因論題 → 杜恆-[UNK]因論題</td></tr>
+</tbody>
+</table></div>
+<p>空字串最常見：135 題，佔 dev 的 3.3%。原因是 start 與 end 各自取最大值，沒有任何規則要求終點在起點之後（第 3 章 3.1 節：兩排分數是獨立打的）。更糟的是，這種「不合法」的組合照樣參加視窗之間的比較：第 0 章的 dev 第 0 題，終點在起點之前的那個視窗分數最高，答案就成了空字串。這就是投影片 p.21 點名的 bug（end_index &lt; start_index）。</p>
+
+<h2 id="valid">4.3　規則一：只在合法的範圍內挑</h2>
+<p>修法是把「各自取最大」改成「在所有合法的 (起點, 終點) 組合裡，取 start 分數 + end 分數最大的一對」。合法的條件有三個：起點 ≤ 終點；兩者都在文章的部分（不在問題、特殊符號或 padding 上）；答案長度不超過一個上限。上限取 30 個 token：dev 答案的第 99 百分位是 23 個 token，30 足夠寬鬆。寫成程式：</p>
+<figure class="listing"><figcaption>docs/tools/hw07_postprocess_v2.py:7–26 — 改良的後處理：合法組合裡挑最高分，再從原文切出答案</figcaption>
+<pre class="py" data-hot="12-15,16-19,25"><code>def evaluate_v2(data, output, paragraph, encoding, question_len, doc_stride, max_answer_len=30):
+    # paragraph: the paragraph string; encoding: its tokenizer output (has .offsets)
+    # question_len: [CLS] + question tokens + [SEP], i.e. where the paragraph part of every window begins
+    best_score, answer = float('-inf'), ''
+    for k in range(data[0].shape[1]):
+        n = int(data[1][0][k].sum()) - 1                 # paragraph tokens in window k (token_type 1, minus the last [SEP])
+        lo, hi = question_len, question_len + n          # the paragraph part of the window is [lo, hi)
+        s = output.start_logits[k][lo:hi]
+        e = output.end_logits[k][lo:hi]
+        pair = s[:, None] + e[None, :]                   # pair[i, j] = start score of i + end score of j
+        ones = torch.ones_like(pair, dtype=torch.bool)
+        ok = ones.triu() &amp; ~ones.triu(max_answer_len)    # i &lt;= j &lt; i + max_answer_len
+        pair = pair.masked_fill(~ok, float('-inf'))
+        score, idx = pair.flatten().max(0)
+        if score &gt; best_score:
+            best_score = score
+            i, j = divmod(int(idx), n)
+            first, last = k * doc_stride + i, k * doc_stride + j   # token positions in the whole paragraph
+            answer = paragraph[encoding.offsets[first][0]:encoding.offsets[last][1]]
+    return answer</code></pre></figure>
+<p>關鍵在第 16–19 行：<code>pair[i, j]</code> 是「起點 i、終點 j」這個組合的分數，一次算出文章裡所有組合（最多 150 × 150 個）；<code>triu()</code> 留下 i ≤ j 的上三角，<code>~triu(30)</code> 再去掉 j ≥ i + 30 的部分，剩下一條寬 30 的帶狀區域。第 12–15 行用 <code>token_type_ids</code> 算出這個視窗的文章有幾個 token，只取文章部分的分數，問題與 padding 就自然被排除了。拿 dev 4,131 題實際跑一次，EM 是 0.42677（1,763 題），和實驗工具 <code>docs/tools/hw07_post.py</code> 的結果完全相同。</p>
+<p>逐步加上去，各值多少（同一個模型，stride 150）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>規則</th><th class="num">dev EM</th><th class="num">比範例多答對</th></tr></thead>
+<tbody>
+<tr><td>範例（各自取最大、decode）</td><td class="num">0.41588</td><td class="num"></td></tr>
+<tr><td>範例的選擇，但從原文切答案</td><td class="num">0.41854</td><td class="num">+11</td></tr>
+<tr><td>合法組合（i ≤ j、在文章內），decode</td><td class="num">0.42242</td><td class="num">+27</td></tr>
+<tr><td>　再加長度 ≤ 30</td><td class="num">0.42411</td><td class="num">+34</td></tr>
+<tr><td>　再從原文切答案（<code>evaluate_v2</code>）</td><td class="num">0.42677</td><td class="num">+45</td></tr>
+</tbody>
+</table></div>
+<p>全部加起來，多答對 45 題，沒有任何一題從對變錯。分類一下這 45 題：原本是空字串的 27 題、含 <code>[UNK]</code> 的 9 題、答案過長的 6 題、其他 3 題。135 個空字串全部消失了，但只有 27 題變成正確答案；其餘的 108 題換成了另一個合法、但錯誤的答案。這說明規則能修的是「明顯不合理」的輸出，修不了模型本身的判斷：第 3 章的分類裡，「選錯視窗」與「視窗對、位置錯」合計 2,331 題，後處理碰不到它們的大部分。</p>
+
+<h2 id="offsets">4.4　規則二：從原文切出答案</h2>
+<p>第 1 章算過：就算位置全對，用 <code>decode</code> 還原，dev 有 44 題對不上；改用 offsets 從原文切，只剩 1 題。<code>evaluate_v2</code> 的第 25 行就是這件事：視窗 k 裡的第 i 個文章 token，是整篇文章的第 <code>k × doc_stride + i</code> 個 token，查它的 offsets 得到字元位置，直接從原文字串切。原文是什麼樣子，答案就是什麼樣子，<code>[UNK]</code>、大小寫、原文中的空白都保留。</p>
+<p>實際的收穫比 44 題小：單獨加上「從原文切」只多答對 11 題（範例的選擇，0.41588 → 0.41854），因為這 44 題裡，模型多半本來就沒有指對位置。後處理的上限由模型決定，但後處理錯了，模型再準也拿不到分數。在第 7 章換成 hfl 與 luhua 的模型時，這一條會變得更重要：它們的 tokenizer 會轉小寫，decode 出來的英文全是小寫，和標準答案的大小寫對不上。</p>
+
+<h2 id="compare">4.5　視窗之間怎麼比：logits 還是機率</h2>
+<p>4.1 節提到，範例比的是 logits 的和，不是機率。直覺上，換成真正的機率應該比較合理：每個視窗各自做 softmax，取 log P(起點) + log P(終點) 來比。實測（合法組合、長度 ≤ 30、從原文切，只改比較方式）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>視窗之間比較的分數</th><th class="num">stride 150</th><th class="num">stride 32</th></tr></thead>
+<tbody>
+<tr><td>start logit + end logit（範例的作法）</td><td class="num">0.42677</td><td class="num">0.57153</td></tr>
+<tr><td>log softmax(start) + log softmax(end)（各視窗分別正規化）</td><td class="num">0.37570</td><td class="num">0.44275</td></tr>
+</tbody>
+</table></div>
+<p>機率版本差了 5 到 13 個百分點。原因在於 softmax 是在<strong>每個視窗內部</strong>正規化的：機率加起來一定是 1，所以就算一個視窗根本沒有答案，它最可能的位置照樣可以拿到很高的機率。logits 沒有這個限制，它的絕對大小保留了「模型有多確定」的訊息：含答案的視窗，範例規則的分數（max start + max end）平均是 8.09，不含答案的視窗平均只有 0.76。正規化把這個差距抹掉了。</p>
+<p>這也點出這個模型的根本限制：它從來沒有被訓練過「這個視窗沒有答案」（第 3 章 3.5 節），logits 的大小只是碰巧帶有這個訊息。SQuAD 2.0 之後的標準做法，是讓模型在沒有答案時指向 <code>[CLS]</code>，把「沒有答案」也當成一個要學的選項。</p>
+
+<h2 id="stride">4.6　評估的 stride：一個不用重新訓練的大改進</h2>
+<p>第 2 章說過，<code>doc_stride</code> 只影響評估，可以不重新訓練就調整，並且算出 stride 100 時被切斷的答案從 74 題變成 0 題。用同一個模型實際評估各種 stride：</p>
+<div class="tablewrap"><table>
+<thead><tr><th class="num">doc_stride</th><th class="num">相鄰視窗重疊</th><th class="num">dev 視窗數</th><th class="num">範例規則</th><th class="num"><code>evaluate_v2</code></th></tr></thead>
+<tbody>
+<tr><td class="num">150（範例）</td><td class="num">0</td><td class="num">13,695</td><td class="num">0.41588</td><td class="num">0.42677</td></tr>
+<tr><td class="num">100</td><td class="num">50</td><td class="num">19,619</td><td class="num">0.46720</td><td class="num">0.48027</td></tr>
+<tr><td class="num">75</td><td class="num">75</td><td class="num">25,481</td><td class="num">0.49455</td><td class="num">0.50278</td></tr>
+<tr><td class="num">50</td><td class="num">100</td><td class="num">37,151</td><td class="num">0.52602</td><td class="num">0.53571</td></tr>
+<tr><td class="num">32</td><td class="num">118</td><td class="num">56,958</td><td class="num">0.56306</td><td class="num">0.57153</td></tr>
+<tr><td class="num">16</td><td class="num">134</td><td class="num">111,762</td><td class="num">0.60881</td><td class="num">0.61535</td></tr>
+<tr><td class="num">8</td><td class="num">142</td><td class="num">221,409</td><td class="num">0.62672</td><td class="num">0.63205</td></tr>
+</tbody>
+</table></div>
+<p>這是全書到目前為止最大的一個改進：同一個模型，一次訓練都沒有重跑，EM 從 0.416 漲到 0.63，而且 stride 越小越好；到 16 → 8 這一段，視窗數加倍、EM 只多 1.8 個百分點，才開始趨緩。stride 150 到 100 的那一段（+5 個百分點），可以用「74 題被切斷的答案救回來」解釋一部分（74 題只佔 1.8 個百分點）；但 stride 100 之後已經沒有被切斷的答案，EM 卻繼續往上漲。救回切斷的答案解釋不了。這個現象不是這一個模型的巧合：第 5 章用學習率衰減訓練的兩個模型（種子 0、1），在 stride 150 是 0.528 與 0.566，stride 16 加 <code>evaluate_v2</code> 變成 0.698 與 0.707，同樣漲了十幾個百分點。</p>
+<p>回想第 2 章 2.3 節：訓練時有 52.4% 的答案中點正好落在視窗的第 75 個位置。模型會不會因此特別相信「視窗中央的答案」？量模型在 dev 上的預測位置：對每一個 dev 視窗，取範例規則挑出的 span 中點，看它落在文章部分（150 個 token）的哪裡：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>預測中點的位置</th><th class="num">0–14</th><th class="num">15–29</th><th class="num">30–44</th><th class="num">45–59</th><th class="num">60–69</th><th class="num"><strong>70–80</strong></th><th class="num">81–89</th><th class="num">90–104</th><th class="num">105–119</th><th class="num">120–134</th><th class="num">135–149</th></tr></thead>
+<tbody>
+<tr><td>stride 150 的所有視窗</td><td class="num">2,593</td><td class="num">1,535</td><td class="num">1,392</td><td class="num">1,219</td><td class="num">1,106</td><td class="num"><strong>4,023</strong></td><td class="num">684</td><td class="num">428</td><td class="num">237</td><td class="num">85</td><td class="num">24</td></tr>
+<tr><td>stride 32 的所有視窗</td><td class="num">7,519</td><td class="num">5,619</td><td class="num">5,194</td><td class="num">5,067</td><td class="num">4,895</td><td class="num"><strong>19,759</strong></td><td class="num">3,319</td><td class="num">2,059</td><td class="num">1,112</td><td class="num">457</td><td class="num">135</td></tr>
+</tbody>
+</table></div>
+<p>中央那一格（70–80，寬 11 個位置）的預測數量，換算成每個位置的密度，是左邊相鄰那一格（60–69，寬 10）的 3.3 倍（stride 150）與 3.7 倍（stride 32）。視窗後半段（90 以後）的預測則越來越少。模型確實學到了訓練資料的形狀：答案若不是在中央，就是在前段，很少在後段（第 2 章：在後半的訓練答案只佔 13.7%）。</p>
+<p>這解釋了 stride 的效果。stride 150 時，每個答案只出現在一個視窗裡，位置是隨機的，多半不在中央；stride 越小，同一個答案出現在越多個視窗裡，其中總有一個視窗讓它接近中央，而模型對中央的答案最有把握，那個視窗就會勝出。換句話說，<strong>小 stride 是在評估時把「答案在中央」這個條件重新造出來</strong>，讓評估更像訓練。stride 從 150 改成 32，答對的題目多了 842 題、變錯的有 244 題，淨增 598 題；選中的視窗含有答案的題數也從 2,734 題增加到 3,213 題。</p>
+<p>代價是計算量：視窗數和 stride 大致成反比，stride 16 要算 8 倍的視窗（111,762 個），stride 8 要 16 倍（221,409 個），評估時間也差不多按比例增加。另一個更好的解法是從源頭消除偏差：讓訓練視窗的位置隨機，模型就不會偏好中央，第 6 章實測。到時候也能驗證本節的解釋：如果偏差真的是原因，用隨機視窗訓練的模型，從小 stride 得到的好處應該會小很多。</p>
+
+<h2 id="report">4.7　報告第 1 題怎麼寫</h2>
+<p>報告第 1 題（投影片 p.30）問：模型預測出起點、終點的機率之後，你用什麼規則決定最後的答案範圍？規則必須和範例不同。根據本章，一份有根據的答案大致是：</p>
+<ul>
+<li>在每個視窗裡，只考慮起點 ≤ 終點、兩者都在文章部分、長度不超過 30 個 token 的組合，取 start logit + end logit 最大的一對（修掉 end &lt; start 與答案落在問題裡的情況）。</li>
+<li>視窗之間比較 logits 的和，不做 softmax（4.5 節：正規化會讓沒有答案的視窗也顯得很有把握）。</li>
+<li>答案用 offsets 從原文切出，不用 decode（修掉 <code>[UNK]</code> 與空白）。</li>
+<li>評估時用重疊的視窗（較小的 <code>doc_stride</code>），並附上本章的實測數字。</li>
+</ul>
+
+<div class="note"><h4>現在的做法：pipeline 已經內建這些規則</h4>
+<p>transformers 的 <code>pipeline("question-answering")</code> 把本章的後處理都包好了：它在每個視窗裡對合法的 (起點, 終點) 組合排序、限制答案長度（參數 <code>max_answer_len</code>，預設 15 個 token）、用 offsets 從原文切出答案，還能用 <code>top_k</code> 回傳前幾名的候選答案（n-best），視窗重疊則由 <code>doc_stride</code> 參數控制。它還支援 <code>handle_impossible_answer=True</code>：把 <code>[CLS]</code> 的分數當成「沒有答案」的分數一起比較，這需要模型在 SQuAD 2.0 這類有「無答案」題目的資料上訓練過。到了 LLM 時代，生成式問答不需要這些規則，但 RAG 的檢索階段又回到同樣的問題：每個 chunk 的相關度分數能不能互相比較，要不要正規化。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>範例的 <code>evaluate</code> 讓 start、end 各自取最大值，可能 end &lt; start（dev 135 題回答空字串）、可能落在問題裡、可能過長；答案用 decode 還原，<code>[UNK]</code> 會原樣出現。</li>
+<li>改成「在 i ≤ j、文章內、長度 ≤ 30 的組合裡取最高分，並用 offsets 從原文切」，同一個模型多答對 45 題（0.416 → 0.427），沒有任何一題變錯。</li>
+<li>視窗之間要比 logits，不要比各視窗分別正規化的機率（0.427 → 0.376）：logits 的大小帶有「這個視窗有沒有答案」的訊息。</li>
+<li>評估的 stride 從 150 縮到 8，同一個模型的 EM 從 0.416 漲到 0.627（範例規則；<code>evaluate_v2</code> 0.632），不用重新訓練，代價是 16 倍的視窗。主因不是救回被切斷的答案，而是模型偏好視窗中央：預測中點在中央的密度是旁邊的 3 倍多，小 stride 讓每個答案都有機會落在某個視窗的中央。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 一個視窗的 start logits 最大值在位置 50（分數 6.0），end logits 最大值在位置 48（分數 5.5）；位置 48、50 的另一排分數分別是 start[48] = 5.0、end[50] = 4.0。範例規則與 <code>evaluate_v2</code> 各會選出什麼？</summary>
+<p>範例：起點 50、終點 48，視窗分數 11.5，decode 出空字串。<code>evaluate_v2</code> 要找 i ≤ j 的最佳組合：(48, 48) 是 5.0 + 5.5 = 10.5，(50, 50) 是 6.0 + 4.0 = 10.0，(48, 50) 是 5.0 + 4.0 = 9.0；如果其他位置的分數都比這些低，會選 (48, 48)，也就是單一個 token。注意這個視窗在範例裡拿 11.5 分，在 <code>evaluate_v2</code> 裡只拿 10.5 分，所以視窗之間的勝負也可能改變。</p></details>
+<details class="quiz"><summary>2. 為什麼「長度 ≤ 30」只多答對 7 題（0.42242 → 0.42411），卻沒有讓任何題目變錯？如果把上限設成 3 呢？</summary>
+<p>dev 的答案 99% 不超過 23 個 token，30 的上限幾乎不會排除正確答案，只排除模型偶爾挑出的超長片段，所以只會修正、不太會改錯。上限設成 3，所有超過 3 個 token 的答案（例如「暖溫帶大陸性季風氣候」）都不可能答對，EM 會明顯下降。上限要依資料的答案長度分布來定。（上限 3 的情形是推論，本書沒有實測。）</p></details>
+<details class="quiz"><summary>3. stride 越小 EM 越高。那 stride 設成 1（每個位置都開一個視窗）是不是最好？</summary>
+<p>視窗數會變成大約「文章長度」那麼多個，dev 會有大約 170 萬個視窗，是 stride 150 的 125 倍，評估要好幾個小時。EM 可能還會再漲一點，但 4.6 節的分析告訴我們，這是在用計算量彌補訓練資料的偏差。更划算的做法是修正偏差本身（第 6 章），讓模型在任何位置都能找到答案，這樣中等的 stride 就夠了。</p></details>
+<details class="quiz"><summary>4. 有人主張：「logits 不是機率，不能跨視窗比較，應該先 softmax 才公平。」用本章的數據回應。</summary>
+<p>實測先 softmax 會讓 EM 從 0.427 掉到 0.376（stride 150），從 0.572 掉到 0.443（stride 32）。原因是 softmax 在每個視窗內部正規化，抹掉了「這個視窗整體有多可信」的訊息：含答案的視窗分數平均 8.09，不含的平均 0.76，正規化後兩者都會有一個機率很高的位置。logits 確實沒有嚴格的機率意義，但它的大小在這裡是有用的訊號。根本的解法是訓練模型明確地預測「沒有答案」。</p></details>
+<details class="quiz"><summary>5. 把 stride 從 150 改成 32，有 244 題從答對變成答錯。這可能是怎麼發生的？</summary>
+<p>stride 小了，每題的視窗變多，其中不含答案的視窗也變多；只要某個不含答案的視窗裡，模型在中央附近找到一個看起來很像答案的片段、分數又比原本的正確視窗高，答案就被換掉了。小 stride 讓每個位置都有機會「站在中央」，對錯誤的候選人也一樣。淨效果是正的（+842、−244），但不是只有好處。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Pranav Rajpurkar 等，<a href="https://arxiv.org/abs/1806.03822">Know What You Don't Know: Unanswerable Questions for SQuAD</a>（2018）：SQuAD 2.0，把「沒有答案」加入閱讀理解的評估。</li>
+<li>Hugging Face 文件，<a href="https://huggingface.co/docs/transformers/main_classes/pipelines#transformers.QuestionAnsweringPipeline">QuestionAnsweringPipeline</a>：<code>doc_stride</code>、<code>max_answer_len</code>、<code>top_k</code>、<code>handle_impossible_answer</code> 等參數。</li>
+<li>投影片 p.14、p.21：範例的視窗比較方式，以及「打開預測檔」的提示。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW07 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW07 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>
