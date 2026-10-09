@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 1 章　程式結構與訓練迴圈 — HW13 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW13 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「壓縮實驗台」——近黑的冷灰底、紙白的字、薄荷青只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：老師 紫、學生 CE 灰、學生 KD 藍、架構變體 橘／青、剪枝 洋紅、量化 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與 HW14 相同，色盤沿用 HW14 2026-10-08 的 validate_palette.js 結果）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #5cc9ae;      /* 薄荷青：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(92, 201, 174, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #5cc9ae;
+  /* 角色色 */
+  --r-teacher: #9085e9; --r-ce: #8b949e; --r-kd: #3987e5; --r-arch1: #d95926;
+  --r-arch2: #199e70; --r-prune: #d55181; --r-quant: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "老師 ResNet-18 11,182,155 參數　→　學生 ≤ 100,000　·　Food-11　224×224 → 11 類";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #f2fbf8; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #141c1f; border-color: rgba(92, 201, 174, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #0b1613; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.teacher { --rc: var(--r-teacher); } .role.ce { --rc: var(--r-ce); } .role.kd { --rc: var(--r-kd); }
+.role.arch1 { --rc: var(--r-arch1); } .role.arch2 { --rc: var(--r-arch2); } .role.prune { --rc: var(--r-prune); }
+.role.quant { --rc: var(--r-quant); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW13 讀碼教材</p>
+  <h1>第 1 章　程式結構與訓練迴圈</h1>
+  <p class="chap-lead">這一章讀「模型以外」的程式：notebook 怎麼拆成檔案、怎麼證明拆完沒變；老師模型為什麼即使不用也得建、而且要建在原來的位置；影像怎麼轉成張量；一步訓練做了哪些事；印出來的驗證準確率可不可信；八分鐘花在哪裡。最後一節的結論會跟著全書走：在這份作業裡，只是換一條亂數流，10 個 epoch 的準確率就能差一個百分點以上。</p>
+</header>
+<main>
+
+<h2 id="split">1.1　從 notebook 到六個檔</h2>
+<p>原版的範例程式是一份 32 格的 notebook（文字格與程式格各半），放在 Kaggle 比賽頁與 Colab。官方 GitHub 上的 HW13 資料夾只有資料，沒有程式，所以本 repo 是從投影片 p.2 的 Colab 連結下載 notebook，存成 <code>HW13/HW13.ipynb</code>，再拆成六個檔。對照表在<a href="index.html#layer-env">目錄頁</a>，這裡講拆法和驗證。</p>
+<p>拆的原則是「能照抄就照抄」：每個檔的開頭註解寫著它來自 notebook 的哪幾格，程式碼逐字搬過來，只去掉行尾空白。真正改動的地方只有三處：<code>kd.py</code> 的 TODO（第 4 章）、老師的建法（1.2 節），以及把 Medium 的「手動取消註解」換成命令列選項。最後一項的樣子是這樣：</p>
+<figure class="listing"><figcaption>train.py:20–27 — 命令列選項覆蓋 cfg</figcaption>
+<pre class="py" data-hot="25-27"><code>parser = argparse.ArgumentParser()
+parser.add_argument('--exp_name')
+parser.add_argument('--loss_fn_type', choices=['CE', 'KD'])
+parser.add_argument('--n_epochs', type=int)
+opt = parser.parse_args()
+for key in ('exp_name', 'loss_fn_type', 'n_epochs'):
+    if getattr(opt, key) is not None:
+        cfg[key] = getattr(opt, key)</code></pre></figure>
+<p>原版要跑 Medium，得把 <code>config.py</code> 的 <code>'loss_fn_type'</code> 改成 <code>'KD'</code>，再到訓練迴圈裡把六行標著 <code># MEDIUM BASELINE</code> 的註解打開。本 repo 把那六行包進 <code>if use_kd:</code>，用 <code>--loss_fn_type KD</code> 一次切換。三個選項不給的時候，<code>cfg</code> 完全不動，第 48 行印出的設定和原版一字不差。</p>
+<p>拆完怎麼知道沒有改壞？光看程式碼對不對是不夠的，要讓兩邊實際跑出同樣的東西。做法分三步：</p>
+<ol>
+<li>用 <code>docs/tools/hw13_make_ref.py</code> 把 notebook 的程式格<strong>原樣</strong>串成一支腳本，當作「參照版」。它只動兩種行：<code>!wget</code>、<code>!tar</code> 這種 shell 指令（資料已經在本機）註解掉；<code>torch.hub.load</code> 那一行換成本機 torchvision（1.2 節）。其他一字不改，連印資料夾檔案數的那一格都保留。</li>
+<li>在另一個資料夾跑參照版，再跑本 repo 的 <code>train.py</code> 與 <code>test.py</code>。</li>
+<li>比對三樣東西：stdout 的每一行（<code>diff</code>）、存下的學生權重（每個張量用 <code>torch.equal</code>）、<code>submission.csv</code>（<code>cmp</code> 逐位元組）。</li>
+</ol>
+<figure class="listing"><figcaption>docs/tools/hw13_make_ref.py:9–26 — 參照版：程式格原樣串起來</figcaption>
+<pre class="py" data-hot="15,17,18,20,21"><code>for i, cell in enumerate(nb['cells']):
+  if cell['cell_type'] != 'code':
+    continue
+  src = ''.join(cell['source'])
+  lines = []
+  for line in src.split('\n'):
+    if line.lstrip().startswith('!'):
+      # shell commands (wget / tar): the data is already extracted locally
+      lines.append('# [ref] ' + line)
+    elif "torch.hub.load('pytorch/vision:v0.10.0', 'resnet18'" in line:
+      # torch.hub downloads torchvision v0.10.0 source from GitHub; use the installed torchvision
+      lines.append('# [ref] ' + line)
+      lines.append("import torchvision; teacher_model = torchvision.models.resnet18(weights=None, num_classes=11)")
+    else:
+      lines.append(line)
+  out.append(f'# ---- cell [{i}] ----\n' + '\n'.join(lines) + '\n')
+
+open(sys.argv[2], 'w').write('\n'.join(out))</code></pre></figure>
+<p>結果：stdout 只差一行——<code>One ./food11-hw13/evaluation sample ...</code> 從 <code>train.py</code> 搬到了 <code>test.py</code> 印，因為建測試集那一格本來就屬於推論；權重 30 個張量全部相等；<code>submission.csv</code> 位元組相同。這種「逐位元一致」的檢查看起來嚴格得過頭，其實是最省事的：只要有一個位元不同，就知道拆的時候改到了會影響結果的東西，不必再猜是哪裡。1.2 節就是這個檢查抓到的例子。</p>
+
+<h2 id="teacher">1.2　老師要建在哪裡：不用它，也得建它</h2>
+<p>原版 notebook 建老師的那一行是：</p>
+<pre class="py"><code>teacher_model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=False, num_classes=11)</code></pre>
+<p><code>torch.hub.load</code> 會在執行時從 GitHub 下載 <code>pytorch/vision</code> 這個 repo 在 v0.10.0 標籤的原始碼，存進 <code>~/.cache/torch/hub/</code>，再從裡面的 <code>hubconf.py</code> 呼叫 <code>resnet18</code>。這在 2022 年的 Colab 上很方便，但有三個問題：每次換環境都要連網下載；執行的是一份和你安裝的 torchvision 不同版本的程式碼；<code>pretrained=False</code> 這個參數在新版 torchvision 已經移除，改成 <code>weights=None</code>。本 repo 改成直接用已安裝的 <code>torchvision.models.resnet18(weights=None, num_classes=11)</code>（<a href="ch00.html#teacher">第 0 章</a>引用過的 <code>model.py</code> 第 68 行）。兩者的架構相同，助教的 checkpoint 載得進去、122 個 key 全部對上，驗證準確率 0.86093（第 3 章）。</p>
+<div class="warn"><h4>沒有驗證的地方</h4>
+<p>torchvision 0.10.0 和本機的 0.26.0 建 ResNet-18 時，初始化權重各用掉多少亂數，本書沒有實測（要先下載舊版才能比）。如果兩者用掉的亂數不同，2022 年在 Colab 上跑出來的學生，和本書的參照版就不會逐位元相同。本書的「參照版」指的一律是「notebook 原樣、但老師用本機 torchvision 建」的版本。</p>
+</div>
+<p>Simple baseline 根本不用老師：loss 只有 cross entropy，老師連 <code>.to(device)</code> 都沒做。那麼拆檔時，能不能乾脆在 CE 模式下不建老師？</p>
+<figure class="listing"><figcaption>train.py:61–68 — 學生、torchsummary、老師</figcaption>
+<pre class="py" data-hot="62,68"><code># DO NOT modify this block and please make sure that this block can run sucessfully.
+student_model = get_student_model()
+summary(student_model, (3, 224, 224), device='cpu')
+# You have to copy&amp;paste the results of this block to HW13 GradeScope.
+
+# Building the teacher draws from the global random stream (weight init before load_state_dict),
+# so it stays here, at the same point as in the notebook, even for the CE run.
+teacher_model = get_teacher_model(cfg['dataset_root'])</code></pre></figure>
+<p>不行，因為<strong>建模型會用到全域的亂數產生器</strong>。<code>resnet18(...)</code> 在 <code>__init__</code> 裡替每個卷積與全連接層隨機初始化權重，這些亂數取自第 33 行 <code>torch.manual_seed(myseed)</code> 設定的那一個產生器。<code>model.py</code> 第 71 行雖然馬上用助教的權重蓋掉，但亂數已經用掉了。之後 <code>DataLoader</code> 要洗牌、<code>RandomHorizontalFlip</code> 要決定翻不翻，用的都是同一個產生器的「下一段」亂數，所以有沒有建老師，學生看到的資料順序就不同。</p>
+<p>實測兩種情況（都照 <code>train.py</code> 的順序設種子、建資料、建學生）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>建老師（原版）</th><th>不建老師</th></tr></thead>
+<tbody>
+<tr><td>學生第一層的初始權重</td><td colspan="2">相同（<code>torch.equal</code>：學生在老師之前建）</td></tr>
+<tr><td>之後的亂數產生器狀態</td><td colspan="2">不同</td></tr>
+<tr><td>第一個訓練 batch 的前 12 個標籤</td><td><code>[7, 1, 8, 0, 7, 8, 0, 3, 1, 10, 6, 3]</code></td><td><code>[5, 5, 2, 3, 9, 9, 10, 2, 6, 9, 2, 2]</code></td></tr>
+<tr><td>最佳驗證準確率（10 個 epoch）</td><td>0.50408（第 9 個 epoch）</td><td>0.51720（第 10 個 epoch）</td></tr>
+</tbody>
+</table></div>
+<p>最後一列是照字面改的：在 scratchpad 複製一份 HW13，只把 <code>train.py</code> 第 68 行註解掉，其他一字不動，完整跑 10 個 epoch。準確率差了 1.3 個百分點，而且<strong>不是因為少了老師</strong>——老師在 CE 模式下本來就沒參與訓練。這 1.3 個百分點純粹是「另一條亂數流」造成的。1.6 節會再看到同樣量級的差異，並說明這對後面每一個實驗意味著什麼。</p>
+<p>所以 <code>train.py</code> 第 66–67 行留了註解：老師不管用不用，都建在 notebook 原來的位置。這和 HW14 教材遇到的 <code>example = Model()</code> 是同一件事：一行看起來「只是建個物件」的程式，也會改變結果。</p>
+
+<h2 id="data">1.3　資料：從 JPEG 到 (3, 224, 224)</h2>
+<figure class="listing"><figcaption>dataset.py:8–27 — 測試與訓練的轉換</figcaption>
+<pre class="py" data-hot="8,12,13,24"><code>normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+# define training/testing transforms
+test_tfm = transforms.Compose([
+    # It is not encouraged to modify this part if you are using the provided teacher model. This transform is stardard and good enough for testing.
+    transforms.Resize(256),
+    transforms.CenterCrop(224),
+    transforms.ToTensor(),
+    normalize,
+])
+
+train_tfm = transforms.Compose([
+    # add some useful transform or augmentation here, according to your experience in HW3.
+    transforms.Resize(256),  # You can change this
+    transforms.CenterCrop(224), # You can change this, but be aware of that the given teacher model's input size is 224.
+    # The training input size of the provided teacher model is (3, 224, 224).
+    # Thus, Input size other then 224 might hurt the performance. please be careful.
+    transforms.RandomHorizontalFlip(), # You can change this.
+    transforms.ToTensor(),
+    normalize,
+])</code></pre></figure>
+<p><code>print(test_tfm)</code> 的實際內容是 <code>Resize(size=256, interpolation=bilinear, max_size=None, antialias=True)</code>、<code>CenterCrop(size=(224, 224))</code>、<code>ToTensor()</code>、<code>Normalize(...)</code> 四步：</p>
+<ul>
+<li><code>Resize(256)</code> 給的是一個整數，意思是「把<strong>短邊</strong>縮到 256、長邊等比例」，不會把照片壓扁。HW03 用的是 <code>Resize((128, 128))</code>，給一個 tuple，就是硬壓成正方形。</li>
+<li><code>CenterCrop(224)</code> 從中間裁出 224×224。照片四周的 32 像素以上被丟掉，長邊丟得更多。</li>
+<li><code>Normalize</code> 用的平均值 <code>[0.485, 0.456, 0.406]</code> 與標準差 <code>[0.229, 0.224, 0.225]</code> 是 <strong>ImageNet</strong> 的統計值，不是 Food-11 的（HW03 教材量過 Food-11 的通道平均是 [0.5549, 0.4509, 0.3436]）。這裡用 ImageNet 的值不是錯，而是一個約定：torchvision 的分類模型都是這樣訓練的，助教訓練老師時也用了同一套轉換。</li>
+</ul>
+<p>第 11 行與第 21–23 行的註解是重點：老師是在 224×224、這種正規化的輸入上訓練的。學生的輸入可以改，但如果要做知識蒸餾，老師和學生吃的是同一個 <code>imgs</code>（<code>train.py</code> 第 122、124 行），改了大小或正規化，老師的輸出就可能變差，學生學到的是一個變笨的老師。第 5 章加資料增強時會遇到這個限制。</p>
+<p>訓練的轉換只比測試多一個 <code>RandomHorizontalFlip()</code>：一半的機率左右翻轉。這幾乎是最弱的增強；HW03 教材第 8 章實測過：沒有增強的模型 40 個 epoch 就停在 0.674，加上一組較強的增強（隨機裁切、旋轉、色彩抖動）訓練 200 個 epoch 能到 0.765。第 5 章會把那一套搬過來。</p>
+<figure class="listing"><figcaption>dataset.py:29–50 — FoodDataset</figcaption>
+<pre class="py" data-hot="33,44,45,47,49"><code>class FoodDataset(Dataset):
+    def __init__(self, path, tfm=test_tfm, files = None):
+        super().__init__()
+        self.path = path
+        self.files = sorted([os.path.join(path,x) for x in os.listdir(path) if x.endswith(".jpg")])
+        if files != None:
+            self.files = files
+        print(f"One {path} sample",self.files[0])
+        self.transform = tfm
+
+    def __len__(self):
+        return len(self.files)
+
+    def __getitem__(self,idx):
+        fname = self.files[idx]
+        im = Image.open(fname)
+        im = self.transform(im)
+        try:
+            label = int(fname.split("/")[-1].split("_")[0])
+        except:
+            label = -1 # test has no label
+        return im,label</code></pre></figure>
+<p><code>FoodDataset</code> 和 HW03 的幾乎一樣：第 33 行列出資料夾裡所有 <code>.jpg</code> 並排序；<code>__getitem__</code> 每次被取一張時才開檔、轉換（第 44–45 行），所以「讀圖」的成本在每個 epoch、每張圖都會重付一次；第 47 行從檔名切出類別，<code>evaluation/</code> 的檔名沒有底線，<code>int("0000.jpg")</code> 拋例外，就回傳 −1。第 47 行用 <code>"/"</code> 切路徑，在 Windows 上路徑分隔符是反斜線，這行會在整個訓練集都回傳 −1；HW03 的版本改用了 <code>os.path.basename</code>，這裡照原版保留。</p>
+<figure class="listing"><figcaption>train.py:54–59 — DataLoader</figcaption>
+<pre class="py" data-hot="56,59"><code># Form train/valid dataloaders
+train_set = FoodDataset(os.path.join(cfg['dataset_root'],"training"), tfm=train_tfm)
+train_loader = DataLoader(train_set, batch_size=cfg['batch_size'], shuffle=True, num_workers=0, pin_memory=True)
+
+valid_set = FoodDataset(os.path.join(cfg['dataset_root'], "validation"), tfm=test_tfm)
+valid_loader = DataLoader(valid_set, batch_size=cfg['batch_size'], shuffle=False, num_workers=0, pin_memory=True)</code></pre></figure>
+<p>訓練集 <code>shuffle=True</code>、驗證集 <code>shuffle=False</code>，兩者都是 <code>num_workers=0</code>：讀圖全部在主行程裡做，GPU 每一步都要等 CPU 解完 64 張 JPEG。1.6 節會量這個代價。</p>
+
+<h2 id="step">1.4　一步訓練</h2>
+<figure class="listing"><figcaption>train.py:112–157 — 訓練迴圈（一個 epoch）</figcaption>
+<pre class="py" data-hot="124,131,133,136,139,142,145"><code>    for batch in tqdm(train_loader):
+
+        # A batch consists of image data and corresponding labels.
+        imgs, labels = batch
+        imgs = imgs.to(device)
+        labels = labels.to(device)
+
+        # Forward the data. (Make sure data and model are on the same device.)
+        if use_kd:
+            with torch.no_grad():  # MEDIUM BASELINE
+                teacher_logits = teacher_model(imgs)  # MEDIUM BASELINE
+
+        logits = student_model(imgs)
+
+        # Calculate the cross-entropy loss.
+        # We don't need to apply softmax before computing cross-entropy as it is done automatically.
+        if use_kd:
+            loss = loss_fn(logits, labels, teacher_logits) # MEDIUM BASELINE
+        else:
+            loss = loss_fn(logits, labels) # SIMPLE BASELINE
+        # Gradients stored in the parameters in the previous step should be cleared out first.
+        optimizer.zero_grad()
+
+        # Compute the gradients for parameters.
+        loss.backward()
+
+        # Clip the gradient norms for stable training.
+        grad_norm = nn.utils.clip_grad_norm_(student_model.parameters(), max_norm=cfg['grad_norm_max'])
+
+        # Update the parameters with computed gradients.
+        optimizer.step()
+
+        # Compute the accuracy for current batch.
+        acc = (logits.argmax(dim=-1) == labels).float().sum()
+
+        # Record the loss and accuracy.
+        train_batch_len = len(imgs)
+        train_loss.append(loss.item() * train_batch_len)
+        train_accs.append(acc)
+        train_lens.append(train_batch_len)
+
+    train_loss = sum(train_loss) / sum(train_lens)
+    train_acc = sum(train_accs) / sum(train_lens)
+
+    # Print the information.
+    log(f"[ Train | {epoch + 1:03d}/{n_epochs:03d} ] loss = {train_loss:.5f}, acc = {train_acc:.5f}")</code></pre></figure>
+<p>CE 模式下，一步就是標準的五件事：前向（第 124 行）、算 loss（第 131 行）、清掉上一步的梯度（第 133 行）、反向傳播（第 136 行）、更新（第 142 行）。KD 模式多了第 120–122 行：在 <code>torch.no_grad()</code> 底下讓老師也看同一批圖，產生 <code>teacher_logits</code> 傳給 loss。老師不需要梯度，<code>no_grad</code> 讓 PyTorch 不必記錄老師的計算圖，省記憶體也省時間；老師的權重也不在 <code>optimizer</code> 裡（第 93 行只交了 <code>student_model.parameters()</code>），本來就不會被更新。</p>
+<p>第 139 行是 <strong>gradient clipping</strong>（梯度裁剪）：先算出所有參數梯度合起來的長度（L2 範數），如果超過 <code>grad_norm_max</code>（10），就把所有梯度等比例縮小到長度剛好是 10。它防的是偶發的巨大梯度把權重一下子推太遠。這個保護在 Simple 的訓練裡用到了幾次？本書另外寫了一支 <code>docs/tools/hw13_gradnorm.py</code>，照同樣的設定跑 10 個 epoch、記下每一步裁剪前的範數（它用 16 個 worker 讀資料，亂數流和 <code>train.py</code> 不同，但分布可以參考）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>統計</th><th class="num">值</th></tr></thead>
+<tbody>
+<tr><td>總步數（155 步 × 10 個 epoch）</td><td class="num">1,550</td></tr>
+<tr><td>範數超過 10、真的被裁剪的步數</td><td class="num">6（0.39%）</td></tr>
+<tr><td>平均／中位數</td><td class="num">4.061／4.059</td></tr>
+<tr><td>最大值</td><td class="num">16.875（第 8 個 epoch）</td></tr>
+<tr><td>每個 epoch 的最大值</td><td class="num">4.6、5.7、10.1、11.1、8.0、13.2、14.7、16.9、9.9、12.6</td></tr>
+</tbody>
+</table></div>
+<p>第 1 個 epoch 的範數都在 2 左右，之後慢慢變大，中位數 4，偶爾有超過 10 的尖峰。所以 clipping 在這裡是「保險」，絕大多數的步驟都沒有作用。順帶一提，第 139 行把回傳值存進 <code>grad_norm</code>，之後卻沒有用到；印出來或記進 log，就是最便宜的訓練健康檢查。</p>
+<p>第 93 行的 optimizer 是 <code>Adam(..., weight_decay=1e-5)</code>。要注意 <code>torch.optim.Adam</code> 的 <code>weight_decay</code> 是把 <code>wd·θ</code> 加進梯度（L2 正則化），再經過 Adam 的自適應縮放；這和 AdamW 的「直接把權重往 0 拉」不是同一件事。1e-5 很小，在這份作業裡兩者差別不大。</p>
+<p>第 145 行算這個 batch 答對幾張，結果是一個放在 GPU 上的張量；第 150 行把它 append 進串列，第 154 行加總。這種寫法每一步都不需要把數字搬回 CPU，比 <code>.item()</code> 快一點；<code>train_loss</code> 那一邊用的是 <code>loss.item()</code>（第 149 行），每一步會同步一次 GPU。兩種寫法並存，是範例程式從 HW3 一路修改下來的痕跡。</p>
+
+<h2 id="valid">1.5　驗證、存檔，以及印出的數字可不可信</h2>
+<figure class="listing"><figcaption>train.py:198–218 — 算平均、印出、存最佳權重</figcaption>
+<pre class="py" data-hot="199,200,203,209,211,215,216"><code>    # The average loss and accuracy for entire validation set is the average of the recorded values.
+    valid_loss = sum(valid_loss) / sum(valid_lens)
+    valid_acc = sum(valid_accs) / sum(valid_lens)
+
+    # update logs
+    if valid_acc &gt; best_acc:
+        log(f"[ Valid | {epoch + 1:03d}/{n_epochs:03d} ] loss = {valid_loss:.5f}, acc = {valid_acc:.5f} -&gt; best")
+    else:
+        log(f"[ Valid | {epoch + 1:03d}/{n_epochs:03d} ] loss = {valid_loss:.5f}, acc = {valid_acc:.5f}")
+
+    # save models
+    if valid_acc &gt; best_acc:
+        log(f"Best model found at epoch {epoch}, saving model")
+        torch.save(student_model.state_dict(), f"{save_path}/student_best.ckpt") # only save best to prevent output memory exceed error
+        best_acc = valid_acc
+        stale = 0
+    else:
+        stale += 1
+        if stale &gt; patience:
+            log(f"No improvment {patience} consecutive epochs, early stopping")
+            break</code></pre></figure>
+<p>驗證迴圈（第 161–196 行）和訓練迴圈同構，只是先 <code>student_model.eval()</code>（BatchNorm 改用訓練時累積的平均與變異數，不再用當前 batch 的統計）、前向放在 <code>no_grad</code> 裡、不更新。第 199–200 行把逐 batch 的「loss × 張數」與「答對張數」加總，再除以總張數。</p>
+<p>前幾本書都在這裡踩過雷：HW01 印出的驗證 loss 和真實值差了 0.4，HW04 的驗證只取每句話的一個隨機片段。所以每本書在 Phase 0 都會檢查：用最佳的權重，在整個驗證集上重新算一次，和訓練時印出的數字比對。HW13 的條件很乾淨——驗證集 <code>shuffle=False</code>、沒有 <code>drop_last</code>、每一張都算到、轉換沒有隨機成分——重算的結果是 <strong>0.50408（1,729 / 3,430）</strong>、CE <strong>1.47539</strong>，和第 9 個 epoch 印出的數字完全相同。本書之後引用的驗證準確率，都可以當成「整個驗證集上的真實準確率」。</p>
+<p>存檔的規則是「驗證準確率創新高就存」（第 209–213 行），所以 <code>student_best.ckpt</code> 永遠是最好的那個 epoch，不是最後一個。用驗證集挑 epoch，本身就是在驗證集上做了一次選擇，選出來的準確率會略為偏高；在這份作業裡，Kaggle 測試集才是最後的裁判。<code>patience</code> 是 300，對 10 個、甚至 200 個 epoch 的訓練都等於不會提早停止（第 215–218 行）。</p>
+<p>印出的行同時寫進 <code>outputs/&lt;exp_name&gt;/log.txt</code>（第 43–46 行的 <code>log</code>）。要注意 torchsummary 的表格與資料夾的檔案數是用 <code>print</code> 印的，不會出現在 <code>log.txt</code> 裡；報告第 1 題要貼的 torchsummary 結果，得從終端機複製。</p>
+
+<h2 id="time">1.6　八分鐘花在哪裡，以及本書的實驗怎麼跑</h2>
+<p>Simple 跑完 10 個 epoch 要 8 分 19 秒，大約每個 epoch 50 秒。把時間拆開：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>量測</th><th class="num">時間</th><th>說明</th></tr></thead>
+<tbody>
+<tr><td>只讀訓練集一遍，<code>num_workers=0</code></td><td class="num">21.1 s</td><td>不做任何計算，只有開檔、解碼、縮放、裁切、轉張量</td></tr>
+<tr><td>同上，<code>num_workers=16</code></td><td class="num">2.3 s</td><td>16 個子行程同時讀</td></tr>
+<tr><td>一個 epoch 的訓練，<code>num_workers=0</code></td><td class="num">34.8–46.1 s</td><td>工具在預設設定下的實測（與 train.py 逐位元一致）</td></tr>
+<tr><td>一個 epoch 的訓練，<code>num_workers=16</code></td><td class="num">12.5–13.9 s</td><td>A 組第一次實驗（A10_ce）</td></tr>
+<tr><td>一次驗證，<code>num_workers=0</code> → 16</td><td class="num">10.3–19.3 s → 3.0–4.1 s</td><td>同上</td></tr>
+<tr><td>整個 10 個 epoch</td><td class="num">8 分 19 秒 → 163.5 s</td><td>3 倍快</td></tr>
+</tbody>
+</table></div>
+<p>單一行程時，訓練一個 epoch 有大約一半的時間花在 CPU 讀圖。開 16 個 worker 之後，讀圖幾乎被藏到 GPU 計算的背後，剩下的 12.5 秒大部分是學生模型本身的計算：學生雖然只有 8 萬多個參數，前兩層卻在 222×222 的解析度上做 32 通道的卷積，算得並不少（第 2 章）。參照版跑的時候 CPU 使用率是 1567%，PyTorch 預設會開滿所有核心做 CPU 上的運算，這對讀圖這種小運算反而不划算（HW03 教材量過，<code>OMP_NUM_THREADS=1</code> 能快 18%）。</p>
+<p>所以本書的實驗（第 4、5 章，加起來幾十個小時的訓練量）一律用 16 個 worker。但這有代價：<strong>worker 的數量會改變亂數的用法</strong>。多行程的 DataLoader 在建立時，就會先替每個 worker 抽亂數種子並預取資料（HW03 教材第 4 章拆過這件事），所以同一個種子、只改 <code>num_workers</code>，資料順序與翻轉就不同，結果也不同：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th class="num">第 5 個 epoch</th><th class="num">最佳驗證準確率</th><th class="num">在第幾個 epoch</th></tr></thead>
+<tbody>
+<tr><td><code>train.py</code>（<code>num_workers=0</code>）</td><td class="num">0.44286</td><td class="num">0.50408</td><td class="num">9</td></tr>
+<tr><td><code>train.py</code>，不建老師（1.2 節）</td><td class="num">0.46589</td><td class="num">0.51720</td><td class="num">10</td></tr>
+<tr><td>實驗工具，<code>num_workers=16</code>（A10_ce）</td><td class="num">0.40000</td><td class="num">0.51545</td><td class="num">10</td></tr>
+</tbody>
+</table></div>
+<p>三組的程式、超參數、種子都一樣，只是亂數的用法不同，最佳準確率就分布在 0.504 到 0.517 之間，中途的某個 epoch 甚至能差 6 個百分點（0.400 對 0.466）。這給了全書一把尺：<strong>10 個 epoch 的實驗，差距在 1–2 個百分點以內，就分不出是方法的效果還是亂數的運氣</strong>。第 4 章拿 KD 和 CE 比的時候，A10 兩組只差 0.2 個百分點（0.51720 對 0.51545），在這把尺之下等於沒有差別；要看出差別，得訓練更久、或跑多個種子。</p>
+<p>實驗工具 <code>docs/tools/hw13_exp.py</code> 的設計就是為了這件事：不加任何選項時，它和 <code>train.py</code> 逐位元一致（Phase 1 驗證過：20 行輸出相同、權重每個張量相等），所以它的程式路徑可以信任；加上 <code>--nw 16</code> 才換成多 worker，並且全書所有正式實驗都在同一個 <code>--nw 16</code> 的條件下比較。它另外記錄每個 epoch 的驗證 cross entropy 與訓練、驗證各花的秒數，這些額外的計算都不碰亂數產生器。</p>
+<div class="note"><h4>現在的做法：讀圖的瓶頸</h4>
+<p>2022 年的範例用 <code>num_workers=0</code>，在 Colab 與 Kaggle 那種只有兩個 CPU 核心的機器上，多開 worker 的好處有限。現在的訓練程式通常會把 <code>num_workers</code> 設成 CPU 核心數附近，加上 <code>persistent_workers=True</code>（每個 epoch 不重建子行程）；資料量大時，會先把影像預先解碼、縮放成固定大小存起來（例如存成 numpy 陣列或 WebDataset 的分片），或用 NVIDIA DALI 把 JPEG 解碼搬到 GPU 上做。本書的工具開了 <code>persistent_workers</code>，結果踩到一個坑：Python 3.12 下行程在結束時會卡住，所以工具最後用 <code>os._exit(0)</code> 直接離開。</p>
+</div>
+
+<h2 id="nits">1.7　拆檔時順便看到的小問題</h2>
+<ul>
+<li><strong><code>test.py</code> 的 <code>squeeze()</code></strong>：推論時用 <code>list(logits.argmax(dim=-1).squeeze().cpu().numpy())</code> 把一個 batch 的預測轉成串列。如果最後一批剛好只有 1 張，<code>squeeze()</code> 會把形狀 <code>(1,)</code> 壓成 0 維，<code>list()</code> 就拋出 <code>TypeError: iteration over a 0-d array</code>（實測）。這份測試集有 3,347 張，3,347 除以 64 餘 19，所以不會觸發；換一個讓 3,347 除以 batch size 餘 1 的設定（例如 batch size 2）就會。把 <code>.squeeze()</code> 拿掉就安全了。</li>
+<li><strong>寫死的路徑</strong>：<code>train.py</code> 第 50 行列資料夾檔案數時用的是 <code>'./food11-hw13'</code>，不是 <code>cfg['dataset_root']</code>。改了 <code>dataset_root</code> 之後，這一段什麼都不印，也不會報錯。</li>
+<li><strong><code>if files != None</code></strong>（<code>dataset.py</code> 第 34 行）：和 <code>None</code> 比較應該用 <code>is not None</code>。如果 <code>files</code> 是 numpy 陣列，<code>!=</code> 會逐元素比較，<code>if</code> 就會報錯。範例程式從來沒傳過 <code>files</code>，所以沒事。</li>
+<li><strong>沒有用到的 <code>grad_norm</code></strong>：見 1.4 節。</li>
+</ul>
+<p>這幾個都不影響本書的數字，本 repo 照原版保留，好讓 <code>train.py</code> 能和 notebook 逐位元比對。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>notebook 照抄拆成六個檔，用「參照版」逐位元比對 stdout、權重與 <code>submission.csv</code> 來證明拆完沒變。<code>--loss_fn_type KD</code> 取代手動取消註解。</li>
+<li><code>torch.hub.load</code> 會在執行時從 GitHub 下載 torchvision 0.10.0 的原始碼；本 repo 改用本機的 <code>torchvision.models.resnet18</code>。建老師會用掉全域亂數，所以即使 CE 模式用不到，也要建在原位置；照字面拿掉那一行，最佳準確率從 0.50408 變成 0.51720。</li>
+<li>轉換：短邊縮到 256、中央裁 224、ImageNet 的正規化；訓練只多一個水平翻轉。老師是在這種輸入上訓練的，蒸餾時學生和老師吃同一批圖。</li>
+<li>一步訓練：前向、loss、清梯度、反向、clip 到 10、Adam 更新。實測 1,550 步只有 6 步真的被裁剪。</li>
+<li>印出的驗證準確率就是整個驗證集的真實準確率（重算得到同樣的 0.50408）。</li>
+<li>讀圖佔了單一行程時大約一半的時間；16 個 worker 讓 10 個 epoch 從 8 分 19 秒變成 163.5 秒，但會改變亂數流。只換亂數流，10 個 epoch 的最佳準確率就在 0.504–0.517 之間：差距 1–2 個百分點以內的比較，不能當真。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 有人想讓 CE 模式省一點記憶體，把 <code>train.py</code> 第 68 行改成 <code>if cfg['loss_fn_type'] == 'KD': teacher_model = get_teacher_model(...)</code>。訓練結果會改變嗎？</summary>
+<p>會。CE 模式下不建老師，等於 1.2 節的「不建老師」：老師的權重初始化不再用掉亂數，之後的洗牌與翻轉都不同。本書照字面把那一行註解掉實際跑過，最佳驗證準確率從 0.50408 變成 0.51720。這不是「省了老師所以變好」，換一個種子也可能變差；重點是結果不再能和原版逐位元比對。</p></details>
+<details class="quiz"><summary>2. 把 <code>test_tfm</code> 的 <code>Resize(256)</code> 改成 <code>Resize((256, 256))</code>，會有什麼不同？</summary>
+<p><code>Resize(256)</code> 把短邊縮到 256、保持長寬比；<code>Resize((256, 256))</code> 把整張圖壓成正方形，長方形的照片會被擠扁。接著的 <code>CenterCrop(224)</code> 在前者只裁掉長邊多出來的部分，在後者則是裁一張變形過的圖。老師是在保持長寬比的輸入上訓練的，改成後者，老師的準確率很可能下降。本書沒有實際量這個改動。</p></details>
+<details class="quiz"><summary>3. 第 139 行的 gradient clipping 如果拿掉，Simple 的結果會差很多嗎？</summary>
+<p>從實測的分布判斷，影響應該很小：1,550 步裡只有 6 步的範數超過 10，其餘的步驟 clipping 本來就沒有作用。但那 6 步的更新會變大，之後的權重與訓練軌跡都跟著不同（clipping 不用亂數，所以資料順序不變），結果不會逐位元相同。本書沒有實際跑「拿掉 clipping」這一組。</p></details>
+<details class="quiz"><summary>4. 為什麼本書的正式實驗要全部用同一個 <code>--nw 16</code>，而不是讓其中幾組用 <code>--nw 0</code>（和 <code>train.py</code> 一致）？</summary>
+<p>worker 數會改變亂數流。如果 A 組用 16、B 組用 0，兩組之間的差異就混進了「換一條亂數流」的效果，而 1.6 節量過，光是這一項在 10 個 epoch 就能造成 1 個百分點以上的差距。所有實驗用同一個 worker 數，比較時才只剩下被改動的那一項。</p></details>
+<details class="quiz"><summary>5. 本章說「印出的驗證準確率可信」。那用驗證準確率挑出的最佳 epoch，它的準確率能代表模型在測試集上的表現嗎？</summary>
+<p>不完全能。印出的值確實是整個驗證集的真實準確率；但「創新高就存檔」是在 10 個（或更多）epoch 裡挑了驗證集上最好的一個，挑選本身會讓這個數字略為偏高。epoch 越多、每個 epoch 之間的起伏越大，偏高得越多。測試集上的準確率通常會略低一點。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>PyTorch 文件：<a href="https://pytorch.org/docs/stable/notes/randomness.html">Reproducibility</a>，說明哪些操作會用到亂數、怎麼讓結果可重現，以及 DataLoader worker 的種子。</li>
+<li>PyTorch 文件：<a href="https://pytorch.org/docs/stable/hub.html">torch.hub</a>，<code>hub.load</code> 會下載什麼、存到哪裡。</li>
+<li>torchvision 文件：<a href="https://pytorch.org/vision/stable/models.html">Models and pre-trained weights</a>，<code>weights=</code> 取代 <code>pretrained=</code> 的說明，以及各模型的標準輸入轉換。</li>
+<li><a href="../HW03/ch04.html">HW03 教材第 4 章</a>：同一套訓練迴圈的前身，以及 tqdm、worker 與亂數用法的細節。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW13 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW13 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

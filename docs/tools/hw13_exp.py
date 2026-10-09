@@ -170,3 +170,6 @@ print(f"{a.name}: best valid acc {best_acc:.5f} at epoch {best_epoch}, {rec['tot
 if a.jsonl:
     with open(a.jsonl, 'a') as f:
         f.write(json.dumps(rec) + '\n')
+# persistent DataLoader workers can hang the interpreter at exit; everything is written, so leave now
+sys.stdout.flush()
+os._exit(0)

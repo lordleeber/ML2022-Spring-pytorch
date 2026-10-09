@@ -105,3 +105,19 @@
 - 學生 `student_best.ckpt`：30 個 key，88,367 個數（87,907 參數 + 456 個 running mean/var + 4 個 int64 `num_batches_tracked`），張量 353,484 bytes，檔案 363,645 bytes。老師 / 學生檔案大小 123 倍。
 - `submission.csv`（Simple，test.py）：3,348 行（表頭 + 3,347）；預測各類張數 0:636、1:38、2:531、3:331、4:263、5:202、6:50、7:21、8:303、9:734、10:238。訓練集比例（HW03 FACTS）第 1 類 4.3%、第 6 類 4.5%、第 7 類 2.8%；預測只佔 1.1%、1.5%、0.6%。
 - test.py 的 stdout：`One ./food11-hw13/evaluation sample ./food11-hw13/evaluation/0000.jpg`（tqdm 進度條在 stderr）。
+
+## ch01 實測（程式結構與訓練迴圈，2026-10-09）
+- **建老師會改變學生的訓練**：照 train.py 的順序設種子、建 DataLoader、建學生後，「建老師」與「不建老師」兩種情況：學生第一層權重 `torch.equal`（學生在老師之前建）；之後全域 RNG 狀態不同；第一個訓練 batch 的前 12 個標籤：建老師 `[7, 1, 8, 0, 7, 8, 0, 3, 1, 10, 6, 3]`、不建 `[5, 5, 2, 3, 9, 9, 10, 2, 6, 9, 2, 2]`（nw=0，迴圈包 tqdm）。
+- `print(test_tfm)`：`Resize(size=256, interpolation=bilinear, max_size=None, antialias=True)` / `CenterCrop(size=(224, 224))` / `ToTensor()` / `Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])`；train_tfm 在 CenterCrop 後多 `RandomHorizontalFlip(p=0.5)`。
+- `log.txt` 只有 `log()` 寫的行（cfg、`device: cuda`、Train/Valid/Best、Finish training）；資料夾檔案數、`One ... sample`、torchsummary 表格只印在 stdout。
+- test.py 的 `list(logits.argmax(dim=-1).squeeze().cpu().numpy())`：batch 只有 1 張時 `TypeError: iteration over a 0-d array`（實測 `torch.zeros(1,11)`）；2 張時 `[np.int64(0), np.int64(0)]`。
+- **計時**：
+  - 參照版（nw=0、預設 24 執行緒）8 分 19 秒，CPU 1567%。
+  - 工具驗證那次（nw=0，與參照版逐位元一致；同時本機有其他輕量 CPU 工作）：每 epoch 訓練 34.8–46.1 s、驗證 10.3–19.3 s，總 523.4 s。
+  - A10_ce（nw=16、persistent workers）：每 epoch 訓練 12.5–13.9 s、驗證 3.0–4.1 s，總 163.5 s。
+  - 只讀資料一輪：nw=0 21.1 s、nw=16 2.3 s（Phase 0）。
+- **只改 worker 數的雜訊**：A10_ce（nw=16）最佳驗證 0.51545（第 10 個 epoch），train.py（nw=0）0.50408（第 9 個）；第 5 個 epoch A10_ce 0.40000、train.py 0.44286。逐 epoch 驗證：0.35394 0.36793 0.43061 0.46764 0.40000 0.40554 0.48571 0.46793 0.48776 0.51545。
+- 工具修正：A10_ce 寫完 jsonl 後行程卡在結束（persistent workers 收尾），手動結束；之後 `hw13_exp.py` 結尾加 `os._exit(0)`（只影響結束，不影響數字）。
+- **不建老師、完整重跑**（scratchpad 複本，`train.py` 第 68 行照字面註解掉，其餘不變，nw=0，`OMP_NUM_THREADS=4`，與 A 組並行）：10:01:39–10:11:07。逐 epoch 驗證準確率 0.35423 0.38455 0.44023 0.43673 0.46589 0.47609 0.47464 0.46297 0.48105 **0.51720**（第 10 個 epoch 最佳；原版 0.50408 在第 9 個）。第 1 個 epoch 驗證 loss 1.85076（原版 1.86308）。（0.51720 = 1774/3430，和 A10_kd 的最佳值相同，巧合。）
+- **梯度範數**（`docs/tools/hw13_gradnorm.py` → `hw13_gradnorm.json`；Simple 設定、nw=16，所以和 train.py 的亂數流不同）：1,550 步，clip 前的總範數 > 10 只有 **6 步**（0.39%）；平均 4.061、中位數 4.059、最大 16.875；前 10 步 2.788 1.89 2.206 2.293 2.183 1.67 1.811 1.829 1.522 1.628；每個 epoch 的最大值 4.634 5.717 10.108 11.067 8.042 13.159 14.741 16.875 9.891 12.628。
+- A10_kd_T1_a0.5（nw=16）：最佳 0.51720（第 10 個 epoch），200.5 s（A10_ce 163.5 s，多 23%）。
