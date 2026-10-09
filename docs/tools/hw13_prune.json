@@ -1,0 +1,367 @@
+{
+ "teacher": {
+  "per_layer_l1": [
+   {
+    "ratio": 0.0,
+    "acc": 0.87143,
+    "zeros": 0.0
+   },
+   {
+    "ratio": 0.1,
+    "acc": 0.86443,
+    "zeros": 0.1
+   },
+   {
+    "ratio": 0.2,
+    "acc": 0.85598,
+    "zeros": 0.2
+   },
+   {
+    "ratio": 0.3,
+    "acc": 0.82711,
+    "zeros": 0.3
+   },
+   {
+    "ratio": 0.4,
+    "acc": 0.77551,
+    "zeros": 0.4
+   },
+   {
+    "ratio": 0.5,
+    "acc": 0.52216,
+    "zeros": 0.5
+   },
+   {
+    "ratio": 0.6,
+    "acc": 0.16064,
+    "zeros": 0.6
+   },
+   {
+    "ratio": 0.7,
+    "acc": 0.11516,
+    "zeros": 0.7
+   },
+   {
+    "ratio": 0.8,
+    "acc": 0.10991,
+    "zeros": 0.8
+   },
+   {
+    "ratio": 0.9,
+    "acc": 0.10233,
+    "zeros": 0.9
+   },
+   {
+    "ratio": 0.95,
+    "acc": 0.10117,
+    "zeros": 0.95
+   }
+  ],
+  "global_l1": [
+   {
+    "ratio": 0.0,
+    "acc": 0.87143,
+    "zeros": 0.0
+   },
+   {
+    "ratio": 0.1,
+    "acc": 0.86822,
+    "zeros": 0.1
+   },
+   {
+    "ratio": 0.2,
+    "acc": 0.86327,
+    "zeros": 0.2
+   },
+   {
+    "ratio": 0.3,
+    "acc": 0.85714,
+    "zeros": 0.3
+   },
+   {
+    "ratio": 0.4,
+    "acc": 0.82187,
+    "zeros": 0.4
+   },
+   {
+    "ratio": 0.5,
+    "acc": 0.74927,
+    "zeros": 0.5
+   },
+   {
+    "ratio": 0.6,
+    "acc": 0.64257,
+    "zeros": 0.6
+   },
+   {
+    "ratio": 0.7,
+    "acc": 0.17376,
+    "zeros": 0.7
+   },
+   {
+    "ratio": 0.8,
+    "acc": 0.12362,
+    "zeros": 0.8
+   },
+   {
+    "ratio": 0.9,
+    "acc": 0.14665,
+    "zeros": 0.9
+   },
+   {
+    "ratio": 0.95,
+    "acc": 0.10117,
+    "zeros": 0.95
+   }
+  ],
+  "per_layer_ln_structured": [
+   {
+    "ratio": 0.0,
+    "acc": 0.87143,
+    "zeros": 0.0
+   },
+   {
+    "ratio": 0.1,
+    "acc": 0.22449,
+    "zeros": 0.1
+   },
+   {
+    "ratio": 0.2,
+    "acc": 0.14402,
+    "zeros": 0.1995
+   },
+   {
+    "ratio": 0.3,
+    "acc": 0.14577,
+    "zeros": 0.3005
+   },
+   {
+    "ratio": 0.4,
+    "acc": 0.14577,
+    "zeros": 0.4
+   },
+   {
+    "ratio": 0.5,
+    "acc": 0.14577,
+    "zeros": 0.5
+   },
+   {
+    "ratio": 0.6,
+    "acc": 0.1309,
+    "zeros": 0.6
+   },
+   {
+    "ratio": 0.7,
+    "acc": 0.1309,
+    "zeros": 0.6995
+   },
+   {
+    "ratio": 0.8,
+    "acc": 0.10117,
+    "zeros": 0.8005
+   },
+   {
+    "ratio": 0.9,
+    "acc": 0.10292,
+    "zeros": 0.9
+   },
+   {
+    "ratio": 0.95,
+    "acc": 0.10117,
+    "zeros": 0.9495
+   }
+  ]
+ },
+ "student": {
+  "per_layer_l1": [
+   {
+    "ratio": 0.0,
+    "acc": 0.50408,
+    "zeros": 0.0
+   },
+   {
+    "ratio": 0.1,
+    "acc": 0.46356,
+    "zeros": 0.1
+   },
+   {
+    "ratio": 0.2,
+    "acc": 0.39708,
+    "zeros": 0.2
+   },
+   {
+    "ratio": 0.3,
+    "acc": 0.2484,
+    "zeros": 0.3
+   },
+   {
+    "ratio": 0.4,
+    "acc": 0.16531,
+    "zeros": 0.4
+   },
+   {
+    "ratio": 0.5,
+    "acc": 0.18426,
+    "zeros": 0.5
+   },
+   {
+    "ratio": 0.6,
+    "acc": 0.15248,
+    "zeros": 0.6
+   },
+   {
+    "ratio": 0.7,
+    "acc": 0.14606,
+    "zeros": 0.7
+   },
+   {
+    "ratio": 0.8,
+    "acc": 0.14577,
+    "zeros": 0.8
+   },
+   {
+    "ratio": 0.9,
+    "acc": 0.14577,
+    "zeros": 0.9
+   },
+   {
+    "ratio": 0.95,
+    "acc": 0.14577,
+    "zeros": 0.95
+   }
+  ],
+  "global_l1": [
+   {
+    "ratio": 0.0,
+    "acc": 0.50408,
+    "zeros": 0.0
+   },
+   {
+    "ratio": 0.1,
+    "acc": 0.50525,
+    "zeros": 0.1
+   },
+   {
+    "ratio": 0.2,
+    "acc": 0.507,
+    "zeros": 0.2
+   },
+   {
+    "ratio": 0.3,
+    "acc": 0.5172,
+    "zeros": 0.3
+   },
+   {
+    "ratio": 0.4,
+    "acc": 0.47843,
+    "zeros": 0.4
+   },
+   {
+    "ratio": 0.5,
+    "acc": 0.39796,
+    "zeros": 0.5
+   },
+   {
+    "ratio": 0.6,
+    "acc": 0.32128,
+    "zeros": 0.6
+   },
+   {
+    "ratio": 0.7,
+    "acc": 0.17551,
+    "zeros": 0.7
+   },
+   {
+    "ratio": 0.8,
+    "acc": 0.14723,
+    "zeros": 0.8
+   },
+   {
+    "ratio": 0.9,
+    "acc": 0.14577,
+    "zeros": 0.9
+   },
+   {
+    "ratio": 0.95,
+    "acc": 0.14577,
+    "zeros": 0.95
+   }
+  ],
+  "per_layer_ln_structured": [
+   {
+    "ratio": 0.0,
+    "acc": 0.50408,
+    "zeros": 0.0
+   },
+   {
+    "ratio": 0.1,
+    "acc": 0.30758,
+    "zeros": 0.0979
+   },
+   {
+    "ratio": 0.2,
+    "acc": 0.14752,
+    "zeros": 0.1992
+   },
+   {
+    "ratio": 0.3,
+    "acc": 0.14577,
+    "zeros": 0.3008
+   },
+   {
+    "ratio": 0.4,
+    "acc": 0.14577,
+    "zeros": 0.4021
+   },
+   {
+    "ratio": 0.5,
+    "acc": 0.14577,
+    "zeros": 0.5
+   },
+   {
+    "ratio": 0.6,
+    "acc": 0.14577,
+    "zeros": 0.5979
+   },
+   {
+    "ratio": 0.7,
+    "acc": 0.14577,
+    "zeros": 0.6992
+   },
+   {
+    "ratio": 0.8,
+    "acc": 0.14577,
+    "zeros": 0.8008
+   },
+   {
+    "ratio": 0.9,
+    "acc": 0.14577,
+    "zeros": 0.9021
+   },
+   {
+    "ratio": 0.95,
+    "acc": 0.14577,
+    "zeros": 0.9492
+   }
+  ]
+ },
+ "mechanics_teacher_l1_0.5": {
+  "params_names": [
+   "weight_orig"
+  ],
+  "buffer_names": [
+   "weight_mask"
+  ],
+  "weight_is_parameter": false,
+  "hooks": 1,
+  "numel_params": 11182155,
+  "torchsummary_total": "Total params: 11,182,155",
+  "file_masked": 89481855,
+  "state_dict_keys_masked": 142,
+  "file_after_remove": 44807627,
+  "state_dict_keys_after_remove": 122,
+  "acc_after_remove": 0.52216,
+  "zeros_after_remove": 0.5,
+  "file_sparse_coo": 201150399
+ }
+}

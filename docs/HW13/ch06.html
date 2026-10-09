@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 6 章　剪枝 — HW13 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW13 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「壓縮實驗台」——近黑的冷灰底、紙白的字、薄荷青只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：老師 紫、學生 CE 灰、學生 KD 藍、架構變體 橘／青、剪枝 洋紅、量化 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與 HW14 相同，色盤沿用 HW14 2026-10-08 的 validate_palette.js 結果）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #5cc9ae;      /* 薄荷青：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(92, 201, 174, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #5cc9ae;
+  /* 角色色 */
+  --r-teacher: #9085e9; --r-ce: #8b949e; --r-kd: #3987e5; --r-arch1: #d95926;
+  --r-arch2: #199e70; --r-prune: #d55181; --r-quant: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "老師 ResNet-18 11,182,155 參數　→　學生 ≤ 100,000　·　Food-11　224×224 → 11 類";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #f2fbf8; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #141c1f; border-color: rgba(92, 201, 174, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #0b1613; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.teacher { --rc: var(--r-teacher); } .role.ce { --rc: var(--r-ce); } .role.kd { --rc: var(--r-kd); }
+.role.arch1 { --rc: var(--r-arch1); } .role.arch2 { --rc: var(--r-arch2); } .role.prune { --rc: var(--r-prune); }
+.role.quant { --rc: var(--r-quant); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch05.html">← 第 5 章</a><a href="ch07.html">第 7 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW13 讀碼教材</p>
+  <h1>第 6 章　剪枝：把權重設成 0，會變快嗎</h1>
+  <p class="chap-lead">報告第 3 題要你對老師做剪枝：畫出剪枝比例和準確率的關係，再回答「教學裡的剪枝能不能加速推論」。這一章先讀 PyTorch 的剪枝工具到底對模型做了什麼，再量三種剪法的準確率曲線，然後在一張沒有其他工作的 GPU 上計時。答案是不會變快，有時反而更慢；要真的變快，得把通道整個拿掉、模型真的變小，而那需要重新訓練。</p>
+</header>
+<main>
+
+<h2 id="tool">6.1　torch.nn.utils.prune 做了什麼</h2>
+<p>報告第 3-1 題附的範例 notebook（本 repo 存成 <code>HW13/HW13_pruning_example.ipynb</code>）只有幾行，核心是第 [3] 格：</p>
+<pre class="py"><code>ratio = 0.2 # specify the pruning ratio
+for name, module in model.named_modules():
+    if isinstance(module, torch.nn.Conv2d): # if the nn.module is torch.nn.Conv2d
+        prune.l1_unstructured(module, name='weight', amount=ratio) # use 'prune' method provided by 'torch.nn.utils.prune' to prune the weight parameters in the nn.Conv2d layers
+# Next, you just have to generize the above code to different ratio and test the accuracy on the validation set of food11-hw13.</code></pre>
+<p>對每一個 <code>Conv2d</code>，把它自己的權重裡絕對值最小的 20% 設成 0。這叫 <strong>unstructured pruning</strong>（非結構化剪枝）：被剪掉的是散落在各處的單一權重，不是整個通道或整個濾波器。「絕對值小的權重不重要」是最簡單的重要度標準（magnitude pruning），也是 <code>l1_unstructured</code> 名字裡的 L1。</p>
+<p>它不是真的把權重刪掉。對剪過的老師檢查 <code>conv1</code>（剪 50%）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>剪之前</th><th>剪之後</th></tr></thead>
+<tbody>
+<tr><td>參數只有 <code>weight</code></td><td>參數變成 <code>weight_orig</code>（原本的權重，完整保留），另外多了一個 buffer <code>weight_mask</code>（0 與 1 組成的同形狀張量）</td></tr>
+<tr><td><code>conv1.weight</code> 是 <code>nn.Parameter</code></td><td><code>conv1.weight</code> 不再是參數，而是一個普通屬性；模組多了 1 個 forward pre-hook，<strong>每次 forward 之前</strong>重新算一次 <code>weight = weight_orig * weight_mask</code></td></tr>
+<tr><td>numel 11,182,155；torchsummary 11,182,155</td><td>都還是 11,182,155（被設成 0 的權重仍然算參數）</td></tr>
+<tr><td>state_dict 122 個 key，存檔 44,806,605 bytes</td><td>142 個 key，存檔 <strong>89,481,855 bytes</strong>（兩倍：原權重和 mask 各存一份）</td></tr>
+</tbody>
+</table></div>
+<p>所以剪枝之後，模型在每一個意義上都沒有變小：參數一樣多、計算一樣多，存成檔案還大了一倍。要把 mask 固定下來，得對每個模組呼叫 <code>prune.remove(module, 'weight')</code>：它把 <code>weight_orig * weight_mask</code> 的結果寫回一個普通的 <code>weight</code> 參數，拿掉 hook 與 mask。之後 state_dict 回到 122 個 key、44,807,627 bytes，零依然是零（50%），準確率不變——只是一個「一半是 0」的稠密模型。</p>
+<p>想用稀疏格式存？把每個 4 維權重轉成 PyTorch 的 COO 稀疏張量（<code>to_sparse()</code>）再存，檔案變成 <strong>201,150,399 bytes</strong>，是原本的 4.5 倍：COO 格式每個非零元素要另外存 4 個 int64 的座標，50% 的稀疏程度遠不夠抵銷。</p>
+<p>另一個實作上的副作用：剪過的模組不能 <code>copy.deepcopy</code>。本書的計時工具第一次這樣做時得到 <code>RuntimeError: Only Tensors created explicitly by the user (graph leaves) support the deepcopy protocol at the moment.</code>，因為 <code>weight</code> 變成了由兩個張量算出來的結果，不是使用者建立的 leaf 張量。要複製，得先 <code>prune.remove</code>，或對一份新載入的模型重新剪一次。</p>
+
+<h2 id="curve">6.2　剪枝比例與準確率（報告第 3-1 題）</h2>
+<p>報告要求把範例推廣到不同比例，在驗證集上量準確率。本書的 <code>docs/tools/hw13_prune.py</code> 對老師和 Simple 學生各做三種剪法，比例從 0 到 0.95，全部不微調：</p>
+<figure class="listing"><figcaption>docs/tools/hw13_prune.py:48–62 — 三種剪法</figcaption>
+<pre class="py" data-hot="52,56,61"><code>  for r in RATIOS:
+    # 1) the sample code: l1_unstructured on every Conv2d, same ratio per layer
+    m = copy.deepcopy(base)
+    for mod in convs(m):
+      prune.l1_unstructured(mod, name='weight', amount=r)
+    res[who]['per_layer_l1'].append(dict(ratio=r, acc=acc(m), zeros=zero_frac(m)))
+    # 2) global_unstructured: one threshold over all conv weights together
+    m = copy.deepcopy(base)
+    prune.global_unstructured([(mod, 'weight') for mod in convs(m)], pruning_method=prune.L1Unstructured, amount=r)
+    res[who]['global_l1'].append(dict(ratio=r, acc=acc(m), zeros=zero_frac(m)))
+    # 3) ln_structured: drop whole output channels (L2 norm), same ratio per layer; still a mask
+    m = copy.deepcopy(base)
+    for mod in convs(m):
+      prune.ln_structured(mod, name='weight', amount=r, n=2, dim=0)
+    res[who]['per_layer_ln_structured'].append(dict(ratio=r, acc=acc(m), zeros=zero_frac(m)))</code></pre></figure>
+<ul>
+<li><strong>逐層 L1</strong>（第 52 行）：範例的做法，每一層各自剪掉 r 比例。</li>
+<li><strong>全域 L1</strong>（第 56 行）：<code>prune.global_unstructured</code> 把所有卷積的權重放在一起排序，用同一個門檻剪掉全體的 r 比例。有的層剪得多、有的層剪得少。</li>
+<li><strong>整個通道</strong>（第 61 行）：<code>prune.ln_structured(..., n=2, dim=0)</code>，每一層剪掉 L2 範數最小的 r 比例個<strong>輸出通道</strong>（整個濾波器設成 0）。這是 structured pruning（結構化剪枝）；不過這裡仍然只是 mask，通道並沒有真的消失。</li>
+</ul>
+<figure class="fig">
+<svg viewBox="0 0 900 360" role="img" aria-label="剪枝比例對驗證準確率。老師用全域 L1 剪枝時，剪 50% 仍有 74.9%，60% 64.3%，70% 掉到 17.4%；逐層剪時 50% 剩 52.2%；整個通道剪 10% 就掉到 22.4%。學生全域剪 30% 仍有 51.7%">
+<line x1="56" y1="314.0" x2="780" y2="314.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="318.0" text-anchor="end">0</text>
+<line x1="56" y1="281.3" x2="780" y2="281.3" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="285.3" text-anchor="end">10</text>
+<line x1="56" y1="248.7" x2="780" y2="248.7" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="252.7" text-anchor="end">20</text>
+<line x1="56" y1="216.0" x2="780" y2="216.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="220.0" text-anchor="end">30</text>
+<line x1="56" y1="183.3" x2="780" y2="183.3" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="187.3" text-anchor="end">40</text>
+<line x1="56" y1="150.7" x2="780" y2="150.7" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="154.7" text-anchor="end">50</text>
+<line x1="56" y1="118.0" x2="780" y2="118.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="122.0" text-anchor="end">60</text>
+<line x1="56" y1="85.3" x2="780" y2="85.3" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="89.3" text-anchor="end">70</text>
+<line x1="56" y1="52.7" x2="780" y2="52.7" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="56.7" text-anchor="end">80</text>
+<line x1="56" y1="20.0" x2="780" y2="20.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="24.0" text-anchor="end">90</text>
+<text class="s-mono" x="56.0" y="332" text-anchor="middle">0.0</text>
+<text class="s-mono" x="128.4" y="332" text-anchor="middle">0.1</text>
+<text class="s-mono" x="200.8" y="332" text-anchor="middle">0.2</text>
+<text class="s-mono" x="273.2" y="332" text-anchor="middle">0.3</text>
+<text class="s-mono" x="345.6" y="332" text-anchor="middle">0.4</text>
+<text class="s-mono" x="418.0" y="332" text-anchor="middle">0.5</text>
+<text class="s-mono" x="490.4" y="332" text-anchor="middle">0.6</text>
+<text class="s-mono" x="562.8" y="332" text-anchor="middle">0.7</text>
+<text class="s-mono" x="635.2" y="332" text-anchor="middle">0.8</text>
+<text class="s-mono" x="707.6" y="332" text-anchor="middle">0.9</text>
+<text class="s-mono" x="780.0" y="332" text-anchor="middle">.95</text>
+<line x1="56" y1="314" x2="780" y2="314" stroke="#4a5562" stroke-width="1"/>
+<text class="s-sm" x="418.0" y="354" text-anchor="middle">剪枝比例（卷積權重設成 0 的比例）</text>
+<text class="s-sm" x="14" y="167.0" text-anchor="middle" transform="rotate(-90 14 167.0)">驗證準確率（%）</text>
+<polyline points="56.0,29.3 128.4,30.4 200.8,32.0 273.2,34.0 345.6,45.5 418.0,69.2 490.4,104.1 562.8,257.2 635.2,273.6 707.6,266.1 780.0,281.0" fill="none" stroke="#9085e9" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,29.3 128.4,31.6 200.8,34.4 273.2,43.8 345.6,60.7 418.0,143.4 490.4,261.5 562.8,276.4 635.2,278.1 707.6,280.6 780.0,281.0" fill="none" stroke="#9085e9" stroke-width="2" stroke-linejoin="round" stroke-dasharray="6 4"/>
+<polyline points="56.0,29.3 128.4,240.7 200.8,267.0 273.2,266.4 345.6,266.4 418.0,266.4 490.4,271.2 562.8,271.2 635.2,281.0 707.6,280.4 780.0,281.0" fill="none" stroke="#d55181" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,149.3 128.4,149.0 200.8,148.4 273.2,145.0 345.6,157.7 418.0,184.0 490.4,209.0 562.8,256.7 635.2,265.9 707.6,266.4 780.0,266.4" fill="none" stroke="#8b949e" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,149.3 128.4,162.6 200.8,184.3 273.2,232.9 345.6,260.0 418.0,253.8 490.4,264.2 562.8,266.3 635.2,266.4 707.6,266.4 780.0,266.4" fill="none" stroke="#8b949e" stroke-width="2" stroke-linejoin="round" stroke-dasharray="6 4"/>
+<rect x="786.0" y="262.4" width="8" height="8" rx="2" fill="#8b949e"/>
+<text class="s-lbl" x="798.0" y="270.4">學生 全域</text>
+<rect x="786.0" y="276.4" width="8" height="8" rx="2" fill="#8b949e"/>
+<text class="s-lbl" x="798.0" y="284.4">學生 逐層（虛線）</text>
+<rect x="786.0" y="290.4" width="8" height="8" rx="2" fill="#9085e9"/>
+<text class="s-lbl" x="798.0" y="298.4">老師 全域</text>
+<rect x="786.0" y="304.4" width="8" height="8" rx="2" fill="#d55181"/>
+<text class="s-lbl" x="798.0" y="312.4">老師 整個通道</text>
+<rect x="786.0" y="318.4" width="8" height="8" rx="2" fill="#9085e9"/>
+<text class="s-lbl" x="798.0" y="326.4">老師 逐層（虛線）</text>
+<rect x="19.8" y="20" width="72.4" height="294" fill="transparent" data-tip="比例 0.0：老師 全域 87.1　老師 逐層（虛線） 87.1　老師 整個通道 87.1　學生 全域 50.4　學生 逐層（虛線） 50.4"/>
+<rect x="92.2" y="20" width="72.4" height="294" fill="transparent" data-tip="比例 0.1：老師 全域 86.8　老師 逐層（虛線） 86.4　老師 整個通道 22.4　學生 全域 50.5　學生 逐層（虛線） 46.4"/>
+<rect x="164.6" y="20" width="72.4" height="294" fill="transparent" data-tip="比例 0.2：老師 全域 86.3　老師 逐層（虛線） 85.6　老師 整個通道 14.4　學生 全域 50.7　學生 逐層（虛線） 39.7"/>
+<rect x="237.0" y="20" width="72.4" height="294" fill="transparent" data-tip="比例 0.3：老師 全域 85.7　老師 逐層（虛線） 82.7　老師 整個通道 14.6　學生 全域 51.7　學生 逐層（虛線） 24.8"/>
+<rect x="309.4" y="20" width="72.4" height="294" fill="transparent" data-tip="比例 0.4：老師 全域 82.2　老師 逐層（虛線） 77.6　老師 整個通道 14.6　學生 全域 47.8　學生 逐層（虛線） 16.5"/>
+<rect x="381.8" y="20" width="72.4" height="294" fill="transparent" data-tip="比例 0.5：老師 全域 74.9　老師 逐層（虛線） 52.2　老師 整個通道 14.6　學生 全域 39.8　學生 逐層（虛線） 18.4"/>
+<rect x="454.2" y="20" width="72.4" height="294" fill="transparent" data-tip="比例 0.6：老師 全域 64.3　老師 逐層（虛線） 16.1　老師 整個通道 13.1　學生 全域 32.1　學生 逐層（虛線） 15.2"/>
+<rect x="526.6" y="20" width="72.4" height="294" fill="transparent" data-tip="比例 0.7：老師 全域 17.4　老師 逐層（虛線） 11.5　老師 整個通道 13.1　學生 全域 17.6　學生 逐層（虛線） 14.6"/>
+<rect x="599.0" y="20" width="72.4" height="294" fill="transparent" data-tip="比例 0.8：老師 全域 12.4　老師 逐層（虛線） 11.0　老師 整個通道 10.1　學生 全域 14.7　學生 逐層（虛線） 14.6"/>
+<rect x="671.4" y="20" width="72.4" height="294" fill="transparent" data-tip="比例 0.9：老師 全域 14.7　老師 逐層（虛線） 10.2　老師 整個通道 10.3　學生 全域 14.6　學生 逐層（虛線） 14.6"/>
+<rect x="743.8" y="20" width="72.4" height="294" fill="transparent" data-tip="比例 0.95：老師 全域 10.1　老師 逐層（虛線） 10.1　老師 整個通道 10.1　學生 全域 14.6　學生 逐層（虛線） 14.6"/>
+</svg>
+<div class="legend"><span><i style="background:#9085e9"></i>老師 全域</span><span><i style="background:#9085e9"></i>老師 逐層（虛線）</span><span><i style="background:#d55181"></i>老師 整個通道</span><span><i style="background:#8b949e"></i>學生 全域</span><span><i style="background:#8b949e"></i>學生 逐層（虛線）</span></div>
+<figcaption>圖 6.1　剪枝比例對驗證準確率（不微調）。紫色是老師、灰色是 Simple 學生；實線是全域、虛線是逐層；洋紅是老師的整個通道剪法。x 軸是類別刻度，最後一點是 0.95。滑過圖看數值。</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<thead><tr><th class="num">比例</th><th class="num">老師 逐層</th><th class="num">老師 全域</th><th class="num">老師 整個通道</th><th class="num">學生 逐層</th><th class="num">學生 全域</th></tr></thead>
+<tbody>
+<tr><td class="num">0</td><td class="num">0.87143</td><td class="num">0.87143</td><td class="num">0.87143</td><td class="num">0.50408</td><td class="num">0.50408</td></tr>
+<tr><td class="num">0.1</td><td class="num">0.86443</td><td class="num">0.86822</td><td class="num">0.22449</td><td class="num">0.46356</td><td class="num">0.50525</td></tr>
+<tr><td class="num">0.2</td><td class="num">0.85598</td><td class="num">0.86327</td><td class="num">0.14402</td><td class="num">0.39708</td><td class="num">0.50700</td></tr>
+<tr><td class="num">0.3</td><td class="num">0.82711</td><td class="num">0.85714</td><td class="num">0.14577</td><td class="num">0.24840</td><td class="num">0.51720</td></tr>
+<tr><td class="num">0.4</td><td class="num">0.77551</td><td class="num">0.82187</td><td class="num">0.14577</td><td class="num">0.16531</td><td class="num">0.47843</td></tr>
+<tr><td class="num">0.5</td><td class="num">0.52216</td><td class="num">0.74927</td><td class="num">0.14577</td><td class="num">0.18426</td><td class="num">0.39796</td></tr>
+<tr><td class="num">0.6</td><td class="num">0.16064</td><td class="num">0.64257</td><td class="num">0.13090</td><td class="num">0.15248</td><td class="num">0.32128</td></tr>
+<tr><td class="num">0.7</td><td class="num">0.11516</td><td class="num">0.17376</td><td class="num">0.13090</td><td class="num">0.14606</td><td class="num">0.17551</td></tr>
+<tr><td class="num">0.8</td><td class="num">0.10991</td><td class="num">0.12362</td><td class="num">0.10117</td><td class="num">0.14577</td><td class="num">0.14723</td></tr>
+<tr><td class="num">0.9</td><td class="num">0.10233</td><td class="num">0.14665</td><td class="num">0.10292</td><td class="num">0.14577</td><td class="num">0.14577</td></tr>
+<tr><td class="num">0.95</td><td class="num">0.10117</td><td class="num">0.10117</td><td class="num">0.10117</td><td class="num">0.14577</td><td class="num">0.14577</td></tr>
+</tbody>
+</table></div>
+<p>表裡反覆出現的 0.14577 是 500 / 3,430：模型把每一張圖都猜成同一類（甜點或湯，驗證集裡各 500 張）；0.10117 是 347 / 3,430，全部猜海鮮。到了這兩個數字，模型已經壞掉了。</p>
+<p>讀這張表：</p>
+<ul>
+<li><strong>老師很耐剪</strong>。全域剪 30% 只掉 1.4 個百分點，剪 50% 還有 0.749。1,100 萬個參數裡有大量冗餘，這也是「大模型可以壓縮」的實證。</li>
+<li><strong>全域比逐層好得多</strong>。剪 50% 時 0.749 對 0.522。逐層的做法對每一層一視同仁，包括只有 9,408 個參數的第一層、和三個 downsample 的 1×1 卷積；這些層小而關鍵，剪掉一半就傷筋動骨。全域的做法讓大的層（layer4 有 840 萬個參數）多剪一些、小的層少剪一些，自然地避開了這個問題。</li>
+<li><strong>學生幾乎沒有冗餘</strong>。逐層剪 20% 就掉了 10 個百分點。全域剪到 30% 還能維持（0.517，比沒剪時的 0.504 還高，是雜訊範圍內的波動），但它的空間比老師小得多：8 萬多個參數，每一個都有用。</li>
+<li><strong>整個通道的剪法一碰就崩</strong>。老師只剪 10% 的通道，準確率就從 0.871 掉到 0.224。6.4 節解釋為什麼，並說明真正有用的結構化剪枝長什麼樣子。</li>
+</ul>
+<p>報告第 3-1 題要的圖，就是圖 6.1 裡的「老師 逐層」那條虛線（範例的做法）。</p>
+
+<h2 id="speed">6.3　剪了會變快嗎（報告第 3-2 題）</h2>
+<p>第 3-2 題的兩個選項：(a) 剪枝之後神經元被移除，計算量變少，推論變快；(b) 教學裡的剪枝只是替模組加上 mask，計算量幾乎相同，推論時間也差不多。投影片鼓勵自己量。本書用 <code>docs/tools/hw13_speed.py</code> 在 GPU 上沒有任何其他程式時計時（前後各記一次 <code>nvidia-smi</code>，兩次都是空的），每種設定先暖機、再跑 100 次（CPU 20 次）取中位數：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>老師</th><th class="num">GPU batch 64</th><th class="num">GPU batch 1</th><th class="num">CPU batch 1（4 執行緒）</th></tr></thead>
+<tbody>
+<tr><td>原本</td><td class="num">16.531 ms</td><td class="num">1.115 ms</td><td class="num">9.386 ms</td></tr>
+<tr><td>剪 50%，還掛著 mask</td><td class="num">16.761 ms</td><td class="num"><strong>1.468 ms</strong></td><td class="num"><strong>12.751 ms</strong></td></tr>
+<tr><td>剪 50%，<code>prune.remove</code> 之後</td><td class="num">16.568 ms</td><td class="num">1.101 ms</td><td class="num">9.615 ms</td></tr>
+</tbody>
+</table></div>
+<p>答案是 (b)，而且比 (b) 說的還糟：</p>
+<ul>
+<li><strong>計算量完全沒變</strong>。三種模型用 <code>FlopCounterMode</code> 量都是 1,813,566,976 MACs。一半的權重是 0，但卷積照樣把每一個 0 乘上去、加起來。</li>
+<li><strong>掛著 mask 時反而更慢</strong>：GPU batch 1 慢了 32%，CPU 慢了 36%。每次 forward 之前，20 個卷積都要先做一次 <code>weight_orig * weight_mask</code>，那是額外的運算。batch 64 時這筆固定開銷被大量的卷積運算稀釋，只慢了 1.4%。</li>
+<li><strong><code>prune.remove</code> 之後</strong>和原本一樣快（差距在量測誤差內）：它只是一個一半權重恰好是 0 的普通模型。</li>
+</ul>
+<p>為什麼 0 不能跳過？GPU 和 CPU 的卷積實作（cuDNN、oneDNN）都是為稠密的矩陣運算最佳化的：資料連續地搬、成批地乘。要跳過散落各處的 0，得先檢查每個權重是不是 0、再決定算不算，這種不規則的分支在硬體上通常比直接乘還慢。稀疏要變快，需要兩個條件：零夠多（通常 90% 以上），而且硬體或函式庫支援那種稀疏格式。</p>
+<div class="note"><h4>現在的做法：硬體能跳過的稀疏，與大型語言模型的剪枝</h4>
+<p>NVIDIA 從 Ampere 架構（2020）開始支援 <strong>2:4 結構化稀疏</strong>：每連續 4 個權重裡恰好 2 個是 0，Tensor Core 可以只算另外兩個，理論上矩陣乘法快一倍。它是「非結構化」與「整個通道」之間的折衷：零的位置有規律，硬體才吃得下。PyTorch 用 <code>to_sparse_semi_structured</code> 支援這種格式（本書沒有實測）。在大型語言模型上，SparseGPT（2023）與 Wanda（2023）可以不重新訓練就把權重剪到 50%，再配合 2:4 格式加速；另一條路是整塊拿掉注意力頭、層或隱藏維度（例如 NVIDIA 的 Minitron，2024，剪完再用蒸餾把能力補回來）——和 6.4 節的「拿掉通道、再訓練」是同一個思路，也和第 4 章的蒸餾接上了。</p>
+</div>
+
+<h2 id="structured">6.4　真的變小：把通道拿掉，再訓練</h2>
+<p>6.2 節的「整個通道」剪法讓老師一剪就崩。先看原因。本書的 <code>docs/tools/hw13_prune_bn.py</code> 做了兩個實驗（老師，不微調）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th class="num">剪掉的通道比例</th><th class="num">只把卷積的通道設成 0</th><th class="num">連後面 BatchNorm 的 γ、β 也設成 0</th><th class="num">改用 BatchNorm 的 |γ| 挑通道</th></tr></thead>
+<tbody>
+<tr><td class="num">0.1</td><td class="num">0.22449</td><td class="num">0.38338</td><td class="num"><strong>0.61895</strong></td></tr>
+<tr><td class="num">0.2</td><td class="num">0.14402</td><td class="num">0.13469</td><td class="num">0.24286</td></tr>
+<tr><td class="num">0.3</td><td class="num">0.14577</td><td class="num">0.13586</td><td class="num">0.14431</td></tr>
+<tr><td class="num">0.5</td><td class="num">0.14577</td><td class="num">0.04519</td><td class="num">0.12653</td></tr>
+</tbody>
+</table></div>
+<p>第一個問題是 BatchNorm。卷積的某個輸出通道設成 0 之後，緊接的 BatchNorm 仍用原本的統計量做正規化：(0 − μ) / σ · γ + β，輸出是一個常數，不是 0。剪 10% 時有 480 個這樣的「死通道」，每個都輸出一個絕對值平均 0.59、最大 2.4 的常數，傳到下一層去干擾。把 γ、β 也設成 0，讓死通道真的輸出 0，準確率從 0.224 回到 0.383。</p>
+<p>第二個問題更根本：<strong>挑錯了通道</strong>。<code>ln_structured</code> 按卷積權重的 L2 範數挑，可是卷積後面接著 BatchNorm，BN 會把每個通道除以它自己的標準差、再乘上 γ：權重小的通道，輸出也小，標準差跟著小，正規化之後又被放大回來。所以卷積權重的大小幾乎不代表這個通道的重要性。改用 BatchNorm 的 |γ| 來挑（γ 才是正規化之後真正決定通道輸出大小的係數，這是 network slimming 的做法），剪 10% 的準確率回到 0.619。即使如此，剪到 20% 仍然只剩 0.243：不重新訓練，結構化剪枝的損失就是這麼大。</p>
+<p>結構化剪枝的價值，在於剪完之後可以把通道<strong>真的拿掉</strong>，得到一個更小的稠密模型，所有的硬體都能直接加速。本書用 Simple 學生示範（它是單純的一條鏈，拿通道比 ResNet 容易得多）：</p>
+<figure class="listing"><figcaption>docs/tools/hw13_shrink.py:7–29 — shrink_student()：實體拿掉通道</figcaption>
+<pre class="py" data-hot="15,16,17,18,20,21,27"><code>def shrink_student(m, keep):
+  """Physically remove output channels of every conv in the sample student (L1 norm), fix BN and the next layer."""
+  layers = list(m.cnn)
+  conv_idx = [i for i, l in enumerate(layers) if isinstance(l, nn.Conv2d)]
+  new, prev_keep = copy.deepcopy(layers), torch.arange(3)
+  for ci in conv_idx:
+    conv, bn = layers[ci], layers[ci + 1]
+    n_out = conv.out_channels
+    k = max(1, round(n_out * keep))
+    idx = conv.weight.detach().abs().sum((1, 2, 3)).argsort(descending=True)[:k].sort().values
+    c = nn.Conv2d(len(prev_keep), k, conv.kernel_size, conv.stride, conv.padding)
+    c.weight.data = conv.weight.data[idx][:, prev_keep].clone(); c.bias.data = conv.bias.data[idx].clone()
+    b = nn.BatchNorm2d(k)
+    for name in ['weight', 'bias', 'running_mean', 'running_var']:
+      getattr(b, name).data = getattr(bn, name).data[idx].clone()
+    new[ci], new[ci + 1] = c, b
+    prev_keep = idx
+  out = copy.deepcopy(m)
+  out.cnn = nn.Sequential(*new)
+  fc = m.fc[0]
+  out.fc = nn.Sequential(nn.Linear(len(prev_keep), 11))
+  out.fc[0].weight.data = fc.weight.data[:, prev_keep].clone(); out.fc[0].bias.data = fc.bias.data.clone()
+  return out.eval()</code></pre></figure>
+<p>每個卷積依權重的 L1 範數留下前 keep 比例的輸出通道（第 15–16 行）；新的卷積只保留這些輸出通道、以及上一層留下來的輸入通道（第 17–18 行）；BatchNorm 的四組數字跟著挑（第 20–21 行）；最後的全連接層只保留留下來的輸入（第 27 行）。這裡用卷積權重的範數挑通道，正是上面說的那個不好的標準；本書保留它，是因為接著會重新訓練，挑選標準的影響會被訓練補回來。</p>
+<p>拿掉之後的模型真的變小、變快了：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Simple 學生</th><th>通道</th><th class="num">參數</th><th class="num">MACs</th><th class="num">GPU batch 64</th><th class="num">CPU batch 1</th><th class="num">不微調</th></tr></thead>
+<tbody>
+<tr><td>原本</td><td>32、32、64、100</td><td class="num">87,907</td><td class="num">8.59 億</td><td class="num">22.369 ms</td><td class="num">5.698 ms</td><td class="num">0.50408</td></tr>
+<tr><td>留 75%</td><td>24、24、48、75</td><td class="num">49,949</td><td class="num">4.91 億</td><td class="num">17.278 ms</td><td class="num">3.778 ms</td><td class="num">0.17085</td></tr>
+<tr><td>留 50%</td><td>16、16、32、50</td><td class="num">22,647</td><td class="num">2.25 億</td><td class="num">10.800 ms</td><td class="num">2.249 ms</td><td class="num">0.14577</td></tr>
+</tbody>
+</table></div>
+<p>通道留一半，參數剩四分之一（每個卷積的參數和「輸入 × 輸出」通道成正比，兩邊都減半），計算量也剩約四分之一，GPU 時間剩一半、CPU 時間剩四成。但不微調的話，模型是壞的。所以本書加跑了 C 組實驗（使用者核可的規格外實驗）：從剪完的權重<strong>微調</strong> 20 個 epoch；對照組是同樣寬度的模型<strong>從頭訓練</strong> 20 個 epoch。其他設定與第 1 章的 Simple 相同（CE、範例增強、16 個 worker）。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th class="num">參數</th><th class="num">最佳驗證準確率</th></tr></thead>
+<tbody>
+<tr><td>留 75%，剪完微調 20 epoch</td><td class="num">49,949</td><td class="num"><strong>0.57843</strong></td></tr>
+<tr><td>留 75%，同寬度從頭訓練 20 epoch</td><td class="num">49,949</td><td class="num">0.53324</td></tr>
+<tr><td>留 50%，剪完微調 20 epoch</td><td class="num">22,647</td><td class="num"><strong>0.54373</strong></td></tr>
+<tr><td>留 50%，同寬度從頭訓練 20 epoch</td><td class="num">22,647</td><td class="num">0.48601</td></tr>
+</tbody>
+</table></div>
+<p>剪完再微調，比同樣大小從頭訓練高 4.5 到 5.8 個百分點，超出第 1 章的雜訊範圍。剪枝留下來的權重確實帶著有用的東西。但這個比較要附一個但書：微調的起點是已經訓練了 9 個 epoch 的 Simple 學生，所以「剪完微調」總共經歷了 29 個 epoch 的訓練，從頭訓練只有 20 個。剪枝的好處，有一部分其實是「多訓練了 9 個 epoch」。要公平比較，對照組應該訓練 29 個 epoch；本書沒有跑這一組。不論如何，一個 22,647 個參數、GPU 上快一倍的學生，微調 20 個 epoch 之後就比原本 87,907 個參數的 Simple（0.504）還準。</p>
+
+<h2 id="four">6.5　回到第 2 章：四個量，一次看清楚</h2>
+<p><a href="ch02.html#table">第 2 章</a>說參數、計算量、記憶體、時間是四個不同的量，推論時間留到這一章量。把全書的模型放在一起（GPU 為 RTX PRO 4000 Blackwell，CPU 為 4 執行緒）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>模型</th><th class="num">參數</th><th class="num">MACs</th><th class="num">GPU b64 fp32</th><th class="num">GPU b64 fp16</th><th class="num">GPU b1 fp32</th><th class="num">CPU b1 fp32</th></tr></thead>
+<tbody>
+<tr><td><span class="role teacher">老師</span></td><td class="num">11,182,155</td><td class="num">18.1 億</td><td class="num">16.531</td><td class="num">7.443</td><td class="num">1.115</td><td class="num">9.386</td></tr>
+<tr><td><span class="role ce">範例學生</span></td><td class="num">87,907</td><td class="num">8.59 億</td><td class="num"><strong>22.369</strong></td><td class="num">15.728</td><td class="num">0.303</td><td class="num">5.698</td></tr>
+<tr><td><span class="role arch1">dw</span></td><td class="num">99,811</td><td class="num">6,603 萬</td><td class="num">6.373</td><td class="num">3.657</td><td class="num">0.731</td><td class="num">1.633</td></tr>
+<tr><td><span class="role extra">plain</span></td><td class="num">99,355</td><td class="num">8,433 萬</td><td class="num"><strong>2.901</strong></td><td class="num">1.430</td><td class="num">0.464</td><td class="num">0.931</td></tr>
+<tr><td><span class="role arch2">mbv2</span></td><td class="num">96,651</td><td class="num">7,950 萬</td><td class="num">8.920</td><td class="num">4.569</td><td class="num">0.888</td><td class="num">2.038</td></tr>
+<tr><td><span class="role prune">範例學生留 50%</span></td><td class="num">22,647</td><td class="num">2.25 億</td><td class="num">10.800</td><td class="num">6.695</td><td class="num">0.263</td><td class="num">2.249</td></tr>
+</tbody>
+</table></div>
+<p>（時間單位 ms；b64 是一次 64 張，b1 是一次 1 張。<code>dw</code>、<code>plain</code>、<code>mbv2</code> 用隨機權重計時，權重的值不影響時間。）</p>
+<p>最醒目的一格：<strong>範例學生在 GPU 上一次處理 64 張，比老師還慢</strong>（22.4 對 16.5 ms）。參數只有老師的 1/127，卻慢了 35%。第 2 章已經預告了原因：它的計算量是老師的 47%，而且集中在 220×220 的大特徵圖上，要搬的中間結果比老師多；老師的計算集中在小特徵圖、多通道的層，正是 GPU 最擅長的形狀。如果作業的目標是「在 GPU 上跑得快」，範例學生是一個比老師更差的模型。</p>
+<p>一次只處理 1 張時，排名完全反過來：範例學生最快（0.30 ms），老師和 26 層的 <code>mbv2</code> 較慢。單張圖的工作量太小，GPU 的時間主要花在逐層啟動運算的固定開銷，層數少的模型佔便宜。CPU 上又是另一個排名：<code>plain</code> 最快、老師最慢，比較接近計算量的順序。<strong>哪個模型比較快，取決於硬體與 batch 大小</strong>；要部署，就要在部署的條件下量。</p>
+<p>fp16 一欄是第 7 章的預告：同樣的模型改用 16 位元浮點數，GPU 上老師從 16.5 變成 7.4 ms，快了一倍多，而且第 7 章會看到準確率完全不變。和剪枝相比，這是不必重新訓練、就能真的加速的壓縮。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li><code>prune.l1_unstructured</code> 把權重拆成 <code>weight_orig</code> 與 <code>weight_mask</code>，每次 forward 前重算 <code>weight</code>；參數與計算量不變，存檔大一倍，模組不能 <code>deepcopy</code>。<code>prune.remove</code> 把它固定成一個帶 0 的稠密模型。</li>
+<li>剪枝比例對準確率（報告 3-1）：老師全域剪 50% 仍有 0.749，逐層剪只有 0.522；學生幾乎沒有冗餘；整個通道的 mask 剪法剪 10% 就崩到 0.224。</li>
+<li>剪 50% 的老師完全沒有變快（GPU b64 16.76 對 16.53 ms），掛著 mask 時 batch 1 還慢了 32%（報告 3-2 選 (b)）。0 散落各處，稠密的卷積實作照樣全部乘一遍。</li>
+<li>結構化剪枝要成功：死通道後面的 BatchNorm 要一起處理，挑通道要看 |γ| 而不是卷積權重的大小，而且要重新訓練。實體拿掉一半通道的學生參數剩 22,647、GPU 快一倍，微調後 0.544，比同寬度從頭訓練高 5.8 個百分點（但多訓練了 9 個 epoch）。</li>
+<li>範例學生在 GPU batch 64 時比老師還慢（22.4 對 16.5 ms）；batch 1 時卻最快。速度取決於硬體與 batch 大小，要在部署條件下量。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 剪枝之後用 torchsummary 數參數，<code>Total params</code> 會變少嗎？那報告第 1 題能不能用「先訓練一個大學生、再剪掉 90%」來過 100,000 的上限？</summary>
+<p>不會變少。<code>conv.weight</code> 仍然存在（由 <code>weight_orig * weight_mask</code> 算出來），torchsummary 照樣數它的元素數，設成 0 的權重也算；本章實測剪 50% 前後都是 11,182,155。所以 mask 式剪枝不能用來過參數上限；要變少，得像 6.4 節那樣把通道真的拿掉、建一個更小的模型。</p></details>
+<details class="quiz"><summary>2. 為什麼全域剪枝在老師上比逐層剪枝好那麼多？</summary>
+<p>逐層剪枝讓每一層都剪掉同樣比例，包括參數很少但很關鍵的層：第一個 7×7 卷積（9,408 個參數）、三個 downsample 的 1×1 卷積。這些層剪一半，資訊就被截斷了。全域剪枝用同一個門檻，參數多、冗餘多的層（layer4 佔 75% 的參數）會被剪得多，小而關鍵的層剪得少，整體損失就小很多：剪 50% 時 0.749 對 0.522。</p></details>
+<details class="quiz"><summary>3. 一個剪掉 50% 權重的模型，用 <code>prune.remove</code> 固定之後存成檔案，為什麼不會變小？要怎樣才會變小？</summary>
+<p>因為 PyTorch 預設用稠密格式存張量，0 也要佔 4 個 bytes。改用 COO 稀疏格式（<code>to_sparse()</code>）反而變成 4.5 倍大：每個非零元素要多存 4 個 int64 的座標，50% 的稀疏度遠不夠抵銷。要變小，可以把通道真的拿掉（6.4 節），或用壓縮率高的格式存（例如只存非零值與位元遮罩，再加上壓縮），或配合量化減少每個數的位元（第 7 章）。Deep Compression（2015）就是把剪枝、量化與霍夫曼編碼串起來做這件事。</p></details>
+<details class="quiz"><summary>4. 本章說「剪完微調」比「同寬度從頭訓練」好 4.5 到 5.8 個百分點。這個比較有什麼不公平的地方？</summary>
+<p>微調的起點是已經訓練了 9 個 epoch 的 Simple 學生，所以剪完微調的模型總共看過 29 個 epoch 的資料，從頭訓練的只有 20 個。第 4 章看過，這個學生在 50 個 epoch 之前都還在進步，多 9 個 epoch 本身就值好幾個百分點。公平的對照應該讓從頭訓練跑 29 個 epoch。本書沒有跑這一組，所以只能說「剪完微調在同樣的微調預算下比較好」，不能說剪枝留下的權重值多少個百分點。</p></details>
+<details class="quiz"><summary>5. 範例學生在 GPU batch 64 時比老師慢，batch 1 時卻比老師快 3.7 倍。如果你的應用是手機上一次辨識一張照片，你會根據哪一個數字選模型？</summary>
+<p>兩個都不適合直接拿來用。batch 1 的條件比較接近，但本書的 batch 1 是在桌機 GPU 上量的，手機的處理器、記憶體頻寬、支援的運算元都不同；本書在桌機 CPU（4 執行緒）上量到範例學生 5.70 ms、老師 9.39 ms、<code>plain</code> 0.93 ms，排名又和 GPU 不一樣。要在手機上用，就要匯出到手機的推論框架、在手機上量。本章的教訓就是：速度要在部署的條件下量。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>PyTorch 官方教學：<a href="https://pytorch.org/tutorials/intermediate/pruning_tutorial.html">Pruning Tutorial</a>（投影片 p.18 指定的教學）。</li>
+<li>Song Han 等，<a href="https://arxiv.org/abs/1506.02626">Learning both Weights and Connections for Efficient Neural Networks</a>（2015）：magnitude pruning 加重新訓練的經典做法。</li>
+<li>Zhuang Liu 等，<a href="https://arxiv.org/abs/1708.06519">Learning Efficient Convolutional Networks through Network Slimming</a>（2017）：用 BatchNorm 的 γ 挑通道。</li>
+<li>Jonathan Frankle、Michael Carbin，<a href="https://arxiv.org/abs/1803.03635">The Lottery Ticket Hypothesis</a>（2018）：剪枝留下的子網路「從頭訓練」也能訓練得好，前提是用原本的初始值。和 6.4 節的對照實驗是同一類問題。</li>
+<li>Elias Frantar、Dan Alistarh，<a href="https://arxiv.org/abs/2301.00774">SparseGPT</a>（2023）；Mingjie Sun 等，<a href="https://arxiv.org/abs/2306.11695">Wanda</a>（2023）：不重新訓練的 LLM 剪枝。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch05.html">← 第 5 章</a><a href="ch07.html">第 7 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW13 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW13 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

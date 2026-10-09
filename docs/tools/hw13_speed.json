@@ -1,0 +1,105 @@
+{
+ "gpu": "NVIDIA RTX PRO 4000 Blackwell",
+ "torch": "2.11.0+cu128",
+ "cpu_threads": 4,
+ "quick": false,
+ "shrink": {
+  "keep75": {
+   "params": 49949,
+   "macs": 491384409,
+   "acc_no_finetune": 0.17085,
+   "channels": [
+    24,
+    24,
+    48,
+    75
+   ]
+  },
+  "keep50": {
+   "params": 22647,
+   "macs": 225490150,
+   "acc_no_finetune": 0.14577,
+   "channels": [
+    16,
+    16,
+    32,
+    50
+   ]
+  }
+ },
+ "rows": {
+  "teacher": {
+   "params": 11182155,
+   "macs": 1813566976,
+   "gpu_b64_fp32_ms": 16.531,
+   "gpu_b1_fp32_ms": 1.115,
+   "gpu_b64_fp16_ms": 7.443,
+   "cpu_b1_fp32_ms": 9.386,
+   "cpu_b1_int8_ms": 3.742
+  },
+  "teacher_pruned50_mask": {
+   "params": 11182155,
+   "macs": 1813566976,
+   "gpu_b64_fp32_ms": 16.761,
+   "gpu_b1_fp32_ms": 1.468,
+   "cpu_b1_fp32_ms": 12.751
+  },
+  "teacher_pruned50_removed": {
+   "params": 11182155,
+   "macs": 1813566976,
+   "gpu_b64_fp32_ms": 16.568,
+   "gpu_b1_fp32_ms": 1.101,
+   "gpu_b64_fp16_ms": 7.429,
+   "cpu_b1_fp32_ms": 9.615
+  },
+  "student_sample": {
+   "params": 87907,
+   "macs": 859378124,
+   "gpu_b64_fp32_ms": 22.369,
+   "gpu_b1_fp32_ms": 0.303,
+   "gpu_b64_fp16_ms": 15.728,
+   "cpu_b1_fp32_ms": 5.698,
+   "cpu_b1_int8_ms": 2.621
+  },
+  "student_dw": {
+   "params": 99811,
+   "macs": 66033200,
+   "gpu_b64_fp32_ms": 6.373,
+   "gpu_b1_fp32_ms": 0.731,
+   "gpu_b64_fp16_ms": 3.657,
+   "cpu_b1_fp32_ms": 1.633
+  },
+  "student_plain": {
+   "params": 99355,
+   "macs": 84333928,
+   "gpu_b64_fp32_ms": 2.901,
+   "gpu_b1_fp32_ms": 0.464,
+   "gpu_b64_fp16_ms": 1.43,
+   "cpu_b1_fp32_ms": 0.931
+  },
+  "student_mbv2": {
+   "params": 96651,
+   "macs": 79502496,
+   "gpu_b64_fp32_ms": 8.92,
+   "gpu_b1_fp32_ms": 0.888,
+   "gpu_b64_fp16_ms": 4.569,
+   "cpu_b1_fp32_ms": 2.038
+  },
+  "student_sample_keep75": {
+   "params": 49949,
+   "macs": 491384409,
+   "gpu_b64_fp32_ms": 17.278,
+   "gpu_b1_fp32_ms": 0.302,
+   "gpu_b64_fp16_ms": 11.954,
+   "cpu_b1_fp32_ms": 3.778
+  },
+  "student_sample_keep50": {
+   "params": 22647,
+   "macs": 225490150,
+   "gpu_b64_fp32_ms": 10.8,
+   "gpu_b1_fp32_ms": 0.263,
+   "gpu_b64_fp16_ms": 6.695,
+   "cpu_b1_fp32_ms": 2.249
+  }
+ }
+}

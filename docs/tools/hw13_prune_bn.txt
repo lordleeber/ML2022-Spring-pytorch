@@ -1,0 +1,8 @@
+ratio 0.1: BN untouched 0.22449  BN zeroed 0.38338  (pairs 20  dead channels 480  |BN output of a dead channel| mean 0.593 max 2.415)
+ratio 0.2: BN untouched 0.14402  BN zeroed 0.13469  (pairs 20  dead channels 960  |BN output of a dead channel| mean 0.597 max 3.901)
+ratio 0.3: BN untouched 0.14577  BN zeroed 0.13586  (pairs 20  dead channels 1440  |BN output of a dead channel| mean 0.601 max 3.901)
+ratio 0.5: BN untouched 0.14577  BN zeroed 0.04519  (pairs 20  dead channels 2400  |BN output of a dead channel| mean 0.601 max 3.901)
+ratio 0.1: channels chosen by |gamma|, BN zeroed 0.61895
+ratio 0.2: channels chosen by |gamma|, BN zeroed 0.24286
+ratio 0.3: channels chosen by |gamma|, BN zeroed 0.14431
+ratio 0.5: channels chosen by |gamma|, BN zeroed 0.12653
