@@ -285,7 +285,7 @@ td.num { font-family: var(--font-mono); }
 <tr><td>資料、學生模型、超參數、種子</td><td colspan="2">相同</td><td>第 0–2 章</td></tr>
 </tbody>
 </table></div>
-<p>讀程式時會碰到幾個說明和實際對不上的地方：notebook 說資料「改過了，不要用 HW03 的」，實測訓練與驗證集和 HW03 逐位元相同，只有測試集重新編號；蒸餾公式寫成 KL(學生‖老師)，程式該算、PyTorch 範例也示範的其實是 KL(老師‖學生)；老師號稱準確率 0.899，在驗證集上量是 0.861；投影片要求參數「連不可訓練的也要算」，但 torchsummary 根本不數 BatchNorm 的統計量。完整清單在<a href="outline.html#issues">教學大綱</a>，每一項都在對應章節實測。</p>
+<p>讀程式時會碰到幾個說明和實際對不上的地方：notebook 說資料「改過了，不要用 HW03 的」，實測訓練與驗證集和 HW03 逐位元相同，只有測試集重新編號；蒸餾公式寫成 KL(學生‖老師)，程式該算、PyTorch 範例也示範的其實是 KL(老師‖學生)；老師號稱準確率 0.899，在驗證集上量是 0.871；投影片要求參數「連不可訓練的也要算」，但 torchsummary 根本不數 BatchNorm 的統計量。完整清單在<a href="outline.html#issues">教學大綱</a>，每一項都在對應章節實測。</p>
 
 <h3 id="layer-method">第三層：方法——蒸餾、輕量架構、剪枝仍是主流，只是對象換成大型語言模型</h3>
 <p>投影片列了五種壓縮技術：knowledge distillation、architecture design、network pruning、parameter quantization、dynamic computation，作業聚焦前三種。這三種在 2026 年都還在用，差別在於對象：2022 年的作業壓縮的是一個 1,100 萬參數的 CNN，今天大家最想壓縮的是幾十億到上千億參數的語言模型。</p>
@@ -344,7 +344,7 @@ td.num { font-family: var(--font-mono); }
 <div class="tablewrap"><table>
 <thead><tr><th>模型</th><th class="num">參數</th><th class="num">驗證準確率</th><th>出處</th></tr></thead>
 <tbody>
-<tr><td><span class="role teacher">老師 ResNet-18</span></td><td class="num">11,182,155</td><td class="num">0.86093</td><td>第 3 章</td></tr>
+<tr><td><span class="role teacher">老師 ResNet-18</span></td><td class="num">11,182,155</td><td class="num">0.87143</td><td>第 3 章</td></tr>
 <tr><td><span class="role ce">範例學生、CE、10 epoch（Simple）</span></td><td class="num">87,907</td><td class="num">0.50408</td><td>第 0 章</td></tr>
 </tbody>
 </table></div>

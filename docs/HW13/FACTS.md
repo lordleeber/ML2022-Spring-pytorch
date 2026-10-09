@@ -66,7 +66,7 @@
 - 學生各層（torchsummary）：Conv 3→32 3×3：896；BN 64；Conv 32→32：9,248；BN 64；Conv 32→64：18,496；BN 128；Conv 64→100：57,700；BN 200；Linear 100→11：1,111。輸出形狀 222→220→110→108→54→52→26→1。
 
 ## 老師模型
-- 驗證集 acc **0.86093（2953/3430）**、CE 0.64702（`test_tfm`，batch 64）。notebook 註解「test-acc ~= 89.9%」、投影片 p.7「test-Acc ≅ 0.899」——那是 Kaggle 測試集，本機無法驗證；驗證集低 3.8 個百分點。
+- ~~驗證集 acc 0.86093（2953/3430）、CE 0.64702~~ **錯誤，ch03 更正**：`hw13_facts.py` 在量準確率之前先對老師呼叫 `torchsummary.summary`（老師剛建好是訓練模式），summary 的 forward 用隨機輸入更新了每個 BatchNorm 的 running mean/var。正確值 **0.87143（2989/3430）**，見「ch03 實測」。notebook 註解「test-acc ~= 89.9%」、投影片 p.7「test-Acc ≅ 0.899」——那是 Kaggle 測試集，本機無法驗證；驗證集低 3.8 個百分點。
 
 ## 資料與 HW03 的關係
 - notebook [7] 說「We've modified the dataset ... DO NOT utilize the dataset of HW3」。實測（md5 全量比對 `HW03/food11`）：
@@ -77,7 +77,7 @@
 
 ## KD loss（`kd.py`）
 - 填法：`alpha * T² * kl_div(log_softmax(s/T), softmax(t/T), 'batchmean') + (1-alpha) * CE(s, y)`。
-- 與 `nn.KLDivLoss(reduction='batchmean')` 照官方文件範例的寫法逐值相同（驗證集前 64 張、最佳學生 vs 老師 logits）：α=0.5 T=1：1.192444；α=0.5 T=4：6.928273；α=0 T=1（純 CE）：1.237240；α=1 T=1（純 KL）：1.147648。
+- 與 `nn.KLDivLoss(reduction='batchmean')` 照官方文件範例的寫法逐值相同（驗證集前 64 張、最佳學生 vs 老師 logits；老師用正確的 BN 統計量，2026-10-09 重跑）：α=0.5 T=1：1.166643；α=0.5 T=4：6.807671；α=0 T=1（純 CE）：1.237240；α=1 T=1（純 KL）：1.096046。（第一版被 summary 汙染的老師：1.192444／6.928273／1.237240／1.147648。）
 - **文件與程式不一致**：notebook [23] 的公式寫 `KL(p || q)`，p = 學生、q = 老師；但 `kl_div(input=學生 log 機率, target=老師機率)` 算的是 KL(老師 ‖ 學生)，Hinton 的原意也是這個方向。
 
 ## 速度

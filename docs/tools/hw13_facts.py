@@ -47,7 +47,9 @@ def evaluate(model, loader):
 
 
 student = get_student_model()
-teacher = get_teacher_model(cfg['dataset_root'])
+# eval() first: summary() runs a forward pass on random input, and in train mode that overwrites
+# every BatchNorm's running mean/var (the first version of this script did so: 0.86093 instead of 0.87143)
+teacher = get_teacher_model(cfg['dataset_root']).eval()
 print('student', counts(student))
 print('teacher', counts(teacher))
 

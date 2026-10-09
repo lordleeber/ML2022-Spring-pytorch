@@ -300,7 +300,7 @@ open(sys.argv[2], 'w').write('\n'.join(out))</code></pre></figure>
 <h2 id="teacher">1.2　老師要建在哪裡：不用它，也得建它</h2>
 <p>原版 notebook 建老師的那一行是：</p>
 <pre class="py"><code>teacher_model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=False, num_classes=11)</code></pre>
-<p><code>torch.hub.load</code> 會在執行時從 GitHub 下載 <code>pytorch/vision</code> 這個 repo 在 v0.10.0 標籤的原始碼，存進 <code>~/.cache/torch/hub/</code>，再從裡面的 <code>hubconf.py</code> 呼叫 <code>resnet18</code>。這在 2022 年的 Colab 上很方便，但有三個問題：每次換環境都要連網下載；執行的是一份和你安裝的 torchvision 不同版本的程式碼；<code>pretrained=False</code> 這個參數在新版 torchvision 已經移除，改成 <code>weights=None</code>。本 repo 改成直接用已安裝的 <code>torchvision.models.resnet18(weights=None, num_classes=11)</code>（<a href="ch00.html#teacher">第 0 章</a>引用過的 <code>model.py</code> 第 68 行）。兩者的架構相同，助教的 checkpoint 載得進去、122 個 key 全部對上，驗證準確率 0.86093（第 3 章）。</p>
+<p><code>torch.hub.load</code> 會在執行時從 GitHub 下載 <code>pytorch/vision</code> 這個 repo 在 v0.10.0 標籤的原始碼，存進 <code>~/.cache/torch/hub/</code>，再從裡面的 <code>hubconf.py</code> 呼叫 <code>resnet18</code>。這在 2022 年的 Colab 上很方便，但有三個問題：每次換環境都要連網下載；執行的是一份和你安裝的 torchvision 不同版本的程式碼；<code>pretrained=False</code> 這個參數在新版 torchvision 已經移除，改成 <code>weights=None</code>。本 repo 改成直接用已安裝的 <code>torchvision.models.resnet18(weights=None, num_classes=11)</code>（<a href="ch00.html#teacher">第 0 章</a>引用過的 <code>model.py</code> 第 68 行）。兩者的架構相同，助教的 checkpoint 載得進去、122 個 key 全部對上，驗證準確率 0.87143（第 3 章）。</p>
 <div class="warn"><h4>沒有驗證的地方</h4>
 <p>torchvision 0.10.0 和本機的 0.26.0 建 ResNet-18 時，初始化權重各用掉多少亂數，本書沒有實測（要先下載舊版才能比）。如果兩者用掉的亂數不同，2022 年在 Colab 上跑出來的學生，和本書的參照版就不會逐位元相同。本書的「參照版」指的一律是「notebook 原樣、但老師用本機 torchvision 建」的版本。</p>
 </div>

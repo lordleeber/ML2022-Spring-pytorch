@@ -45,7 +45,7 @@
 - 範例程式：投影片的 Colab 連結匿名下載成功（使用者同意），`HW13/HW13.ipynb`、`HW13/HW13_pruning_example.ipynb`。torchsummary 1.5.1 裝進共用 .venv（使用者決定）。
 - 現行 skill 與 HW14 時相同（mySkills 27d96f9）：不寫附錄、最後一章是總結章、樣板自己設計寫在 index.html、不冷讀（照前幾本）。
 - notebook 拆成 `config.py`、`dataset.py`、`model.py`、`kd.py`、`train.py`、`test.py`；參照版（`docs/tools/hw13_make_ref.py`）8 分 19 秒，train.py 與它逐位元一致。
-- 事實在 `docs/HW13/FACTS.md`：學生 87,907 參數、老師 11,182,155；老師驗證 0.86093；Simple 驗證 0.50408；指標無偏差；資料與 HW03 相同（只有測試集重新編號）。
+- 事實在 `docs/HW13/FACTS.md`：學生 87,907 參數、老師 11,182,155；老師驗證 0.87143（Phase 0 的 0.86093 是被 torchsummary 改掉 BN 統計量之後的值，ch03 更正）；Simple 驗證 0.50408；指標無偏差；資料與 HW03 相同（只有測試集重新編號）。
 - 下一步：大綱與實驗規格給使用者核可。
 
 ## 使用者決定（2026-10-09 09:55）
