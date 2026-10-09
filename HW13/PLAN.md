@@ -1,6 +1,7 @@
 # HW13 模型壓縮（Network Compression）— 研究筆記與計畫
 
-> 2026-10-08 由前一個 session 整理，尚未開始做。總覽與排序見 [docs/HW_STUDY_OVERVIEW.md](../docs/HW_STUDY_OVERVIEW.md)。**建議排第二。**
+> **2026-10-09 完成**：教材 docs/HW13（index、outline、ch00–ch08）全部推上 master；實驗 A 11 組、B 5 組、B2 2 組、C 4 組加計時，數字都在 docs/HW13/FACTS.md。
+> 2026-10-08 由前一個 session 整理。總覽與排序見 [docs/HW_STUDY_OVERVIEW.md](../docs/HW_STUDY_OVERVIEW.md)。**建議排第二。**
 
 ## 題目（讀自本資料夾的 `Machine Learning HW13.pdf`，23 頁；從課程網站下載：https://speech.ee.ntu.edu.tw/~hylee/ml/ml2022-course-data/Machine%20Learning%20HW13.pdf）
 - 把 HW03 的 Food-11 分類模型縮小：**學生模型參數 ≤ 100,000**（用 `torchsummary` 算，含不可訓練參數；ensemble 要把所有模型加總）。違反就整份 0 分。不准用預訓練模型與外部資料；測試資料只能拿來推論（不能用老師模型對測試集做 pseudo-label）。

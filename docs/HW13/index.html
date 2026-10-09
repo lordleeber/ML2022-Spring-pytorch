@@ -340,14 +340,19 @@ td.num { font-family: var(--font-mono); }
 </figure>
 
 <h2 id="results">先看結果</h2>
-<p>作業的四條基準線是 Kaggle 測試集上的準確率；測試集沒有標籤，本書一律報驗證集（3,430 張，有標籤）的準確率，所以只能說「驗證集上到了多少」，不能說「過了哪條基準線」。到目前為止實測的數字如下，其餘各章的結果在寫到時補上。</p>
+<p>作業的四條基準線是 Kaggle 測試集上的準確率；測試集沒有標籤，本書一律報驗證集（3,430 張，有標籤）的準確率，所以只能說「驗證集上到了多少」，不能說「過了哪條基準線」。全書的主要結果（完整總表在<a href="ch08.html#all">第 8 章</a>）：</p>
 <div class="tablewrap"><table>
-<thead><tr><th>模型</th><th class="num">參數</th><th class="num">驗證準確率</th><th>出處</th></tr></thead>
+<thead><tr><th>模型與訓練方式</th><th class="num">參數</th><th class="num">驗證準確率</th><th>出處</th></tr></thead>
 <tbody>
 <tr><td><span class="role teacher">老師 ResNet-18</span></td><td class="num">11,182,155</td><td class="num">0.87143</td><td>第 3 章</td></tr>
 <tr><td><span class="role ce">範例學生、CE、10 epoch（Simple）</span></td><td class="num">87,907</td><td class="num">0.50408</td><td>第 0 章</td></tr>
+<tr><td><span class="role ce">範例學生、50 epoch：CE／最好的蒸餾（T=2、α=0.5）</span></td><td class="num">87,907</td><td class="num">0.64286／0.64840</td><td>第 4 章</td></tr>
+<tr><td><span class="role ce">範例學生、200 epoch ＋ HW03 增強（KD）</span></td><td class="num">87,907</td><td class="num">0.73440</td><td>第 5 章</td></tr>
+<tr><td><span class="role arch1">dw</span>／<span class="role extra">plain</span>／<span class="role arch2">mbv2</span>，同上（KD）</td><td class="num">≈ 97,000–99,800</td><td class="num">0.78513／0.79125／0.80000</td><td>第 5 章</td></tr>
+<tr><td><span class="role arch2">mbv2</span>，同上（CE，全書最佳）</td><td class="num">96,651</td><td class="num"><strong>0.80437</strong></td><td>第 5 章</td></tr>
 </tbody>
 </table></div>
+<p>最有效的是訓練更久、增強更強、架構把計算放在對的地方；蒸餾在每一組比較裡都落在亂數雜訊（1–2 個百分點）之內。剪枝與量化的結果在第 6、7 章：mask 剪枝不會變快，fp16 與 int8 不減參數卻真的加速。</p>
 <div class="tablewrap"><table>
 <thead><tr><th>基準線（Kaggle 測試集）</th><th class="num">準確率</th><th>投影片的做法</th></tr></thead>
 <tbody>
@@ -387,9 +392,9 @@ td.num { font-family: var(--font-mono); }
 
 <h2 id="version">版本聲明</h2>
 <ul>
-<li>教材對應本 repo 的 commit <code>dca7e03</code>（HW13 拆檔、實驗工具與事實清單）。書中引用的行號以這個版本為準。</li>
+<li>教材對應本 repo 的 commit <code>4a20e4d</code>（HW13 拆檔、實驗工具、事實清單與全書）。書中引用的行號以這個版本為準。</li>
 <li>環境：Python 3.12、PyTorch 2.11.0+cu128、torchvision 0.26.0、torchsummary 1.5.1、NumPy 2.5.3、pandas 3.0.6、Pillow 12.3.0、tqdm 4.70.1；GPU 為 NVIDIA RTX PRO 4000 Blackwell，CPU 24 核心。</li>
-<li>實驗工具：<code>docs/tools/hw13_make_ref.py</code>（把 notebook 原樣串成參照腳本）、<code>docs/tools/hw13_exp.py</code>（不加選項時與 <code>train.py</code> 逐位元一致，另外記錄每個 epoch 的驗證 CE 與時間）、<code>docs/tools/hw13_students.py</code>（第 5 章的學生架構）、<code>docs/tools/hw13_facts.py</code>（參數量、老師準確率、KD loss 核對）。每個數字的出處記在 <code>docs/HW13/FACTS.md</code>。</li>
+<li>實驗工具：<code>docs/tools/hw13_make_ref.py</code>（把 notebook 原樣串成參照腳本）、<code>docs/tools/hw13_exp.py</code>（不加選項時與 <code>train.py</code> 逐位元一致，另外記錄每個 epoch 的驗證 CE 與時間）、<code>docs/tools/hw13_students.py</code>（第 5 章的學生架構）、<code>docs/tools/hw13_facts.py</code>（參數量、老師準確率、KD loss 核對）、<code>hw13_count.py</code>（第 2 章的計數與 MACs）、<code>hw13_teacher.py</code>／<code>hw13_teacher_train.py</code>／<code>hw13_teacher_aug.py</code>（第 3、5 章的老師分析）、<code>hw13_kdcheck.py</code>／<code>hw13_kd_perclass.py</code>／<code>hw13_soft_mass.py</code>（第 4 章）、<code>hw13_arch.py</code>（第 5 章）、<code>hw13_prune.py</code>／<code>hw13_prune_bn.py</code>／<code>hw13_shrink.py</code>（第 6 章）、<code>hw13_quant.py</code>（第 7 章）、<code>hw13_speed.py</code>（計時）、<code>hw13_gradnorm.py</code>（第 1 章）、<code>hw13_run_grid*.sh</code>（實驗排程）、<code>hw13_book/</code>（樣板、圖表與 listing 填入工具）。原始數字在 <code>docs/tools/hw13_runs.jsonl</code> 與各工具的 <code>.json</code>／<code>.txt</code>；每個數字的出處記在 <code>docs/HW13/FACTS.md</code>。</li>
 </ul>
 
 </main>

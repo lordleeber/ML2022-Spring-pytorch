@@ -115,3 +115,16 @@ HW14 由同一個本機 session 寫完（不冷讀；使用者授權「每章寫
 - **多種子是基本盤**：baseline 換種子 ACC 就差 3 個百分點；一個種子的成績表排名要配五個種子的範圍一起看。
 - **圖表產生器與 listing 填入工具**放在 `docs/tools/hw14_book/`（`charts.py` 直接從 jsonl 畫 SVG、附 hover；`fill_listings.py` 依 figcaption 的「檔名:行號」從原始碼重填 code，避免行尾空白造成 verify 失敗）。
 - **正文字數**：skill 要求每章 3,000+ 中文字，寫完用 verify_book.py 的 cjk 計數檢查，不足就補一節實質內容（HW14 ch04–ch07 都補過）。
+
+## HW13 的調整（2026-10-09）
+
+HW13 由同一個本機 session 在一天內寫完（不冷讀；授權同 HW14：每章寫完驗證就推、需要 GPU 實驗就直接做）。另外學到這些：
+- **範例程式找不到時，看投影片的連結**：官方 GitHub 只有資料，範例 notebook 是投影片 p.2 的 Colab 連結，`drive.google.com/uc?export=download&id=<id>` 可以匿名下載（先問使用者）。
+- **任何會跑 forward 的檢查工具，先 `eval()`**：torchsummary 在訓練模式下用 `torch.rand` 跑一次 forward，會改掉 BatchNorm 的 running 統計量。HW13 Phase 0 因此把老師準確率量成 0.86093（正確 0.87143），已推送的三頁要回頭更正。量模型之前，確認它剛載入、或已經 `eval()`。
+- **建模型、torchsummary 都會用掉全域亂數**：拆檔時保留原位置；「改 X 會怎樣」照字面在 scratchpad 複本跑（HW13 拿掉建老師那一行，結果從 0.504 變 0.517）。
+- **對照組要事先想、事後補**：同參數的 `plain` 推翻了「depthwise 比較好」；範例學生在同訓練方式下的 B2 把「架構的貢獻」從 15 點拆成 5–7 點。結果出來後發現分不開的，問使用者加跑。
+- **計時排在所有訓練之後**，前後記 `nvidia-smi --query-compute-apps`；章節順序因此要配合（HW13 把推論時間從 ch02 移到 ch06）。
+- **`os._exit(0)` 前要先 `sys.stdout.flush()`**；persistent DataLoader workers 在 Python 3.12 結束時會卡住，工具用 `os._exit` 收尾。
+- **等待條件別寫錯**：`pgrep -f`／`pkill -f` 會比對到自己那條命令列；舊記錄檔裡的 FAILED 會讓 `grep -q FAILED` 立刻成立。
+- **JetBrains Mono 有連字**：程式裡的 `!=` 會被畫成 ≠，樣板要 `font-variant-ligatures: none`。
+- 樣板與工具在 `docs/tools/hw13_book/`（由 HW14 複製改色、改字型；`charts.py` 的 `task_lines` 預設改成 False）；`fill_listings.py` 也能引用 `.venv` 裡第三方套件的原始碼（說明文字寫完整路徑）。

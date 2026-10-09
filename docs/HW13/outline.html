@@ -259,7 +259,7 @@ td.num { font-family: var(--font-mono); }
 
 <h2 id="principles">寫法</h2>
 <ul>
-<li>每一章對應真實的檔案與函式，程式碼逐字引用、標注 <code>檔名:行號</code>（以 commit <code>dca7e03</code> 為準）。</li>
+<li>每一章對應真實的檔案與函式，程式碼逐字引用、標注 <code>檔名:行號</code>（以 commit <code>4a20e4d</code> 為準）。</li>
 <li>具象先於抽象：先跑一次、看參數表與老師的輸出分布，再讀蒸餾的公式；先量推論時間，再談剪枝會不會變快。</li>
 <li>每一個數字都在本機實測，原始紀錄在 <code>docs/tools/hw13_runs.jsonl</code>；「改 X 會怎樣」的題目一律實際跑過，推論而沒跑的會註明。</li>
 <li>只報驗證集的準確率。Kaggle 的基準線是測試集上的數字，本書不宣稱「過了哪條線」。</li>
@@ -311,7 +311,8 @@ td.num { font-family: var(--font-mono); }
 <tr><td>參照</td><td>notebook 原樣（Simple，10 epoch），用來驗證拆檔與工具</td><td class="num">1</td></tr>
 <tr><td>A</td><td>10 epoch：CE vs KD（α=0.5、T=1）；50 epoch：CE，以及 KD 的 T∈{1,2,4,8} × α∈{0.5,0.9}</td><td class="num">11</td></tr>
 <tr><td>B</td><td>兩種 ≤ 100,000 參數的學生 × CE／最佳 KD，200 epoch、HW03 的資料增強；再加一組參數量相同的一般卷積對照</td><td class="num">5</td></tr>
-<tr><td>C</td><td>老師與學生的剪枝：比例 0–0.9 的驗證準確率、推論時間，結構化剪枝（只推論；微調另計）</td><td class="num">—</td></tr>
+<tr><td>B2</td><td>（使用者核可加跑）範例學生在 B 組的訓練方式下，KD 與 CE 各一組，用來分開架構與訓練方式的貢獻</td><td class="num">2</td></tr>
+<tr><td>C</td><td>老師與學生的剪枝：比例 0–0.95 的驗證準確率、推論時間、結構化剪枝（只推論）；（使用者核可加跑）範例學生實體拿掉 25%／50% 通道後微調 20 epoch，與同寬度從頭訓練 20 epoch 的對照</td><td class="num">4</td></tr>
 <tr><td>D</td><td>量化：fp16、int8 動態與靜態（只推論）</td><td class="num">—</td></tr>
 </tbody>
 </table></div>
