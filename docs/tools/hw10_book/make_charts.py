@@ -115,6 +115,23 @@ def ch05_epochs():
   return charts.legend(series) + '\n' + svg
 
 
+def ch07_quality():
+  # docs/tools/hw10_jpeg.jsonl: victims behind JPEG of decreasing quality, mean of the 8 victims
+  J = {}
+  for l in open(os.path.join(root, 'docs/tools/hw10_jpeg.jsonl')):
+    r = json.loads(l)
+    J[(r['tag'], r['rate'])] = r['victims_mean']
+  rates = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0]
+  qs = ['無', '90', '80', '71', '61', '51', '41', '31', '22', '12']
+  tags = [('clean', '原圖', C['clean'], None), ('fgsm_eps8', 'FGSM', C['fgsm'], None), ('ifgsm_it20', 'I-FGSM', C['ifgsm'], None),
+          ('single_ifgsm_nin', 'I-FGSM（nin）', C['ifgsm'], '6 4')]
+  series = [dict(name=t, label=lab, values=[round(J[(t, r)], 4) for r in rates], color=c, dash=d) for t, lab, c, d in tags]
+  svg = charts.line_chart(series, len(rates), 0.3, 1.0, [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], xlabel='受害者前面的 JPEG 品質（越往右壓縮越重；31 = 作業的壓縮率 70）',
+                          ylabel='8 個受害者平均準確率', fmt='{:.3f}', height=340, xticks=list(enumerate(qs)), xname=lambda i: f'JPEG 品質 {qs[i]}',
+                          aria='受害者先做 JPEG 再分類。原圖：無 JPEG 0.962，品質 90 0.926、80 0.901、71 0.876、51 0.803、31 0.664、12 0.403。I-FGSM（resnet110）：0.485，品質 90 0.792、80 0.841、71 0.806、31 0.651。FGSM：0.626，品質 80 0.731，31 0.641。nin 的 I-FGSM：0.362，品質 80 0.603，31 0.563。品質 80 左右防禦效果最好、原圖代價又小')
+  return charts.legend(series) + '\n' + svg
+
+
 def put(page, name, html):
   path = os.path.join(root, 'docs/HW10', page)
   s = open(path).read()
@@ -128,7 +145,7 @@ def put(page, name, html):
   print('chart', name, '->', page)
 
 
-TABLE = {'ch02_eps': ('ch02.html', ch02_eps), 'ch03_single': ('ch03.html', ch03_single), 'ch04_traj': ('ch04.html', ch04_traj), 'ch05_epochs': ('ch05.html', ch05_epochs)}
+TABLE = {'ch02_eps': ('ch02.html', ch02_eps), 'ch03_single': ('ch03.html', ch03_single), 'ch04_traj': ('ch04.html', ch04_traj), 'ch05_epochs': ('ch05.html', ch05_epochs), 'ch07_quality': ('ch07.html', ch07_quality)}
 for name in sys.argv[2:]:
   page, fn = TABLE[name]
   put(page, name, fn())

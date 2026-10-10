@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 7 章　防禦：JPEG 壓縮 — HW10 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW10 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px——近黑的冷灰底、紙白的字、珊瑚紅只用在標題記號與強調（「攻擊」的顏色）；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：原圖 灰、FGSM 藍、I-FGSM 橘、MI-FGSM 綠、DIM 紫、ensemble 洋紅、JPEG 防禦 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與前幾本相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #ef7a6d;      /* 珊瑚紅：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(239, 122, 109, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #ef7a6d;
+  /* 角色色 */
+  --r-clean: #8b949e; --r-fgsm: #3987e5; --r-ifgsm: #d95926; --r-mi: #199e70;
+  --r-dim: #9085e9; --r-ens: #d55181; --r-jpeg: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "x′ = x + ε · sign(∇ₓ L)　→　代理模型（白箱）　→　助教的模型（黑箱）　·　CIFAR-10 200 張　ε = 8";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fdf1ef; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #1c1616; border-color: rgba(239, 122, 109, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1f0d0b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.clean { --rc: var(--r-clean); } .role.fgsm { --rc: var(--r-fgsm); } .role.ifgsm { --rc: var(--r-ifgsm); }
+.role.mi { --rc: var(--r-mi); } .role.dim { --rc: var(--r-dim); } .role.ens { --rc: var(--r-ens); }
+.role.jpeg { --rc: var(--r-jpeg); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="ch08.html">第 8 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW10 讀碼教材</p>
+  <h1>第 7 章　防禦：JPEG 壓縮</h1>
+  <p class="chap-lead">報告的第二部分換到防守的一方：同一張被 FGSM 騙成貓的狗，先做 JPEG 壓縮再分類，模型又認出是狗了。這一章先把報告題做完，然後追問三件事：notebook 的「壓縮率 70」到底是多重的壓縮；JPEG 擋住攻擊，真的是因為「把雜訊減少」嗎；攻擊者如果知道你會做 JPEG，這個防禦還剩多少。順便會看到，少了一行 <code>model.eval()</code>，報告題的答案就整個不一樣。</p>
+</header>
+<main>
+
+<h2 id="report">7.1　報告題：dog2.png</h2>
+<p>報告的第二部分（投影片 p.20–21）指定了設定：代理 resnet110_cifar10，最原始的 FGSM，攻擊 <code>dog/dog2.png</code>，問三題。<code>report.py</code> 把 notebook 的這幾格接起來（原本是畫圖，本 repo 改成印出圖上的標題）：</p>
+<figure class="listing"><figcaption>report.py:47–75 — 原圖、FGSM 之後、JPEG 之後的預測</figcaption>
+<pre class="py" data-hot="56,70,72"><code># original image
+path = f'dog/dog2.png'
+im = Image.open(f'./data/{path}')
+logit = model(transform(im).unsqueeze(0).to(device))[0]
+predict = logit.argmax(-1).item()
+prob = logit.softmax(-1)[predict].item()
+print(f'benign: dog2.png  {classes[predict]}: {prob:.2%}')
+
+# adversarial image
+im = Image.open(f'./fgsm/{path}')
+logit = model(transform(im).unsqueeze(0).to(device))[0]
+predict = logit.argmax(-1).item()
+prob = logit.softmax(-1)[predict].item()
+print(f'adversarial: dog2.png  {classes[predict]}: {prob:.2%}')
+
+# Passive Defense - JPEG compression by imgaug package, compression rate set to 70
+# pre-process image
+x = transforms.ToTensor()(im)*255
+x = x.permute(1, 2, 0).numpy()
+compressed_x = x.astype(np.uint8)
+
+# TODO: use "imgaug" package to perform JPEG compression (compression rate = 70)
+# compressed_x = ...
+compressed_x = iaa.JpegCompression(compression=70)(image=compressed_x)
+
+logit = model(transform(compressed_x).unsqueeze(0).to(device))[0]
+predict = logit.argmax(-1).item()
+prob = logit.softmax(-1)[predict].item()
+print(f'JPEG adversarial: dog2.png  {classes[predict]}: {prob:.2%}')</code></pre></figure>
+<p>第 56 行讀的是 <code>hw10.py</code> 存下的 <code>fgsm/dog/dog2.png</code>，所以要先跑 <code>hw10.py</code>。第 64–66 行把 PIL 圖片轉回 (高, 寬, 通道) 的 uint8 陣列（imgaug 只吃這種格式），第 70 行是本 repo 補上的 TODO。執行（imgaug 需要 7.2 節的 shim）：</p>
+<pre class="shell cmd">$ PYTHONPATH=&lt;shim 與 imgaug 所在目錄&gt; ../.venv/bin/python report.py</pre>
+<pre class="shell">benign: dog2.png  dog: 99.64%
+adversarial: dog2.png  cat: 72.20%       «1»
+JPEG adversarial: dog2.png  dog: 99.24%  «2»</pre>
+<ol class="notes">
+<li><span class="mk">1</span>第 1 題：被攻擊後預測錯了嗎？錯了，變成 <strong>cat</strong>（72.20%）。第 2 章看到，狗→貓是 FGSM 最常見的錯法。</li>
+<li><span class="mk">2</span>第 2 題：JPEG 壓縮之後呢？預測回到 <strong>dog</strong>，而且信心 99.24%，幾乎和原圖一樣。</li>
+</ol>
+<p>第 3 題是選擇題：JPEG 為什麼能抵擋對抗攻擊？選項是 (a) 讓色彩更鮮豔、(b) 把雜訊減少、(c) 讓圖片品質下降、(d) 讓雜訊變大。投影片要的答案是 <strong>(b)</strong>。7.4 節會量給你看：這個答案只對了一半。</p>
+
+<h2 id="imgaug">7.2　「壓縮率 70」是多重的壓縮</h2>
+<p>imgaug 最後一版是 2020 年的 0.4.0。在本書的環境（NumPy 2.5）下，<code>import imgaug</code> 第一行就失敗：它在載入時讀 <code>np.sctypes</code>，而這個屬性在 NumPy 2.0 被刪掉了。它的依賴 opencv 也有問題：uv 解析出的 opencv-python 5 和它不相容。本書不改 imgaug 的原始碼，而是把它和 opencv 4（headless 版）裝在共用環境之外，再用 Python 的 <code>sitecustomize</code> 機制在一切開始之前補回 <code>np.sctypes</code>：</p>
+<figure class="listing"><figcaption>docs/tools/hw10_npshim_sitecustomize.py:1–8 — 補回 NumPy 2 刪掉的 np.sctypes</figcaption>
+<pre class="py"><code># imgaug 0.4.0 (2020) reads np.sctypes at import time; NumPy 2 removed it. Put it back.
+import numpy as np
+if not hasattr(np, 'sctypes'):
+    np.sctypes = {'int': [np.int8, np.int16, np.int32, np.int64],
+                  'uint': [np.uint8, np.uint16, np.uint32, np.uint64],
+                  'float': [np.float16, np.float32, np.float64, np.longdouble],
+                  'complex': [np.complex64, np.complex128, np.clongdouble],
+                  'others': [bool, object, bytes, str, np.void]}</code></pre></figure>
+<p>使用時把這個檔案改名成 <code>sitecustomize.py</code>，和 imgaug 一起放在 <code>PYTHONPATH</code> 指到的目錄。這是讓舊套件在新環境暫時跑起來的權宜之計；imgaug 已經不再維護，新程式應該改用 albumentations 或 torchvision 的轉換。</p>
+<p>讀 imgaug 的原始碼會發現，<code>JpegCompression(compression=70)</code> 的 70 不是 JPEG 的「品質」。它把壓縮強度 0–100 換算成 PIL 的品質 1–100：品質 = round(1 + 99 × (1 − 壓縮率 / 101))。壓縮率 70 換算出來是<strong>品質 31</strong>。「壓縮率 70%」很容易被讀成「保留 70% 的品質」，其實是相當重的壓縮。本書的實驗工具照同一個公式寫了一個不需要 imgaug 的版本：</p>
+<figure class="listing"><figcaption>docs/tools/hw10_exp.py:128–134 — jpeg()：和 imgaug 相同的換算</figcaption>
+<pre class="py" data-hot="130,132"><code>def jpeg(arr, rate):
+  # same mapping as imgaug 0.4.0 JpegCompression(compression=rate): PIL quality = round(1 + 99 * (1 - rate/101))
+  q = int(np.clip(np.round(1 + 99 * (1.0 - rate / 101)), 1, 100))
+  buf = io.BytesIO()
+  Image.fromarray(arr).save(buf, format='JPEG', quality=q)
+  buf.seek(0)
+  return np.array(Image.open(buf).convert('RGB'))</code></pre></figure>
+<p>在 <code>fgsm/</code> 的 200 張圖上，用壓縮率 10、50、70、90 各比一次，這個函式和 imgaug 的輸出 800 組全部逐位元相同。壓縮率與品質的對照：10 → 90、20 → 80、30 → 71、50 → 51、70 → 31、90 → 12。</p>
+
+<h2 id="eval">7.3　少了一行 <code>model.eval()</code></h2>
+<p>notebook 的報告題那幾格沒有呼叫 <code>model.eval()</code>。它能得到正確答案，是因為前面的 <code>gen_adv_examples</code> 已經把同一個 <code>model</code> 切到 eval 模式（第 1 章）。<code>report.py</code> 是單獨執行的，所以本 repo 在載入模型後補了一行 <code>model.eval()</code>。如果沒有補呢？pytorchcv 的 <code>get_model</code> 回傳的模型是 <strong>train 模式</strong>（<code>model.training</code> 是 <code>True</code>）。每次用一個新載入的模型實測（工具 <code>docs/tools/hw10_ch07_eval.py</code>）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>圖片</th><th>train 模式</th><th>eval 模式</th></tr></thead>
+<tbody>
+<tr><td>原圖 dog2</td><td>dog 40.45%</td><td>dog 99.64%</td></tr>
+<tr><td>FGSM 之後的 dog2</td><td><strong>dog 30.17%</strong></td><td>cat 72.20%</td></tr>
+</tbody>
+</table></div>
+<p>train 模式下，BN 用「這一個 batch」的平均與變異數做正規化，而這裡的 batch 只有一張圖：每個通道的統計量都來自這張圖自己，輸出和訓練時完全不同。結果是原圖的信心掉到 40%，而被攻擊的圖<strong>沒有被騙</strong>——第 1 題的答案會從「cat」變成「沒有錯」。FGSM 的雜訊是對 eval 模式的模型算出來的，換成 train 模式等於換了一個模型。</p>
+<p>更麻煩的是，train 模式的前向傳播會<strong>悄悄改掉</strong> BN 的 running 統計量，即使包在 <code>torch.no_grad()</code> 裡也一樣（<code>no_grad</code> 只關掉梯度，不影響 BN 更新統計量）。實測：用 train 模式跑一次 dog2，第一層 BN 的 running mean 最多改變了 0.085；之後再切回 eval，原圖的 dog 信心從 99.64% 變成 99.06%。這和 HW13 的教材遇到的陷阱是同一件事：量模型之前，先確認它是剛載入的，或已經 <code>eval()</code>。</p>
+
+<h2 id="why">7.4　JPEG 為什麼擋得住：不是「減少」，是「打亂」</h2>
+<p>JPEG 把圖片切成 8×8 的區塊，每個區塊做離散餘弦轉換（DCT），把像素換成「低頻到高頻」的係數，再依品質設定把係數量化（除以一個量化表再取整數）。高頻係數的量化格子很粗，小的高頻變化會被取整成 0。對抗雜訊大多是高頻的：把雜訊做二維傅立葉轉換，32×32 的頻譜裡，最中央 8×8（最低頻）以外的能量，I-FGSM 佔 92%、FGSM 佔 94%。所以直覺是：JPEG 把高頻的雜訊抹掉了，選項 (b)。</p>
+<p>直接量一下。比較「攻擊圖 − 原圖」與「JPEG(攻擊圖) − JPEG(原圖)」：前者是攻擊者精心算出的雜訊，後者是經過 JPEG 之後模型實際看到的差異（工具 <code>docs/tools/hw10_ch07.py</code>；0–255 的尺度）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>resnet110 的 I-FGSM</th><th class="num">差異的大小（RMS）</th><th class="num">高頻能量比例</th><th class="num">和原本雜訊的餘弦相似度</th></tr></thead>
+<tbody>
+<tr><td>原本的雜訊（不壓縮）</td><td class="num">4.35</td><td class="num">0.92</td><td class="num">1</td></tr>
+<tr><td>JPEG 品質 90 之後</td><td class="num">5.33</td><td class="num">0.88</td><td class="num">0.37</td></tr>
+<tr><td>JPEG 品質 80 之後</td><td class="num">5.54</td><td class="num">0.86</td><td class="num">0.22</td></tr>
+<tr><td>JPEG 品質 31 之後</td><td class="num">5.70</td><td class="num">0.76</td><td class="num">0.08</td></tr>
+</tbody>
+</table></div>
+<p>差異<strong>沒有變小，反而變大</strong>：JPEG 之後，攻擊圖與原圖的差距從 4.35 變成 5.5 左右。這是因為兩張圖各自被 JPEG 改了一次（JPEG 對原圖本身的誤差就有 RMS 5.8–12.3），兩邊的量化誤差不同，加進了新的差異。高頻的比例確實下降了一些，但下降得不多。真正劇烈改變的是最後一欄：JPEG 之後的差異和原本雜訊的方向幾乎無關了，品質 80 時餘弦相似度只剩 0.22。</p>
+<p>所以更精確的說法是：JPEG 沒有把雜訊「拿掉」，而是把雜訊的<strong>方向打亂</strong>了。第 2 章看到，對抗雜訊的力量全部來自它對準了梯度的方向；同樣大小、方向隨機的雜訊幾乎沒有作用。JPEG 的量化把精心對準的 ±8 變成一堆和梯度無關的誤差，攻擊就失效了。選項 (b) 說的「雜訊減少」，若理解成「有效的雜訊減少」是對的，若理解成「差異變小」則不符合實測。</p>
+<p>這也解釋了為什麼有些攻擊比較不怕 JPEG。nin 產生的雜訊在品質 80 之後還保留 0.39 的相似度（resnet110 的 I-FGSM 只有 0.22），DIM-MI 是 0.30；7.5 節與第 6 章的表也顯示，它們在 JPEG 之下的準確率比較低（品質 80：nin 0.603、resnet110 的 DIM-MI 0.681，resnet110 的 I-FGSM 0.841）。DIM 的隨機縮放讓雜訊不依賴精確的像素位置，比較接近低頻，JPEG 比較打不亂它。</p>
+
+<h2 id="cost">7.5　防禦的代價：壓縮多重才夠</h2>
+<p>防禦不是免費的：JPEG 對所有圖都做，乾淨的圖也會被壓壞。讓 8 個受害者先做各種品質的 JPEG 再分類（工具 <code>docs/tools/hw10_jpeg_sweep.py</code>）：</p>
+<figure class="fig">
+<!-- CHART:ch07_quality -->
+<div class="legend"><span><i style="background:#8b949e"></i>原圖</span><span><i style="background:#3987e5"></i>FGSM</span><span><i style="background:#d95926"></i>I-FGSM</span><span><i style="background:#d95926"></i>I-FGSM（nin）</span></div>
+<svg viewBox="0 0 900 340" role="img" aria-label="受害者先做 JPEG 再分類。原圖：無 JPEG 0.962，品質 90 0.926、80 0.901、71 0.876、51 0.803、31 0.664、12 0.403。I-FGSM（resnet110）：0.485，品質 90 0.792、80 0.841、71 0.806、31 0.651。FGSM：0.626，品質 80 0.731，31 0.641。nin 的 I-FGSM：0.362，品質 80 0.603，31 0.563。品質 80 左右防禦效果最好、原圖代價又小">
+<line x1="56" y1="294.0" x2="780" y2="294.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="298.0" text-anchor="end">0.3</text>
+<line x1="56" y1="254.9" x2="780" y2="254.9" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="258.9" text-anchor="end">0.4</text>
+<line x1="56" y1="215.7" x2="780" y2="215.7" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="219.7" text-anchor="end">0.5</text>
+<line x1="56" y1="176.6" x2="780" y2="176.6" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="180.6" text-anchor="end">0.6</text>
+<line x1="56" y1="137.4" x2="780" y2="137.4" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="141.4" text-anchor="end">0.7</text>
+<line x1="56" y1="98.3" x2="780" y2="98.3" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="102.3" text-anchor="end">0.8</text>
+<line x1="56" y1="59.1" x2="780" y2="59.1" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="63.1" text-anchor="end">0.9</text>
+<line x1="56" y1="20.0" x2="780" y2="20.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="24.0" text-anchor="end">1.0</text>
+<text class="s-mono" x="56.0" y="312" text-anchor="middle">無</text>
+<text class="s-mono" x="136.4" y="312" text-anchor="middle">90</text>
+<text class="s-mono" x="216.9" y="312" text-anchor="middle">80</text>
+<text class="s-mono" x="297.3" y="312" text-anchor="middle">71</text>
+<text class="s-mono" x="377.8" y="312" text-anchor="middle">61</text>
+<text class="s-mono" x="458.2" y="312" text-anchor="middle">51</text>
+<text class="s-mono" x="538.7" y="312" text-anchor="middle">41</text>
+<text class="s-mono" x="619.1" y="312" text-anchor="middle">31</text>
+<text class="s-mono" x="699.6" y="312" text-anchor="middle">22</text>
+<text class="s-mono" x="780.0" y="312" text-anchor="middle">12</text>
+<line x1="56" y1="294" x2="780" y2="294" stroke="#4a5562" stroke-width="1"/>
+<text class="s-sm" x="418.0" y="334" text-anchor="middle">受害者前面的 JPEG 品質（越往右壓縮越重；31 = 作業的壓縮率 70）</text>
+<text class="s-sm" x="14" y="157.0" text-anchor="middle" transform="rotate(-90 14 157.0)">8 個受害者平均準確率</text>
+<polyline points="56.0,34.7 136.4,49.1 216.9,58.9 297.3,68.5 377.8,91.0 458.2,97.1 538.7,118.8 619.1,151.6 699.6,189.3 780.0,253.6" fill="none" stroke="#8b949e" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,166.3 136.4,144.5 216.9,125.5 297.3,110.5 377.8,110.8 458.2,113.2 538.7,127.4 619.1,160.7 699.6,190.0 780.0,247.8" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,221.6 136.4,101.2 216.9,82.4 297.3,96.1 377.8,110.3 458.2,109.0 538.7,130.3 619.1,156.5 699.6,195.9 780.0,254.6" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,269.5 136.4,213.5 216.9,175.4 297.3,159.7 377.8,150.4 458.2,149.2 538.7,161.7 619.1,191.0 699.6,218.2 780.0,260.3" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round" stroke-dasharray="6 4"/>
+<rect x="786.0" y="243.8" width="8" height="8" rx="2" fill="#3987e5"/>
+<text class="s-lbl" x="798.0" y="251.8">FGSM</text>
+<rect x="786.0" y="257.8" width="8" height="8" rx="2" fill="#8b949e"/>
+<text class="s-lbl" x="798.0" y="265.8">原圖</text>
+<rect x="786.0" y="271.8" width="8" height="8" rx="2" fill="#d95926"/>
+<text class="s-lbl" x="798.0" y="279.8">I-FGSM</text>
+<rect x="786.0" y="285.8" width="8" height="8" rx="2" fill="#d95926"/>
+<text class="s-lbl" x="798.0" y="293.8">I-FGSM（nin）</text>
+<rect x="15.8" y="20" width="80.4" height="274" fill="transparent" data-tip="JPEG 品質 無：原圖 0.963　FGSM 0.626　I-FGSM 0.485　I-FGSM（nin） 0.362"/>
+<rect x="96.2" y="20" width="80.4" height="274" fill="transparent" data-tip="JPEG 品質 90：原圖 0.926　FGSM 0.682　I-FGSM 0.792　I-FGSM（nin） 0.506"/>
+<rect x="176.7" y="20" width="80.4" height="274" fill="transparent" data-tip="JPEG 品質 80：原圖 0.901　FGSM 0.731　I-FGSM 0.841　I-FGSM（nin） 0.603"/>
+<rect x="257.1" y="20" width="80.4" height="274" fill="transparent" data-tip="JPEG 品質 71：原圖 0.876　FGSM 0.769　I-FGSM 0.806　I-FGSM（nin） 0.643"/>
+<rect x="337.6" y="20" width="80.4" height="274" fill="transparent" data-tip="JPEG 品質 61：原圖 0.819　FGSM 0.768　I-FGSM 0.769　I-FGSM（nin） 0.667"/>
+<rect x="418.0" y="20" width="80.4" height="274" fill="transparent" data-tip="JPEG 品質 51：原圖 0.803　FGSM 0.762　I-FGSM 0.772　I-FGSM（nin） 0.670"/>
+<rect x="498.4" y="20" width="80.4" height="274" fill="transparent" data-tip="JPEG 品質 41：原圖 0.748　FGSM 0.726　I-FGSM 0.718　I-FGSM（nin） 0.638"/>
+<rect x="578.9" y="20" width="80.4" height="274" fill="transparent" data-tip="JPEG 品質 31：原圖 0.664　FGSM 0.641　I-FGSM 0.651　I-FGSM（nin） 0.563"/>
+<rect x="659.3" y="20" width="80.4" height="274" fill="transparent" data-tip="JPEG 品質 22：原圖 0.568　FGSM 0.566　I-FGSM 0.551　I-FGSM（nin） 0.494"/>
+<rect x="739.8" y="20" width="80.4" height="274" fill="transparent" data-tip="JPEG 品質 12：原圖 0.403　FGSM 0.418　I-FGSM 0.401　I-FGSM（nin） 0.386"/>
+</svg>
+<!-- /CHART:ch07_quality -->
+<figcaption>圖 7.1　受害者先做 JPEG 再分類，8 個受害者的平均準確率。灰線是原圖：防禦的代價。其他線是三種攻擊：防禦的效果。橫軸往右壓縮越重。</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<thead><tr><th>JPEG 品質（壓縮率）</th><th class="num">原圖</th><th class="num">FGSM</th><th class="num">I-FGSM</th><th class="num">I-FGSM（nin）</th></tr></thead>
+<tbody>
+<tr><td>不壓縮</td><td class="num">0.962</td><td class="num">0.626</td><td class="num">0.485</td><td class="num">0.362</td></tr>
+<tr><td>90（10）</td><td class="num">0.926</td><td class="num">0.682</td><td class="num">0.792</td><td class="num">0.506</td></tr>
+<tr><td>80（20）</td><td class="num">0.901</td><td class="num">0.731</td><td class="num"><strong>0.841</strong></td><td class="num">0.603</td></tr>
+<tr><td>71（30）</td><td class="num">0.876</td><td class="num">0.769</td><td class="num">0.806</td><td class="num">0.643</td></tr>
+<tr><td>51（50）</td><td class="num">0.803</td><td class="num">0.762</td><td class="num">0.772</td><td class="num">0.670</td></tr>
+<tr><td>31（70，作業的設定）</td><td class="num">0.664</td><td class="num">0.641</td><td class="num">0.651</td><td class="num">0.563</td></tr>
+<tr><td>12（90）</td><td class="num">0.403</td><td class="num">0.418</td><td class="num">0.401</td><td class="num">0.386</td></tr>
+</tbody>
+</table></div>
+<p>原圖的準確率隨著壓縮一路往下掉，而攻擊的效果在品質 80 左右就被抵銷得差不多了：resnet110 的 I-FGSM 在品質 80 時是 0.841，比原圖（0.901）只低 6 個百分點。再壓下去，攻擊後的準確率跟著原圖一起往下掉，到了品質 31（作業的設定）以下，四條線幾乎重疊：這時候準確率是被壓縮本身決定的，有沒有攻擊都差不多。對防守方來說，品質 80–90 是代價與效果的甜蜜點；作業的「壓縮率 70」對 32×32 的小圖來說太重了。dog2 這一張在品質 31 之下仍然 99% 認得出是狗，只是剛好，不代表整體。</p>
+<p>反過來也要注意：防禦對不同攻擊的效果差很多。FGSM 一步走滿 ε，雜訊「力氣大、方向粗」，品質 80 只把它從 0.626 拉回 0.731；I-FGSM 的雜訊方向細緻，最容易被打亂（0.485 → 0.841）。第 6 章的表已經看到，ensemble 加 DIM-MI 在品質 80 之下還能壓到 0.274。</p>
+
+<h2 id="bpda">7.6　攻擊者知道你有 JPEG</h2>
+<p>到目前為止，攻擊者都不知道受害者會做 JPEG。如果知道呢？最直接的想法是把 JPEG 放進代理模型裡：代理變成「先 JPEG、再分類」，對這個組合做 I-FGSM。問題是 JPEG 不可微分：量化是取整數，梯度幾乎處處是 0。2018 年 Athalye 等人的 BPDA（Backward Pass Differentiable Approximation）給了一個簡單的解法：前向傳播做真的 JPEG，反向傳播時假裝 JPEG 是恆等函數，梯度直接穿過去。本書不改 <code>hw10_exp.py</code>，而是寫一個小包裝，讓名稱是 <code>jpeg20+resnet110_cifar10</code> 的代理自動套上 JPEG：</p>
+<figure class="listing"><figcaption>docs/tools/hw10_bpda.py:40–45 — JpegFront.forward()：前向做 JPEG，反向當成恆等函數</figcaption>
+<pre class="py" data-hot="45"><code>  def forward(self, x):
+    with torch.no_grad():
+      pix = ((x * std + mean).clamp(0, 1) * 255).round().to(torch.uint8).permute(0, 2, 3, 1).cpu().numpy()
+      xj = torch.stack([torch.from_numpy(jpeg_np(a, self.rate)) for a in pix]).to(x.device)
+      xj = (xj.permute(0, 3, 1, 2).float() / 255 - mean) / std
+    return self.model(x + (xj - x).detach())</code></pre></figure>
+<p>關鍵是第 45 行的 <code>x + (xj - x).detach()</code>：數值上它等於 <code>xj</code>（JPEG 之後的圖），但 <code>(xj - x)</code> 被 <code>detach</code> 了，反向傳播時這一項的梯度是 0，所以對 <code>x</code> 的梯度就是對 <code>xj</code> 的梯度原封不動傳回來。這個寫法也叫 straight-through estimator，量化感知訓練（訓練時模擬低位元量化）也常用同一招。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>攻擊（20 步）</th><th class="num">代理自己（含 JPEG）</th><th class="num">受害者：無防禦</th><th class="num">受害者：JPEG 品質 80</th><th class="num">受害者：JPEG 品質 31</th></tr></thead>
+<tbody>
+<tr><td>resnet110 I-FGSM（不知道 JPEG）</td><td class="num">—</td><td class="num">0.485</td><td class="num">0.841</td><td class="num">0.651</td></tr>
+<tr><td>JPEG 品質 80 ＋ resnet110，BPDA</td><td class="num">0.225</td><td class="num">0.664</td><td class="num"><strong>0.582</strong></td><td class="num">0.607</td></tr>
+<tr><td>JPEG 品質 31 ＋ resnet110，BPDA</td><td class="num">0.255</td><td class="num">0.755</td><td class="num">0.799</td><td class="num"><strong>0.519</strong></td></tr>
+<tr><td>自訓 6 個 MI（不知道 JPEG）</td><td class="num">—</td><td class="num">0.204</td><td class="num">0.430</td><td class="num">0.546</td></tr>
+<tr><td>JPEG 品質 80 ＋ 自訓 6 個，MI，BPDA</td><td class="num">0.017</td><td class="num">0.520</td><td class="num"><strong>0.362</strong></td><td class="num">0.502</td></tr>
+<tr><td>自訓 6 個 DIM-MI（不知道 JPEG，種子 0）</td><td class="num">—</td><td class="num">0.194</td><td class="num">0.342</td><td class="num">0.502</td></tr>
+<tr><td>JPEG 品質 80 ＋ 自訓 6 個，DIM-MI，BPDA（種子 0）</td><td class="num">0.027</td><td class="num">0.497</td><td class="num">0.351</td><td class="num">0.409</td></tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>知道防禦，就能針對防禦。</strong>單一 resnet110：對品質 80 的受害者從 0.841 降到 0.582，對品質 31 的受害者從 0.651 降到 0.519。代理自己（resnet110 加 JPEG）也從幾乎擋得住變成只剩 0.2 多。</li>
+<li><strong>針對一種防禦，就犧牲了其他情況。</strong>同一批圖給沒有防禦的受害者，準確率從 0.485 升到 0.664；針對品質 31 的攻擊，在品質 80 的受害者上只有 0.799，比完全不知道 JPEG 的 0.841 好不了多少。攻擊者必須猜對防禦。</li>
+<li><strong>DIM 已經包含了大部分的效果。</strong>自訓 6 個代理用 MI 時，BPDA 把品質 80 從 0.430 降到 0.362；但加了 DIM 之後，有沒有 BPDA 都是 0.35 左右（0.342 對 0.351，只有一個種子，差距在種子範圍內）。DIM 的隨機變換本身就讓雜訊不怕輕微的影像處理，和 BPDA 達到差不多的效果，卻不必知道防禦是什麼。</li>
+</ul>
+<div class="warn"><h4>被動防禦的教訓</h4>
+<p>JPEG 這類「把輸入先洗一遍」的防禦，對不知情的攻擊者很有效，對知情的攻擊者效果就打了折。2018 年 Athalye 等人檢查了當年 ICLR 接受的 9 個防禦，發現其中 7 個靠「讓梯度失真」（不可微分的前處理、隨機化、梯度消失）來擋；用 BPDA 一類的方法換一個方式估計梯度，完全攻破了其中 6 個、部分攻破 1 個。這也是為什麼評估一個防禦時，一定要假設攻擊者知道防禦的全部細節（白箱的防禦評估），並用第 4 章提到的 AutoAttack 之類的標準工具。投影片說「助教用了一些被動防禦」，對學生來說是黑箱；但如果學生猜到是 JPEG，就能用這一節的方法針對它。</p>
+</div>
+
+<h2 id="today">7.7　防禦在今天</h2>
+<div class="note"><h4>現在的做法：對抗訓練、可證明的穩健性，以及 LLM 的輸入過濾</h4>
+<p>影像分類這一端，經得起知情攻擊者考驗的防禦主要有兩種：<strong>對抗訓練</strong>（訓練時把 PGD 產生的對抗樣本放進去，第 2、4 章提過），以及<strong>可證明的穩健性</strong>（例如 randomized smoothing：對輸入加大量隨機雜訊、多次分類取多數決，可以數學上保證某個半徑內的任何攻擊都改變不了結果）。RobustBench 排行榜上 CIFAR-10、ε = 8/255 的最好模型，在 AutoAttack 之下的準確率約七成，乾淨圖約九成多——代價仍然存在。大型語言模型這一端（ML2026 HW1），被動防禦的形式變成把使用者的提示先改寫（paraphrase）、過濾、或用另一個模型判斷是否惡意，再交給主模型；它們面對的也是同一個問題：攻擊者知道防禦之後，會針對防禦設計攻擊。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>報告題：resnet110 的 FGSM 把 dog2 騙成 cat（72.20%）；JPEG 之後回到 dog（99.24%）；第 3 題投影片要的答案是 (b)。</li>
+<li>imgaug 的「壓縮率 70」= JPEG 品質 31（品質 = round(1 + 99 × (1 − 壓縮率 / 101))）。imgaug 0.4.0 在 NumPy 2 下要補回 <code>np.sctypes</code> 才能 import。</li>
+<li>少了 <code>model.eval()</code>：pytorchcv 的模型預設是 train 模式，報告題的攻擊圖會被認成 dog 30%，答案完全不同；train 模式的前向即使在 <code>no_grad</code> 下也會改掉 BN 的統計量。</li>
+<li>JPEG 沒有把差異變小（RMS 4.35 → 5.5），而是把雜訊的方向打亂（品質 80 時和原雜訊的餘弦相似度 0.22）。</li>
+<li>品質 80 是甜蜜點：原圖 0.962 → 0.901，I-FGSM 0.485 → 0.841；作業的品質 31 讓原圖只剩 0.664。</li>
+<li>BPDA（前向 JPEG、反向恆等）讓知情的攻擊者對 JPEG 受害者從 0.841 降到 0.582，但會犧牲無防禦時的效果；DIM 已經提供了類似的抗 JPEG 能力。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 有人說「壓縮率 70% 表示圖片只保留 30% 的資訊」。用 imgaug 的換算說明這句話錯在哪裡。</summary>
+<p>imgaug 的壓縮率只是一個 0–100 的強度刻度，換算成 PIL 的 JPEG 品質是 31。JPEG 的「品質」也不是保留資訊的百分比，而是量化表的縮放係數；品質 31 實際丟掉多少資訊要看圖片內容。本書量到的是：品質 31 讓 8 個受害者在原圖上的準確率從 0.962 掉到 0.664。</p></details>
+<details class="quiz"><summary>2. 7.4 節說 JPEG 之後的差異比原本的雜訊還大，攻擊卻失效了。這和第 2 章的哪一個實驗結果是同一個道理？</summary>
+<p>第 2 章 2.3 節：同樣大小的改動，沿 FGSM 方向（對準梯度）讓準確率掉 21.5 個百分點，沿隨機方向幾乎沒影響。對抗雜訊的力量來自方向，不是大小。JPEG 把方向打亂（餘弦相似度 0.22），即使差異變大，也像隨機雜訊一樣沒有作用。</p></details>
+<details class="quiz"><summary>3. 為什麼 <code>with torch.no_grad():</code> 不能防止 train 模式的前向改掉 BN 的 running 統計量？</summary>
+<p><code>no_grad</code> 只控制 autograd 要不要記錄計算圖、算梯度。BN 在 train 模式的前向裡，會直接用這個 batch 的平均與變異數更新 <code>running_mean</code>、<code>running_var</code> 這兩個 buffer，這是前向本身的行為，和梯度無關。要避免，只能用 <code>model.eval()</code>。</p></details>
+<details class="quiz"><summary>4. 第 45 行寫成 <code>return self.model(xj)</code>（直接用 JPEG 之後的圖）會怎樣？</summary>
+<p><code>xj</code> 是在 <code>no_grad</code> 底下、經過 numpy 與 PIL 算出來的，和 <code>x</code> 之間沒有計算圖。前向的數值一樣，但反向傳播時 <code>x</code> 拿不到任何梯度（<code>x_adv.grad</code> 會是 <code>None</code>，攻擊程式在 <code>.detach()</code> 那一行報錯）。<code>x + (xj - x).detach()</code> 讓數值等於 <code>xj</code>、梯度卻流向 <code>x</code>，這就是 BPDA 的技巧。這是推論，本書沒有實際跑錯誤的寫法。</p></details>
+<details class="quiz"><summary>5. 如果你是助教，要從本章的結果挑一個被動防禦，你會選哪個品質？還有什麼要考慮的？</summary>
+<p>品質 80–90：乾淨圖只損失 4–6 個百分點，卻能讓不知情的 I-FGSM 從 0.485 回到 0.79–0.84。要考慮的是：學生如果猜到是 JPEG，可以用 BPDA 或 DIM 針對它（品質 80 的受害者可被打到 0.27–0.35，第 6 章與 7.6 節）；而且被動防禦只是讓攻擊變難，不是讓模型真正穩健。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Gintare Karolina Dziugaite、Zoubin Ghahramani、Daniel Roy，<a href="https://arxiv.org/abs/1608.00853">A study of the effect of JPG compression on adversarial images</a>（2016）：最早用 JPEG 對付對抗樣本的研究之一。</li>
+<li>Anish Athalye、Nicholas Carlini、David Wagner，<a href="https://arxiv.org/abs/1802.00420">Obfuscated Gradients Give a False Sense of Security</a>（ICML 2018）：BPDA，以及被動防禦為什麼會被攻破。</li>
+<li>Jeremy Cohen、Elan Rosenfeld、J. Zico Kolter，<a href="https://arxiv.org/abs/1902.02918">Certified Adversarial Robustness via Randomized Smoothing</a>（ICML 2019）：可證明的穩健性。</li>
+<li><a href="https://robustbench.github.io/">RobustBench</a>：各種防禦在 AutoAttack 之下的標準排行榜。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="ch08.html">第 8 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW10 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW10 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

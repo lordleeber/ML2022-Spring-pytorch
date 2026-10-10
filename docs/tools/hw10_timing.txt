@@ -1,0 +1,12 @@
+== Sat Oct 10 18:11:08 CST 2026 gpu apps before: 0
+hw10.py normal mode run 1: 10.185446204 s
+hw10.py deterministic run 1: 13.586270681 s
+hw10.py normal mode run 2: 10.182482409 s
+hw10.py deterministic run 2: 12.142235995 s
+ifgsm_it20 attack_s (normal mode): 7.7
+dim_mi_p0.5_s0 attack_s (normal mode): 7.9
+c2_u6_dimmi_s0 attack_s (normal mode): 17.2
+c2_k8_dimmi_s0 attack_s (normal mode): 253.4
+c2_mix_dimmi_s0 attack_s (normal mode): 273.1
+== Sat Oct 10 18:21:30 CST 2026 gpu apps after: 0
+DONE
