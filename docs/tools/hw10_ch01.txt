@@ -1,0 +1,8 @@
+FGSM pixels: grad exactly 0 0 | clamped to 0 change 4305 | clamped partially (1-7) 9449 | full 8 600646
+benign pixels == 0: 2633 == 255: 5920 in [0,7]: 9859 in [248,255]: 17733 total 614400
+round trip max |float - int| = 1.52587890625e-05 exact after round: True
+epsilon if written 8/255 (normalized units) = pixel [1.616, 1.592, 1.608]
+runs 34 printed != png 15 max |diff| 0.02 png higher 8 png lower 7
+[(-0.02, 'ifgsm_it2'), (-0.01, 'ifgsm_it1'), (0.01, 'ifgsm_it5'), (0.01, 'ifgsm_a0.2'), (0.01, 'single_fgsm_nin'), (0.01, 'single_fgsm_resnet20'), (-0.01, 'single_fgsm_resnet272bn'), (-0.01, 'single_fgsm_resnet1001')]
+runs 97 printed != png 41 max |diff| 0.02 png higher 25 png lower 16
+[(-0.02, 'ifgsm_it2'), (0.015, 'single_fgsm_preresnet1202'), (0.015, 'single_fgsm_densenet100_k12_bc'), (-0.01, 'ifgsm_it1'), (0.01, 'ifgsm_it5'), (0.01, 'ifgsm_a0.2'), (0.01, 'single_fgsm_nin'), (0.01, 'single_fgsm_resnet20')]

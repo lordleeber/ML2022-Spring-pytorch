@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 1 章　資料與 ε 的換算 — HW10 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW10 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px——近黑的冷灰底、紙白的字、珊瑚紅只用在標題記號與強調（「攻擊」的顏色）；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：原圖 灰、FGSM 藍、I-FGSM 橘、MI-FGSM 綠、DIM 紫、ensemble 洋紅、JPEG 防禦 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與前幾本相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #ef7a6d;      /* 珊瑚紅：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(239, 122, 109, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #ef7a6d;
+  /* 角色色 */
+  --r-clean: #8b949e; --r-fgsm: #3987e5; --r-ifgsm: #d95926; --r-mi: #199e70;
+  --r-dim: #9085e9; --r-ens: #d55181; --r-jpeg: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "x′ = x + ε · sign(∇ₓ L)　→　代理模型（白箱）　→　助教的模型（黑箱）　·　CIFAR-10 200 張　ε = 8";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fdf1ef; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #1c1616; border-color: rgba(239, 122, 109, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1f0d0b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.clean { --rc: var(--r-clean); } .role.fgsm { --rc: var(--r-fgsm); } .role.ifgsm { --rc: var(--r-ifgsm); }
+.role.mi { --rc: var(--r-mi); } .role.dim { --rc: var(--r-dim); } .role.ens { --rc: var(--r-ens); }
+.role.jpeg { --rc: var(--r-jpeg); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW10 讀碼教材</p>
+  <h1>第 1 章　資料與 ε 的換算：0–255 的 8，在模型眼裡是多少</h1>
+  <p class="chap-lead">攻擊在模型看到的數字上進行，限制卻寫在 PNG 的像素上。兩者之間隔著 ToTensor 與 Normalize 兩道轉換，攻擊完還要走回去：乘回標準差、加回平均、剪到 0–255、四捨五入成整數。這一章把這條來回的路走一遍，看 ε = 8 為什麼在程式裡寫成 <code>8/255/std</code>，以及「程式印出的準確率」和「交出去的 PNG 的準確率」為什麼可能不同。</p>
+</header>
+<main>
+
+<h2 id="disk">1.1　200 張圖在磁碟上的樣子</h2>
+<p>Kaggle 的壓縮檔解開後是 <code>data/</code>，底下 10 個以類別命名的資料夾，每個 20 張 PNG，檔名是「類別名稱＋編號」，例如 <code>dog/dog2.png</code>。<code>AdvDataset</code> 把它們讀進來：</p>
+<figure class="listing"><figcaption>dataset.py:28–37 — AdvDataset 的建構與取值</figcaption>
+<pre class="py" data-hot="28,29,31,32"><code>        for i, class_dir in enumerate(sorted(glob.glob(f'{data_dir}/*'))):
+            images = sorted(glob.glob(f'{class_dir}/*'))
+            self.images += images
+            self.labels += ([i] * len(images))
+            self.names += [os.path.relpath(imgs, data_dir) for imgs in images]
+        self.transform = transform
+    def __getitem__(self, idx):
+        image = self.transform(Image.open(self.images[idx]))
+        label = self.labels[idx]
+        return image, label</code></pre></figure>
+<p>這幾行藏了三個值得注意的地方。</p>
+<p><strong>類別編號來自資料夾名稱的字母順序。</strong>第 28 行把資料夾排序後，用 <code>enumerate</code> 的順序當類別編號：airplane 是 0、automobile 是 1……truck 是 9。可是代理模型在 CIFAR-10 上訓練時，類別編號是 CIFAR-10 自己定的。兩者要一致，模型的輸出才對得上標籤。它們剛好一致：CIFAR-10 的官方順序就是 airplane、automobile、bird、cat、deer、dog、frog、horse、ship、truck，正好是字母順序。這是巧合，不是程式保證的：如果資料集是 CIFAR-100、或類別用中文命名，同一段程式就會默默給出錯誤的標籤，原圖準確率會掉到接近亂猜，而且程式不會報錯。</p>
+<p><strong>檔名是字串排序，不是數字排序。</strong>第 29 行的 <code>sorted</code> 比的是字串，所以每一類的順序是 airplane1、airplane10、airplane11、……、airplane19、airplane2、airplane20、airplane3……。<code>dog/dog2.png</code> 因此排在第 111 個（從 0 算起），而不是你可能以為的第 101 個。這對結果沒有影響，因為每張圖都帶著自己的名字走（第 32 行的 <code>names</code>），最後依名字存回同一個位置；但如果你想用索引去找「第幾張圖」，就要小心。</p>
+<p><strong><code>names</code> 是相對路徑。</strong><code>os.path.relpath</code> 把 <code>./data/dog/dog2.png</code> 變成 <code>dog/dog2.png</code>，存檔時接在輸出資料夾後面（1.6 節），交出去的資料夾結構就和 <code>data/</code> 一模一樣。JudgeBoi 靠這個結構判斷每張圖的正確類別。</p>
+<p><code>__getname__</code> 這個方法名稱長得像 Python 的特殊方法（前後兩個底線），其實不是：Python 沒有叫 <code>__getname__</code> 的協定，它只是一個普通方法，<code>hw10.py</code> 第 25 行直接呼叫它。PEP 8 建議不要自己發明這種名字，因為將來 Python 可能真的定義同名的特殊方法。</p>
+
+<h2 id="transform">1.2　ToTensor 與 Normalize：模型看到的數字</h2>
+<figure class="listing"><figcaption>dataset.py:11–14 — transform</figcaption>
+<pre class="py"><code>transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize(cifar_10_mean, cifar_10_std)
+])</code></pre></figure>
+<p>PNG 讀進來是 32×32×3 的 0–255 整數。<code>ToTensor</code> 做兩件事：把形狀從 (高, 寬, 通道) 換成 PyTorch 慣用的 (通道, 高, 寬)，再除以 255 變成 0–1 的浮點數。<code>Normalize</code> 再對每個通道減去平均、除以標準差。平均與標準差寫在 <code>config.py</code>：</p>
+<figure class="listing"><figcaption>config.py:8–16 — CIFAR-10 的統計量與 ε</figcaption>
+<pre class="py" data-hot="16"><code># the mean and std are the calculated statistics from cifar_10 dataset
+cifar_10_mean = (0.491, 0.482, 0.447) # mean for the three channels of cifar_10 images
+cifar_10_std = (0.202, 0.199, 0.201) # std for the three channels of cifar_10 images
+
+# convert mean and std to 3-dimensional tensors for future operations
+mean = torch.tensor(cifar_10_mean).to(device).view(3, 1, 1)
+std = torch.tensor(cifar_10_std).to(device).view(3, 1, 1)
+
+epsilon = 8/255/std</code></pre></figure>
+<p>這組數字是 CIFAR-10 訓練集 5 萬張圖每個通道的平均與標準差（取到小數點後三位）。pytorchcv 的模型訓練時用的就是這樣的正規化，所以攻擊與評估也必須用同一組，模型看到的輸入分布才和訓練時一致。<code>.view(3, 1, 1)</code> 把三個數排成 (3, 1, 1) 的形狀，和 (B, 3, 32, 32) 的圖片相乘時會自動廣播（broadcast）到每一個像素。</p>
+<p>正規化之後，數字的範圍不再是 0–1。量了這 200 張圖：三個通道的最小值是 −2.43、−2.42、−2.22，最大值是 2.52、2.60、2.75。為什麼不對稱？因為一個通道的最小值是 (0 − 平均) ÷ 標準差，最大值是 (1 − 平均) ÷ 標準差，平均不在 0.5，兩邊就不一樣長。這件事在 1.5 節會變得重要：合法像素在模型眼中的範圍，每個通道都不同。</p>
+
+<h2 id="epsilon">1.3　ε = 8 為什麼寫成 <code>8/255/std</code></h2>
+<p>限制是寫在 0–255 的像素上：|a − p| ≤ 8，p 是原圖的像素、a 是改過的像素。攻擊卻是在正規化之後的空間裡做的：程式改的是 N(T(p))，T 是 ToTensor（除以 255）、N 是 Normalize（減平均、除標準差）。兩個空間之間的距離是一個固定的比例：</p>
+<div class="eq">| N(T(a)) − N(T(p)) | = | (a/255 − mean)/std − (p/255 − mean)/std | = | a − p | ÷ (255 × std)</div>
+<p>平均在相減時消掉了，只剩下除以 255 和除以標準差。所以「像素上差 8」對應到「正規化空間裡差 8 ÷ (255 × std)」，這就是第 16 行的 <code>8/255/std</code>。因為三個通道的標準差不同，ε 也是三個不同的數：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>通道</th><th class="num">std</th><th class="num">ε（正規化空間）= 8/255/std</th></tr></thead>
+<tbody>
+<tr><td>R</td><td class="num">0.202</td><td class="num">0.155310</td></tr>
+<tr><td>G</td><td class="num">0.199</td><td class="num">0.157651</td></tr>
+<tr><td>B</td><td class="num">0.201</td><td class="num">0.156082</td></tr>
+</tbody>
+</table></div>
+<p><code>epsilon</code> 是一個形狀 (3, 1, 1) 的張量，攻擊函式裡的 <code>epsilon * grad.sign()</code> 與 <code>x + epsilon</code> 都靠廣播把每個通道的 ε 套到對應的像素上。</p>
+<div class="warn"><h4>常見錯誤：忘了除以 std</h4>
+<p>如果寫成 <code>epsilon = 8/255</code>（0.0314），在正規化空間裡走 0.0314，換回像素是 0.0314 × 255 × std ≈ 1.6。三個通道分別是 1.616、1.592、1.608：比允許的 8 小了約 5 倍。圖片完全合法，JudgeBoi 不會報錯，只是攻擊弱很多。第 2 章的 ε 掃描裡，resnet110 在 ε = 1 與 ε = 2 時白箱準確率是 0.735 與 0.665，遠不如 ε = 8 的 0.590。反過來，如果攻擊在 0–1 的空間裡做、卻除了 std，就會超過 8 被退件。所以 notebook 在這一格寫著「Don't change the settings here」。</p>
+</div>
+<p>另一個做法是把正規化從資料轉換搬進模型裡：資料只做 ToTensor（0–1），模型的第一層是「減平均、除標準差」。這樣攻擊就在 0–1 的空間裡做，ε 就是單純的 8/255，剪回合法範圍也只是 <code>clamp(0, 1)</code>。現在的對抗攻擊函式庫（例如 torchattacks、RobustBench 的模型）大多採用這個慣例，第 4 章會再提到它的好處。</p>
+
+<h2 id="save">1.4　攻擊之後：走回 PNG</h2>
+<p>攻擊函式回傳的 <code>x_adv</code> 還在正規化空間裡，而且是浮點數。<code>gen_adv_examples</code> 一邊量代理模型的準確率，一邊把每個 batch 換回可以存成 PNG 的整數：</p>
+<figure class="listing"><figcaption>attack.py:74–91 — gen_adv_examples()</figcaption>
+<pre class="py" data-hot="81,86-88"><code>def gen_adv_examples(model, loader, attack, loss_fn):
+    model.eval()
+    adv_names = []
+    train_acc, train_loss = 0.0, 0.0
+    for i, (x, y) in enumerate(loader):
+        x, y = x.to(device), y.to(device)
+        x_adv = attack(model, x, y, loss_fn) # obtain adversarial examples
+        yp = model(x_adv)
+        loss = loss_fn(yp, y)
+        train_acc += (yp.argmax(dim=1) == y).sum().item()
+        train_loss += loss.item() * x.shape[0]
+        # store adversarial examples
+        adv_ex = ((x_adv) * std + mean).clamp(0, 1) # to 0-1 scale
+        adv_ex = (adv_ex * 255).clamp(0, 255) # 0-255 scale
+        adv_ex = adv_ex.detach().cpu().data.numpy().round() # round to remove decimal part
+        adv_ex = adv_ex.transpose((0, 2, 3, 1)) # transpose (bs, C, H, W) back to (bs, H, W, C)
+        adv_examples = adv_ex if i == 0 else np.r_[adv_examples, adv_ex]
+    return adv_examples, train_acc / len(loader.dataset), train_loss / len(loader.dataset)</code></pre></figure>
+<p>第 86–89 行把 ToTensor 與 Normalize 倒著做一遍：乘回 std、加回 mean，回到 0–1；剪到 [0, 1]；乘 255；四捨五入成整數；把形狀從 (B, C, H, W) 換回 (B, H, W, C)。第 90 行用 <code>np.r_</code> 把每個 batch 接起來，最後得到 (200, 32, 32, 3) 的陣列。</p>
+<p>來回一趟會不會有誤差？把 200 張原圖經過 transform 再倒回來，和原本的整數最多差 1.5 × 10⁻⁵，四捨五入之後完全相同。所以沒有被攻擊改到的像素，存回去一定是原值。被改到的像素，原值是整數、改動在 ±8 以內，四捨五入之後也不會超過 8：L∞ 的限制在存檔後仍然成立（1.6 節實際檢查）。</p>
+<p>讀這段程式時會注意到幾個命名上的殘留：量的是攻擊後的準確率，變數卻叫 <code>train_acc</code>、<code>train_loss</code>（從訓練迴圈複製過來的）；第 76 行的 <code>adv_names = []</code> 從頭到尾沒有用到。<code>.data</code> 在 <code>.detach()</code> 之後也是多餘的。這些不影響結果。</p>
+
+<h2 id="printed">1.5　程式印出的準確率，量的不是交出去的圖</h2>
+<p>關鍵在第 81 行：<code>yp = model(x_adv)</code> 量的是攻擊函式剛回傳的 <code>x_adv</code>——<strong>還沒有剪到合法範圍、也還沒有四捨五入</strong>的浮點數圖片。可是交出去的是第 86–88 行處理過的整數。兩者在兩個地方不同：</p>
+<ul>
+<li><strong>超出 0–255 的像素被剪掉。</strong>攻擊函式只保證「離原圖不超過 ε」，從來沒有保證「是合法的像素」。原圖裡已經是 255 的像素再加 8，在浮點數圖片裡是 263，存檔時被剪回 255。這 200 張圖的 614,400 個像素值裡，有 5,920 個本來就是 255、2,633 個本來就是 0；FGSM 之後有 13,754 個超出範圍（其中 4,305 個被剪回原值，等於完全沒改；9,449 個只改了 1–7），I-FGSM 之後有 7,628 個。</li>
+<li><strong>四捨五入。</strong>I-FGSM 每步走 0.8，累積起來常常是 1.6、2.4 這種非整數（1.6 節）。存檔時變成 2，比浮點數圖片多改或少改了一點。</li>
+</ul>
+<p>結果：resnet110 的 FGSM，程式印出 0.595，把 <code>fgsm/</code> 的 PNG 讀回來重新量是 0.590。差了一張圖。差距很小，但方向不一定：實驗 A 的 97 組單一代理攻擊裡（第 2–4 章），有 41 組的「印出」與「PNG」不同，最多差 0.02（4 張圖）；PNG 比較高的 25 組、比較低的 16 組。換句話說，剪掉與四捨五入有時幫了攻擊、有時害了攻擊，沒有固定方向。 所以本書所有的實驗都量<strong>存成 PNG 之後</strong>的準確率（<code>docs/tools/hw10_exp.py</code> 存檔後重新讀檔評估），程式印出的只當參考。</p>
+<div class="note"><h4>現在的做法：在攻擊迴圈裡就剪到合法範圍</h4>
+<p>比較嚴謹的實作會在每一步之後，除了剪回 ε 球，也剪回合法的像素範圍：在 0–1 空間裡是 <code>x_adv.clamp(0, 1)</code>；在正規化空間裡要對每個通道用不同的上下界（1.2 節量到的 −2.43 到 2.52 這類數字）。這樣攻擊產生的就是真的能存成圖片的東西，量到的準確率也就是交出去的準確率；還剩四捨五入一項，可以在最後一步之後再量一次。這也是把正規化搬進模型裡（1.3 節）的另一個好處：合法範圍永遠是 [0, 1]。</p>
+</div>
+
+<h2 id="hist">1.6　存檔後檢查：每個像素到底改了多少</h2>
+<p>交件前最該做的檢查是 L∞：讀回每一張 PNG，和原圖逐像素相減，看最大的絕對值是不是 ≤ 8。本書的工具 <code>docs/tools/hw10_eval_dir.py</code> 做了這件事（並用指定的模型量準確率）：</p>
+<pre class="shell cmd">$ ../.venv/bin/python ../docs/tools/hw10_eval_dir.py data,fgsm,ifgsm resnet110_cifar10</pre>
+<pre class="shell">data: 200 images, max |adv - benign| = 0
+fgsm: 200 images, max |adv - benign| = 8                «1»
+ifgsm: 200 images, max |adv - benign| = 8
+resnet110_cifar10 on data: acc = 0.95000, loss = 0.22679
+resnet110_cifar10 on fgsm: acc = 0.59000, loss = 2.49183   «2»
+resnet110_cifar10 on ifgsm: acc = 0.00500, loss = 17.28956</pre>
+<ol class="notes">
+<li><span class="mk">1</span>兩種攻擊的 L∞ 都剛好是 8，沒有超過。</li>
+<li><span class="mk">2</span>PNG 的準確率 0.590，比程式印出的 0.595 低一張圖（1.5 節）。loss 也不同：2.49183 對 2.48333。</li>
+</ol>
+<p>更有意思的是「改了多少」的分布。把 614,400 個像素值的 |改過的值 − 原值| 數一數：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>|差|</th><th class="num">0</th><th class="num">1</th><th class="num">2</th><th class="num">3</th><th class="num">4</th><th class="num">5</th><th class="num">6</th><th class="num">7</th><th class="num">8</th></tr></thead>
+<tbody>
+<tr><td>FGSM</td><td class="num">4,305</td><td class="num">1,845</td><td class="num">1,678</td><td class="num">1,255</td><td class="num">1,176</td><td class="num">1,034</td><td class="num">1,045</td><td class="num">1,416</td><td class="num">600,646</td></tr>
+<tr><td>I-FGSM</td><td class="num">89,045</td><td class="num">1,575</td><td class="num">154,965</td><td class="num">124,722</td><td class="num">982</td><td class="num">91,500</td><td class="num">65,068</td><td class="num">18,636</td><td class="num">67,907</td></tr>
+</tbody>
+</table></div>
+<p>FGSM 的分布很好懂：每個像素都往梯度的正負號方向走滿 8（梯度剛好等於 0 的像素一個都沒有），所以 97.8% 是 8；不是 8 的那些，全部是原值太靠近 0 或 255、被剪掉一部分（1–7）或全部（0）的像素。</p>
+<p>I-FGSM 的分布則有一個奇怪的形狀：2、3、5、6 很多，1、4、7 很少。原因是步長。每一步走 ±0.8，20 步之後淨移動是 0.8 ×（往上的步數 − 往下的步數）。往上加往下等於 20，兩者的差一定是偶數，所以淨移動只可能是 0、±1.6、±3.2、±4.8、±6.4、±8.0——四捨五入後正好是 0、2、3、5、6、8。會出現 1、4、7，是因為碰到 ε 球的邊界被剪掉之後，奇偶就被打亂了（例如走到 8.8 被剪回 8，再往回走一步是 7.2，四捨五入成 7），或是被 0–255 剪掉。另一個值得注意的數字是 0 的那 89,045 個：上上下下走了 20 步，最後回到原點。I-FGSM 只把 11% 的像素值推到 ε 的邊界，FGSM 則把 98% 推到邊界。改得「比較少」，在白箱上卻強得多——第 2、4 章會解釋為什麼。</p>
+
+<h2 id="createdir">1.7　存檔：<code>create_dir</code></h2>
+<figure class="listing"><figcaption>attack.py:94–99 — create_dir()</figcaption>
+<pre class="py" data-hot="95-96,98"><code>def create_dir(data_dir, adv_dir, adv_examples, adv_names):
+    if os.path.exists(adv_dir) is not True:
+        _ = shutil.copytree(data_dir, adv_dir)
+    for example, name in zip(adv_examples, adv_names):
+        im = Image.fromarray(example.astype(np.uint8)) # image pixel value should be unsigned int
+        im.save(os.path.join(adv_dir, name))</code></pre></figure>
+<p>先把整個 <code>data/</code> 複製成 <code>fgsm/</code>（只是為了得到同樣的資料夾結構），再用攻擊後的圖逐張覆蓋。<code>astype(np.uint8)</code> 把浮點數轉成 0–255 的無號整數；前面已經剪過、四捨五入過，所以轉換不會截斷或繞回（如果沒剪，263 轉成 uint8 是溢位，常見的結果是繞回 7）。存成 PNG 是無損壓縮，讀回來的像素值和存進去的完全相同；如果存成 JPEG，壓縮本身就會改變像素，把精心算出來的雜訊抹掉一大半——第 7 章會看到，這正是 JPEG 能當防禦的原因。</p>
+<p>第 95 行有一個陷阱：資料夾已經存在時，什麼都不清。如果上一次的輸出還在，而且這次的 <code>adv_names</code> 和上次不同（例如你改了資料、或只攻擊了一部分圖片），舊的檔案就會留在資料夾裡，打包時一起交出去。<code>zip</code> 也不會檢查兩個串列一樣長：<code>adv_examples</code> 比較短時，多出來的名字就保留原圖。範例程式每次都處理全部 200 張，所以不會出事；改寫的時候要記得先刪掉舊資料夾。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>類別編號來自資料夾名稱的字母排序，剛好和 CIFAR-10 的官方順序相同；檔名是字串排序（dog2 是第 111 張）。</li>
+<li>ToTensor 除以 255、Normalize 減平均除標準差；正規化後每個通道的合法範圍不同，大約是 −2.4 到 2.5–2.75。</li>
+<li>像素上的 ε = 8，在正規化空間裡是 8/255/std，三個通道約 0.155–0.158。只寫 8/255 會讓攻擊弱 5 倍。</li>
+<li><code>gen_adv_examples</code> 印出的準確率量的是沒剪、沒四捨五入的浮點數圖片；交出去的 PNG 要剪到 0–255、四捨五入。resnet110 的 FGSM：印出 0.595、PNG 0.590。本書一律量 PNG。</li>
+<li>FGSM 把 98% 的像素值推到 ±8；I-FGSM 的步長 0.8 讓改動集中在 0、2、3、5、6、8，只有 11% 在邊界上。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 一個像素的原值是 252，FGSM 要它 +8。在正規化空間裡算出來的值換回像素是多少？存成 PNG 之後呢？它在 1.6 節的表裡被算在 |差| 等於多少的那一欄？</summary>
+<p>正規化空間裡是 260（換回像素的浮點數），超出 255；存檔時第 86 行剪到 1.0（即 255），所以 PNG 裡是 255，|差| = 3，算在「3」那一欄。代理模型在第 81 行看到的卻是 260，這就是印出的準確率與 PNG 不同的來源之一。</p></details>
+<details class="quiz"><summary>2. 如果 CIFAR-10 的類別名稱改成中文資料夾（飛機、汽車、鳥……），<code>AdvDataset</code> 會出什麼問題？怎麼修？</summary>
+<p>中文字串的排序（依 Unicode 碼位）和 CIFAR-10 的類別順序不同，類別編號會對錯，模型的「正確答案」全部錯位，原圖準確率會掉到接近亂猜，程式卻不會報錯。修法是明確寫出類別清單（例如 <code>report.py</code> 的 <code>classes</code>），用 <code>classes.index(資料夾名稱)</code> 當編號，不要依賴排序。</p></details>
+<details class="quiz"><summary>3. 某人把 <code>epsilon = 8/255/std</code> 改成 <code>epsilon = 8/std</code>。交到 JudgeBoi 會發生什麼事？</summary>
+<p>正規化空間裡的 8/std 換回像素是 8 × 255 = 2,040，遠超過 8。FGSM 會把幾乎每個像素推到 0 或 255（存檔時被剪掉），圖片變成一片雜訊，L∞ 遠大於 8，JudgeBoi 會退件。這是推算，本書沒有實際交件。</p></details>
+<details class="quiz"><summary>4. I-FGSM 的步長改成 1.0（每步走 1 個像素值）、步數 20，你預期 1.6 節的 |差| 分布會變成什麼樣子？</summary>
+<p>淨移動是 1 ×（往上 − 往下），差一定是偶數，所以沒有被剪到的像素只會落在 0、2、4、6、8；奇數（1、3、5、7）只會出現在碰過 ε 邊界或 0–255 邊界的像素上。這是推論，本書沒有實際跑步長 1.0 的組（第 4 章跑了 0.2、0.4、0.8、1.6、3.2、8）。</p></details>
+<details class="quiz"><summary>5. 為什麼「把 Normalize 搬進模型裡」能讓攻擊程式變簡單？</summary>
+<p>資料只做 ToTensor，攻擊在 0–1 的空間裡進行：ε 就是 8/255（三個通道相同）、合法範圍就是 [0, 1]，每一步 <code>clamp(0, 1)</code> 就能保證圖片合法，不必記得乘回 std、加回 mean，也不會出現 1.5 節那種「量的不是交出去的東西」。代價是模型多一個小小的前處理層。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Alex Krizhevsky，<a href="https://www.cs.toronto.edu/~kriz/learning-features-2009-TR.pdf">Learning Multiple Layers of Features from Tiny Images</a>（2009）：CIFAR-10 的技術報告，第 3 章描述資料怎麼收集與標註。</li>
+<li>torchvision 文件 <a href="https://pytorch.org/vision/stable/generated/torchvision.transforms.Normalize.html">Normalize</a> 與 <a href="https://pytorch.org/vision/stable/generated/torchvision.transforms.ToTensor.html">ToTensor</a>：兩者的精確定義。</li>
+<li>Harry Kim，<a href="https://github.com/Harry24k/adversarial-attacks-pytorch">torchattacks</a>：常用的 PyTorch 對抗攻擊函式庫；它要求輸入在 [0, 1]，正規化放在模型裡（1.3、1.5 節的慣例）。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW10 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW10 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>
