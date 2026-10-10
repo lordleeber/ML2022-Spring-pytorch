@@ -45,6 +45,49 @@ def ch02_eps():
   return charts.legend(series) + '\n' + svg
 
 
+def scatter(points, x0, x1, y0, y1, xticks, yticks, *, xlabel, ylabel, aria, height=420, diag=False):
+  """points: list of {x, y, label, color, show (bool: print the label next to the dot)}"""
+  W, ML, MR, MT, MB = 900, 64, 40, 20, 46
+  pw, ph = W - ML - MR, height - MT - MB
+  X = lambda v: ML + pw * (v - x0) / (x1 - x0)
+  Y = lambda v: MT + ph * (1 - (v - y0) / (y1 - y0))
+  out = [f'<svg viewBox="0 0 {W} {height}" role="img" aria-label="{charts._esc(aria)}">']
+  for t in yticks:
+    out.append(f'<line x1="{ML}" y1="{Y(t):.1f}" x2="{ML + pw}" y2="{Y(t):.1f}" stroke="#2a343f" stroke-width="1"/>')
+    out.append(f'<text class="s-mono" x="{ML - 8}" y="{Y(t) + 4:.1f}" text-anchor="end">{t}</text>')
+  for t in xticks:
+    out.append(f'<line x1="{X(t):.1f}" y1="{MT}" x2="{X(t):.1f}" y2="{MT + ph}" stroke="#2a343f" stroke-width="1"/>')
+    out.append(f'<text class="s-mono" x="{X(t):.1f}" y="{MT + ph + 18}" text-anchor="middle">{t}</text>')
+  if diag:
+    a, b = max(x0, y0), min(x1, y1)
+    out.append(f'<line x1="{X(a):.1f}" y1="{Y(a):.1f}" x2="{X(b):.1f}" y2="{Y(b):.1f}" stroke="#4a5562" stroke-width="1" stroke-dasharray="4 4"/>')
+  out.append(f'<text class="s-sm" x="{ML + pw / 2:.1f}" y="{height - 6}" text-anchor="middle">{charts._esc(xlabel)}</text>')
+  out.append(f'<text class="s-sm" x="16" y="{MT + ph / 2:.1f}" text-anchor="middle" transform="rotate(-90 16 {MT + ph / 2:.1f})">{charts._esc(ylabel)}</text>')
+  for p in points:
+    out.append(f'<circle cx="{X(p["x"]):.1f}" cy="{Y(p["y"]):.1f}" r="5" fill="{p["color"]}" stroke="#181e25" stroke-width="1.5" data-tip="{charts._esc(p["label"])}：{p["x"]:.3f}／{p["y"]:.3f}"/>')
+    if p.get('show'):
+      if p.get('left'):
+        out.append(f'<text class="s-lbl" x="{X(p["x"]) - 9:.1f}" y="{Y(p["y"]) + 4:.1f}" text-anchor="end">{charts._esc(p["label"])}</text>')
+      else:
+        out.append(f'<text class="s-lbl" x="{X(p["x"]) + 9:.1f}" y="{Y(p["y"]) + 4:.1f}">{charts._esc(p["label"])}</text>')
+  out.append('</svg>')
+  return '\n'.join(out)
+
+
+def ch03_single():
+  # every surrogate in the pool: FGSM vs I-FGSM, mean accuracy of the 8 victims
+  pts = []
+  for t in R:
+    if t.startswith('single_fgsm_'):
+      s = t[len('single_fgsm_'):]
+      show = s in ('nin', 'resnet110', 'densenet40_k12_bc', 'resnet20', 'sepreresnet110', 'resnet1001')
+      pts.append(dict(x=vavg(t), y=vavg('single_ifgsm_' + s), label=s, show=show, left=s in ('sepreresnet110', 'resnet1001'),
+                      color=C['ifgsm'] if show else C['clean']))
+  return scatter(pts, 0.55, 0.75, 0.30, 0.75, [0.55, 0.60, 0.65, 0.70, 0.75], [0.3, 0.4, 0.5, 0.6, 0.7],
+                 xlabel='FGSM：8 個受害者的平均準確率', ylabel='I-FGSM：8 個受害者的平均準確率',
+                 aria='40 個代理模型各自的轉移結果。橫軸是 FGSM、縱軸是 I-FGSM 時 8 個受害者的平均準確率，越低越好。點散得很開，兩者的相關只有 0.30。nin 在 I-FGSM 最低 0.362；densenet40_k12_bc 最高 0.681；resnet110 是 0.626 與 0.485')
+
+
 def put(page, name, html):
   path = os.path.join(root, 'docs/HW10', page)
   s = open(path).read()
@@ -58,7 +101,7 @@ def put(page, name, html):
   print('chart', name, '->', page)
 
 
-TABLE = {'ch02_eps': ('ch02.html', ch02_eps)}
+TABLE = {'ch02_eps': ('ch02.html', ch02_eps), 'ch03_single': ('ch03.html', ch03_single)}
 for name in sys.argv[2:]:
   page, fn = TABLE[name]
   put(page, name, fn())

@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 3 章　本機黑箱 — HW10 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW10 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px——近黑的冷灰底、紙白的字、珊瑚紅只用在標題記號與強調（「攻擊」的顏色）；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：原圖 灰、FGSM 藍、I-FGSM 橘、MI-FGSM 綠、DIM 紫、ensemble 洋紅、JPEG 防禦 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與前幾本相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #ef7a6d;      /* 珊瑚紅：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(239, 122, 109, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #ef7a6d;
+  /* 角色色 */
+  --r-clean: #8b949e; --r-fgsm: #3987e5; --r-ifgsm: #d95926; --r-mi: #199e70;
+  --r-dim: #9085e9; --r-ens: #d55181; --r-jpeg: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "x′ = x + ε · sign(∇ₓ L)　→　代理模型（白箱）　→　助教的模型（黑箱）　·　CIFAR-10 200 張　ε = 8";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fdf1ef; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #1c1616; border-color: rgba(239, 122, 109, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1f0d0b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.clean { --rc: var(--r-clean); } .role.fgsm { --rc: var(--r-fgsm); } .role.ifgsm { --rc: var(--r-ifgsm); }
+.role.mi { --rc: var(--r-mi); } .role.dim { --rc: var(--r-dim); } .role.ens { --rc: var(--r-ens); }
+.role.jpeg { --rc: var(--r-jpeg); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch02.html">← 第 2 章</a><a href="ch04.html">第 4 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW10 讀碼教材</p>
+  <h1>第 3 章　本機黑箱：怎麼量轉移性</h1>
+  <p class="chap-lead">作業的分數由助教的黑箱決定，而 JudgeBoi 已經關了。要比較不同的攻擊方法，得先在本機搭一個「看不見內部」的對手。這一章看 pytorchcv 有哪些 CIFAR-10 模型、為什麼受害者要和代理不同家族、實驗工具怎麼量，然後把代理池裡的 40 個模型一個一個拿來當代理，看誰產生的雜訊最能騙過別人。答案不是最大的、也不是最準的。</p>
+</header>
+<main>
+
+<h2 id="why">3.1　為什麼需要本機黑箱</h2>
+<p>第 0、2 章已經看到，程式印出的準確率是代理模型自己的成績（白箱），和交出去之後的成績（黑箱）可以差很遠：resnet110 的 I-FGSM 白箱 0.005，同一批圖在別的模型上卻有 0.485。作業時，學生每天只能交 5 次 JudgeBoi，用這 5 次來比較「哪個代理比較好、步數多少比較好」很奢侈；現在 JudgeBoi 已經關閉，連這 5 次都沒有了。</p>
+<p>所以本書在本機準備一組<strong>受害模型</strong>（victim models），攻擊時完全不碰它們，只在最後拿它們來分類存好的 PNG。它們扮演助教模型的角色：只要攻擊的程式碼沒有看過它們，它們對攻擊者來說就是黑箱。這是研究轉移性的論文的標準做法：在一組模型上產生、在另一組模型上評估。</p>
+<p>這個做法有一個前提：本機的受害者要和助教的模型「夠像」，在本機比較好的方法，到助教那邊才會也比較好。助教的模型我們不知道，投影片 p.15 只說是「一般模型的 ensemble，可能加上被動防禦」，而且「猜中助教用了哪些模型不會讓攻擊變好」。本書的做法是盡量讓受害者和代理<strong>不一樣</strong>，寧可低估攻擊的效果，也不要高估。</p>
+
+<h2 id="zoo">3.2　pytorchcv 的模型庫</h2>
+<p>notebook 只說「模型清單在這裡，挑結尾是 <code>_cifar10</code> 的；有些載不到，跳過就好」。本書寫了一個小工具把它們全部載入一次，記下參數量與 200 張原圖上的準確率：</p>
+<figure class="listing"><figcaption>docs/tools/hw10_zoo.py:25–39 — 逐一載入 pytorchcv 的 CIFAR-10 模型</figcaption>
+<pre class="py" data-hot="32,35,39"><code>names = [k for k in _models if k.endswith('_cifar10')]
+for name in names:
+    if name in done:
+        continue
+    rec = {'name': name}
+    t0 = time.time()
+    try:
+        model = ptcv_get_model(name, pretrained=True).to(device)
+        rec['params'] = sum(p.numel() for p in model.parameters())
+        with torch.no_grad():
+            rec['benign_acc'], rec['benign_loss'] = epoch_benign(model, adv_loader, loss_fn)
+        del model
+        torch.cuda.empty_cache()
+    except Exception as e:
+        rec['error'] = f'{type(e).__name__}: {e}'[:300]</code></pre></figure>
+<p>pytorchcv 0.0.74 列了 85 個 CIFAR-10 模型，屬於 19 個家族。<strong>70 個能載入</strong>，15 個不行：13 個是權重的下載網址已經失效（resnext20 的三個變體、seresnet／sepreresnet 的 1001 與 1202 層、diaresnet／diapreresnet 的 1001 與 1202 層、msdnet22、fractalnet），2 個本來就沒有預訓練權重（resdropresnet20、shakedropresnet20，它們在 pytorchcv 裡只有架構）。notebook 說的「有些模型載不到」就是這些；投影片也說助教不會用這些模型。全部權重下載下來約 2.5 GB。</p>
+<p>能載入的 70 個，參數從 176,122（densenet40_k12_bc）到 68,155,210（resnext29_16x64d），差了將近 400 倍；在 200 張原圖上的準確率卻都在 0.915（nin）到 0.98 之間，平均 0.957。這 200 張圖對它們來說都不難，所以「原圖準確率」幾乎不能拿來區分它們。</p>
+<p>每個家族代表一種架構上的想法，這裡只列出名字，不展開：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>家族</th><th>想法</th><th class="num">pytorchcv 數量（能載入）</th><th>本書用途</th></tr></thead>
+<tbody>
+<tr><td>nin</td><td>Network in Network（2013），沒有殘差，用 1×1 卷積代替全連接層</td><td class="num">1（1）</td><td>代理</td></tr>
+<tr><td>resnet、preresnet</td><td>殘差連接；preresnet 把 BN、ReLU 移到卷積前面</td><td class="num">8（8）、8（8）</td><td>代理</td></tr>
+<tr><td>seresnet、sepreresnet</td><td>加上 Squeeze-and-Excitation（通道注意力）</td><td class="num">8（6）、8（6）</td><td>代理</td></tr>
+<tr><td>densenet、xdensenet</td><td>每一層接收前面所有層的輸出</td><td class="num">9（9）、2（2）</td><td>代理</td></tr>
+<tr><td>wrn</td><td>Wide ResNet：層數少、通道很寬</td><td class="num">5（5）</td><td>受害者 2 個</td></tr>
+<tr><td>pyramidnet</td><td>通道數逐層慢慢增加，而不是每個 stage 加倍</td><td class="num">7（7）</td><td>受害者 1 個</td></tr>
+<tr><td>resnext</td><td>分組卷積（多條平行的窄路徑）</td><td class="num">7（4）</td><td>受害者 1 個</td></tr>
+<tr><td>ror、rir</td><td>殘差的殘差；ResNet in ResNet</td><td class="num">3（3）、1（1）</td><td>受害者各 1 個</td></tr>
+<tr><td>shakeshakeresnet</td><td>兩條分支用隨機權重相加的正則化</td><td class="num">2（2）</td><td>受害者 1 個</td></tr>
+<tr><td>diaresnet、diapreresnet</td><td>加上跨層的注意力模組（DIA）</td><td class="num">6（4）、6（4）</td><td>受害者 1 個</td></tr>
+<tr><td>msdnet、fractalnet、resdropresnet、shakedropresnet</td><td>（載不到）</td><td class="num">4（0）</td><td>—</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="victims">3.3　怎麼挑受害者</h2>
+<p>關鍵的選擇是：<strong>代理與受害者分屬不同的家族</strong>。同一家族的模型，例如 resnet56 與 resnet110，架構一樣、只差深度，訓練方式也一樣，它們的 loss 曲面很像，在一個上面找到的雜訊很容易騙過另一個。如果受害者裡有 resnet110，而代理用 resnet56，量到的轉移性就會偏高；而助教的模型不太可能剛好是你挑的代理的兄弟。所以本書把 70 個模型分成兩堆：</p>
+<ul>
+<li><strong>代理池（40 個）</strong>：nin、resnet、preresnet、seresnet、sepreresnet、densenet、xdensenet 這七個家族的全部可用模型。攻擊只能用這裡的模型。</li>
+<li><strong>受害者（8 個）</strong>：從其餘的家族各挑一兩個。受害者家族裡沒有被挑中的 22 個模型，全書都不用——它們既不當代理（會和受害者同家族），也不當受害者（受害者 8 個已經夠了，評估要快）。</li>
+</ul>
+<div class="tablewrap"><table>
+<thead><tr><th>受害者</th><th class="num">參數</th><th class="num">原圖準確率</th><th class="num">先做 JPEG70 再分類</th></tr></thead>
+<tbody>
+<tr><td><code>wrn28_10_cifar10</code></td><td class="num">36,479,194</td><td class="num">0.960</td><td class="num">0.640</td></tr>
+<tr><td><code>wrn40_8_cifar10</code></td><td class="num">35,748,314</td><td class="num">0.980</td><td class="num">0.710</td></tr>
+<tr><td><code>pyramidnet110_a48_cifar10</code></td><td class="num">1,772,706</td><td class="num">0.960</td><td class="num">0.630</td></tr>
+<tr><td><code>resnext29_32x4d_cifar10</code></td><td class="num">4,775,754</td><td class="num">0.955</td><td class="num">0.635</td></tr>
+<tr><td><code>ror3_110_cifar10</code></td><td class="num">1,637,690</td><td class="num">0.955</td><td class="num">0.680</td></tr>
+<tr><td><code>rir_cifar10</code></td><td class="num">9,492,980</td><td class="num">0.970</td><td class="num">0.635</td></tr>
+<tr><td><code>shakeshakeresnet26_2x32d_cifar10</code></td><td class="num">2,923,162</td><td class="num">0.965</td><td class="num">0.700</td></tr>
+<tr><td><code>diaresnet56_cifar10</code></td><td class="num">870,162</td><td class="num">0.955</td><td class="num">0.680</td></tr>
+<tr><td><strong>8 個的平均</strong></td><td class="num"></td><td class="num"><strong>0.963</strong></td><td class="num"><strong>0.664</strong></td></tr>
+<tr><td><strong>受害者 ensemble</strong>（8 個的 logits 相加）</td><td class="num"></td><td class="num"><strong>0.985</strong></td><td class="num"><strong>0.735</strong></td></tr>
+</tbody>
+</table></div>
+<p>每次實驗量三種數字：8 個受害者各自的準確率（報平均）；把 8 個的 logits 相加當成一個模型的準確率（「受害者 ensemble」，模擬投影片說的 ensemble）；以及先對圖片做 JPEG 壓縮（imgaug 的壓縮率 70）再分類的準確率，模擬「被動防禦」。</p>
+<div class="warn"><h4>JPEG70 本身就很傷</h4>
+<p>表的最後一欄是一張圖都還沒攻擊、只做 JPEG 壓縮的準確率：8 個受害者從平均 0.963 掉到 0.664。imgaug 的「壓縮率 70」其實是 JPEG 品質 31（第 7 章），對 32×32 的小圖來說太粗糙，連乾淨的圖都毀了三成。所以「加 JPEG70 的受害者」這一欄要當成參考：它的準確率幾乎和攻擊無關，大部分被壓縮本身決定了。真的助教不太可能用這麼傷的防禦。第 7 章會掃過各種壓縮強度，找出代價比較合理的設定，再回頭看各種攻擊在防禦下的表現。前面幾章主要看「無防禦」的 8 個平均與受害者 ensemble。</p>
+</div>
+
+<h2 id="tool">3.4　實驗工具：先存 PNG，再讀回來量</h2>
+<p>全書的實驗都用 <code>docs/tools/hw10_exp.py</code>。它的攻擊部分直接呼叫 <code>attack.py</code> 的 <code>fgsm</code>、<code>ifgsm</code> 與 <code>gen_adv_examples</code>、<code>create_dir</code>，所以在預設設定下產生的 PNG 和 <code>hw10.py</code> 逐位元相同（決定性模式下比對過）。不同的是攻擊之後的評估：</p>
+<figure class="listing"><figcaption>docs/tools/hw10_exp.py:171–197 — 讀回 PNG，檢查 L∞，用代理與受害者分類</figcaption>
+<pre class="py" data-hot="172,175,179,186,193"><code># evaluate the saved PNGs (what JudgeBoi receives)
+ds = AdvDataset(opt.out_dir, transform=None)
+benign = AdvDataset(root, transform=None)
+imgs = [np.array(Image.open(f).convert('RGB')) for f in ds.images]
+rec['linf'] = int(max(np.abs(a.astype(np.int16) - np.asarray(Image.open(b).convert('RGB'), dtype=np.int16)).max()
+                      for a, b in zip(imgs, benign.images)))
+labels = torch.tensor(ds.labels, device=device)
+X = torch.stack([transform(a) for a in imgs]).to(device)
+jx = {r: torch.stack([transform(jpeg(a, float(r))) for a in imgs]).to(device) for r in opt.jpeg.split(',') if r}
+rec['acc'] = {}
+victims = [n for n in opt.victims.split(',') if n]
+ens_logits = {}  # the victims as one ensemble (sum of logits): a stand-in for the TA's "ensemble of vanilla models"
+for v in [n for n in (names + victims) if n]:
+  if v in rec['acc']:
+    continue
+  m = get_m(v).to(device).eval()
+  with torch.no_grad():
+    out = {'': m(X)}
+    out.update({f'+jpeg{r}': m(xj) for r, xj in jx.items()})
+    for k, o in out.items():
+      rec['acc'][v + k] = (o.argmax(1) == labels).float().mean().item()
+      if v in victims:
+        ens_logits[k] = ens_logits.get(k, 0) + o
+  del m
+  torch.cuda.empty_cache()
+for k, o in ens_logits.items():
+  rec['acc']['victim_ens' + k] = (o.argmax(1) == labels).float().mean().item()</code></pre></figure>
+<ul>
+<li><strong>第 172–176 行</strong>：從輸出資料夾讀回 PNG（不是用記憶體裡的浮點數圖片，第 1 章），並和原圖逐像素相減，記下 L∞。全書每一組實驗的 L∞ 都記在 <code>hw10_runs.jsonl</code>：除了刻意超過限制的 ε = 16，全部 ≤ 8；大部分剛好是 8，只有步數太少或步長太小、走不到邊界的幾組 I-FGSM 比較小（第 4 章）。</li>
+<li><strong>第 179 行</strong>：同一批 PNG 再做一次 JPEG 壓縮。<code>jpeg()</code> 是本書照 imgaug 的換算公式寫的，和 imgaug 的輸出逐位元相同（第 7 章），這樣跑實驗時不必載入 imgaug。</li>
+<li><strong>第 183–193 行</strong>：先用代理自己（白箱），再用每個受害者分類，一律 <code>eval()</code> 加 <code>no_grad()</code>；受害者的 logits 順便累加起來，給第 196–197 行算 ensemble 的準確率。</li>
+</ul>
+<p>每組實驗寫一行 JSON 到 <code>docs/tools/hw10_runs.jsonl</code>，內容包括攻擊的參數、印出的準確率、攻擊花的秒數、L∞、以及代理與每個受害者（含 JPEG 與 ensemble）的準確率。<code>docs/tools/hw10_run_grid.sh</code> 照規格檔（例如 <code>hw10_grid_A.txt</code>，一行一組）在決定性模式下依序執行。</p>
+
+<h2 id="single">3.5　40 個代理，誰的雜訊最能轉移</h2>
+<p>實驗 A 的後半：代理池的 40 個模型，每一個單獨當代理，各跑一次範例設定的 FGSM 與 I-FGSM（ε = 8；I-FGSM 步長 0.8、20 步），量 8 個受害者的平均準確率。</p>
+<figure class="fig">
+<!-- CHART:ch03_single -->
+<svg viewBox="0 0 900 420" role="img" aria-label="40 個代理模型各自的轉移結果。橫軸是 FGSM、縱軸是 I-FGSM 時 8 個受害者的平均準確率，越低越好。點散得很開，兩者的相關只有 0.30。nin 在 I-FGSM 最低 0.362；densenet40_k12_bc 最高 0.681；resnet110 是 0.626 與 0.485">
+<line x1="64" y1="374.0" x2="860" y2="374.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="56" y="378.0" text-anchor="end">0.3</text>
+<line x1="64" y1="295.3" x2="860" y2="295.3" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="56" y="299.3" text-anchor="end">0.4</text>
+<line x1="64" y1="216.7" x2="860" y2="216.7" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="56" y="220.7" text-anchor="end">0.5</text>
+<line x1="64" y1="138.0" x2="860" y2="138.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="56" y="142.0" text-anchor="end">0.6</text>
+<line x1="64" y1="59.3" x2="860" y2="59.3" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="56" y="63.3" text-anchor="end">0.7</text>
+<line x1="64.0" y1="20" x2="64.0" y2="374" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="64.0" y="392" text-anchor="middle">0.55</text>
+<line x1="263.0" y1="20" x2="263.0" y2="374" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="263.0" y="392" text-anchor="middle">0.6</text>
+<line x1="462.0" y1="20" x2="462.0" y2="374" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="462.0" y="392" text-anchor="middle">0.65</text>
+<line x1="661.0" y1="20" x2="661.0" y2="374" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="661.0" y="392" text-anchor="middle">0.7</text>
+<line x1="860.0" y1="20" x2="860.0" y2="374" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="860.0" y="392" text-anchor="middle">0.75</text>
+<text class="s-sm" x="462.0" y="414" text-anchor="middle">FGSM：8 個受害者的平均準確率</text>
+<text class="s-sm" x="16" y="197.0" text-anchor="middle" transform="rotate(-90 16 197.0)">I-FGSM：8 個受害者的平均準確率</text>
+<circle cx="193.3" cy="324.8" r="5" fill="#d95926" stroke="#181e25" stroke-width="1.5" data-tip="nin：0.583／0.362"/>
+<text class="s-lbl" x="202.3" y="328.8">nin</text>
+<circle cx="168.3" cy="189.1" r="5" fill="#d95926" stroke="#181e25" stroke-width="1.5" data-tip="resnet20：0.576／0.535"/>
+<text class="s-lbl" x="177.3" y="193.1">resnet20</text>
+<circle cx="429.8" cy="215.2" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="resnet56：0.642／0.502"/>
+<circle cx="367.3" cy="228.5" r="5" fill="#d95926" stroke="#181e25" stroke-width="1.5" data-tip="resnet110：0.626／0.485"/>
+<text class="s-lbl" x="376.3" y="232.5">resnet110</text>
+<circle cx="454.4" cy="200.9" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="resnet164bn：0.648／0.520"/>
+<circle cx="549.2" cy="194.6" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="resnet272bn：0.672／0.528"/>
+<circle cx="718.3" cy="137.1" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="resnet542bn：0.714／0.601"/>
+<circle cx="733.0" cy="164.6" r="5" fill="#d95926" stroke="#181e25" stroke-width="1.5" data-tip="resnet1001：0.718／0.566"/>
+<text class="s-lbl" x="724.0" y="168.6" text-anchor="end">resnet1001</text>
+<circle cx="730.7" cy="169.9" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="resnet1202：0.718／0.559"/>
+<circle cx="233.1" cy="203.4" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="preresnet20：0.593／0.517"/>
+<circle cx="419.8" cy="268.8" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="preresnet56：0.639／0.434"/>
+<circle cx="449.7" cy="287.9" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="preresnet110：0.647／0.409"/>
+<circle cx="553.9" cy="140.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="preresnet164bn：0.673／0.598"/>
+<circle cx="618.8" cy="205.3" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="preresnet272bn：0.689／0.514"/>
+<circle cx="713.1" cy="153.7" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="preresnet542bn：0.713／0.580"/>
+<circle cx="399.9" cy="200.9" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="preresnet1001：0.634／0.520"/>
+<circle cx="387.2" cy="213.2" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="preresnet1202：0.631／0.504"/>
+<circle cx="158.3" cy="161.6" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="seresnet20：0.574／0.570"/>
+<circle cx="474.3" cy="165.1" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="seresnet56：0.653／0.566"/>
+<circle cx="360.1" cy="173.4" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="seresnet110：0.624／0.555"/>
+<circle cx="384.8" cy="203.9" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="seresnet164bn：0.631／0.516"/>
+<circle cx="556.3" cy="194.6" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="seresnet272bn：0.674／0.528"/>
+<circle cx="613.6" cy="228.5" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="seresnet542bn：0.688／0.485"/>
+<circle cx="362.5" cy="113.5" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="sepreresnet20：0.625／0.631"/>
+<circle cx="442.1" cy="159.6" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="sepreresnet56：0.645／0.573"/>
+<circle cx="342.6" cy="289.4" r="5" fill="#d95926" stroke="#181e25" stroke-width="1.5" data-tip="sepreresnet110：0.620／0.407"/>
+<text class="s-lbl" x="333.6" y="293.4" text-anchor="end">sepreresnet110</text>
+<circle cx="663.4" cy="181.7" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="sepreresnet164bn：0.701／0.544"/>
+<circle cx="593.7" cy="167.5" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="sepreresnet272bn：0.683／0.562"/>
+<circle cx="673.3" cy="155.2" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="sepreresnet542bn：0.703／0.578"/>
+<circle cx="384.8" cy="111.5" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="densenet40_k12：0.631／0.634"/>
+<circle cx="390.0" cy="74.1" r="5" fill="#d95926" stroke="#181e25" stroke-width="1.5" data-tip="densenet40_k12_bc：0.632／0.681"/>
+<text class="s-lbl" x="399.0" y="78.1">densenet40_k12_bc</text>
+<circle cx="531.6" cy="108.5" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="densenet40_k24_bc：0.667／0.637"/>
+<circle cx="491.8" cy="177.3" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="densenet40_k36_bc：0.657／0.550"/>
+<circle cx="280.5" cy="207.3" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="densenet100_k12：0.604／0.512"/>
+<circle cx="534.0" cy="215.7" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="densenet100_k24：0.668／0.501"/>
+<circle cx="464.4" cy="202.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="densenet100_k12_bc：0.651／0.519"/>
+<circle cx="407.1" cy="205.3" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="densenet190_k40_bc：0.636／0.514"/>
+<circle cx="529.3" cy="139.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="densenet250_k24_bc：0.667／0.599"/>
+<circle cx="544.0" cy="87.3" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="xdensenet40_2_k24_bc：0.671／0.664"/>
+<circle cx="471.9" cy="179.8" r="5" fill="#8b949e" stroke="#181e25" stroke-width="1.5" data-tip="xdensenet40_2_k36_bc：0.652／0.547"/>
+</svg>
+<!-- /CHART:ch03_single -->
+<figcaption>圖 3.1　40 個代理模型各自的轉移結果。每一點是一個代理；橫軸是 FGSM、縱軸是 I-FGSM 之後 8 個受害者的平均準確率，兩軸都是越低越好（左下角最好）。有標名字的是本節提到的模型。滑鼠移到點上可看名稱與數值。</figcaption>
+</figure>
+<p>先看前五名與後五名（依 I-FGSM 的黑箱準確率排序；完整的 40 個在本節最後）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th class="num">名次</th><th>代理</th><th class="num">參數</th><th class="num">FGSM 黑箱</th><th class="num">I-FGSM 白箱</th><th class="num">I-FGSM 黑箱</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td><code>nin</code></td><td class="num">966,986</td><td class="num">0.582</td><td class="num">0.000</td><td class="num"><strong>0.362</strong></td></tr>
+<tr><td class="num">2</td><td><code>sepreresnet110</code></td><td class="num">1,744,664</td><td class="num">0.620</td><td class="num">0.005</td><td class="num">0.408</td></tr>
+<tr><td class="num">3</td><td><code>preresnet110</code></td><td class="num">1,730,522</td><td class="num">0.647</td><td class="num">0.000</td><td class="num">0.409</td></tr>
+<tr><td class="num">4</td><td><code>preresnet56</code></td><td class="num">855,578</td><td class="num">0.639</td><td class="num">0.005</td><td class="num">0.434</td></tr>
+<tr><td class="num">5</td><td><code>seresnet542bn</code></td><td class="num">6,272,746</td><td class="num">0.688</td><td class="num">0.025</td><td class="num">0.485</td></tr>
+<tr><td class="num">6</td><td><code>resnet110</code>（範例）</td><td class="num">1,730,714</td><td class="num">0.626</td><td class="num">0.005</td><td class="num">0.485</td></tr>
+<tr><td class="num">36</td><td><code>sepreresnet20</code></td><td class="num">274,559</td><td class="num">0.625</td><td class="num">0.000</td><td class="num">0.631</td></tr>
+<tr><td class="num">37</td><td><code>densenet40_k12</code></td><td class="num">599,050</td><td class="num">0.631</td><td class="num">0.000</td><td class="num">0.634</td></tr>
+<tr><td class="num">38</td><td><code>densenet40_k24_bc</code></td><td class="num">690,346</td><td class="num">0.667</td><td class="num">0.005</td><td class="num">0.637</td></tr>
+<tr><td class="num">39</td><td><code>xdensenet40_2_k24_bc</code></td><td class="num">1,319,338</td><td class="num">0.671</td><td class="num">0.000</td><td class="num">0.664</td></tr>
+<tr><td class="num">40</td><td><code>densenet40_k12_bc</code></td><td class="num">176,122</td><td class="num">0.632</td><td class="num">0.000</td><td class="num">0.681</td></tr>
+</tbody>
+</table></div>
+<p>五個觀察：</p>
+<ol>
+<li><strong>代理的選擇差很多。</strong>同樣是 I-FGSM、同樣的 ε，最好的代理讓受害者剩 0.362，最差的剩 0.681，差了 32 個百分點。範例的 resnet110 排第 6（FGSM 排第 9），算是運氣不錯的選擇。投影片說「挑對代理模型很重要」，這張表是最直接的證據。</li>
+<li><strong>大小與準確率都預測不了轉移性。</strong>I-FGSM 黑箱準確率和代理參數量（取對數）的相關係數只有 −0.16，和代理的原圖準確率的相關只有 −0.10。第一名 nin 是代理池裡原圖準確率最低的（0.915），參數不到一百萬；1,900 萬參數的 resnet1202、preresnet1202 分別排第 25、9。</li>
+<li><strong>白箱成績對黑箱沒有參考價值。</strong>40 個代理的 I-FGSM 白箱準確率幾乎都是 0–0.05：每一個都被自己的攻擊完全打倒，但黑箱成績從 0.36 到 0.68 都有。只看程式印出的數字，你分不出哪個代理好。</li>
+<li><strong>FGSM 好的代理，I-FGSM 不一定好。</strong>兩者的黑箱準確率相關只有 0.30（圖 3.1 的點散得很開）。例如 resnet20 的 FGSM 是全池第 2 好（0.576），I-FGSM 卻只排第 20（0.535）。有趣的是 FGSM 的白箱與黑箱相關高達 0.82：FGSM 只走一步，在代理上越有效、在別人身上通常也越有效；I-FGSM 的白箱全都是 0，這個關係就斷了。</li>
+<li><strong>小型 DenseNet 最差。</strong>40 層的 DenseNet 四兄弟與 xdensenet40 佔了倒數 5 名裡的 4 個。它們用的連接方式（每層看到前面所有層）和受害者的家族差最遠，可能是原因之一，但本書沒有進一步驗證。</li>
+</ol>
+<p>為什麼 nin 特別好？一個常見的解釋是：轉移性好的代理，loss 曲面比較「平滑」，它的梯度反映的是資料本身的特徵（很多模型都會用到），而不是它自己架構的細節。nin 沒有殘差連接、原圖準確率也最低，可能剛好學得比較「粗」。第 5 章的 paper B 把這個想法推到極端：<strong>故意用訓練不足的模型當代理</strong>。</p>
+<details><summary>展開：40 個代理的完整結果（依 I-FGSM 黑箱準確率排序）</summary>
+<div class="tablewrap"><table>
+<thead><tr><th class="num">#</th><th>代理模型</th><th class="num">參數</th><th class="num">原圖</th><th class="num">FGSM 白箱</th><th class="num">FGSM 黑箱</th><th class="num">I-FGSM 白箱</th><th class="num">I-FGSM 黑箱</th><th class="num">I-FGSM 攻擊秒數</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td><code>nin</code></td><td class="num">966,986</td><td class="num">0.915</td><td class="num">0.225</td><td class="num">0.582</td><td class="num">0.000</td><td class="num">0.362</td><td class="num">1.1</td></tr>
+<tr><td class="num">2</td><td><code>sepreresnet110</code></td><td class="num">1,744,664</td><td class="num">0.965</td><td class="num">0.615</td><td class="num">0.620</td><td class="num">0.005</td><td class="num">0.408</td><td class="num">17.5</td></tr>
+<tr><td class="num">3</td><td><code>preresnet110</code></td><td class="num">1,730,522</td><td class="num">0.950</td><td class="num">0.640</td><td class="num">0.647</td><td class="num">0.000</td><td class="num">0.409</td><td class="num">9.6</td></tr>
+<tr><td class="num">4</td><td><code>preresnet56</code></td><td class="num">855,578</td><td class="num">0.960</td><td class="num">0.605</td><td class="num">0.639</td><td class="num">0.005</td><td class="num">0.434</td><td class="num">6.8</td></tr>
+<tr><td class="num">5</td><td><code>seresnet542bn</code></td><td class="num">6,272,746</td><td class="num">0.965</td><td class="num">0.750</td><td class="num">0.688</td><td class="num">0.025</td><td class="num">0.485</td><td class="num">66.8</td></tr>
+<tr><td class="num">6</td><td><code>resnet110</code></td><td class="num">1,730,714</td><td class="num">0.950</td><td class="num">0.590</td><td class="num">0.626</td><td class="num">0.005</td><td class="num">0.485</td><td class="num">9.8</td></tr>
+<tr><td class="num">7</td><td><code>densenet100_k24</code></td><td class="num">16,114,138</td><td class="num">0.965</td><td class="num">0.695</td><td class="num">0.668</td><td class="num">0.010</td><td class="num">0.501</td><td class="num">41.7</td></tr>
+<tr><td class="num">8</td><td><code>resnet56</code></td><td class="num">855,770</td><td class="num">0.950</td><td class="num">0.560</td><td class="num">0.642</td><td class="num">0.000</td><td class="num">0.502</td><td class="num">5.4</td></tr>
+<tr><td class="num">9</td><td><code>preresnet1202</code></td><td class="num">19,423,834</td><td class="num">0.970</td><td class="num">0.590</td><td class="num">0.631</td><td class="num">0.030</td><td class="num">0.504</td><td class="num">114.2</td></tr>
+<tr><td class="num">10</td><td><code>densenet100_k12</code></td><td class="num">4,068,490</td><td class="num">0.960</td><td class="num">0.445</td><td class="num">0.604</td><td class="num">0.005</td><td class="num">0.512</td><td class="num">25.0</td></tr>
+<tr><td class="num">11</td><td><code>densenet190_k40_bc</code></td><td class="num">25,624,430</td><td class="num">0.955</td><td class="num">0.455</td><td class="num">0.636</td><td class="num">0.025</td><td class="num">0.514</td><td class="num">36.2</td></tr>
+<tr><td class="num">12</td><td><code>preresnet272bn</code></td><td class="num">2,816,090</td><td class="num">0.965</td><td class="num">0.755</td><td class="num">0.689</td><td class="num">0.010</td><td class="num">0.514</td><td class="num">21.4</td></tr>
+<tr><td class="num">13</td><td><code>seresnet164bn</code></td><td class="num">1,906,258</td><td class="num">0.970</td><td class="num">0.670</td><td class="num">0.631</td><td class="num">0.005</td><td class="num">0.516</td><td class="num">20.8</td></tr>
+<tr><td class="num">14</td><td><code>preresnet20</code></td><td class="num">272,282</td><td class="num">0.945</td><td class="num">0.310</td><td class="num">0.592</td><td class="num">0.000</td><td class="num">0.517</td><td class="num">2.4</td></tr>
+<tr><td class="num">15</td><td><code>densenet100_k12_bc</code></td><td class="num">769,162</td><td class="num">0.955</td><td class="num">0.545</td><td class="num">0.651</td><td class="num">0.005</td><td class="num">0.519</td><td class="num">8.9</td></tr>
+<tr><td class="num">16</td><td><code>preresnet1001</code></td><td class="num">10,327,706</td><td class="num">0.975</td><td class="num">0.675</td><td class="num">0.634</td><td class="num">0.000</td><td class="num">0.520</td><td class="num">81.7</td></tr>
+<tr><td class="num">17</td><td><code>resnet164bn</code></td><td class="num">1,704,154</td><td class="num">0.960</td><td class="num">0.660</td><td class="num">0.648</td><td class="num">0.010</td><td class="num">0.520</td><td class="num">12.6</td></tr>
+<tr><td class="num">18</td><td><code>resnet272bn</code></td><td class="num">2,816,986</td><td class="num">0.970</td><td class="num">0.640</td><td class="num">0.672</td><td class="num">0.000</td><td class="num">0.528</td><td class="num">21.8</td></tr>
+<tr><td class="num">19</td><td><code>seresnet272bn</code></td><td class="num">3,153,826</td><td class="num">0.975</td><td class="num">0.775</td><td class="num">0.674</td><td class="num">0.045</td><td class="num">0.528</td><td class="num">34.0</td></tr>
+<tr><td class="num">20</td><td><code>resnet20</code></td><td class="num">272,474</td><td class="num">0.945</td><td class="num">0.330</td><td class="num">0.576</td><td class="num">0.000</td><td class="num">0.535</td><td class="num">2.8</td></tr>
+<tr><td class="num">21</td><td><code>sepreresnet164bn</code></td><td class="num">1,904,882</td><td class="num">0.955</td><td class="num">0.705</td><td class="num">0.701</td><td class="num">0.055</td><td class="num">0.544</td><td class="num">18.9</td></tr>
+<tr><td class="num">22</td><td><code>xdensenet40_2_k36_bc</code></td><td class="num">2,957,914</td><td class="num">0.945</td><td class="num">0.510</td><td class="num">0.652</td><td class="num">0.000</td><td class="num">0.547</td><td class="num">4.6</td></tr>
+<tr><td class="num">23</td><td><code>densenet40_k36_bc</code></td><td class="num">1,542,682</td><td class="num">0.955</td><td class="num">0.590</td><td class="num">0.657</td><td class="num">0.000</td><td class="num">0.550</td><td class="num">4.3</td></tr>
+<tr><td class="num">24</td><td><code>seresnet110</code></td><td class="num">1,744,952</td><td class="num">0.955</td><td class="num">0.605</td><td class="num">0.624</td><td class="num">0.020</td><td class="num">0.555</td><td class="num">17.5</td></tr>
+<tr><td class="num">25</td><td><code>resnet1202</code></td><td class="num">19,424,026</td><td class="num">0.970</td><td class="num">0.735</td><td class="num">0.717</td><td class="num">0.130</td><td class="num">0.559</td><td class="num">118.0</td></tr>
+<tr><td class="num">26</td><td><code>sepreresnet272bn</code></td><td class="num">3,152,450</td><td class="num">0.960</td><td class="num">0.735</td><td class="num">0.683</td><td class="num">0.005</td><td class="num">0.562</td><td class="num">33.4</td></tr>
+<tr><td class="num">27</td><td><code>seresnet56</code></td><td class="num">862,889</td><td class="num">0.965</td><td class="num">0.620</td><td class="num">0.653</td><td class="num">0.010</td><td class="num">0.566</td><td class="num">8.3</td></tr>
+<tr><td class="num">28</td><td><code>resnet1001</code></td><td class="num">10,328,602</td><td class="num">0.965</td><td class="num">0.715</td><td class="num">0.718</td><td class="num">0.090</td><td class="num">0.566</td><td class="num">80.5</td></tr>
+<tr><td class="num">29</td><td><code>seresnet20</code></td><td class="num">274,847</td><td class="num">0.930</td><td class="num">0.345</td><td class="num">0.574</td><td class="num">0.000</td><td class="num">0.570</td><td class="num">3.8</td></tr>
+<tr><td class="num">30</td><td><code>sepreresnet56</code></td><td class="num">862,601</td><td class="num">0.950</td><td class="num">0.620</td><td class="num">0.645</td><td class="num">0.000</td><td class="num">0.572</td><td class="num">10.3</td></tr>
+<tr><td class="num">31</td><td><code>sepreresnet542bn</code></td><td class="num">6,271,370</td><td class="num">0.975</td><td class="num">0.770</td><td class="num">0.703</td><td class="num">0.055</td><td class="num">0.578</td><td class="num">74.5</td></tr>
+<tr><td class="num">32</td><td><code>preresnet542bn</code></td><td class="num">5,598,170</td><td class="num">0.980</td><td class="num">0.745</td><td class="num">0.713</td><td class="num">0.035</td><td class="num">0.580</td><td class="num">44.3</td></tr>
+<tr><td class="num">33</td><td><code>preresnet164bn</code></td><td class="num">1,703,258</td><td class="num">0.960</td><td class="num">0.620</td><td class="num">0.673</td><td class="num">0.005</td><td class="num">0.597</td><td class="num">14.1</td></tr>
+<tr><td class="num">34</td><td><code>densenet250_k24_bc</code></td><td class="num">15,324,406</td><td class="num">0.965</td><td class="num">0.590</td><td class="num">0.667</td><td class="num">0.035</td><td class="num">0.599</td><td class="num">42.4</td></tr>
+<tr><td class="num">35</td><td><code>resnet542bn</code></td><td class="num">5,599,066</td><td class="num">0.955</td><td class="num">0.745</td><td class="num">0.714</td><td class="num">0.050</td><td class="num">0.601</td><td class="num">54.5</td></tr>
+<tr><td class="num">36</td><td><code>sepreresnet20</code></td><td class="num">274,559</td><td class="num">0.950</td><td class="num">0.440</td><td class="num">0.625</td><td class="num">0.000</td><td class="num">0.631</td><td class="num">3.6</td></tr>
+<tr><td class="num">37</td><td><code>densenet40_k12</code></td><td class="num">599,050</td><td class="num">0.930</td><td class="num">0.510</td><td class="num">0.631</td><td class="num">0.000</td><td class="num">0.634</td><td class="num">5.4</td></tr>
+<tr><td class="num">38</td><td><code>densenet40_k24_bc</code></td><td class="num">690,346</td><td class="num">0.940</td><td class="num">0.520</td><td class="num">0.667</td><td class="num">0.005</td><td class="num">0.637</td><td class="num">4.8</td></tr>
+<tr><td class="num">39</td><td><code>xdensenet40_2_k24_bc</code></td><td class="num">1,319,338</td><td class="num">0.940</td><td class="num">0.490</td><td class="num">0.671</td><td class="num">0.000</td><td class="num">0.664</td><td class="num">5.0</td></tr>
+<tr><td class="num">40</td><td><code>densenet40_k12_bc</code></td><td class="num">176,122</td><td class="num">0.930</td><td class="num">0.370</td><td class="num">0.632</td><td class="num">0.000</td><td class="num">0.681</td><td class="num">4.9</td></tr>
+</tbody>
+</table></div>
+</details>
+
+<h2 id="per-victim">3.6　受害者之間也不一樣</h2>
+<p>把 40 個代理的結果對每個受害者分別平均，可以看出哪個受害者比較好騙：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>受害者</th><th class="num">FGSM 後（40 個代理平均）</th><th class="num">範圍</th><th class="num">I-FGSM 後（40 個代理平均）</th><th class="num">範圍</th></tr></thead>
+<tbody>
+<tr><td><code>wrn28_10</code></td><td class="num">0.745</td><td class="num">0.660–0.810</td><td class="num">0.590</td><td class="num">0.355–0.755</td></tr>
+<tr><td><code>wrn40_8</code></td><td class="num">0.693</td><td class="num">0.605–0.775</td><td class="num">0.606</td><td class="num">0.420–0.770</td></tr>
+<tr><td><code>pyramidnet110_a48</code></td><td class="num">0.598</td><td class="num">0.515–0.680</td><td class="num"><strong>0.425</strong></td><td class="num">0.230–0.580</td></tr>
+<tr><td><code>resnext29_32x4d</code></td><td class="num"><strong>0.510</strong></td><td class="num">0.415–0.625</td><td class="num">0.545</td><td class="num">0.385–0.680</td></tr>
+<tr><td><code>ror3_110</code></td><td class="num">0.706</td><td class="num">0.510–0.805</td><td class="num">0.594</td><td class="num">0.255–0.800</td></tr>
+<tr><td><code>rir</code></td><td class="num">0.669</td><td class="num">0.585–0.745</td><td class="num">0.469</td><td class="num">0.295–0.610</td></tr>
+<tr><td><code>shakeshakeresnet26_2x32d</code></td><td class="num">0.649</td><td class="num">0.550–0.715</td><td class="num">0.567</td><td class="num">0.325–0.740</td></tr>
+<tr><td><code>diaresnet56</code></td><td class="num">0.644</td><td class="num">0.480–0.770</td><td class="num">0.524</td><td class="num">0.205–0.740</td></tr>
+<tr><td><strong>受害者 ensemble</strong></td><td class="num">0.704</td><td class="num">0.620–0.795</td><td class="num">0.537</td><td class="num">0.315–0.730</td></tr>
+</tbody>
+</table></div>
+<p>兩個最寬的 Wide ResNet 最難騙（尤其是 FGSM），resnext 最怕 FGSM、pyramidnet 最怕 I-FGSM。每個受害者的範圍都很寬：對 diaresnet56 來說，最好的代理讓它剩 0.205、最差的剩 0.740。這說明「轉移性」不是代理單方面的性質，而是代理與受害者這一對的性質。也因此，用一組受害者的平均來評估比用單一受害者可靠得多；而助教用 ensemble，就是在利用這一點：要騙倒 ensemble，必須同時騙倒裡面大部分的模型。受害者 ensemble 在 FGSM 後的平均 0.704，比 8 個受害者各自的平均（0.652）高了 5 個百分點。</p>
+
+<h2 id="limits">3.7　這個黑箱的限制</h2>
+<ul>
+<li><strong>它不是助教的模型。</strong>助教可能用了本書的受害者家族，也可能用了代理池裡的模型（那對攻擊者有利）。本書的數字只能比較方法的相對好壞，不能換算成 JudgeBoi 的分數。</li>
+<li><strong>只有 200 張圖。</strong>準確率的最小單位是 0.005（一張圖）；兩個方法差 0.01–0.02，可能只是少數幾張圖的運氣。前面幾章的攻擊是決定性的，跑兩次結果相同，但「換一組 200 張圖會不會也一樣」是另一個問題，本書沒有測。第 5、6 章有隨機性的方法，會用 3 個種子看雜訊。</li>
+<li><strong>受害者是固定的 8 個。</strong>如果你根據本機黑箱反覆調整攻擊，也會對這 8 個模型「過擬合」——和用 JudgeBoi 反覆提交是同一個問題。本書的實驗規格在開始前就定好了，盡量避免這件事。</li>
+</ul>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>pytorchcv 有 85 個 CIFAR-10 模型、19 個家族；70 個能載入（13 個下載網址失效、2 個沒有權重）。原圖準確率都在 0.915–0.98。</li>
+<li>本機黑箱：代理池 40 個（nin、resnet、preresnet、se*、densenet 家族），受害者 8 個（wrn、pyramidnet、resnext、ror、rir、shakeshake、dia 家族），兩邊不同家族，避免高估轉移性。另外量受害者 ensemble 與 JPEG 前處理；JPEG70 本身就讓乾淨圖從 0.963 掉到 0.664。</li>
+<li><code>hw10_exp.py</code> 先存 PNG 再讀回來量，記下 L∞ 與每個模型的準確率。</li>
+<li>40 個單一代理的 I-FGSM 黑箱準確率從 0.362（nin）到 0.681（densenet40_k12_bc）；和參數量、原圖準確率幾乎無關；白箱成績全部接近 0，看不出好壞。範例的 resnet110 排第 6。</li>
+<li>轉移性是「代理 × 受害者」一對的性質；ensemble 受害者比單一受害者難騙。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 有人把受害者換成 resnet56、resnet164bn、preresnet110 等代理池裡的模型，發現 resnet110 的 I-FGSM 黑箱準確率降到 0.2。可以說「resnet110 的雜訊轉移性很好」嗎？</summary>
+<p>不行。同家族的模型架構、訓練方式都很像，雜訊在它們之間特別容易轉移；這樣量到的轉移性偏高，不能代表對「不知道是什麼架構」的助教模型的效果。本書刻意讓受害者與代理不同家族，就是為了避免這種高估。（0.2 這個數字是假設的情境，本書沒有用同家族受害者實測。）</p></details>
+<details class="quiz"><summary>2. 40 個代理的 I-FGSM 白箱準確率幾乎都是 0。為什麼不能用白箱準確率來挑代理？</summary>
+<p>I-FGSM 走 20 步、每步重新算代理的梯度，幾乎一定能把代理自己完全打倒，所以白箱準確率全部擠在 0 附近，沒有區分度。黑箱成績卻從 0.362 到 0.681，差異完全看不出來。挑代理一定要用（本機或真正的）黑箱來量。</p></details>
+<details class="quiz"><summary>3. 受害者 ensemble 的原圖準確率是 0.985，比 8 個受害者裡最好的 wrn40_8（0.98）還高。為什麼 ensemble 比最好的成員還準？</summary>
+<p>不同模型答錯的圖不完全相同。把 logits 相加後，一個模型的錯誤可能被其他模型的正確意見蓋過去，只要大部分模型對同一張圖有信心，ensemble 就會答對。在攻擊下也一樣：要騙倒 ensemble，必須同時讓大部分成員認錯，所以它比單一模型難騙。</p></details>
+<details class="quiz"><summary>4. 依照 3.5 節的表，如果你只能挑一個代理，而且要用 FGSM，你會挑哪一個？要用 I-FGSM 呢？這個選擇有什麼風險？</summary>
+<p>FGSM：resnet20（0.576）或 seresnet20（0.574）這類 20 層的小模型；I-FGSM：nin（0.362）。風險是這個排名是在本書的 8 個受害者上量的，換一組受害者（例如助教的模型）排名可能改變；3.6 節也看到，每個受害者對不同代理的反應差很多。挑一個以上的代理（第 5 章的 ensemble）可以降低這個風險。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Florian Tramèr 等，<a href="https://arxiv.org/abs/1704.03453">The Space of Transferable Adversarial Examples</a>（2017）：為什麼對抗樣本會轉移；不同模型的決策邊界在對抗方向上很接近。</li>
+<li>Nicolas Papernot、Patrick McDaniel、Ian Goodfellow，<a href="https://arxiv.org/abs/1605.07277">Transferability in Machine Learning: from Phenomena to Black-Box Attacks using Adversarial Samples</a>（2016）：跨模型種類的轉移性實驗，以及用代理模型做黑箱攻擊。</li>
+<li>Oleg Sémery（osmr），<a href="https://github.com/osmr/imgclsmob">imgclsmob</a>：pytorchcv 的原始專案，README 列出每個模型的論文與測試集錯誤率。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch02.html">← 第 2 章</a><a href="ch04.html">第 4 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW10 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW10 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>
