@@ -63,6 +63,25 @@ def ch05_epochs():
   return charts.legend(series) + '\n' + svg
 
 
+def ch08_ladder():
+  # final dev EM (sample evaluation, stride 150) of the main settings, three seeds each
+  def vals(prefix, ep=-1):
+    return [R[f'{prefix}_s{s}']['dev_by_epoch'][ep] for s in range(3)]
+  rows = [dict(label='範例', color=C['base'], values=vals('nd3', 0)),
+          dict(label='範例，3 epoch', color=C['base'], values=vals('nd3', 2)),
+          dict(label='固定 lr 5e-5', color=C['m4'], values=vals('lr5')),
+          dict(label='線性衰減', color=C['decay'], values=vals('lin1')),
+          dict(label='衰減＋隨機視窗', color=C['window'], values=vals('win1')),
+          dict(label='衰減＋RoBERTa-wwm', color=C['m1'], values=vals('rwe1')),
+          dict(label='衰減＋MacBERT', color=C['m2'], values=vals('mac1')),
+          dict(label='衰減＋ckiplab QA', color=C['m3'], values=vals('ckip1')),
+          dict(label='衰減＋luhua large', color=C['m4'], values=vals('luhua1'))]
+  for r in rows:
+    r['mean'] = mean(r['values'])
+  return charts.dot_rows(rows, 0.40, 0.75, [0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75], xlabel='dev EM（範例的評估，stride 150）', vfmt='{:.3f}', label_w=190,
+                         aria='主要設定的 dev EM：範例 0.446、範例 3 epoch 0.499、固定學習率 5e-5 0.524、線性衰減 0.552、衰減加隨機視窗 0.702、RoBERTa-wwm 0.588、MacBERT 0.514、ckiplab 0.651、luhua large 0.641')
+
+
 def put(page, name, html):
   path = os.path.join(root, 'docs/HW07', page)
   s = open(path).read()
@@ -76,7 +95,7 @@ def put(page, name, html):
   print('chart', name, '->', page)
 
 
-TABLE = {'ch05_loss': ('ch05.html', ch05_loss), 'ch05_em': ('ch05.html', ch05_em), 'ch05_epochs': ('ch05.html', ch05_epochs)}
+TABLE = {'ch05_loss': ('ch05.html', ch05_loss), 'ch05_em': ('ch05.html', ch05_em), 'ch05_epochs': ('ch05.html', ch05_epochs), 'ch08_ladder': ('ch08.html', ch08_ladder)}
 for name in sys.argv[2:]:
   page, fn = TABLE[name]
   put(page, name, fn())
