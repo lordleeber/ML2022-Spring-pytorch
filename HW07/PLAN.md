@@ -48,3 +48,4 @@
 - 21:00 加跑（使用者核可）：bert-base-chinese ＋ `do_lower_case=True` ×3 種子（D 組的對照）。原因：hfl／luhua 的 tokenizer 預設轉小寫，bert-base-chinese、ckiplab 不轉；五個模型的 vocab.txt 完全相同（md5 3b5b76c4…）。
 - 21:50 佇列（規格內）：queue1 = AdamW 對照 ×3 → 其餘 M → 轉小寫對照 ×3；queue2 = S 隨機視窗（線性衰減 1 epoch ×3）、D 零樣本（ckiplab、luhua）與四個模型 × 線性衰減 1 epoch ×3。佇列檔 `docs/tools/hw07_grid_queue{1,2}.txt`。
 - 22:55 加跑（使用者核可）：固定 lr 5e-5（線性衰減 1 epoch 的平均 lr）×3 種子，放在 queue2 開頭，用來分開「學習率變小」與「最後降到 0」。
+- 06:57 發現 queue2 自 01:34 起被兩個等待程序同時執行（第一個以為已死的 bash -c 等待程序其實活著）。dev 結果兩份完全相同，已去重；計時無效。教訓：起背景佇列前後用 `ps -eo pid,cmd | grep run_grid` 確認只有一個。

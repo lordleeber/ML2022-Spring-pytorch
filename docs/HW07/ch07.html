@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 7 章　換預訓練模型 — HW07 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW07 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px 的「閱讀理解」書桌——近黑的冷灰底、紙白的字、沙金色只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：原版 灰、LR 衰減 藍、隨機視窗 橘、換模型 綠／紫／洋紅／黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與 HW13、HW14 相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #e0a458;      /* 沙金：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(224, 164, 88, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #e0a458;
+  /* 角色色 */
+  --r-base: #8b949e; --r-decay: #3987e5; --r-window: #d95926; --r-m1: #199e70;
+  --r-m2: #9085e9; --r-m3: #d55181; --r-m4: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "[CLS] 問題 ≤40 [SEP] 文章視窗 150 [SEP]　→　BERT　→　start／end 位置　·　DRCD 繁中閱讀理解";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fbf4ea; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #1b1914; border-color: rgba(224, 164, 88, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1a1208; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.base { --rc: var(--r-base); } .role.decay { --rc: var(--r-decay); } .role.window { --rc: var(--r-window); }
+.role.m1 { --rc: var(--r-m1); } .role.m2 { --rc: var(--r-m2); } .role.m3 { --rc: var(--r-m3); }
+.role.m4 { --rc: var(--r-m4); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="ch08.html">第 8 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW07 讀碼教材</p>
+  <h1>第 7 章　換預訓練模型，以及讓訓練變快的兩個技巧</h1>
+  <p class="chap-lead">投影片給 Strong 的另一個提示是「試試其他預訓練模型」，報告第 2 題也要你換一個模型、說明它和 BERT 的差別。這一章用同一套訓練方式（線性衰減、1 個 epoch、中心視窗）比較五個中文模型，各 3 個種子：四個和 bert-base-chinese 一模一樣大，只差在預訓練的方法與資料；一個大三倍。結果有好有壞，而且排名第一的那個「換模型的好處」，有很大一部分來自它早就學過閱讀理解。最後實測投影片建議的兩個訓練技巧：混合精度讓訓練快 2.7 倍，梯度累積省記憶體但不會變快。</p>
+</header>
+<main>
+
+<h2 id="swap">7.1　換模型只要改兩行</h2>
+<p>模型在 <code>train.py</code> 的兩行裡載入（第 0 章 0.3 節）：</p>
+<figure class="listing"><figcaption>train.py:36–37 — 換模型就是換這兩個字串</figcaption>
+<pre class="py"><code>model = BertForQuestionAnswering.from_pretrained("bert-base-chinese").to(device)
+tokenizer = BertTokenizerFast.from_pretrained("bert-base-chinese")</code></pre></figure>
+<p>把 <code>"bert-base-chinese"</code> 換成 Hugging Face 上另一個模型的名字即可。本章的模型都是 BERT 架構，所以 <code>BertForQuestionAnswering</code> 照樣能用；比較通用的寫法是 <code>AutoModelForQuestionAnswering</code>，它會依模型的設定檔自動選對類別，實驗工具用的就是它。要確認三件事：</p>
+<ul>
+<li><strong>詞表與特殊符號</strong>：<code>dataset.py</code> 把 <code>[CLS]</code>、<code>[SEP]</code> 寫死成 101、102（第 1 章 1.4 節）。本章五個模型的 <code>vocab.txt</code> 逐位元組相同（md5 都是 3b5b76c4…），所以不必改。換成詞表不同的模型（例如英文 RoBERTa 或多語言模型），這兩個數字就錯了。</li>
+<li><strong>tokenizer 的設定</strong>：ckiplab 的模型卡要求用 bert-base-chinese 的 tokenizer；hfl 與 luhua 的 tokenizer 雖然詞表相同，卻<strong>預設轉小寫</strong>（第 1 章 1.3 節），bert-base-chinese 不轉。換模型時順便換了前處理，7.5 節討論。</li>
+<li><strong>模型大小</strong>：大模型需要更多記憶體與時間（7.6 節）。</li>
+</ul>
+
+<h2 id="models">7.2　五個模型</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>模型</th><th class="num">參數</th><th>預訓練的方法與資料</th><th>載入時有沒有問答頭</th></tr></thead>
+<tbody>
+<tr><td><code>bert-base-chinese</code>（範例）</td><td class="num">101,678,594</td><td>Google 2018。遮住 15% 的 token 讓模型猜（MLM），加上「兩句是否相連」（NSP）；中文維基百科，逐字遮</td><td>沒有（隨機初始化）</td></tr>
+<tr><td><code>hfl/chinese-roberta-wwm-ext</code></td><td class="num">101,678,594</td><td>哈工大訊飛聯合實驗室（HFL）。<strong>whole word masking</strong>：先斷詞，一個詞的字一起遮（例如「模型」兩個字一起遮），猜整個詞比猜單字難；拿掉 NSP、更多資料（ext）、訓練更久，是 RoBERTa 的做法</td><td>沒有</td></tr>
+<tr><td><code>hfl/chinese-macbert-base</code></td><td class="num">101,678,594</td><td>HFL。<strong>MLM as correction</strong>：不用 <code>[MASK]</code>，而是把詞換成意思相近的詞，讓模型「改錯」，減少預訓練（看得到 <code>[MASK]</code>）與微調（看不到）的落差；另加 whole word masking、N-gram masking、句子順序預測</td><td>沒有</td></tr>
+<tr><td><code>ckiplab/bert-base-chinese-qa</code></td><td class="num">101,678,594</td><td>中研院 CKIP。語言模型用繁體中文資料訓練（中文維基百科以 OpenCC 轉成繁體，加上中央社新聞）；名稱裡的 qa 表示已經微調成問答模型，但模型卡沒有說用什麼資料</td><td><strong>有</strong></td></tr>
+<tr><td><code>luhua/chinese_pretrain_mrc_roberta_wwm_ext_large</code></td><td class="num">324,474,882</td><td>以 hfl 的 RoBERTa-wwm-ext-large（24 層、1,024 維）為基礎，再用「網上收集的大量中文 MRC 數據（包括公開的 MRC 數據集與自己爬取的網頁數據）」訓練；沒有列出是哪些資料集</td><td><strong>有</strong></td></tr>
+</tbody>
+</table></div>
+<p>前四個模型的架構完全相同：12 層、768 維、12 個頭，參數量一個都不差（101,678,594），所以它們之間的差異<strong>只</strong>來自預訓練的方法與資料。這是比較「預訓練方法」最乾淨的條件。luhua 的 24 層模型有 324,474,882 個參數，和第 0 章自我測驗 2 的手算（encoder 302,309,376 + 嵌入 22,163,456 + 問答頭 2,050）完全一致。</p>
+<p>最後兩個模型有一個關鍵的不同：它們在載入時就帶著訓練好的問答頭（設定檔的 architectures 是 <code>BertForQuestionAnswering</code>，載入報告沒有 MISSING），也就是說，它們<strong>已經</strong>在某些閱讀理解資料上微調過。這讓它們在比較中處於不同的起跑點，7.4 節會量這個起跑點有多前面。</p>
+
+<h2 id="results">7.3　結果</h2>
+<p>五個模型都用第 5 章的設定（線性衰減、1 個 epoch、學習率 1e-4、中心視窗）各訓練 3 個種子。左邊是範例的評估（stride 150），右邊是第 4 章改良的評估：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>模型（線性衰減、1 epoch、中心視窗）</th><th class="num">範例評估 stride 150</th><th class="num">平均</th><th class="num"><code>evaluate_v2</code> stride 32</th><th class="num">平均</th></tr></thead>
+<tbody>
+<tr><td><span class="role decay">bert-base-chinese</span></td><td class="num">0.528、0.566、0.562</td><td class="num">0.552</td><td class="num">0.675、0.699、0.704</td><td class="num">0.693</td></tr>
+<tr><td><span class="role m1">hfl RoBERTa-wwm-ext</span></td><td class="num">0.588、0.595、0.580</td><td class="num">0.588</td><td class="num">0.727、0.718、0.719</td><td class="num">0.721</td></tr>
+<tr><td><span class="role m2">hfl MacBERT</span></td><td class="num">0.471、0.562、0.510</td><td class="num">0.514</td><td class="num">0.643、0.713、0.667</td><td class="num">0.674</td></tr>
+<tr><td><span class="role m3">ckiplab QA</span></td><td class="num">0.644、0.656、0.654</td><td class="num">0.651</td><td class="num">0.748、0.748、0.737</td><td class="num">0.744</td></tr>
+<tr><td><span class="role m4">luhua RoBERTa-large</span></td><td class="num">0.629、0.646、0.646</td><td class="num">0.641</td><td class="num">0.750、0.755、0.763</td><td class="num">0.756</td></tr>
+</tbody>
+</table></div>
+<p>先看同樣大小的四個模型。hfl RoBERTa-wwm-ext 穩定地比 bert-base-chinese 高：範例評估高 3.6 個百分點、改良評估高 2.8 個百分點，三個種子全部高於 bert-base-chinese 的平均。整詞遮罩、更多資料與更長的預訓練，在中文閱讀理解上確實有幫助。MacBERT 卻比 bert-base-chinese <strong>低</strong>（0.514、0.674），而且三個種子差了 9 個百分點，是本章雜訊最大的一個。MacBERT 的論文（GitHub ymcui/MacBERT 的表格）報告 DRCD dev 的 EM：BERT-base 83.1、RoBERTa-wwm-ext 86.6、MacBERT-base 89.4（10 次的最高值），MacBERT 最好，這裡卻反過來。論文的 EM 也比本章高得多，因為微調方式完全不同：論文用的是完整的閱讀理解流程（較長的序列、多個 epoch、各自調過的訓練設定），本章則是範例的 193 個 token、學習率 1e-4、1 個 epoch。這是比較預訓練模型時常見的陷阱：同一組超參數未必對每個模型都公平，排名可能隨著微調設定改變；本章的結果只代表「在範例的設定下」。</p>
+<p>ckiplab 與 luhua 是前兩名，但它們不是在和其他模型同一個起跑點比賽，下一節會說明。luhua 的 0.756 是全書最高的數字，代價是 3 倍的參數與 3 倍的訓練時間（7.6 節）。</p>
+
+<h2 id="pretrained-qa">7.4　已經會做閱讀理解的模型</h2>
+<p>ckiplab 與 luhua 載入時就帶著問答頭。如果完全不訓練，直接拿它們在 dev 上評估呢？</p>
+<div class="tablewrap"><table>
+<thead><tr><th>不訓練，直接評估</th><th class="num">範例評估 stride 150</th><th class="num"><code>evaluate_v2</code> stride 150</th><th class="num"><code>evaluate_v2</code> stride 32</th><th class="num">訓練 1 epoch 後（stride 32，3 種子平均）</th></tr></thead>
+<tbody>
+<tr><td>ckiplab QA</td><td class="num">0.415</td><td class="num">0.694</td><td class="num">0.719</td><td class="num">0.744</td></tr>
+<tr><td>luhua RoBERTa-large</td><td class="num">0.369</td><td class="num">0.655</td><td class="num">0.668</td><td class="num">0.756</td></tr>
+</tbody>
+</table></div>
+<p>兩個現象。第一，<strong>一次都沒訓練</strong>，ckiplab 用改良的評估就有 0.719，已經和本書用 bert-base-chinese 加隨機視窗、精心調過的最好結果（第 6 章，0.729）相當；我們花一個 epoch 微調它，只多了 2.5 個百分點。它的問答頭顯然在某個繁體中文閱讀理解資料上訓練過（DRCD 是最常見的繁體中文閱讀理解資料集），但模型卡沒有說明。luhua 不訓練也有 0.668，它的文件只說用了「大量中文 MRC 數據（包括公開的 MRC 數據集）」，沒有點名。我們無法確定它們有沒有看過 DRCD 的 dev 題目；如果看過，這些分數就有一部分是「背答案」。</p>
+<p>第二，範例的評估把它們低估得很嚴重：ckiplab 從 0.694 掉到 0.415，luhua 從 0.655 掉到 0.369。原因是這兩個模型是用 SQuAD 2.0 的方式訓練的：視窗裡沒有答案時，start 與 end 都指向 <code>[CLS]</code>，表示「沒有答案」，而且這個分數往往很高。範例規則照樣拿它參加視窗之間的比較，結果 ckiplab 有 2,114 題、luhua 有 1,995 題的回答是字面上的「[CLS]」（另有 12、14 題是空字串）。第 4 章的規則只在文章範圍內挑答案，<code>[CLS]</code> 自然被排除了。這再一次說明後處理不是細節：換了模型，模型輸出的「習慣」也跟著換，後處理要能處理各種情況。</p>
+<p>回到換模型的問題：ckiplab 從 bert-base-chinese 的 0.693 漲到 0.744，看起來是「換模型」帶來 5 個百分點；但其中大部分在換上去的那一刻就已經有了，來自它過去的問答訓練，而不是更好的預訓練。在報告裡比較模型時，應該把「有沒有先在閱讀理解資料上微調過」分開說明。</p>
+
+<h2 id="lower">7.5　轉小寫的對照</h2>
+<p>第 1 章發現，hfl 與 luhua 的 tokenizer 預設轉小寫，bert-base-chinese 不轉。換成 hfl 的模型，同時也換了這個前處理。為了分開兩者，本書加跑了一組「bert-base-chinese 加轉小寫」的對照（使用者核可）。這組對照有一個設計上的缺陷要先說清楚：它用的是範例的設定（不衰減），而不是本章的設定（線性衰減），所以只能和不衰減的範例比：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>bert-base-chinese，1 epoch，不衰減</th><th class="num">種子 0</th><th class="num">種子 1</th><th class="num">種子 2</th><th class="num">平均</th></tr></thead>
+<tbody>
+<tr><td>不轉小寫（範例）</td><td class="num">0.416</td><td class="num">0.482</td><td class="num">0.439</td><td class="num">0.446</td></tr>
+<tr><td>轉小寫</td><td class="num">0.475</td><td class="num">0.470</td><td class="num">0.419</td><td class="num">0.455</td></tr>
+</tbody>
+</table></div>
+<p>平均只差 0.9 個百分點，而這個設定的種子雜訊高達 6.6 個百分點（第 5 章 5.6 節），兩組的範圍幾乎完全重疊，看不出轉小寫有什麼作用。另外要注意，轉小寫之後，範例的 <code>evaluate</code> 用 decode 還原答案，英文答案會變成小寫而判錯，對轉小寫的模型不利；改用從原文切答案的 <code>evaluate_v2</code>（stride 150），種子 0 是 0.491（範例設定的種子 0 是 0.427），其他兩個種子是 0.488、0.434，仍然被雜訊淹沒。能說的只有：轉小寫的影響在這份資料上不大（英文在 DRCD 裡畢竟少），不足以解釋 hfl RoBERTa 相對 bert-base-chinese 的優勢；要精確量出它的貢獻，得在線性衰減的設定下重做，本書沒有做。</p>
+
+<h2 id="amp">7.6　混合精度：快 2.7 倍</h2>
+<p>投影片 p.22 建議用 automatic mixed precision（自動混合精度，AMP）：大部分運算改用 16 位元的浮點數，速度約快 1.5 到 3 倍。範例的寫法是 <code>accelerate==0.2.0</code> 的 <code>Accelerator(fp16=True)</code>（<code>train.py:29–32</code>），這個參數在新版 accelerate 已經改名為 <code>mixed_precision="fp16"</code>，本機也沒有安裝 accelerate。PyTorch 本身就內建混合精度，實驗工具用的是它：</p>
+<figure class="listing"><figcaption>docs/tools/hw07_exp.py:150–176 — forward 包在 autocast 裡；fp16 時用 GradScaler 縮放 loss；梯度累積</figcaption>
+<pre class="py" data-hot="153,162-164,168-171"><code>    for data in tqdm(train_loader, disable=True):
+        data = [i.to(device) for i in data]
+
+        with torch.autocast('cuda', dtype=amp_dtype, enabled=amp_dtype is not None):
+            output = model(input_ids=data[0], token_type_ids=data[1], attention_mask=data[2], start_positions=data[3], end_positions=data[4])
+
+        start_index = torch.argmax(output.start_logits, dim=1)
+        end_index = torch.argmax(output.end_logits, dim=1)
+
+        train_acc += ((start_index == data[3]) &amp; (end_index == data[4])).float().mean()
+        train_loss += output.loss
+
+        loss = output.loss / args.accum if args.accum &gt; 1 else output.loss
+        if scaler is not None:
+            scaler.scale(loss).backward()
+        else:
+            loss.backward()
+
+        if step % args.accum == 0:
+            if scaler is not None:
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                optimizer.step()
+            optimizer.zero_grad()
+            if scheduler is not None:
+                scheduler.step()</code></pre></figure>
+<p><code>torch.autocast</code> 讓區塊內的矩陣乘法等運算自動改用 16 位元，LayerNorm、softmax、loss 這類對精度敏感的運算仍用 32 位元。參數與優化器的狀態一律保持 32 位元，所以叫「混合」。16 位元有兩種：<strong>fp16</strong> 的指數位元少，能表示的最小數字大約是 6e-8，很小的梯度會直接變成 0（underflow），所以要用 <code>GradScaler</code> 先把 loss 放大（例如乘以 65,536）再反向傳播，更新前再除回來；<strong>bf16</strong>（bfloat16）的指數位元和 fp32 一樣多，範圍夠大，不需要 scaler，代價是有效位數更少。bf16 需要 Ampere（2020 年）以後的 NVIDIA GPU，2022 年 Colab 的 T4 不支援，這是投影片只提 fp16 的原因。</p>
+<p>在乾淨的 GPU 上（同時沒有其他程式）實測，bert-base-chinese、線性衰減 1 個 epoch：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定</th><th class="num">訓練 991 步</th><th class="num">相對 fp32</th><th class="num">dev 評估</th><th class="num">GPU 記憶體峰值</th><th class="num">dev EM（種子 0／1／2）</th></tr></thead>
+<tbody>
+<tr><td>fp32（範例的精度）</td><td class="num">272 秒</td><td class="num">1.0×</td><td class="num">60 秒</td><td class="num">4.91 GB</td><td class="num">0.528（種子 0）；3 種子平均 0.552</td></tr>
+<tr><td>fp16 + GradScaler</td><td class="num">100 秒</td><td class="num">2.7×</td><td class="num">47 秒</td><td class="num">3.76 GB</td><td class="num">0.536、0.556、0.562（平均 0.551）</td></tr>
+<tr><td>bf16</td><td class="num">104 秒</td><td class="num">2.6×</td><td class="num">46 秒</td><td class="num">3.76 GB</td><td class="num">0.543、0.564、0.557（平均 0.555）</td></tr>
+<tr><td>luhua large，fp32</td><td class="num">849 秒</td><td class="num">0.32×</td><td class="num">167 秒</td><td class="num">13.35 GB</td><td class="num">0.646（種子 1）</td></tr>
+<tr><td>luhua large，bf16</td><td class="num">255 秒</td><td class="num">1.07×</td><td class="num">85 秒</td><td class="num">10.40 GB</td><td class="num">0.647（種子 0）</td></tr>
+</tbody>
+</table></div>
+<p>（所有計時都在決定性模式下；fp32 那一列是線性衰減 1 epoch 種子 0 的重跑，dev EM 0.5282 和前一晚第一次跑的結果完全相同。）fp16 與 bf16 都快了 2.6 到 2.7 倍，dev EM 沒有變差（平均 0.551、0.555，和 fp32 的 0.552 在種子雜訊之內）。大模型受益更多：luhua 從 849 秒降到 255 秒，快了 3.3 倍，幾乎和 bert-base 用 fp32 一樣快。記憶體省得不多（4.91 → 3.76 GB），因為參數與優化器狀態仍是 32 位元，省下的只是部分中間結果。</p>
+<p>投影片估計 T4 加 fp16 大約快 2.5 倍（Simple 從 20 分鐘變 8 分鐘），和這裡的 2.7 倍相近。快的原因是現代 GPU 有專門做 16 位元矩陣乘法的硬體（Tensor Core），速度是 32 位元的好幾倍。</p>
+
+<h2 id="accum">7.7　梯度累積：省記憶體，不省時間</h2>
+<p>投影片 p.23 的另一個技巧是梯度累積（gradient accumulation）：GPU 記憶體不夠放一個 batch 時，把 batch 拆成幾份，每份都做 forward 與 backward，但梯度先累加、不更新，等全部做完才更新一次。上面那段程式的第 162 行把 loss 除以累積的次數（讓累加起來的梯度等於大 batch 的平均），第 168 行只在累積滿了才更新參數與學習率。用 batch 16 × 累積 2 次，模擬原本的 batch 32：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定（種子 0）</th><th class="num">訓練時間</th><th class="num">GPU 記憶體峰值</th><th class="num">dev EM</th></tr></thead>
+<tbody>
+<tr><td>batch 32</td><td class="num">272 秒</td><td class="num">4.91 GB</td><td class="num">0.528</td></tr>
+<tr><td>batch 16 × 累積 2</td><td class="num">283 秒</td><td class="num">3.44 GB</td><td class="num">0.542</td></tr>
+</tbody>
+</table></div>
+<p>記憶體從 4.91 GB 降到 3.44 GB，時間略增（每一筆資料的計算量不變，但小 batch 的 GPU 利用率較低）。dev EM 0.542 與 0.528 不同，但都在種子雜訊的範圍內：理論上等價的兩種寫法，浮點運算的順序與 dropout 的隨機遮罩不同，結果就不會逐位元相同（自我測驗 4）。所以梯度累積是「GPU 不夠大時的替代品」，不是加速技巧。本作業的 bert-base 只用不到 5 GB，用不到它；換成 large 模型、或把視窗加長時才需要。</p>
+
+<h2 id="report">7.8　報告第 2 題與 Kaggle 的史料</h2>
+<p>報告第 2 題（投影片 p.30）要求：換一個 Hugging Face 上的預訓練模型，說明（1）用了哪個模型、（2）它的表現、（3）它和 BERT 的差別（架構、預訓練的 loss 等）。根據本章，以 hfl/chinese-roberta-wwm-ext 為例，一份有根據的回答包含：架構與 BERT-base 完全相同（12 層、768 維，101,678,594 個參數），差別在預訓練——整詞遮罩（中文先斷詞、整個詞一起遮）、拿掉 NSP、更多資料與更長的訓練；在相同的微調設定下，dev EM 平均從 0.552 提高到 0.588（3 個種子，範例的評估），改良的評估下從 0.693 到 0.721。如果選 ckiplab 或 luhua，則必須說明它們已經在閱讀理解資料上微調過，並附上不訓練時的分數。</p>
+<p>這個 repo 在寫書之前，曾經實際把不同模型的結果交到 Kaggle 測試集（記在舊版 <code>train.py</code> 的註解裡；當時的訓練設定與本書不同，例如用 <code>torch.optim.AdamW</code>、訓練 3 個 epoch，只當史料參考）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>模型（當時的設定）</th><th class="num">Kaggle 分數</th></tr></thead>
+<tbody>
+<tr><td>bert-base-chinese</td><td class="num">0.49495</td></tr>
+<tr><td>ckiplab/bert-base-chinese-qa</td><td class="num">0.57160</td></tr>
+<tr><td>luhua/chinese_pretrain_mrc_roberta_wwm_ext_large</td><td class="num">0.60508</td></tr>
+<tr><td>luhua/chinese_pretrain_mrc_macbert_large</td><td class="num">0.53206</td></tr>
+<tr><td>wptoux/albert-chinese-large-qa</td><td class="num">0.55990</td></tr>
+</tbody>
+</table></div>
+<p>排名和本章 dev 上的結果大致一致（luhua RoBERTa-large 最好、ckiplab 次之、bert-base-chinese 最差），但絕對分數低很多：當時用的都是範例的後處理與 stride 150、中心視窗，正是第 4、6 章找到的兩個最大的失分來源。測試集還有 1,464 題語音辨識的題目（第 0 章），也會拉低分數。</p>
+
+<div class="note"><h4>現在的做法：先查模型卡，再看自己的評估</h4>
+<p>今天 Hugging Face 上的中文模型多到數不清，選模型的第一步是讀模型卡：架構、預訓練資料、授權，以及<strong>有沒有在你的評估資料上訓練過</strong>。本章的 ckiplab 與 luhua 就是例子：它們的高分有一部分來自「早就學過閱讀理解」，模型卡卻沒寫清楚用了哪些資料；如果訓練資料包含 DRCD 的 dev 或測試題，分數就會虛高。這個問題在大型語言模型時代更嚴重，稱為資料污染（data contamination）：評估用的題目可能早就在預訓練語料裡。做法是一樣的：先查文件，再用自己沒有公開過的資料評估，並且像本章一樣，用「不訓練直接評估」看看模型的起跑點。至於 BERT 這類 encoder，2024 年的 ModernBERT 等新一代模型把上下文長度拉到 8,192 個 token，也改用更新的訓練配方，換模型的選擇比 2022 年多了很多。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>換模型只要改模型名稱；但要確認詞表與特殊符號（本章五個模型的 vocab.txt 相同）、tokenizer 是否轉小寫、以及模型大小。</li>
+<li>同樣大小的模型裡，hfl RoBERTa-wwm-ext 穩定地比 bert-base-chinese 高約 3 個百分點；MacBERT 在這組超參數下反而較差、雜訊也最大。同一組超參數不一定對每個模型公平。</li>
+<li>ckiplab 與 luhua 載入時已有問答頭：不訓練就有 0.719 與 0.668（改良評估、stride 32），換模型的好處大部分來自它們過去的問答訓練；範例的評估會嚴重低估它們（0.415、0.369）。</li>
+<li>轉小寫的對照（不衰減的設定）只差 0.9 個百分點，被種子雜訊淹沒，不足以解釋 hfl 的優勢。</li>
+<li>混合精度（fp16 + GradScaler，或 bf16）讓訓練快 2.6–2.7 倍、大模型快 3.3 倍，dev EM 不變；梯度累積省記憶體（4.91 → 3.44 GB），不省時間。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 想把模型換成英文的 <code>roberta-base</code> 來做這份作業，除了改模型名稱，還有什麼一定要改？</summary>
+<p>至少三件：<code>dataset.py</code> 寫死的 101、102 要改成該 tokenizer 的 <code>cls_token_id</code>、<code>sep_token_id</code>（英文 RoBERTa 的 <code>&lt;s&gt;</code> 是 0）；RoBERTa 沒有句子類型嵌入（<code>type_vocab_size</code> 是 1），<code>token_type_ids</code> 不能有 1；它的詞表是英文的 byte-level BPE，中文會被拆成很多位元組 token，150 個 token 裝不了多少字。更根本的問題是它沒有學過中文，效果一定很差。</p></details>
+<details class="quiz"><summary>2. 為什麼 hfl RoBERTa 與 MacBERT 和 bert-base-chinese 的參數量一模一樣，表現卻不同？</summary>
+<p>參數量只描述架構，表現取決於參數的值，而值是預訓練決定的：用什麼資料、什麼任務（逐字遮、整詞遮、相似詞替換）、訓練多久。這三個模型的架構相同，差在預訓練，所以它們的差異是「預訓練方法與資料」的差異。但本章也看到，一次 1 個 epoch 的微調、3 個種子，排名不一定穩定（MacBERT 的種子差距很大），要下「哪種預訓練比較好」的結論，需要更多種子與不同的微調設定。</p></details>
+<details class="quiz"><summary>3. 用 fp16 訓練時忘了 <code>GradScaler</code>，可能會發生什麼事？bf16 呢？</summary>
+<p>fp16 的範圍小，很多很小的梯度在反向傳播時會變成 0（underflow），模型學得比較差，嚴重時 loss 不降反升，或出現 inf／NaN。bf16 的指數範圍和 fp32 相同，不會 underflow，通常不需要 scaler。本書沒有實測「fp16 不加 scaler」的情形。</p></details>
+<details class="quiz"><summary>4. 梯度累積的 batch 16 × 2 和 batch 32 在數學上等價，為什麼 dev EM 不完全相同？</summary>
+<p>資料順序是一樣的（DataLoader 的隨機排列和 batch 大小無關，16 個一組的兩組正好就是原本的 32 個），loss 也有除以 2。但兩次各 16 筆的 forward 與一次 32 筆的 forward，dropout 每次抽的隨機遮罩不同，矩陣運算的加法順序也不同，浮點數的捨入誤差經過幾百步就會讓結果分岔，和第 0 章的非決定性是同一件事。另外，31,690 不是 32 的倍數，最後一批 10 筆在累積模式下湊不滿兩份，會被丟掉。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Yiming Cui 等，<a href="https://arxiv.org/abs/1906.08101">Pre-Training with Whole Word Masking for Chinese BERT</a>（2019）與 <a href="https://arxiv.org/abs/2004.13922">Revisiting Pre-Trained Models for Chinese Natural Language Processing</a>（2020）：hfl 的 RoBERTa-wwm-ext 與 MacBERT；論文的實驗裡就有 DRCD。</li>
+<li>Yinhan Liu 等，<a href="https://arxiv.org/abs/1907.11692">RoBERTa: A Robustly Optimized BERT Pretraining Approach</a>（2019）：拿掉 NSP、更多資料、更大 batch、動態遮罩。</li>
+<li><a href="https://github.com/ckiplab/ckip-transformers">ckip-transformers</a>：CKIP 的繁體中文模型與預訓練資料說明。</li>
+<li>PyTorch 文件 <a href="https://pytorch.org/docs/stable/amp.html">Automatic Mixed Precision</a>：<code>autocast</code> 與 <code>GradScaler</code> 的用法。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="ch08.html">第 8 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW07 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW07 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

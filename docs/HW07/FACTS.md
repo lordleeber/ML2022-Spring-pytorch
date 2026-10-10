@@ -141,3 +141,33 @@
 - 零樣本（範例評估 stride 150）：ckiplab/bert-base-chinese-qa 0.41467；luhua large 0.36868（tokenizer 轉小寫、decode）。
 - D 組：rwe1_s0 0.58799、rwe1_s1 0.59477。
 - 依答案位置分組的 EM（stride 150、範例規則，lin1_s0 中心 vs win1_s0 隨機；分組以 stride 150 的視窗、答案中點在視窗內的位置）：第 1 個視窗 0–49（1,156 題）0.783／0.775；50–99（579）0.511／0.665；100–149（459）0.240／0.691；之後的視窗 0–49（735）0.536／0.710；50–99（632）0.557／0.698；100–149（496）0.250／0.681；被切斷（74）0.014／0.014。中心 → 隨機：修好 901、弄壞 183。
+- 參數量（AutoModelForQuestionAnswering）：bert-base-chinese、hfl roberta-wwm-ext、hfl macbert-base、ckiplab qa 都是 101,678,594（12 層、768、12 頭、3072、詞表 21,128、位置 512）；luhua large 324,474,882（24 層、1024、16 頭、4096）= encoder 302,309,376 + embeddings 22,163,456 + qa 2,050，與第 0 章自我測驗 2 的手算相同。
+- D 組：rwe1_s2 0.58049（rwe1 平均 0.5878）。
+- **queue2 跑了兩份（01:34–06:56）**：兩個 queue2 等待程序都活著，lr5、win1、零樣本、rwe1、mac1、ckip1 共 17 組每組都同時跑了兩次。兩份的 dev_by_epoch 與每 100 步的 history 全部相同（決定性模式下，同時執行也逐位元重現）；jsonl 已去重（保留第一筆）。這 17 組（以及 luhua1_s0）的 train_s／dev_s 是兩個訓練同時在 GPU 上的時間，不能當計時。06:57 停掉第二份（runner 364734、python 380521）。
+
+## D 組結果（線性衰減 1 epoch、中心視窗；範例評估 stride 150；`hw07_runs.jsonl`）
+- bert-base-chinese：0.52820、0.56621、0.56161，平均 0.5520；valid_len_off stride 150 0.54636、0.58533、0.57879（0.5702），stride 32 0.67514、0.69886、0.70419（0.6927）
+- hfl/chinese-roberta-wwm-ext：0.58799、0.59477、0.58049，平均 0.5877；valid_len_off stride 150 0.60445、0.60978、0.59356（0.6026），stride 32 0.72694、0.71774、0.71871（0.7211）
+- hfl/chinese-macbert-base：0.47131、0.56185、0.50980，平均 0.5143；valid_len_off stride 150 0.48729、0.57662、0.52360（0.5292），stride 32 0.64343、0.71266、0.66667（0.6743）
+- ckiplab/bert-base-chinese-qa：0.64415、0.65626、0.65384，平均 0.6514
+- luhua large：0.62939、0.64633、0.64633，平均 0.6407
+- bert-base-chinese＋轉小寫（不衰減）：0.47470、0.47035、0.41927，平均 0.4548；valid_len_off stride 150 0.49141、0.48778、0.43355（0.4709），stride 32 0.62527、0.62503、0.55628（0.6022）
+- 零樣本 ckipz：sample stride 150 0.41467、valid_len_off 150 0.69354、32 0.71871（sample 32 0.49818）
+- 零樣本 luhuaz：sample stride 150 0.36868、valid_len_off 150 0.65456、32 0.66812（sample 32 0.26337）
+
+## 計時（GPU 只有一個訓練；決定性模式；bert-base 線性衰減 1 epoch 種子 0，除非註明）
+- lin1t_s0：dev [0.5282]、train_s 272.2、dev_s 60.1、max_mem 4.91 GB
+- fp16_s0：dev [0.53571]、train_s 100.2、dev_s 47.2、max_mem 3.76 GB
+- fp16_s1：dev [0.55604]、train_s 100.1、dev_s 48.1、max_mem 3.76 GB
+- fp16_s2：dev [0.56209]、train_s 100.2、dev_s 47.4、max_mem 3.76 GB
+- bf16_s0：dev [0.54297]、train_s 104.8、dev_s 45.7、max_mem 3.76 GB
+- bf16_s1：dev [0.56354]、train_s 104.6、dev_s 46.7、max_mem 3.76 GB
+- bf16_s2：dev [0.55725]、train_s 104.3、dev_s 46.8、max_mem 3.76 GB
+- acc2_s0：dev [0.54248]、train_s 283.2、dev_s 60.2、max_mem 3.44 GB
+- luhua1_s1：dev [0.64633]、train_s 848.9、dev_s 166.5、max_mem 13.35 GB
+- luhua1_s2：dev [0.64633]、train_s 851.6、dev_s 166.6、max_mem 13.35 GB
+- luhua1bf_s0：dev [0.64706]、train_s 254.7、dev_s 85.1、max_mem 10.4 GB
+- lin1t_s0 與前一晚的 lin1_s0 dev 相同（0.5282），跨 session 決定性重現。luhua1_s1 與 luhua1_s2 都答對 2,670 題（history 不同，巧合）。luhua1_s0 前半與重複的 runner 重疊，計時無效。
+- 公平評估補齊（valid_len_off）：ckip1 stride 150 0.66013、0.67223、0.67006（0.6675），stride 32 0.74849、0.74824、0.73663（0.7445）；luhua1 stride 150 0.64294、0.65819、0.65965（0.6536），stride 32 0.74970、0.75478、0.76350（0.7560）。
+- 零樣本的範例規則回答（stride 150）：ckiplab 回答字面「[CLS]」2,114 題、空字串 12、含 [SEP] 6；luhua「[CLS]」1,995、空字串 14、含 [SEP] 3。→ SQuAD 2.0 式的「沒有答案」指向 [CLS]。
+- MacBERT GitHub（ymcui/MacBERT）DRCD dev EM（最高／10 次平均）：BERT-base 83.1（82.7）、BERT-wwm-ext 85.0（84.5）、RoBERTa-wwm-ext 86.6（85.9）、MacBERT-base 89.4（89.2）、MacBERT-large 91.2（90.8）；test：82.2、83.6、85.6、89.5、91.7。
