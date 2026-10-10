@@ -88,6 +88,19 @@ def ch03_single():
                  aria='40 個代理模型各自的轉移結果。橫軸是 FGSM、縱軸是 I-FGSM 時 8 個受害者的平均準確率，越低越好。點散得很開，兩者的相關只有 0.30。nin 在 I-FGSM 最低 0.362；densenet40_k12_bc 最高 0.681；resnet110 是 0.626 與 0.485')
 
 
+def ch04_traj():
+  # docs/tools/hw10_ch04.txt: resnet110 I-FGSM (step 0.8), PNG-equivalent images after each recorded step
+  rows = [l.split() for l in open(os.path.join(root, 'docs/tools/hw10_ch04.txt')) if l[:1].isdigit()]
+  steps = [int(r[0]) for r in rows]
+  series = [dict(name='w', label='白箱 resnet110', values=[float(r[1]) for r in rows], color=C['ifgsm']),
+            dict(name='v', label='8 個受害者平均', values=[float(r[2]) for r in rows], color=C['ifgsm'], dash='6 4'),
+            dict(name='e', label='受害者 ensemble', values=[float(r[3]) for r in rows], color=C['ens'], dash='2 3')]
+  svg = charts.line_chart(series, len(steps), 0.0, 1.0, [0.0, 0.2, 0.4, 0.6, 0.8, 1.0], xlabel='I-FGSM 的步數（步長 0.8；橫軸不是等距）', ylabel='準確率',
+                          aria='I-FGSM 的軌跡，代理 resnet110。白箱準確率在第 10 步降到 0.03、第 50 步降到 0；8 個受害者的平均在第 10 步 0.589、第 20 步 0.486、第 50 步 0.446、第 100 步 0.441，之後幾乎不再下降；受害者 ensemble 與受害者平均相近',
+                          xticks=[(i, str(t)) for i, t in enumerate(steps)], fmt='{:.3f}', height=320, xname=lambda i: f'第 {steps[i]} 步')
+  return charts.legend(series) + '\n' + svg
+
+
 def put(page, name, html):
   path = os.path.join(root, 'docs/HW10', page)
   s = open(path).read()
@@ -101,7 +114,7 @@ def put(page, name, html):
   print('chart', name, '->', page)
 
 
-TABLE = {'ch02_eps': ('ch02.html', ch02_eps), 'ch03_single': ('ch03.html', ch03_single)}
+TABLE = {'ch02_eps': ('ch02.html', ch02_eps), 'ch03_single': ('ch03.html', ch03_single), 'ch04_traj': ('ch04.html', ch04_traj)}
 for name in sys.argv[2:]:
   page, fn = TABLE[name]
   put(page, name, fn())

@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 4 章　I-FGSM 與代理模型的過擬合 — HW10 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW10 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px——近黑的冷灰底、紙白的字、珊瑚紅只用在標題記號與強調（「攻擊」的顏色）；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：原圖 灰、FGSM 藍、I-FGSM 橘、MI-FGSM 綠、DIM 紫、ensemble 洋紅、JPEG 防禦 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與前幾本相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #ef7a6d;      /* 珊瑚紅：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(239, 122, 109, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #ef7a6d;
+  /* 角色色 */
+  --r-clean: #8b949e; --r-fgsm: #3987e5; --r-ifgsm: #d95926; --r-mi: #199e70;
+  --r-dim: #9085e9; --r-ens: #d55181; --r-jpeg: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "x′ = x + ε · sign(∇ₓ L)　→　代理模型（白箱）　→　助教的模型（黑箱）　·　CIFAR-10 200 張　ε = 8";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fdf1ef; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #1c1616; border-color: rgba(239, 122, 109, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1f0d0b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.clean { --rc: var(--r-clean); } .role.fgsm { --rc: var(--r-fgsm); } .role.ifgsm { --rc: var(--r-ifgsm); }
+.role.mi { --rc: var(--r-mi); } .role.dim { --rc: var(--r-dim); } .role.ens { --rc: var(--r-ens); }
+.role.jpeg { --rc: var(--r-jpeg); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW10 讀碼教材</p>
+  <h1>第 4 章　I-FGSM 與代理模型的過擬合</h1>
+  <p class="chap-lead">FGSM 一步走到底，第 2 章看到它沿著一條很快就彎掉的路走過了頭。I-FGSM 改成走很多小步、每步重新看一次梯度：在代理身上，它把準確率打到 0；可是同一批圖拿去騙別的模型，效果在第 20 步左右就停住了。這一章逐行讀 <code>ifgsm</code>，沿著它的 100 步量一遍白箱與黑箱，看「攻擊也會過擬合」是什麼樣子，再試幾個常見的變化：步長、步數、剪回合法範圍、隨機起點。</p>
+</header>
+<main>
+
+<h2 id="code">4.1　<code>ifgsm</code>：FGSM 走很多小步</h2>
+<figure class="listing"><figcaption>attack.py:34–51 — alpha 與 ifgsm()</figcaption>
+<pre class="py" data-hot="36,40,48,50"><code># set alpha as the step size in Global Settings section
+# alpha and num_iter can be decided by yourself
+alpha = 0.8/255/std
+def ifgsm(model, x, y, loss_fn, epsilon=epsilon, alpha=alpha, num_iter=20):
+    x_adv = x
+    # write a loop of num_iter to represent the iterative times
+    for i in range(num_iter):
+        # x_adv = fgsm(model, x_adv, y, loss_fn, alpha) # call fgsm with (epsilon = alpha) to obtain new x_adv
+        x_adv = x_adv.detach().clone()
+        x_adv.requires_grad = True # need to obtain gradient of x_adv, thus set required grad
+        loss = loss_fn(model(x_adv), y) # calculate loss
+        loss.backward() # calculate gradient
+        # fgsm: use gradient ascent on x_adv to maximize loss
+        grad = x_adv.grad.detach()
+        x_adv = x_adv + alpha * grad.sign()
+
+        x_adv = torch.max(torch.min(x_adv, x+epsilon), x-epsilon) # clip new x_adv back to [x-epsilon, x+epsilon]
+    return x_adv</code></pre></figure>
+<p>和 FGSM 只差兩件事：</p>
+<ul>
+<li><strong>步長 α 取代 ε</strong>（第 36、48 行）。每一步只走 α = 0.8（像素值），換到正規化空間一樣要除以 255 和 std（第 1 章）。第 41 行的註解說明了這個關係：每一步就是一次 <code>fgsm(..., epsilon=alpha)</code>，只是範例把 <code>fgsm</code> 的內容攤開寫了一遍。</li>
+<li><strong>每一步之後剪回 ε 球</strong>（第 50 行）。<code>torch.min(x_adv, x+epsilon)</code> 把超過上界的拉回上界，<code>torch.max(..., x-epsilon)</code> 把低於下界的拉回下界，合起來是逐元素的 clip：離原圖 x 的距離永遠不超過 ε。注意比較的對象是<strong>原圖</strong> <code>x</code>，不是上一步的 <code>x_adv</code>。因為 ε 是 (3, 1, 1) 的張量，每個通道的上下界各自不同，用 <code>torch.clamp</code> 的話在舊版 PyTorch 不能接受張量當上下界，所以範例寫成 max／min 兩層。</li>
+</ul>
+<p>範例的設定是 α = 0.8、20 步：如果每一步都往同一個方向，總共會走 16，是 ε 的兩倍。所以剪回 ε 球這一步一定會發生，它不是保險，而是設計的一部分——走過頭的部分被剪掉，像素停在邊界上，之後的步驟只能沿著邊界移動、或往回走。第 1 章看到，這樣產生的雜訊只有 11% 的像素值停在 ±8 上，其他的落在中間。</p>
+<p>這個演算法在論文裡叫 BIM（Basic Iterative Method，2016），作業叫它 I-FGSM（Iterative FGSM）。2017 年 Madry 等人的 PGD（Projected Gradient Descent）是同一件事再加一個隨機起點：從 ε 球裡的隨機一點出發，而不是從原圖出發。「projected」指的就是第 50 行：每一步之後投影回限制的範圍。4.5 節會試隨機起點。</p>
+
+<h2 id="traj">4.2　沿著 100 步量一遍</h2>
+<p>把 resnet110 的 I-FGSM 延長到 100 步，在選定的步數把當下的圖片換成 PNG 會存的樣子（剪到 0–255、四捨五入），量白箱、8 個受害者與受害者 ensemble 的準確率（工具 <code>docs/tools/hw10_ch04.py</code>）：</p>
+<figure class="fig">
+<!-- CHART:ch04_traj -->
+<div class="legend"><span><i style="background:#d95926"></i>白箱 resnet110</span><span><i style="background:#d95926"></i>8 個受害者平均</span><span><i style="background:#d55181"></i>受害者 ensemble</span></div>
+<svg viewBox="0 0 900 320" role="img" aria-label="I-FGSM 的軌跡，代理 resnet110。白箱準確率在第 10 步降到 0.03、第 50 步降到 0；8 個受害者的平均在第 10 步 0.589、第 20 步 0.486、第 50 步 0.446、第 100 步 0.441，之後幾乎不再下降；受害者 ensemble 與受害者平均相近">
+<line x1="56" y1="274.0" x2="780" y2="274.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="278.0" text-anchor="end">0.0</text>
+<line x1="56" y1="223.2" x2="780" y2="223.2" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="227.2" text-anchor="end">0.2</text>
+<line x1="56" y1="172.4" x2="780" y2="172.4" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="176.4" text-anchor="end">0.4</text>
+<line x1="56" y1="121.6" x2="780" y2="121.6" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="125.6" text-anchor="end">0.6</text>
+<line x1="56" y1="70.8" x2="780" y2="70.8" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="74.8" text-anchor="end">0.8</text>
+<line x1="56" y1="20.0" x2="780" y2="20.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="24.0" text-anchor="end">1.0</text>
+<text class="s-mono" x="56.0" y="292" text-anchor="middle">0</text>
+<text class="s-mono" x="116.3" y="292" text-anchor="middle">1</text>
+<text class="s-mono" x="176.7" y="292" text-anchor="middle">2</text>
+<text class="s-mono" x="237.0" y="292" text-anchor="middle">3</text>
+<text class="s-mono" x="297.3" y="292" text-anchor="middle">5</text>
+<text class="s-mono" x="357.7" y="292" text-anchor="middle">10</text>
+<text class="s-mono" x="418.0" y="292" text-anchor="middle">15</text>
+<text class="s-mono" x="478.3" y="292" text-anchor="middle">20</text>
+<text class="s-mono" x="538.7" y="292" text-anchor="middle">30</text>
+<text class="s-mono" x="599.0" y="292" text-anchor="middle">40</text>
+<text class="s-mono" x="659.3" y="292" text-anchor="middle">50</text>
+<text class="s-mono" x="719.7" y="292" text-anchor="middle">70</text>
+<text class="s-mono" x="780.0" y="292" text-anchor="middle">100</text>
+<line x1="56" y1="274" x2="780" y2="274" stroke="#4a5562" stroke-width="1"/>
+<text class="s-sm" x="418.0" y="314" text-anchor="middle">I-FGSM 的步數（步長 0.8；橫軸不是等距）</text>
+<text class="s-sm" x="14" y="147.0" text-anchor="middle" transform="rotate(-90 14 147.0)">準確率</text>
+<polyline points="56.0,32.7 116.3,87.3 176.7,125.4 237.0,161.0 297.3,205.4 357.7,266.4 418.0,270.2 478.3,272.7 538.7,272.7 599.0,272.7 659.3,274.0 719.7,274.0 780.0,274.0" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,29.5 116.3,47.6 176.7,67.3 237.0,63.0 297.3,81.1 357.7,124.3 418.0,142.3 478.3,150.7 538.7,157.2 599.0,160.3 659.3,160.7 719.7,161.5 780.0,162.1" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round" stroke-dasharray="6 4"/>
+<polyline points="56.0,23.8 116.3,44.1 176.7,64.5 237.0,59.4 297.3,82.2 357.7,115.2 418.0,141.9 478.3,157.2 538.7,162.2 599.0,167.3 659.3,161.0 719.7,163.5 780.0,161.0" fill="none" stroke="#d55181" stroke-width="2" stroke-linejoin="round" stroke-dasharray="2 3"/>
+<rect x="786.0" y="157.0" width="8" height="8" rx="2" fill="#d55181"/>
+<text class="s-lbl" x="798.0" y="165.0">受害者 ensemble</text>
+<rect x="786.0" y="171.0" width="8" height="8" rx="2" fill="#d95926"/>
+<text class="s-lbl" x="798.0" y="179.0">8 個受害者平均</text>
+<rect x="786.0" y="270.0" width="8" height="8" rx="2" fill="#d95926"/>
+<text class="s-lbl" x="798.0" y="278.0">白箱 resnet110</text>
+<rect x="25.8" y="20" width="60.3" height="254" fill="transparent" data-tip="第 0 步：白箱 resnet110 0.950　8 個受害者平均 0.963　受害者 ensemble 0.985"/>
+<rect x="86.2" y="20" width="60.3" height="254" fill="transparent" data-tip="第 1 步：白箱 resnet110 0.735　8 個受害者平均 0.891　受害者 ensemble 0.905"/>
+<rect x="146.5" y="20" width="60.3" height="254" fill="transparent" data-tip="第 2 步：白箱 resnet110 0.585　8 個受害者平均 0.814　受害者 ensemble 0.825"/>
+<rect x="206.8" y="20" width="60.3" height="254" fill="transparent" data-tip="第 3 步：白箱 resnet110 0.445　8 個受害者平均 0.831　受害者 ensemble 0.845"/>
+<rect x="267.2" y="20" width="60.3" height="254" fill="transparent" data-tip="第 5 步：白箱 resnet110 0.270　8 個受害者平均 0.759　受害者 ensemble 0.755"/>
+<rect x="327.5" y="20" width="60.3" height="254" fill="transparent" data-tip="第 10 步：白箱 resnet110 0.030　8 個受害者平均 0.589　受害者 ensemble 0.625"/>
+<rect x="387.8" y="20" width="60.3" height="254" fill="transparent" data-tip="第 15 步：白箱 resnet110 0.015　8 個受害者平均 0.519　受害者 ensemble 0.520"/>
+<rect x="448.2" y="20" width="60.3" height="254" fill="transparent" data-tip="第 20 步：白箱 resnet110 0.005　8 個受害者平均 0.486　受害者 ensemble 0.460"/>
+<rect x="508.5" y="20" width="60.3" height="254" fill="transparent" data-tip="第 30 步：白箱 resnet110 0.005　8 個受害者平均 0.460　受害者 ensemble 0.440"/>
+<rect x="568.8" y="20" width="60.3" height="254" fill="transparent" data-tip="第 40 步：白箱 resnet110 0.005　8 個受害者平均 0.448　受害者 ensemble 0.420"/>
+<rect x="629.2" y="20" width="60.3" height="254" fill="transparent" data-tip="第 50 步：白箱 resnet110 0.000　8 個受害者平均 0.446　受害者 ensemble 0.445"/>
+<rect x="689.5" y="20" width="60.3" height="254" fill="transparent" data-tip="第 70 步：白箱 resnet110 0.000　8 個受害者平均 0.443　受害者 ensemble 0.435"/>
+<rect x="749.8" y="20" width="60.3" height="254" fill="transparent" data-tip="第 100 步：白箱 resnet110 0.000　8 個受害者平均 0.441　受害者 ensemble 0.445"/>
+</svg>
+<!-- /CHART:ch04_traj -->
+<figcaption>圖 4.1　I-FGSM 的軌跡（代理 resnet110，步長 0.8）。實線是白箱，虛線是 8 個受害者的平均，點線是受害者 ensemble。第 20 步就是範例的設定。滑鼠移到圖上可看數值。</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<thead><tr><th class="num">步數</th><th class="num">白箱</th><th class="num">8 個受害者平均</th><th class="num">受害者 ensemble</th><th class="num">受害者平均 loss</th><th class="num">停在 ±8 的像素比例</th></tr></thead>
+<tbody>
+<tr><td class="num">0（原圖）</td><td class="num">0.950</td><td class="num">0.963</td><td class="num">0.985</td><td class="num">0.18</td><td class="num">0</td></tr>
+<tr><td class="num">1</td><td class="num">0.735</td><td class="num">0.891</td><td class="num">0.905</td><td class="num">0.48</td><td class="num">0</td></tr>
+<tr><td class="num">2</td><td class="num">0.585</td><td class="num">0.814</td><td class="num">0.825</td><td class="num">0.81</td><td class="num">0</td></tr>
+<tr><td class="num">3</td><td class="num">0.445</td><td class="num">0.831</td><td class="num">0.845</td><td class="num">0.73</td><td class="num">0</td></tr>
+<tr><td class="num">5</td><td class="num">0.270</td><td class="num">0.759</td><td class="num">0.755</td><td class="num">1.09</td><td class="num">0</td></tr>
+<tr><td class="num">10</td><td class="num">0.030</td><td class="num">0.589</td><td class="num">0.625</td><td class="num">1.97</td><td class="num">2.4%</td></tr>
+<tr><td class="num">20</td><td class="num">0.005</td><td class="num">0.486</td><td class="num">0.460</td><td class="num">2.81</td><td class="num">11.1%</td></tr>
+<tr><td class="num">30</td><td class="num">0.005</td><td class="num">0.460</td><td class="num">0.440</td><td class="num">3.05</td><td class="num">15.9%</td></tr>
+<tr><td class="num">50</td><td class="num">0.000</td><td class="num">0.446</td><td class="num">0.445</td><td class="num">3.17</td><td class="num">21.0%</td></tr>
+<tr><td class="num">100</td><td class="num">0.000</td><td class="num">0.441</td><td class="num">0.445</td><td class="num">3.28</td><td class="num">25.8%</td></tr>
+</tbody>
+</table></div>
+<p>第 20 步的數字和實驗 A 的 <code>ifgsm_it20</code>（就是範例的 <code>hw10.py</code>）一致：白箱 0.005、受害者 0.485（表中四捨五入是 0.486，差別來自 8 個受害者平均的小數位）。從這張表可以讀出三件事。</p>
+<p><strong>第一，白箱很快就結束了。</strong>第 10 步時 resnet110 只剩 6 張答對，第 50 步一張都不剩。此後的每一步，對代理來說都是「把已經錯的圖錯得更離譜」：<code>gen_adv_examples</code> 印出的 loss 在第 20 步是 17.5（第 0 章），遠高於分類錯誤所需要的程度。</p>
+<p><strong>第二，黑箱在第 20 步之後幾乎停住。</strong>受害者的平均準確率從第 20 步的 0.486 降到第 100 步的 0.441，80 步只多降了 4.5 個百分點；受害者 ensemble 在第 30 步之後甚至在 0.42–0.445 之間來回。受害者的 loss 從 2.81 只升到 3.28，同一段時間代理的 loss 已經衝到十幾。攻擊的「力氣」幾乎全部花在代理身上。</p>
+<p><strong>第三，前幾步的黑箱並不是穩定下降。</strong>第 2 步時受害者是 0.814，第 3 步反而回到 0.831。第 2 步時每個像素的淨移動只可能是 0 或 ±1.6（存檔成 0 或 2），第 3 步是 ±0.8 或 ±2.4（存檔成 1 或 2）：四捨五入的效果在這麼小的改動上很明顯（第 1 章的奇偶現象）；而且這時每一步都在跟著代理的梯度轉彎，某一步轉向了「只對 resnet110 有效」的方向，黑箱就會退一點。</p>
+
+<h2 id="overfit">4.3　攻擊也會過擬合</h2>
+<p>投影片 p.9 用了訓練模型的語言來描述這件事：I-FGSM 貪心地沿著梯度的正負號走，容易落入「差勁的局部極大值」，<strong>過擬合到代理模型的參數</strong>，這樣的對抗樣本很少能轉移到黑箱模型上。</p>
+<p>類比是這樣的：訓練模型時，訓練資料是你看得到的，測試資料是看不到的；模型在訓練資料上 loss 一直降，測試資料上卻停住甚至變差，叫做過擬合。攻擊時，代理是你看得到的，黑箱是看不到的；雜訊在代理上 loss 一直升，黑箱上卻停住。4.2 節那張表的白箱與黑箱兩欄，就是訓練準確率與測試準確率。</p>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>訓練一個模型</th><th>產生對抗樣本</th></tr></thead>
+<tbody>
+<tr><td>要最佳化的變數</td><td>權重</td><td>輸入圖片（3,072 個數）</td></tr>
+<tr><td>看得到的</td><td>訓練資料</td><td>代理模型</td></tr>
+<tr><td>真正在乎的</td><td>測試資料</td><td>黑箱模型</td></tr>
+<tr><td>過擬合的症狀</td><td>訓練 loss 一直降、測試準確率停住</td><td>代理的 loss 一直升、黑箱準確率停住</td></tr>
+<tr><td>對策</td><td>多一點資料、資料增強、ensemble、正則化、提早停止</td><td>多幾個代理（第 5 章）、輸入增強 DIM、動量 MI（第 6 章）</td></tr>
+</tbody>
+</table></div>
+<p>這個類比有一點要小心：在本書的設定裡，多走幾步並沒有讓黑箱<strong>變差</strong>，只是不再變好。從第 20 步到第 100 步，受害者平均仍在緩慢下降。所以「提早停止」在這裡不是對策；問題不在走太多步，而在<strong>每一步的方向只代表 resnet110 一個模型的意見</strong>。第 3 章已經看到，同樣是 I-FGSM、同樣 20 步，換成 nin 當代理，黑箱就是 0.362，比 resnet110 走 100 步的 0.441 還低。方向比步數重要。</p>
+<p>為什麼 FGSM 的過擬合沒有那麼嚴重？FGSM 只看原圖這一點的梯度，它利用的是 loss 在起點附近的大斜率（第 2 章的線性假說）；不同模型在同樣的資料上訓練，起點附近的斜率方向有不少共通之處。I-FGSM 一步步沿著代理的 loss 曲面爬，越爬越深入代理自己特有的地形。第 3 章 FGSM 的白箱與黑箱相關 0.82、I-FGSM 的白箱全是 0，就是這個差別的另一面。</p>
+
+<h2 id="alpha">4.4　步長與步數</h2>
+<p>實驗 A 固定 20 步，把步長 α 從 0.2 掃到 8（ε = 8 不變）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th class="num">α</th><th class="num">20 步最多能走</th><th class="num">L∞</th><th class="num">白箱</th><th class="num">8 個受害者平均</th><th class="num">受害者 ensemble</th></tr></thead>
+<tbody>
+<tr><td class="num">0.2</td><td class="num">4</td><td class="num">4</td><td class="num">0.100</td><td class="num">0.757</td><td class="num">0.800</td></tr>
+<tr><td class="num">0.4</td><td class="num">8</td><td class="num">8</td><td class="num">0.015</td><td class="num">0.619</td><td class="num">0.635</td></tr>
+<tr><td class="num">0.8（範例）</td><td class="num">16</td><td class="num">8</td><td class="num">0.005</td><td class="num">0.485</td><td class="num">0.460</td></tr>
+<tr><td class="num">1.6</td><td class="num">32</td><td class="num">8</td><td class="num">0.005</td><td class="num">0.452</td><td class="num">0.445</td></tr>
+<tr><td class="num">3.2</td><td class="num">64</td><td class="num">8</td><td class="num">0.010</td><td class="num">0.442</td><td class="num">0.415</td></tr>
+<tr><td class="num">8</td><td class="num">160</td><td class="num">8</td><td class="num">0.060</td><td class="num">0.465</td><td class="num">0.475</td></tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>α = 0.2 根本走不到 ε。</strong>20 × 0.2 = 4，就算每一步都同方向，最多也只改 4。L∞ 是 4，等於浪費了一半的預算；黑箱 0.757，和 FGSM ε = 4 的 0.778 差不多。α × 步數至少要大於 ε，通常取 1.25 到 2 倍以上，才有餘裕在邊界附近調整方向。</li>
+<li><strong>α 加大到 1.6、3.2，黑箱反而更好</strong>（0.452、0.442），白箱幾乎一樣是 0。大步長讓像素更快撞到 ±8 的邊界並停在那裡，雜訊的「能量」比較大；第 2 章看到，ε 越大轉移越好，而這裡是在同一個 ε 之內，讓更多像素用滿 ε。</li>
+<li><strong>α = 8 每一步都是一次完整的 FGSM。</strong>每一步都把像素推到邊界，然後被剪住；下一步如果梯度的正負號反了，一步就從 +8 跳到 −8。這樣在邊界的兩端來回跳，白箱反而沒有打完（0.06）。小步長的好處是能在邊界之內慢慢調整。</li>
+</ul>
+<p>步數方面，實驗 A 固定 α = 0.8，掃 1、2、5、10、20、50、100 步，結果就是 4.2 節表裡的數字（兩者用同一套程式，數字相同）：1 步就是 ε = 0.8 的 FGSM（存成 PNG 時四捨五入成 1，黑箱 0.891，和 FGSM ε = 1 相同）；5 步最多只能走 4（L∞ = 4）；10 步才剛好能走到 8。花的時間和步數成正比：resnet110 在本機 20 步約 11 秒、100 步約 47 秒（決定性模式，200 張圖）。</p>
+<p>整體來看，「α 大一點、步數不必太多」是對轉移性有利的方向，但所有設定的黑箱都擠在 0.44–0.49 之間：只要預算用得滿，步長與步數的影響不大。要往下突破，得改變方向本身。</p>
+
+<h2 id="variants">4.5　兩個常見的修改</h2>
+<p><strong>每一步剪回合法範圍。</strong>第 1 章提到，攻擊迴圈裡從來沒有把像素剪回 0–255，到存檔時才剪。在第 50 行之後再加一次 clamp（每個通道用自己在正規化空間的上下界），讓每一步都是一張真的能存成圖片的圖。20 步的結果：受害者平均 0.488、ensemble 0.465，和範例的 0.486、0.460 幾乎一樣。這個修改讓程式更正確（量到的就是交出去的），對成績沒有影響。</p>
+<p><strong>隨機起點（PGD）。</strong>從 ε 球裡均勻隨機的一點出發，再跑 20 步，3 個種子：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>起點</th><th class="num">白箱</th><th class="num">8 個受害者平均</th><th class="num">受害者 ensemble</th></tr></thead>
+<tbody>
+<tr><td>原圖（範例）</td><td class="num">0.005</td><td class="num">0.486</td><td class="num">0.460</td></tr>
+<tr><td>隨機，種子 0</td><td class="num">0.020</td><td class="num">0.540</td><td class="num">0.540</td></tr>
+<tr><td>隨機，種子 1</td><td class="num">0.010</td><td class="num">0.536</td><td class="num">0.545</td></tr>
+<tr><td>隨機，種子 2</td><td class="num">0.010</td><td class="num">0.535</td><td class="num">0.545</td></tr>
+</tbody>
+</table></div>
+<p>隨機起點讓黑箱<strong>變差</strong>了約 5 個百分點，三個種子都一樣（種子之間只差 0.5 個百分點）。原因不難理解：隨機起點加入了一份和攻擊無關的雜訊，20 步 × 0.8 的預算有一部分花在「抵銷起點的隨機性」，最後停在邊界上的像素也比較少。PGD 的隨機起點是為了<strong>評估防禦</strong>而設計的：從很多個起點出發，比較不會被某些防禦製造的「假梯度」騙到，找到的是更可靠的最壞情況。對「在代理上產生、拿去騙別人」的轉移攻擊來說，它沒有幫助。</p>
+<div class="note"><h4>現在的做法：把 clip 寫成投影、用 0–1 空間</h4>
+<p>現在的攻擊函式庫（torchattacks、Foolbox、ART）大多把 I-FGSM／PGD 寫成：輸入在 0–1，正規化放在模型裡（第 1 章），每一步之後做兩次投影——先 <code>delta = (x_adv - x).clamp(-eps, eps)</code>，再 <code>x_adv = (x + delta).clamp(0, 1)</code>。PyTorch 1.9 起 <code>torch.clamp</code> 也接受張量當上下界，第 50 行可以寫成 <code>torch.clamp(x_adv, x - epsilon, x + epsilon)</code>。評估模型穩健性時的標準做法是 AutoAttack：幾種不同的攻擊（含自動調步長的 APGD）一起跑，取最壞的結果。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>I-FGSM = 很多步、每步 α 的 FGSM，每步之後剪回「離原圖 ≤ ε」的範圍（第 50 行）。範例 α = 0.8、20 步，總步長 16 是 ε 的兩倍，剪裁一定會發生。PGD = I-FGSM 加隨機起點。</li>
+<li>沿著 100 步量：白箱第 10 步剩 0.03、第 50 步 0；8 個受害者第 20 步 0.486、第 100 步 0.441，幾乎停住。攻擊對代理過擬合：力氣幾乎全花在代理身上。</li>
+<li>多走幾步沒有讓黑箱變差，只是不再變好；換代理（nin 20 步 0.362）比多走 80 步（0.441）有效。方向比步數重要。</li>
+<li>α × 步數要大於 ε（α = 0.2 只用了一半預算）；α 1.6–3.2 略好於 0.8；α = 8 在邊界兩端來回跳。只要預算用滿，黑箱都在 0.44–0.49。</li>
+<li>每步剪回合法範圍：成績不變、程式更正確。隨機起點（PGD）：黑箱變差約 5 個百分點，它是評估防禦用的工具。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 把第 50 行改成和上一步的 <code>x_adv</code> 比（<code>torch.max(torch.min(x_adv, prev+epsilon), prev-epsilon)</code>），會發生什麼事？</summary>
+<p>每一步都只限制「離上一步不超過 ε」，而每一步本來就只走 α &lt; ε，所以這行等於沒有作用；20 步累積下來可以離原圖 16，L∞ 超過 8，JudgeBoi 會退件。剪裁一定要以原圖為基準。這是推論，本書沒有實際跑。</p></details>
+<details class="quiz"><summary>2. 範例的 α = 0.8、20 步。如果改成 α = 0.4、40 步（總步長一樣是 16），你預期黑箱結果比較接近哪一組？</summary>
+<p>總步長相同、步長更小，每一步更仔細地沿著代理的曲面走。根據 4.4 節，小步長的黑箱並沒有比較好（α 0.4、20 步是 0.619，但那是因為總步長只有 8）；在總步長足夠的前提下，步數多寡的影響不大（4.2 節第 20 步之後幾乎不變），所以預期和範例的 0.485 接近，可能略差。這是推論，本書沒有實際跑這一組。</p></details>
+<details class="quiz"><summary>3. 白箱準確率在第 50 步已經是 0。為什麼第 50 到第 100 步，受害者的準確率還在下降（0.446 → 0.441）？</summary>
+<p>白箱準確率只看「是否答錯」，答錯之後 loss 還可以繼續上升；I-FGSM 繼續讓代理的 loss 變大，雜訊也繼續變大（停在 ±8 的像素從 21% 增加到 26%）。更大、更極端的雜訊對受害者也多一點點效果。但幅度很小，因為方向仍然是代理自己的方向。</p></details>
+<details class="quiz"><summary>4. 為什麼 PGD 的隨機起點在評估防禦時有用，在轉移攻擊時卻沒用？</summary>
+<p>有些防禦讓模型在原圖附近的梯度失真（例如梯度幾乎為 0 或亂跳），從原圖出發的攻擊會被誤導；從很多隨機起點出發，比較有機會繞開這些區域、找到真正的最壞情況。轉移攻擊的對手不是代理，代理的梯度本身沒有被動過手腳，隨機起點只是加了一份與攻擊無關的雜訊，浪費預算（4.5 節：黑箱變差約 5 個百分點）。</p></details>
+<details class="quiz"><summary>5. 4.3 節說「方向比步數重要」。根據第 3 章和本章的數字，找出一個支持這句話的比較。</summary>
+<p>resnet110 走 100 步，受害者 0.441；nin 只走 20 步，受害者 0.362。後者步數少了 80%，結果卻好 8 個百分點。另一個比較：resnet110 從 20 步到 100 步只改善 4.5 個百分點，而 40 個代理之間 20 步的結果差了 32 個百分點（第 3 章）。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Alexey Kurakin、Ian Goodfellow、Samy Bengio，<a href="https://arxiv.org/abs/1607.02533">Adversarial examples in the physical world</a>（2016）：BIM／I-FGSM 的論文，也把對抗樣本印出來用手機拍照，證明它們在真實世界裡仍然有效。</li>
+<li>Aleksander Madry 等，<a href="https://arxiv.org/abs/1706.06083">Towards Deep Learning Models Resistant to Adversarial Attacks</a>（ICLR 2018）：PGD 與 PGD 對抗訓練。</li>
+<li>Francesco Croce、Matthias Hein，<a href="https://arxiv.org/abs/2003.01690">Reliable evaluation of adversarial robustness with an ensemble of diverse parameter-free attacks</a>（ICML 2020）：AutoAttack，現在評估穩健性的標準。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW10 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW10 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>
