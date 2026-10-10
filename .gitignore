@@ -65,3 +65,10 @@ docs/tools/hw14_logs/*.err
 HW13/food11-hw13/
 HW13/outputs/
 docs/tools/hw13_logs/*.err
+HW10/data/
+HW10/fgsm/
+HW10/ifgsm/
+HW10/mifgsm/
+HW10/*.tgz
+HW10/visualization.png
+docs/tools/hw10_logs/*.err
