@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HW10 教學大綱 — 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW10 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px——近黑的冷灰底、紙白的字、珊瑚紅只用在標題記號與強調（「攻擊」的顏色）；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：原圖 灰、FGSM 藍、I-FGSM 橘、MI-FGSM 綠、DIM 紫、ensemble 洋紅、JPEG 防禦 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與前幾本相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #ef7a6d;      /* 珊瑚紅：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(239, 122, 109, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #ef7a6d;
+  /* 角色色 */
+  --r-clean: #8b949e; --r-fgsm: #3987e5; --r-ifgsm: #d95926; --r-mi: #199e70;
+  --r-dim: #9085e9; --r-ens: #d55181; --r-jpeg: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "x′ = x + ε · sign(∇ₓ L)　→　代理模型（白箱）　→　助教的模型（黑箱）　·　CIFAR-10 200 張　ε = 8";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fdf1ef; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #1c1616; border-color: rgba(239, 122, 109, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1f0d0b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.clean { --rc: var(--r-clean); } .role.fgsm { --rc: var(--r-fgsm); } .role.ifgsm { --rc: var(--r-ifgsm); }
+.role.mi { --rc: var(--r-mi); } .role.dim { --rc: var(--r-dim); } .role.ens { --rc: var(--r-ens); }
+.role.jpeg { --rc: var(--r-jpeg); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">開始閱讀 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW10 讀碼教材</p>
+  <h1>教學大綱</h1>
+  <p class="chap-lead">這一頁是全書的設計圖，列出每一章對應哪些檔案、要回答什麼問題、用哪些實測數字。2026-10-10 經使用者核可。寫作途中如果發現大綱和程式不符，以程式為準，並回頭修改這一頁。</p>
+</header>
+<main>
+
+<h2 id="principles">寫法</h2>
+<ul>
+<li>每一章都對應真實的檔案與函式，程式碼逐字引用並標注 <code>檔名:行號</code>，行號以 commit <code>d817a0a</code> 為準。</li>
+<li>具象先於抽象：先打開一張被攻擊過的 PNG，看它和原圖差幾個像素值，再談梯度；先看單一代理模型的攻擊轉移到別的模型剩多少，再談 ensemble。</li>
+<li>每一個數字都在本機實測，原始紀錄在 <code>docs/tools/hw10_runs.jsonl</code>。「改 X 會怎樣」的題目一律實際跑過，只靠推論、沒有跑的會註明。</li>
+<li><strong>同一份程式在 GPU 上跑兩次，存下的對抗圖片就不一樣</strong>（第 0、2 章）。所以實驗一律在決定性模式下跑；帶隨機性的攻擊（DIM）與自己訓練的代理模型各跑 3 個種子，報平均與範圍。</li>
+<li>助教的 JudgeBoi 已經關閉，本書用「本機黑箱」代替：8 個和代理模型不同家族的 pytorchcv 模型，分別量「直接分類」與「先做 JPEG 壓縮再分類」。投影片說助教的模型是「一般模型的 ensemble 加上被動防禦」，本機黑箱只是近似，所以本書不宣稱「過了哪條線」。</li>
+<li>一律量<strong>存成 PNG 之後</strong>的準確率（JudgeBoi 拿到的就是 PNG），程式印出的準確率只當參考（第 1 章）。</li>
+<li>新名詞在全書第一次出現的地方解釋。遇到 2022 年的寫法已經過時，就加「現在的做法」框。</li>
+<li>圖表的顏色代表角色，全書一致：<span class="role clean">原圖</span>、<span class="role fgsm">FGSM</span>、<span class="role ifgsm">I-FGSM</span>、<span class="role mi">MI-FGSM</span>、<span class="role dim">DIM</span>、<span class="role ens">ensemble</span>、<span class="role jpeg">JPEG 防禦</span>。</li>
+<li>最後一章是總結章（題庫、名詞對照、速查），不寫附錄。全書使用繁體中文與台灣用語。</li>
+</ul>
+
+<h2 id="chapters">各章規劃</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>章</th><th>對應原始碼</th><th>要回答的問題</th><th>用到的實測</th></tr></thead>
+<tbody>
+<tr><td>第 0 章　全貌</td><td><code>hw10.py</code>、<code>config.py</code></td><td>對抗攻擊在做什麼：非目標攻擊、L∞ 限制 ε = 8、黑箱與代理模型；200 張圖與評分方式、四條基準線；<strong>模型總覽</strong>（resnet110_cifar10：架構圖、各層形狀、參數手算與 PyTorch 印出的值）；怎麼跑、跑多久；同一份程式跑兩次圖片就不同</td><td>benign 0.95、FGSM 0.59、I-FGSM 0.005（白箱）；1,730,714 參數；兩次執行有 28 張 PNG 不同</td></tr>
+<tr><td>第 1 章　資料與 ε 的換算</td><td><code>config.py</code>、<code>dataset.py</code>、<code>attack.py</code> 的 <code>gen_adv_examples</code>、<code>create_dir</code></td><td>ToTensor 與 Normalize 之後，ε 為什麼是 <code>8/255/std</code>、為什麼三個通道不一樣；資料夾排序與類別編號；攻擊後怎麼還原成 0–255、四捨五入、存檔；程式印出的準確率和 PNG 的差距；L∞ 的檢查</td><td>印出 0.595 vs PNG 0.590；每張圖的 L∞；四捨五入改變了多少像素</td></tr>
+<tr><td>第 2 章　FGSM</td><td><code>attack.py</code> 的 <code>fgsm</code></td><td>對輸入取梯度；為什麼只用梯度的正負號（L∞ 下的最佳一步）；線性假說；ε 越大越有效、也越看得出來；cuDNN 反向傳播的非決定性</td><td>A 組：ε = 1、2、4、8、16 的白箱與黑箱準確率</td></tr>
+<tr><td>第 3 章　本機黑箱</td><td><code>docs/tools/hw10_exp.py</code>、<code>hw10_zoo.py</code></td><td>pytorchcv 有哪些 CIFAR-10 模型、哪些載不到；為什麼代理與受害者要分家族；8 個受害者與「受害者 ensemble」；轉移性怎麼量；哪個單一代理模型轉移得最好（和參數量、準確率有沒有關係）</td><td>模型庫 85 個（70 個可用）的 benign 準確率；40 個代理 × FGSM／I-FGSM 的轉移表</td></tr>
+<tr><td>第 4 章　I-FGSM 與代理模型的過擬合</td><td><code>attack.py</code> 的 <code>ifgsm</code></td><td>多走幾小步、每步剪回 ε 球；白箱幾乎全錯、黑箱卻只降一點——攻擊對代理模型「過擬合」；步數與步長的影響；沒有把像素剪回 [0, 1] 會怎樣</td><td>A 組：步數 1–100、步長 0.2–8 的白箱與黑箱曲線</td></tr>
+<tr><td>第 5 章　Ensemble 攻擊（Medium／Strong）</td><td><code>ensemble.py</code>、<code>docs/tools/hw10_train_surrogate.py</code></td><td>為什麼同時騙好幾個模型會比較能轉移；logits 相加、平均、機率平均、loss 相加的差別（<code>self.softmax</code> 宣告了卻沒用）；代理的數量與家族多樣性；paper B：訓練不足的代理模型為什麼轉移得更好（自己在 CIFAR-10 上訓練，存下每個階段的 checkpoint）</td><td>B 組：聚合方式、代理數 1–16（3 次抽樣）、同家族 vs 跨家族；U 組：各 epoch 的 checkpoint 當代理，3 個種子</td></tr>
+<tr><td>第 6 章　MI-FGSM 與 DIM（Boss）</td><td><code>attack.py</code> 的 <code>mifgsm</code>、<code>hw10_exp.py</code> 的 <code>diverse</code></td><td>動量讓更新方向穩定、不陷在代理模型的局部極大值；梯度為什麼要先除以 L1 範數；輸入多樣化（隨機縮放加補零）是攻擊的資料增強；和 ensemble、訓練不足的代理疊加</td><td>C 組：decay、DIM 的機率與尺寸（3 個種子）；最強組合</td></tr>
+<tr><td>第 7 章　防禦：JPEG 壓縮（報告題）</td><td><code>report.py</code>、imgaug 的 <code>compress_jpeg</code></td><td>報告第 2 部分三題；「壓縮率 70」其實是 JPEG 品質 31；為什麼 JPEG 能擋：把高頻的小雜訊抹掉；壓縮對乾淨圖片的代價；壓縮強度掃描；攻擊者知道有 JPEG 時能不能繞過（把 JPEG 放進攻擊迴圈）</td><td>D 組：JPEG 品質掃描 × 各攻擊；乾淨圖的準確率代價；防禦感知的攻擊</td></tr>
+<tr><td>第 8 章　總結</td><td>全部</td><td>全書實驗總表；每一招各值多少（和種子雜訊比）；三級題庫（入門／進階／挑戰）、名詞對照、速查表；從騙圖片分類器到 LLM 越獄（ML2026 HW1）</td><td>全書數字</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="issues">讀程式找到的問題（各章實測）</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>#</th><th>問題</th><th>位置</th><th>章</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>設了種子也一樣：cuDNN 卷積的反向傳播預設不是決定性的，接近 0 的梯度在兩次執行之間正負號會翻轉，同一份程式跑兩次，FGSM 存下的 200 張圖有 28 張不同</td><td>所有攻擊函式</td><td>0、2</td></tr>
+<tr><td>2</td><td>攻擊過程中從來沒有把像素剪回合法範圍 [0, 1]，到存檔時才 clamp 並四捨五入；印出的準確率量的是「沒剪、沒四捨五入」的浮點數圖片，和交出去的 PNG 不同</td><td><code>attack.py</code> 的 <code>gen_adv_examples</code></td><td>1、4</td></tr>
+<tr><td>3</td><td>ε 在正規化之後的空間裡是 <code>8/255/std</code>，三個通道各不相同；直接寫 <code>8/255</code> 會讓限制小了約 5 倍</td><td><code>config.py</code></td><td>1</td></tr>
+<tr><td>4</td><td>類別編號來自資料夾的字母排序，剛好和 CIFAR-10 的類別順序相同；檔名排序是 airplane1、airplane10、airplane11……（字串排序）</td><td><code>dataset.py</code></td><td>1</td></tr>
+<tr><td>5</td><td>I-FGSM 的步長 0.8 × 20 步 = 16，比 ε = 8 大一倍，剪回 ε 球這一步一定會發生</td><td><code>attack.py</code> 的 <code>ifgsm</code></td><td>4</td></tr>
+<tr><td>6</td><td><code>ensembleNet</code> 宣告了 <code>self.softmax</code> 卻沒有用到；TODO 的註解說「把 logits 加起來」，加總與平均、與機率平均的梯度方向不同</td><td><code>ensemble.py</code></td><td>5</td></tr>
+<tr><td>7</td><td>imgaug 的 <code>JpegCompression(compression=70)</code> 換算成 PIL 的品質是 31，不是 70；「壓縮率 70%」容易被讀成「品質 70」</td><td><code>report.py</code>、imgaug</td><td>7</td></tr>
+<tr><td>8</td><td>imgaug 0.4.0（2020 年）在 NumPy 2 下 import 就失敗（<code>np.sctypes</code> 已移除）；opencv 5 也和它不相容</td><td><code>report.py</code></td><td>0、7</td></tr>
+<tr><td>9</td><td>報告題的程式沒有呼叫 <code>model.eval()</code>，靠的是前面 <code>gen_adv_examples</code> 已經把模型切到 eval 模式；單獨執行那一格，BatchNorm 會用 batch 統計量</td><td>notebook cell [30]、<code>report.py</code></td><td>7</td></tr>
+<tr><td>10</td><td><code>create_dir</code> 先把原圖整個複製過去再覆蓋；目錄已經存在時不會清空，舊的檔案會留著</td><td><code>attack.py</code></td><td>1</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="spec">實驗規格</h2>
+<p>所有實驗用 <code>docs/tools/hw10_exp.py</code>，在決定性模式下一組一組依序跑（<code>hw10_run_grid.sh</code>）；工具在預設設定下和 <code>hw10.py</code> 產生的 PNG 逐位元相同。每組都把 200 張圖存成 PNG 再讀回來，用 8 個受害者各自量一次、先做 JPEG（imgaug 的 compression 70）再量一次，另外把 8 個受害者的 logits 相加當成一個 ensemble 再量一次。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>組</th><th>內容</th><th>章</th></tr></thead>
+<tbody>
+<tr><td>A</td><td>以 resnet110 為代理：不攻擊；FGSM ε = 1、2、4、8、16；I-FGSM 步數 1、2、5、10、20、50、100；步長 0.2、0.4、0.8、1.6、3.2、8。40 個代理模型各跑 FGSM 與 I-FGSM</td><td>2、3、4</td></tr>
+<tr><td>B</td><td>Ensemble（I-FGSM）：notebook 的三個模型 × 四種聚合方式；從代理池隨機抽 2、4、8、16 個（各 3 次）；同家族 vs 跨家族</td><td>5</td></tr>
+<tr><td>U</td><td>paper B：在 CIFAR-10 訓練集上從頭訓練 resnet20、resnet56（扣掉與作業 200 張重複的圖），60 個 epoch，存下第 1、2、3、5、10、15、20、30、40、45、60 個 epoch 的 checkpoint，3 個種子；每個 checkpoint 當代理跑 I-FGSM</td><td>5</td></tr>
+<tr><td>C</td><td>MI-FGSM 的 decay 0、0.5、1、2；DIM 的機率 0.25–1 與縮放上限，3 個種子；ensemble ＋ 訓練不足的代理 ＋ DIM-MI-FGSM</td><td>6</td></tr>
+<tr><td>D</td><td>JPEG 品質掃描（壓縮率 10–90）× 原圖與各攻擊；把 JPEG 放進攻擊迴圈（前向做真的 JPEG、反向當成恆等函數）</td><td>7</td></tr>
+</tbody>
+</table></div>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">開始閱讀 →</a></nav>
+<script id="book-js">
+/* HW10 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

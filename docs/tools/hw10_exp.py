@@ -47,10 +47,20 @@ alpha = opt.alpha / 255 / std
 loss_fn = nn.CrossEntropyLoss()
 
 
+def get_m(name):
+  # 'arch@path.pth' = a pytorchcv architecture with our own (undertrained) weights from hw10_train_surrogate.py
+  if '@' in name:
+    arch, path = name.split('@')
+    m = ptcv_get_model(arch, pretrained=False)
+    m.load_state_dict(torch.load(path, map_location='cpu'))
+    return m
+  return ptcv_get_model(name, pretrained=True)
+
+
 class Ens(nn.Module):
   def __init__(self, names, mode):
     super().__init__()
-    self.models = nn.ModuleList([ptcv_get_model(n, pretrained=True) for n in names])
+    self.models = nn.ModuleList([get_m(n) for n in names])
     self.mode = mode
   def forward(self, x):
     outs = [m(x) for m in self.models]
@@ -128,7 +138,7 @@ t0 = time.time()
 torch.manual_seed(opt.seed)
 names = opt.surrogates.split(',')
 if len(names) == 1:
-  model = ptcv_get_model(names[0], pretrained=True).to(device)
+  model = get_m(names[0]).to(device)
 else:
   model = Ens(names, opt.ens).to(device)
 adv_set = AdvDataset(root, transform=transform)
@@ -168,16 +178,23 @@ labels = torch.tensor(ds.labels, device=device)
 X = torch.stack([transform(a) for a in imgs]).to(device)
 jx = {r: torch.stack([transform(jpeg(a, float(r))) for a in imgs]).to(device) for r in opt.jpeg.split(',') if r}
 rec['acc'] = {}
-for v in [n for n in (names + opt.victims.split(',')) if n]:
+victims = [n for n in opt.victims.split(',') if n]
+ens_logits = {}  # the victims as one ensemble (sum of logits): a stand-in for the TA's "ensemble of vanilla models"
+for v in [n for n in (names + victims) if n]:
   if v in rec['acc']:
     continue
-  m = ptcv_get_model(v, pretrained=True).to(device).eval()
+  m = get_m(v).to(device).eval()
   with torch.no_grad():
-    rec['acc'][v] = (m(X).argmax(1) == labels).float().mean().item()
-    for r, xj in jx.items():
-      rec['acc'][f'{v}+jpeg{r}'] = (m(xj).argmax(1) == labels).float().mean().item()
+    out = {'': m(X)}
+    out.update({f'+jpeg{r}': m(xj) for r, xj in jx.items()})
+    for k, o in out.items():
+      rec['acc'][v + k] = (o.argmax(1) == labels).float().mean().item()
+      if v in victims:
+        ens_logits[k] = ens_logits.get(k, 0) + o
   del m
   torch.cuda.empty_cache()
+for k, o in ens_logits.items():
+  rec['acc']['victim_ens' + k] = (o.argmax(1) == labels).float().mean().item()
 rec['total_s'] = round(time.time() - t0, 1)
 print(json.dumps(rec), flush=True)
 with open(opt.jsonl, 'a') as f:

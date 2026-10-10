@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HW10 對抗攻擊 — 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW10 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px——近黑的冷灰底、紙白的字、珊瑚紅只用在標題記號與強調（「攻擊」的顏色）；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：原圖 灰、FGSM 藍、I-FGSM 橘、MI-FGSM 綠、DIM 紫、ensemble 洋紅、JPEG 防禦 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與前幾本相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #ef7a6d;      /* 珊瑚紅：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(239, 122, 109, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #ef7a6d;
+  /* 角色色 */
+  --r-clean: #8b949e; --r-fgsm: #3987e5; --r-ifgsm: #d95926; --r-mi: #199e70;
+  --r-dim: #9085e9; --r-ens: #d55181; --r-jpeg: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "x′ = x + ε · sign(∇ₓ L)　→　代理模型（白箱）　→　助教的模型（黑箱）　·　CIFAR-10 200 張　ε = 8";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fdf1ef; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #1c1616; border-color: rgba(239, 122, 109, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1f0d0b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.clean { --rc: var(--r-clean); } .role.fgsm { --rc: var(--r-fgsm); } .role.ifgsm { --rc: var(--r-ifgsm); }
+.role.mi { --rc: var(--r-mi); } .role.dim { --rc: var(--r-dim); } .role.ens { --rc: var(--r-ens); }
+.role.jpeg { --rc: var(--r-jpeg); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="outline.html">教學大綱</a><a href="ch00.html">開始閱讀 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW10 讀碼教材</p>
+  <h1>HW10　對抗攻擊：<br>每個像素只改 8，騙過看不見的模型</h1>
+  <p class="chap-lead">給你 200 張 CIFAR-10 的小圖，每個像素最多只能改 8（0–255 的尺度），人眼幾乎看不出差別，目標是讓助教手上的分類模型認錯越多越好。你看不到助教的模型，只能拿公開的預訓練模型當「代理」，在代理上算梯度產生雜訊，再賭這些雜訊也能騙過別的模型。書中每一段程式碼都逐字取自本 repo，每一個數字都是在本機實際跑出來的。</p>
+</header>
+<main>
+
+<h2 id="then-now">先說在前面：用現在的眼光讀 2022 年的作業</h2>
+<p>這份作業出自 2022 年春季的課程。原版是一份 Colab notebook：資料讀取、評估、FGSM 與 I-FGSM、存檔與壓縮都寫好了，留下三個 TODO——MI-FGSM 的動量、ensemble 模型的 <code>forward</code>、報告題的 JPEG 壓縮。本 repo 把 notebook 拆成幾個 <code>.py</code> 檔、補上三個 TODO，2026 年在本機重新跑過一遍。動手之前，先分四個層次把 2022 年和現在的差異講清楚。</p>
+
+<h3 id="layer-env">第一層：環境——拆成六個檔，讓 2020 年的 imgaug 跑起來</h3>
+<p>notebook 拆成下面這些檔案。拆完先驗證：把 notebook 的程式格原樣串成一支腳本跑一次，再跑拆好的 <code>hw10.py</code>，兩邊印出的每一行、存下的每一張 PNG 都必須完全相同（第 0 章）。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>檔案</th><th>內容</th><th>對應原版 notebook 的哪一段</th></tr></thead>
+<tbody>
+<tr><td><code>config.py</code></td><td>裝置、batch size、CIFAR-10 的 mean／std、ε、資料目錄</td><td>Global Settings</td></tr>
+<tr><td><code>dataset.py</code></td><td><code>transform</code>、讀 200 張圖的 <code>AdvDataset</code></td><td>Data</td></tr>
+<tr><td><code>attack.py</code></td><td><code>epoch_benign</code>、<code>fgsm</code>、<code>ifgsm</code>、<code>mifgsm</code>（補上動量）、<code>gen_adv_examples</code>、<code>create_dir</code></td><td>Utils 三段</td></tr>
+<tr><td><code>ensemble.py</code></td><td><code>ensembleNet</code>（補上 <code>forward</code>）</td><td>Example of Ensemble Attack</td></tr>
+<tr><td><code>hw10.py</code></td><td>載入代理模型、量原圖、跑 FGSM 與 I-FGSM、存 PNG、打包 <code>.tgz</code></td><td>Model／FGSM／I-FGSM／Compress</td></tr>
+<tr><td><code>report.py</code></td><td>視覺化、報告題 dog2.png、JPEG 防禦（補上 imgaug）</td><td>Visualization／Report Question／Passive Defense</td></tr>
+</tbody>
+</table></div>
+<p>代理模型來自 <code>pytorchcv</code>（0.0.74），權重從 GitHub 下載。它列了 85 個 CIFAR-10 模型，其中 13 個的下載網址已經失效、2 個本來就沒有預訓練權重——notebook 說「有些模型載不到，跳過就好」，指的就是這 15 個（第 3 章）。報告題用的 imgaug 0.4.0 是 2020 年的版本，在 NumPy 2 下一 import 就失敗；本書不改 imgaug，而是用一個小 shim 把 NumPy 刪掉的 <code>np.sctypes</code> 補回去（第 7 章）。</p>
+
+<h3 id="layer-repo">第二層：本 repo 的改動——補上三個 TODO，其他照抄</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>項目</th><th>原版 notebook（2022）</th><th>本 repo</th><th>在哪一章講</th></tr></thead>
+<tbody>
+<tr><td><code>mifgsm</code></td><td><code># TODO: Momentum calculation</code>，<code>grad</code> 沒有定義</td><td>依 MI-FGSM 論文：梯度除以自己的 L1 範數，再加上 decay 倍的動量</td><td>第 6 章</td></tr>
+<tr><td><code>ensembleNet.forward</code></td><td>迴圈裡只有註解，是語法錯誤</td><td>照註解「sum up logits」把各模型的 logits 相加</td><td>第 5 章</td></tr>
+<tr><td>JPEG 防禦</td><td><code># compressed_x = ...</code></td><td><code>iaa.JpegCompression(compression=70)</code></td><td>第 7 章</td></tr>
+<tr><td>報告題的輸出</td><td>用 matplotlib 畫在 notebook 裡</td><td>視覺化存成 <code>visualization.png</code>；報告題的預測直接印出</td><td>第 7 章</td></tr>
+<tr><td>打包</td><td><code>%cd</code> 與 <code>!tar</code></td><td>用 <code>subprocess.run</code> 執行同一條 <code>tar</code> 指令</td><td>第 0 章</td></tr>
+</tbody>
+</table></div>
+<p>讀程式時會碰到幾個和直覺不符的地方。設了種子、同一份程式跑兩次，存下的圖片卻有 28 張不同。程式印出的準確率，量的不是交出去的那 200 張 PNG。ε 明明是 8，程式裡卻寫成 <code>8/255/std</code>，而且三個顏色通道各不相同。「壓縮率 70%」的 JPEG 其實是品質 31。完整清單在<a href="outline.html#issues">教學大綱</a>，每一項都在對應的章節實測。</p>
+
+<h3 id="layer-method">第三層：方法——攻擊的對象從圖片分類器換成了大型語言模型</h3>
+<p>2022 年，對抗攻擊的教科書例子就是這份作業：一張圖加上看不出來的雜訊，分類器就認錯；用公開模型產生的雜訊，常常也能騙過沒見過的模型（轉移性）。投影片上的方法——FGSM（2015）、I-FGSM（2017）、ensemble 攻擊（2017）、MI-FGSM（2018）、DIM（2019）——都是那幾年的成果。</p>
+<div class="note"><h4>現在的做法：同一套觀念，搬到了 LLM 的越獄與防禦</h4>
+<p>2026 年的課程（ML2026 HW1「LLM Malicious Instruction Defense」）已經不攻擊圖片分類器，而是處理大型語言模型的越獄：在提示裡加一段看似無意義的字串，讓模型說出它本來會拒絕的內容。最有名的 GCG 攻擊（2023）做的事和本作業幾乎一樣——在一個開源模型（白箱代理）上對輸入的 token 取梯度、一步步改，產生的字串再拿去攻擊看不到內部的商用模型（黑箱），也常常有效。防禦這一端，JPEG 壓縮這類「把輸入先洗一遍」的被動防禦，對應到 LLM 就是把提示改寫、過濾後再交給模型；而「攻擊者知道你有防禦，就把防禦算進攻擊裡」這個教訓（第 7 章），在 LLM 的安全評估裡同樣成立。圖片分類器這一端，真正能抵抗攻擊的做法是對抗訓練（adversarial training）與可證明的穩健性（certified robustness），本作業沒有涵蓋。</p>
+</div>
+
+<h3 id="layer-concept">第四層：觀念——沒有過時，這是本書的主體</h3>
+<p>對輸入取梯度，而不是對權重；在一個限制（L∞ 球）裡找讓 loss 最大的點；為什麼只用梯度的正負號；在代理模型上「太用力」反而騙不過別的模型——攻擊也會過擬合，而防止過擬合的工具和訓練模型時一樣：ensemble、資料增強、動量、不要把代理練得太好。還有兩件和攻擊無關、每個深度學習專案都會遇到的事：在 GPU 上，同一份程式跑兩次結果可能不同；程式印出的分數，不一定是交出去的那個東西的分數。</p>
+
+<h2 id="about">這本教材在教什麼</h2>
+<p>這是台大李宏毅老師《機器學習 2022 Spring》第十份作業（HW10）的讀碼教材。資料是 CIFAR-10 的 200 張 32×32 彩色圖片，10 類各 20 張。整條流程如下：</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 300" role="img" aria-label="HW10 的流程：200 張原圖經過 ToTensor 與 Normalize 送進代理模型；對輸入取梯度，用 FGSM 或 I-FGSM 產生加了雜訊的圖，每個像素的改變不超過 8；還原成 0 到 255、四捨五入後存成 PNG 並打包；助教的黑箱模型讀 PNG 分類，準確率越低越好；本書以 8 個不同家族的本機模型代替黑箱">
+  <defs>
+    <marker id="arI" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#9aa5b1"/>
+    </marker>
+  </defs>
+  <rect x="10" y="20" width="190" height="110" rx="10" class="s-box"/>
+  <text class="s-lbl" x="105" y="50" text-anchor="middle" font-weight="700">200 張原圖</text>
+  <text class="s-mono" x="105" y="76" text-anchor="middle">10 類 × 20 張，32×32</text>
+  <text class="s-sm" x="105" y="100" text-anchor="middle">ToTensor、Normalize</text>
+  <text class="s-sm" x="105" y="120" text-anchor="middle">第 1 章</text>
+
+  <rect x="250" y="20" width="290" height="110" rx="10" class="s-box" stroke="#ef7a6d"/>
+  <text class="s-lbl" x="395" y="48" text-anchor="middle" font-weight="700">在代理模型上算梯度（白箱）</text>
+  <text class="s-mono" x="395" y="74" text-anchor="middle">x′ = x + ε · sign(∇ₓ L)</text>
+  <text class="s-sm" x="395" y="98" text-anchor="middle">FGSM、I-FGSM、MI-FGSM、DIM（第 2、4、6 章）</text>
+  <text class="s-sm" x="395" y="120" text-anchor="middle">一個或多個代理（第 3、5 章）</text>
+
+  <rect x="590" y="20" width="300" height="110" rx="10" class="s-box"/>
+  <text class="s-lbl" x="740" y="48" text-anchor="middle" font-weight="700">還原、存檔、打包</text>
+  <text class="s-mono" x="740" y="74" text-anchor="middle">× std + mean → × 255 → 四捨五入</text>
+  <text class="s-sm" x="740" y="98" text-anchor="middle">每個像素 |改變| ≤ 8</text>
+  <text class="s-sm" x="740" y="120" text-anchor="middle">PNG → .tgz（第 1 章）</text>
+
+  <rect x="590" y="175" width="300" height="105" rx="10" class="s-box"/>
+  <text class="s-lbl" x="740" y="203" text-anchor="middle" font-weight="700">助教的模型（黑箱）</text>
+  <text class="s-sm" x="740" y="228" text-anchor="middle">一般模型的 ensemble ＋ 被動防禦</text>
+  <text class="s-sm" x="740" y="252" text-anchor="middle">準確率越低越好</text>
+
+  <rect x="250" y="175" width="290" height="105" rx="10" class="s-box"/>
+  <text class="s-lbl" x="395" y="203" text-anchor="middle" font-weight="700">本書的本機黑箱（第 3 章）</text>
+  <text class="s-sm" x="395" y="228" text-anchor="middle">8 個不同家族的 pytorchcv 模型</text>
+  <text class="s-sm" x="395" y="252" text-anchor="middle">直接分類，與先做 JPEG 再分類（第 7 章）</text>
+
+  <line x1="202" y1="75" x2="244" y2="75" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#arI)"/>
+  <line x1="542" y1="75" x2="584" y2="75" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#arI)"/>
+  <line x1="740" y1="132" x2="740" y2="169" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#arI)"/>
+  <line x1="588" y1="227" x2="546" y2="227" stroke="#9aa5b1" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arI)"/>
+</svg>
+<figcaption>圖 i.1　HW10 的資料流。實線是交作業的流程；虛線表示 JudgeBoi 已經關閉，本書改用本機的模型代替助教的黑箱。</figcaption>
+</figure>
+
+<p>四條基準線（JudgeBoi 上的準確率，越低越好）與投影片的提示：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>基準線</th><th class="num">準確率</th><th>投影片的提示</th><th>本書在哪一章</th></tr></thead>
+<tbody>
+<tr><td>Simple</td><td class="num">≤ 0.70</td><td>FGSM</td><td>第 2 章</td></tr>
+<tr><td>Medium</td><td class="num">≤ 0.50</td><td>ensemble 攻擊 ＋ 隨便挑幾個模型 ＋ I-FGSM</td><td>第 4、5 章</td></tr>
+<tr><td>Strong</td><td class="num">≤ 0.30</td><td>ensemble ＋ paper B（挑對模型）＋ I-FGSM；或 ensemble ＋ 很多模型 ＋ MI-FGSM</td><td>第 5、6 章</td></tr>
+<tr><td>Boss</td><td class="num">≤ 0.15</td><td>ensemble ＋ paper B ＋ DIM-MI-FGSM</td><td>第 6 章</td></tr>
+</tbody>
+</table></div>
+<p>投影片說每條基準線在 Colab 上都應該 20 分鐘內跑完，而且只用 pytorchcv 的模型就能全部通過。JudgeBoi 已經關閉，本書的數字都是本機黑箱上的準確率，不能直接和上表比。</p>
+
+<h2 id="prereq">預備知識</h2>
+<ul>
+<li>Python 與 PyTorch 的基本用法：<code>nn.Module</code>、<code>DataLoader</code>、<code>loss.backward()</code>、<code>requires_grad</code>。</li>
+<li>CNN 影像分類的概念（卷積、BatchNorm、ResNet 的殘差連接）。讀過 HW03 的教材會很順。</li>
+<li>softmax 與 cross entropy。對輸入取梯度在 HW09 的 saliency map 也出現過，讀過更好。</li>
+</ul>
+
+<h2 id="toc">章節</h2>
+<ol class="toc">
+<li><a href="ch00.html"><span class="toc-title">第 0 章　全貌：200 張圖、ε = 8、看不見的模型</span></a><p class="toc-desc">任務、黑箱與代理、評分與基準線；模型總覽（resnet110_cifar10）；跑一次原版；同一份程式跑兩次圖片就不同。</p></li>
+<li><a href="ch01.html"><span class="toc-title">第 1 章　資料與 ε 的換算</span></a><p class="toc-desc">ToTensor 與 Normalize 之後 ε 變成多少；資料夾順序與類別；還原、四捨五入、存檔；印出的準確率和 PNG 的差距。</p></li>
+<li><a href="ch02.html"><span class="toc-title">第 2 章　FGSM：對輸入取梯度，只走一步</span></a><p class="toc-desc">為什麼取正負號；線性假說；ε 的掃描；GPU 的非決定性。</p></li>
+<li><a href="ch03.html"><span class="toc-title">第 3 章　本機黑箱：怎麼量轉移性</span></a><p class="toc-desc">pytorchcv 的 85 個模型；代理與受害者分家族；40 個代理各自的轉移表。</p></li>
+<li><a href="ch04.html"><span class="toc-title">第 4 章　I-FGSM 與代理模型的過擬合</span></a><p class="toc-desc">多走幾小步；白箱全錯、黑箱只降一點；步數與步長。</p></li>
+<li><a href="ch05.html"><span class="toc-title">第 5 章　Ensemble 與訓練不足的代理</span></a><p class="toc-desc">四種聚合方式；代理的數量與多樣性；自己訓練的早期 checkpoint 當代理（paper B）。</p></li>
+<li><a href="ch06.html"><span class="toc-title">第 6 章　MI-FGSM 與 DIM</span></a><p class="toc-desc">動量與輸入多樣化；和 ensemble 疊加的最強組合。</p></li>
+<li><a href="ch07.html"><span class="toc-title">第 7 章　防禦：JPEG 壓縮</span></a><p class="toc-desc">報告題；壓縮率 70 等於品質 31；壓縮強度掃描；攻擊者知道有防禦時。</p></li>
+<li><a href="ch08.html"><span class="toc-title">第 8 章　總結</span></a><p class="toc-desc">全書實驗總表、題庫、名詞對照、速查表。</p></li>
+</ol>
+
+<h2 id="run">怎麼跑</h2>
+<p>所有指令都在 <code>HW10/</code> 目錄下執行，使用 repo 共用的 <code>.venv</code>（Python 3.12、torch 2.11、pytorchcv 0.0.74）。200 張圖從 Kaggle 的壓縮檔 <code>ml2022spring-hw10.zip</code> 解開成 <code>HW10/data/</code>。</p>
+<pre class="shell cmd">$ cd HW10
+$ ../.venv/bin/python hw10.py      # 量原圖、跑 FGSM 與 I-FGSM，寫出 fgsm/、ifgsm/ 與兩個 .tgz
+$ ../.venv/bin/python report.py    # 視覺化與報告題（需要 imgaug，見第 7 章）</pre>
+<p>需要逐位元重現的時候（例如比對兩份程式），用決定性模式包住執行：</p>
+<pre class="shell cmd">$ CUBLAS_WORKSPACE_CONFIG=:4096:8 ../.venv/bin/python ../docs/tools/hw10_det.py hw10.py</pre>
+
+<h2 id="tools">本書的工具</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>檔案（<code>docs/tools/</code>）</th><th>用途</th></tr></thead>
+<tbody>
+<tr><td><code>hw10_make_ref.py</code></td><td>把 notebook 原樣串成參照腳本，用來驗證拆檔</td></tr>
+<tr><td><code>hw10_det.py</code></td><td>以決定性模式執行任何腳本（不改原檔）</td></tr>
+<tr><td><code>hw10_exp.py</code>、<code>hw10_run_grid.sh</code>、<code>hw10_grid_*.txt</code></td><td>實驗工具（預設與 <code>hw10.py</code> 逐位元一致；存 PNG 後在本機黑箱上評估）、依序執行的佇列與規格</td></tr>
+<tr><td><code>hw10_zoo.py</code></td><td>下載 pytorchcv 全部的 CIFAR-10 模型，量參數量與原圖準確率</td></tr>
+<tr><td><code>hw10_train_surrogate.py</code></td><td>在 CIFAR-10 上從頭訓練代理模型、存下各階段的 checkpoint（paper B）</td></tr>
+<tr><td><code>hw10_eval_dir.py</code></td><td>讀存好的 PNG 目錄，量準確率與 L∞</td></tr>
+<tr><td><code>hw10_npshim_sitecustomize.py</code></td><td>讓 imgaug 0.4.0 在 NumPy 2 下能 import 的 shim</td></tr>
+<tr><td><code>hw10_zoo.jsonl</code>、<code>hw10_pilot.jsonl</code>、<code>hw10_runs.jsonl</code></td><td>全部實驗的原始紀錄</td></tr>
+<tr><td><code>hw10_book/</code></td><td>本書樣板（<code>book.css</code>、<code>book.js</code>、<code>apply_template.py</code>）、圖表（<code>charts.py</code>）、程式引用填入（<code>fill_listings.py</code>）</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="version">版本聲明</h2>
+<p>本書的程式碼引用以 commit <code>d817a0a</code> 為準。環境：RTX PRO 4000 Blackwell 24 GB、Python 3.12、torch 2.11.0+cu128、torchvision 0.26.0、pytorchcv 0.0.74、NumPy 2.5.3；imgaug 0.4.0 裝在共用環境之外。所有數字都在決定性模式下量得，事實與原始數據在 <code>docs/HW10/FACTS.md</code>。本書沒有做冷讀（cold-read）審閱。</p>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="outline.html">教學大綱</a><a href="ch00.html">開始閱讀 →</a></nav>
+<script id="book-js">
+/* HW10 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

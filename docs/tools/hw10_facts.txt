@@ -1,0 +1,47 @@
+== model ==
+params 1730714 buffers 8399
+init_block ConvBlock 464 
+stage1 Sequential 84096 18
+stage2 Sequential 330048 18
+stage3 Sequential 1315456 18
+final_pool AvgPool2d 0 
+output 650
+conv 111 conv3x3 109 bn 111 linear 1
+ResUnit(
+  (body): ResBlock(
+    (conv1): ConvBlock(
+      (conv): Conv2d(16, 32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (activ): ReLU(inplace=True)
+    )
+    (conv2): ConvBlock(
+      (conv): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+  )
+  (identity_conv): ConvBlock(
+    (conv): Conv2d(16, 32, kernel_size=(1, 1), stride=(2, 2), bias=False)
+    (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (activ): ReLU(inplace=True)
+)
+shape ('init_block', (8, 16, 32, 32))
+shape ('stage1', (8, 16, 32, 32))
+shape ('stage2', (8, 32, 16, 16))
+shape ('stage3', (8, 64, 8, 8))
+shape ('final_pool', (8, 64, 1, 1))
+shape ('output', (8, 10))
+hand count 1730714
+== data ==
+n 200 classes Counter({0: 20, 1: 20, 2: 20, 3: 20, 4: 20, 5: 20, 6: 20, 7: 20, 8: 20, 9: 20})
+first names ['airplane/airplane1.png', 'airplane/airplane10.png', 'airplane/airplane11.png', 'airplane/airplane12.png'] ... dog idx 111
+class order ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+epsilon (normalized units) [0.15531, 0.157651, 0.156082] cifar std (0.202, 0.199, 0.201)
+8/255 = 0.03137254901960784
+x range [-1.7718, 2.3415]
+normalized range over 200 imgs [-2.4306929111480713, -2.4221105575561523, -2.2238805294036865] [2.5198018550872803, 2.603015184402466, 2.7512435913085938]
+== rounding / clamping ==
+fgsm pixels 614400 outside[0,255] 13754 float acc 0.595 rounded acc 0.59
+fgsm |diff| histogram [(0, 4305), (1, 1845), (2, 1678), (3, 1255), (4, 1176), (5, 1034), (6, 1045), (7, 1416), (8, 600646)]
+ifgsm pixels 614400 outside[0,255] 7628 float acc 0.005 rounded acc 0.005
+ifgsm |diff| histogram [(0, 89045), (1, 1575), (2, 154965), (3, 124722), (4, 982), (5, 91500), (6, 65068), (7, 18636), (8, 67907)]

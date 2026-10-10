@@ -72,3 +72,4 @@ HW10/mifgsm/
 HW10/*.tgz
 HW10/visualization.png
 docs/tools/hw10_logs/*.err
+HW10/cifar10/
