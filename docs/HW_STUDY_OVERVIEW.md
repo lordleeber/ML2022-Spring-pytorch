@@ -21,7 +21,7 @@ HW01–HW04、HW06、HW07、HW09、HW10、HW13、HW14 的讀碼教材已完成�
 | [HW08](../HW08/PLAN.md) | 異常偵測（autoencoder） | ✗（測試集無標籤） | 中 | 低（已能跑） | 已在 repo | 不建議 |
 | [HW12](../HW12/PLAN.md) | 強化學習（LunarLander） | ✓ | 高（RLHF） | 中（Gym→Gymnasium） | **2022 範例程式失傳** | 不建議 |
 | HW15 | Meta Learning | 未看 | — | — | 官方 notebook 在 `~/poyi/GitHubPublic/ML2022-Spring/HW15/` | 未評估 |
-| [ML2025 HW6](../ML2025-Spring/HW06/PLAN.md)（＝ML2026 HW5） | 微調而不遺忘（Llama-3.2-1B + LoRA） | 部分（安全率要審查模型） | 現行課程 | 中（Llama 需申請權限） | Colab／Kaggle（未下載） | HW14 的續集 |
+| [ML2025 HW6](https://github.com/lordleeber/ML2025-Spring-pytorch/blob/main/HW06/PLAN.md)（＝ML2026 HW5） | 微調而不遺忘（Llama-3.2-1B + LoRA） | 部分（安全率要審查模型） | 現行課程 | 中（Llama 需申請權限） | Colab／Kaggle（未下載） | HW14 的續集 |
 
 建議順序：HW14、HW13、HW07、HW10 已完成；下一本可接 ML2025 HW6 當 HW14 的 LLM 版續集（ML2025 HW5「Fine tune is powerful」則是 HW07 的續集）（HW13 的壓縮觀念則可接 ML2026 HW3 LLM Fast Inference）；有餘力再試 HW05 的環境。
 
