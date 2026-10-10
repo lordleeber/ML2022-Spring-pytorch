@@ -1,6 +1,7 @@
 # HW07 BERT 抽取式問答 — 研究筆記與計畫
 
-> 2026-10-08 由前一個 session 整理，尚未開始寫書。總覽見 [docs/HW_STUDY_OVERVIEW.md](../docs/HW_STUDY_OVERVIEW.md)。排序第三（原本第一，看過 ML2025／2026 後下調）。
+> **2026-10-10 完成**：教材 docs/HW07（index、outline、ch00–ch08）全部推上 master；47 次訓練（決定性模式、3 個種子），數字都在 docs/HW07/FACTS.md。
+> 2026-10-08 由前一個 session 整理。總覽見 [docs/HW_STUDY_OVERVIEW.md](../docs/HW_STUDY_OVERVIEW.md)。排序第三（原本第一，看過 ML2025／2026 後下調）。
 
 ## 題目（官方 `~/poyi/GitHubPublic/ML2022-Spring/HW07/HW07.ipynb`、`HW07.pdf`，34 頁）
 - 給一段中文文章和問題，從文章裡**框出一段**當答案（extractive QA）。

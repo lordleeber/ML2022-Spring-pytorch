@@ -253,7 +253,7 @@ td.num { font-family: var(--font-mono); }
 <header class="chap-header">
   <p class="book-title">ML2022 Spring · HW07 讀碼教材</p>
   <h1>教學大綱</h1>
-  <p class="chap-lead">這一頁是全書的設計圖，列出每一章對應哪些檔案、要回答什麼問題、用哪些實測數字。2026-10-09 經使用者核可。寫作途中如果發現大綱和程式不符，以程式為準，並回頭修改這一頁。</p>
+  <p class="chap-lead">（2026-10-10 全書完成：下面的實驗規格已更新成實際跑過的內容，共 47 次訓練。）這一頁是全書的設計圖，列出每一章對應哪些檔案、要回答什麼問題、用哪些實測數字。2026-10-09 經使用者核可。寫作途中如果發現大綱和程式不符，以程式為準，並回頭修改這一頁。</p>
 </header>
 <main>
 
@@ -312,8 +312,11 @@ td.num { font-family: var(--font-mono); }
 <tr><td>參照</td><td>notebook 原樣（1 epoch），用來驗證拆檔與工具</td><td class="num">1</td></tr>
 <tr><td>N＋M</td><td>不衰減 3 個 epoch（第 1 個 epoch 就是原版）；線性衰減 1／2／3 個 epoch；各跑種子 0、1、2</td><td class="num">12</td></tr>
 <tr><td>P</td><td>後處理與評估 stride：只用現成的 checkpoint 推論，不重新訓練</td><td class="num">—</td></tr>
-<tr><td>S</td><td>答案隨機放在訓練視窗裡，搭配 M 組最好的設定，種子 0、1、2</td><td class="num">3</td></tr>
-<tr><td>D</td><td>換預訓練模型：hfl/chinese-roberta-wwm-ext、hfl/chinese-macbert-base、ckiplab/bert-base-chinese-qa、luhua/chinese_pretrain_mrc_roberta_wwm_ext_large；zero-shot 評估；fp16／bf16、梯度累積</td><td class="num">約 8</td></tr>
+<tr><td>S</td><td>答案隨機放在訓練視窗裡，線性衰減 1 epoch（M 組裡最省時、和 2、3 epoch 一樣好的設定），種子 0、1、2</td><td class="num">3</td></tr>
+<tr><td>O</td><td>（第 3 章）<code>torch.optim.AdamW</code> 對照舊版 AdamW，種子 0、1、2</td><td class="num">3</td></tr>
+<tr><td>D</td><td>換預訓練模型：hfl/chinese-roberta-wwm-ext、hfl/chinese-macbert-base、ckiplab/bert-base-chinese-qa、luhua/chinese_pretrain_mrc_roberta_wwm_ext_large，線性衰減 1 epoch × 3 種子；ckiplab 與 luhua 的零樣本評估</td><td class="num">14</td></tr>
+<tr><td>加跑</td><td>（使用者核可）bert-base-chinese 轉小寫 × 3 種子；固定學習率 5e-5 × 3 種子</td><td class="num">6</td></tr>
+<tr><td>計時</td><td>GPU 上只有一個訓練時：fp32 重跑、fp16 × 3、bf16 × 3、batch 16 × 累積 2、luhua bf16</td><td class="num">9</td></tr>
 </tbody>
 </table></div>
 

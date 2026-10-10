@@ -361,6 +361,27 @@ td.num { font-family: var(--font-mono); }
 </table></div>
 <p>本書只量 dev 的 Exact Match。測試集的答案沒有公開，而且裡面有 1,464 題是語音辨識轉出來的文字，dev 裡沒有這種題目，所以 dev 的分數不能直接拿來和上表比。</p>
 
+<h2 id="results">先看結果</h2>
+<p>全書的主要結果如下（dev EM，每個設定 3 個種子的平均；完整總表在<a href="ch08.html#all">第 8 章</a>）。「範例評估」是範例的後處理加 stride 150；「改良評估」是第 4 章的 <code>evaluate_v2</code> 加 stride 32。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>設定（1 個 epoch）</th><th class="num">範例評估</th><th class="num">改良評估</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>範例：bert-base-chinese、學習率 1e-4</td><td class="num">0.446（0.416–0.482）</td><td class="num">0.572（種子 0）</td><td>第 0 章</td></tr>
+<tr><td>加線性學習率衰減</td><td class="num">0.552</td><td class="num">0.693</td><td>第 5 章</td></tr>
+<tr><td>再加隨機視窗</td><td class="num"><strong>0.702</strong></td><td class="num">0.729</td><td>第 6 章</td></tr>
+<tr><td>線性衰減，換成 hfl RoBERTa-wwm-ext</td><td class="num">0.588</td><td class="num">0.721</td><td>第 7 章</td></tr>
+<tr><td>線性衰減，換成 luhua RoBERTa-large（已在閱讀理解資料上微調過）</td><td class="num">0.641</td><td class="num"><strong>0.756</strong></td><td>第 7 章</td></tr>
+</tbody>
+</table></div>
+<p>最大的兩個進步都不在模型本身：<strong>隨機視窗</strong>（訓練時不要總把答案放在視窗中央）+15 個百分點；<strong>評估的 stride 與後處理</strong>，不重新訓練就讓範例的模型從 0.416 到 0.632。學習率衰減 +10.6（其中 7.8 來自學習率減半）。沒有用的：多訓練幾個 epoch、換 AdamW 的實作、轉小寫。fp16／bf16 讓訓練快 2.7 倍，大模型快 3.3 倍。另外兩個貫穿全書的發現：同一份程式在 GPU 上跑兩次結果不同（第 0、3 章），以及範例設定下種子之間就差 6.6 個百分點，所以每個比較都跑 3 個種子。</p>
+
+<h2 id="prereq">預備知識</h2>
+<ul>
+<li>Python 與 PyTorch 的基本用法：<code>nn.Module</code>、<code>DataLoader</code>、<code>loss.backward()</code>、<code>optimizer.step()</code>。</li>
+<li>Transformer 與 BERT 的概念（self-attention、預訓練與微調）。讀過 HW04、HW05 的教材或李宏毅老師的 Transformer、BERT 課程影片會很順；本書不重講 Transformer 的內部，只在用到時說明。</li>
+<li>softmax 與 cross entropy。</li>
+</ul>
+
 <h2 id="toc">章節</h2>
 <ol class="toc">
 <li><a href="ch00.html"><span class="toc-title">第 0 章　全貌：一篇文章、一個問題、兩排分數</span></a><p class="toc-desc">任務、資料、Exact Match、模型總覽（BERT-base 加問答頭）；跑一次原版；同一份程式跑兩次分數就不同。</p></li>
@@ -381,6 +402,24 @@ $ ../.venv/bin/python train.py    # 訓練 1 個 epoch、評估 dev、存到 sav
 $ ../.venv/bin/python test.py     # 讀 saved_model/，寫出 result.csv</pre>
 <p>需要逐位元重現的時候（例如比對兩份程式），用決定性模式包住執行：</p>
 <pre class="shell cmd">$ CUBLAS_WORKSPACE_CONFIG=:4096:8 PYTHONPATH=. ../.venv/bin/python ../docs/tools/hw07_det.py train.py</pre>
+
+<h2 id="tools">本書的工具</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>檔案（<code>docs/tools/</code>）</th><th>用途</th></tr></thead>
+<tbody>
+<tr><td><code>hw07_make_ref.py</code></td><td>把 notebook 原樣串成參照腳本，用來驗證拆檔</td></tr>
+<tr><td><code>hw07_det.py</code></td><td>以決定性模式執行任何腳本（不改原檔）</td></tr>
+<tr><td><code>hw07_exp.py</code>、<code>hw07_run_grid.sh</code>、<code>hw07_grid_*.txt</code></td><td>實驗工具（預設與 <code>train.py</code> 逐位元一致）、依序執行的佇列與規格</td></tr>
+<tr><td><code>hw07_post.py</code>、<code>hw07_postprocess_v2.py</code></td><td>同一個 checkpoint 套各種後處理與 stride；可讀版的 <code>evaluate_v2</code></td></tr>
+<tr><td><code>hw07_pos.py</code></td><td>模型預測位置的分布（中央偏好）</td></tr>
+<tr><td><code>hw07_data_facts.py</code>、<code>hw07_ch00.py</code>–<code>hw07_ch03.py</code>、<code>hw07_ch01b.py</code>、<code>hw07_eager_det.py</code></td><td>各章的事實量測</td></tr>
+<tr><td><code>hw07_runs.jsonl</code>、<code>hw07_post.jsonl</code>、<code>hw07_pos.jsonl</code>、<code>hw07_logs/</code></td><td>全部實驗的原始紀錄</td></tr>
+<tr><td><code>hw07_book/</code></td><td>本書樣板（<code>book.css</code>、<code>book.js</code>、<code>apply_template.py</code>）、圖表（<code>charts.py</code>、<code>make_charts.py</code>）、程式引用填入（<code>fill_listings.py</code>）</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="version">版本聲明</h2>
+<p>本書的程式碼引用以 commit <code>99b79fe</code>（主線程式）與 <code>fd080ee</code>（實驗工具）為準。環境：RTX PRO 4000 Blackwell 24 GB、Python 3.12、torch 2.11.0+cu128、transformers 5.18.0。所有數字都在決定性模式下量得，事實與原始數據在 <code>docs/HW07/FACTS.md</code>。本書沒有做冷讀（cold-read）審閱。</p>
 
 </main>
 <nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="outline.html">教學大綱</a><a href="ch00.html">開始閱讀 →</a></nav>
