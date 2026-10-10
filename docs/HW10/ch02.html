@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 2 章　FGSM — HW10 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW10 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px——近黑的冷灰底、紙白的字、珊瑚紅只用在標題記號與強調（「攻擊」的顏色）；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：原圖 灰、FGSM 藍、I-FGSM 橘、MI-FGSM 綠、DIM 紫、ensemble 洋紅、JPEG 防禦 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與前幾本相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #ef7a6d;      /* 珊瑚紅：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(239, 122, 109, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #ef7a6d;
+  /* 角色色 */
+  --r-clean: #8b949e; --r-fgsm: #3987e5; --r-ifgsm: #d95926; --r-mi: #199e70;
+  --r-dim: #9085e9; --r-ens: #d55181; --r-jpeg: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "x′ = x + ε · sign(∇ₓ L)　→　代理模型（白箱）　→　助教的模型（黑箱）　·　CIFAR-10 200 張　ε = 8";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fdf1ef; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #1c1616; border-color: rgba(239, 122, 109, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1f0d0b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.clean { --rc: var(--r-clean); } .role.fgsm { --rc: var(--r-fgsm); } .role.ifgsm { --rc: var(--r-ifgsm); }
+.role.mi { --rc: var(--r-mi); } .role.dim { --rc: var(--r-dim); } .role.ens { --rc: var(--r-ens); }
+.role.jpeg { --rc: var(--r-jpeg); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch01.html">← 第 1 章</a><a href="ch03.html">第 3 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW10 讀碼教材</p>
+  <h1>第 2 章　FGSM：對輸入取梯度，只走一步</h1>
+  <p class="chap-lead">FGSM 是整份作業最短的函式：九行程式，算一次梯度，取正負號，乘上 ε，加回去。這一章解釋為什麼「只取正負號」是 L∞ 限制下最划算的一步、為什麼這麼小的改動就能讓模型認錯（線性假說），然後實際掃一遍 ε，看白箱與黑箱的準確率怎麼變。會看到一個反直覺的結果：ε 很大時，FGSM 騙別的模型比騙自己還成功。</p>
+</header>
+<main>
+
+<h2 id="code">2.1　從訓練到攻擊：九行程式</h2>
+<figure class="listing"><figcaption>attack.py:23–32 — fgsm()</figcaption>
+<pre class="py" data-hot="25,26,28,31"><code># perform fgsm attack
+def fgsm(model, x, y, loss_fn, epsilon=epsilon):
+    x_adv = x.detach().clone() # initialize x_adv as original benign image x
+    x_adv.requires_grad = True # need to obtain gradient of x_adv, thus set required grad
+    loss = loss_fn(model(x_adv), y) # calculate loss
+    loss.backward() # calculate gradient
+    # fgsm: use gradient ascent on x_adv to maximize loss
+    grad = x_adv.grad.detach()
+    x_adv = x_adv + epsilon * grad.sign()
+    return x_adv</code></pre></figure>
+<p>逐行看：</p>
+<ul>
+<li><strong>第 25 行</strong>：<code>x.detach().clone()</code> 複製一份輸入。<code>detach</code> 切斷它和之前計算圖的關係，<code>clone</code> 給它獨立的記憶體，之後改 <code>x_adv</code> 不會動到 <code>x</code>。</li>
+<li><strong>第 26 行</strong>：<code>requires_grad = True</code>。訓練時 PyTorch 只追蹤權重的梯度，輸入資料預設不追蹤；這一行告訴它「這張圖也要算梯度」。</li>
+<li><strong>第 27–28 行</strong>：前向、算 cross entropy、反向。和訓練迴圈一模一樣，差別只在之後拿的是誰的 <code>.grad</code>。</li>
+<li><strong>第 30–31 行</strong>：取出輸入的梯度，<code>grad.sign()</code> 把每個元素變成 +1、−1（或 0），乘上 ε，加到圖片上。</li>
+</ul>
+<p>和訓練相比，有兩個方向相反的地方。訓練是 <code>w = w − lr × grad</code>（減，讓 loss 下降），這裡是 <code>x + ε × sign(grad)</code>（加，讓 loss 上升），也就是<strong>梯度上升</strong>。訓練要走很多步、每步一點點；FGSM 只走一步，一口氣走到限制的邊界。名字 Fast Gradient Sign Method 就說明了這三件事：快（一步）、用梯度、只用正負號。</p>
+<p>兩個讀程式時容易忽略的細節。第一，<code>loss_fn</code> 是 <code>nn.CrossEntropyLoss()</code>，預設對整個 batch 取平均，所以每張圖的梯度被除以了 8（batch 大小）。這不影響結果，因為正負號不會因為除以 8 改變；也因為取平均，batch 裡的每張圖互不影響——在 eval 模式下，第 2 張圖的 loss 只和第 2 張圖的輸入有關。第二，<code>loss.backward()</code> 不只算輸入的梯度，<strong>也會算模型所有權重的梯度</strong>，而且累加在權重的 <code>.grad</code> 裡，從來沒有清掉。攻擊用不到這些梯度，白白多花了記憶體與時間；比較乾淨的寫法是先 <code>for p in model.parameters(): p.requires_grad_(False)</code>，或改用 <code>torch.autograd.grad(loss, x_adv)</code> 只對輸入求導。</p>
+
+<h2 id="sign">2.2　為什麼只取正負號</h2>
+<p>為什麼不直接加上梯度本身，而要取正負號？答案來自限制的形狀。把 loss 在原圖 x 附近用一次泰勒展開近似：</p>
+<div class="eq">L(x + δ) ≈ L(x) + g · δ　　　g = ∇ₓL(x)，δ 是要加的雜訊</div>
+<p>要讓 L 增加最多，就是在限制之內讓內積 g · δ = Σ gᵢ δᵢ 最大。限制是 L∞：每個 |δᵢ| ≤ ε，彼此獨立。那麼每一項各自取最大就好：gᵢ 是正的，δᵢ 取 +ε；是負的，取 −ε。這正是 δ = ε · sign(g)，這時 g · δ = ε · Σ|gᵢ| = ε ‖g‖₁。換句話說，<strong>在 L∞ 的限制下，一次泰勒近似的最佳解就是 FGSM</strong>，不是什麼經驗法則。</p>
+<p>如果限制換成 L2（雜訊的總長度 ‖δ‖₂ ≤ ε），最佳解就變成沿著梯度本身的方向走：δ = ε · g / ‖g‖₂，這叫 fast gradient method（FGM）。所以「取正負號」是 L∞ 的產物，換了量距離的方法，最佳的一步也跟著換。</p>
+<p>泰勒近似也解釋了為什麼梯度剛好接近 0 的像素在 GPU 上會「翻轉」（第 0 章）：那個像素的 gᵢ 幾乎是 0，它往哪邊走對 loss 幾乎沒有影響，但 sign 還是硬要選一邊，於是一點點捨入誤差就能決定它是 +8 還是 −8。這 200 張圖的 614,400 個梯度裡，沒有一個剛好是 0，所以 FGSM 改動了每一個像素值（除了被 0–255 剪掉的，第 1 章）。</p>
+
+<h2 id="linear">2.3　為什麼這麼小的改動就夠：線性假說</h2>
+<p>每個像素只改 8，模型為什麼就認錯了？FGSM 的論文給了一個解釋，叫線性假說（linearity hypothesis）。看 g · δ = ε ‖g‖₁ 這個式子：ε 很小，但 ‖g‖₁ 是 3,072 個（32×32×3）梯度絕對值的總和。每個像素的貢獻都很小，加起來卻和維度成正比。對比一下隨機的雜訊：如果每個像素隨機 +ε 或 −ε，Σ gᵢ δᵢ 裡正負互相抵銷，總和大約只和維度的平方根成正比。維度越高，「對準梯度」與「隨機」的差距越大。這也是為什麼對抗樣本在高解析度的圖上更容易找：維度越高，同樣的 ε 能累積的效果越大。</p>
+<p>實際量一下。在 resnet110 上，沿著 FGSM 的方向走 t 個像素值，和沿著一個隨機的 ±1 方向走 t 個像素值，比較準確率與平均 loss（浮點數圖片、沒有剪到 0–255；工具 <code>docs/tools/hw10_ch02.py</code>）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th class="num">t</th><th class="num">FGSM 方向的準確率</th><th class="num">FGSM 方向的 loss</th><th class="num">一次近似預測的 loss</th><th class="num">隨機方向的準確率</th><th class="num">隨機方向的 loss</th></tr></thead>
+<tbody>
+<tr><td class="num">0</td><td class="num">0.950</td><td class="num">0.227</td><td class="num">0.227</td><td class="num">0.950</td><td class="num">0.227</td></tr>
+<tr><td class="num">1</td><td class="num">0.735</td><td class="num">1.631</td><td class="num">2.306</td><td class="num">0.950</td><td class="num">0.251</td></tr>
+<tr><td class="num">2</td><td class="num">0.665</td><td class="num">2.029</td><td class="num">4.385</td><td class="num">0.945</td><td class="num">0.272</td></tr>
+<tr><td class="num">4</td><td class="num">0.660</td><td class="num">2.292</td><td class="num">8.543</td><td class="num">0.935</td><td class="num">0.295</td></tr>
+<tr><td class="num">8</td><td class="num">0.595</td><td class="num">2.483</td><td class="num">16.858</td><td class="num">0.845</td><td class="num">0.495</td></tr>
+<tr><td class="num">16</td><td class="num">0.305</td><td class="num">3.793</td><td class="num">33.489</td><td class="num">0.560</td><td class="num">2.106</td></tr>
+<tr><td class="num">32</td><td class="num">0.135</td><td class="num">5.246</td><td class="num">66.752</td><td class="num">0.195</td><td class="num">4.794</td></tr>
+</tbody>
+</table></div>
+<p>三件事：</p>
+<ul>
+<li><strong>方向比大小重要。</strong>只改 1 個像素值（0.4%），沿 FGSM 方向就讓準確率從 0.95 掉到 0.735；隨機方向改 1 完全沒有影響，改到 4 也只掉 1.5 個百分點。同樣大小的改動，對準了就有效，沒對準幾乎沒用。</li>
+<li><strong>線性近似只在很小的範圍內準。</strong>「一次近似預測的 loss」欄是用 L(x) + g · δ 算出來的：t = 1 時預測 2.31、實際 1.63，已經差了不少；t = 8 時預測 16.9、實際只有 2.48。loss 沿著這個方向很快就彎下來了。所以線性假說說的是「起點附近的斜率很大」，不是「整條路都是直的」。這也是 I-FGSM 要走很多小步、每一步重新算梯度的理由：一大步出去，到達的地方和近似預測的差很遠（第 4 章）。</li>
+<li><strong>效果大部分在第一個像素值就發生了。</strong>FGSM 從 t = 1 到 t = 8，準確率只多降了 14 個百分點，比 t = 0 到 1 的 21.5 個百分點還少。t = 2 和 t = 4 幾乎一樣（0.665 與 0.660）。這說明有一群圖很脆弱、輕輕一推就倒，另一群圖在 FGSM 的方向上相當頑強；要打倒後者，需要的不是更大的一步，而是更好的方向。</li>
+</ul>
+<p>隨機雜訊在 t = 8 時也讓準確率掉了 10.5 個百分點（0.845）。這是另一個現象：這些模型沒有在帶雜訊的圖上訓練過，雜訊本身就是一種分布偏移。但它的效果遠不如同樣大小的 FGSM，到 t = 16 兩者仍差 25 個百分點。</p>
+
+<h2 id="eps">2.4　ε 掃描：白箱與黑箱</h2>
+<p>把 ε 換成 1、2、4、8、16，用 resnet110 做 FGSM、存成 PNG，再量白箱（resnet110 自己）與 8 個受害者的平均準確率（實驗工具 <code>docs/tools/hw10_exp.py</code>，第 3 章介紹）。ε = 16 違反作業的限制，只是用來看趨勢；投影片 p.12 也放了 ε = 16 的圖讓大家看「看得出來」是什麼樣子。</p>
+<figure class="fig">
+<!-- CHART:ch02_eps -->
+<div class="legend"><span><i style="background:#3987e5"></i>白箱 resnet110</span><span><i style="background:#3987e5"></i>8 個受害者平均</span><span><i style="background:#8b949e"></i>隨機 ±ε（白箱）</span></div>
+<svg viewBox="0 0 900 320" role="img" aria-label="FGSM 的 ε 掃描，代理是 resnet110。白箱準確率：ε 0、1、2、4、8、16 依序 0.95、0.735、0.665、0.66、0.59、0.315。8 個受害者平均：0.963、0.891、0.843、0.778、0.626、0.267。隨機正負 ε 的雜訊在白箱上：0.95、0.95、0.945、0.935、0.845、0.56">
+<line x1="56" y1="274.0" x2="780" y2="274.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="278.0" text-anchor="end">0.2</text>
+<line x1="56" y1="210.5" x2="780" y2="210.5" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="214.5" text-anchor="end">0.4</text>
+<line x1="56" y1="147.0" x2="780" y2="147.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="151.0" text-anchor="end">0.6</text>
+<line x1="56" y1="83.5" x2="780" y2="83.5" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="87.5" text-anchor="end">0.8</text>
+<line x1="56" y1="20.0" x2="780" y2="20.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="24.0" text-anchor="end">1.0</text>
+<text class="s-mono" x="56.0" y="292" text-anchor="middle">0</text>
+<text class="s-mono" x="200.8" y="292" text-anchor="middle">1</text>
+<text class="s-mono" x="345.6" y="292" text-anchor="middle">2</text>
+<text class="s-mono" x="490.4" y="292" text-anchor="middle">4</text>
+<text class="s-mono" x="635.2" y="292" text-anchor="middle">8</text>
+<text class="s-mono" x="780.0" y="292" text-anchor="middle">16</text>
+<line x1="56" y1="274" x2="780" y2="274" stroke="#4a5562" stroke-width="1"/>
+<text class="s-sm" x="418.0" y="314" text-anchor="middle">ε（0–255 的尺度；橫軸不是等距）</text>
+<text class="s-sm" x="14" y="147.0" text-anchor="middle" transform="rotate(-90 14 147.0)">準確率</text>
+<polyline points="56.0,35.9 200.8,104.1 345.6,126.4 490.4,128.0 635.2,150.2 780.0,237.5" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,31.9 200.8,54.7 345.6,70.0 490.4,90.5 635.2,138.7 780.0,252.8" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round" stroke-dasharray="6 4"/>
+<polyline points="56.0,35.9 200.8,35.9 345.6,37.5 490.4,40.6 635.2,69.2 780.0,159.7" fill="none" stroke="#8b949e" stroke-width="2" stroke-linejoin="round"/>
+<rect x="786.0" y="155.7" width="8" height="8" rx="2" fill="#8b949e"/>
+<text class="s-lbl" x="798.0" y="163.7">隨機 ±ε（白箱）</text>
+<rect x="786.0" y="233.5" width="8" height="8" rx="2" fill="#3987e5"/>
+<text class="s-lbl" x="798.0" y="241.5">白箱 resnet110</text>
+<rect x="786.0" y="248.8" width="8" height="8" rx="2" fill="#3987e5"/>
+<text class="s-lbl" x="798.0" y="256.8">8 個受害者平均</text>
+<rect x="-16.4" y="20" width="144.8" height="254" fill="transparent" data-tip="ε = 0：白箱 resnet110 0.950　8 個受害者平均 0.963　隨機 ±ε（白箱） 0.950"/>
+<rect x="128.4" y="20" width="144.8" height="254" fill="transparent" data-tip="ε = 1：白箱 resnet110 0.735　8 個受害者平均 0.891　隨機 ±ε（白箱） 0.950"/>
+<rect x="273.2" y="20" width="144.8" height="254" fill="transparent" data-tip="ε = 2：白箱 resnet110 0.665　8 個受害者平均 0.843　隨機 ±ε（白箱） 0.945"/>
+<rect x="418.0" y="20" width="144.8" height="254" fill="transparent" data-tip="ε = 4：白箱 resnet110 0.660　8 個受害者平均 0.778　隨機 ±ε（白箱） 0.935"/>
+<rect x="562.8" y="20" width="144.8" height="254" fill="transparent" data-tip="ε = 8：白箱 resnet110 0.590　8 個受害者平均 0.626　隨機 ±ε（白箱） 0.845"/>
+<rect x="707.6" y="20" width="144.8" height="254" fill="transparent" data-tip="ε = 16：白箱 resnet110 0.315　8 個受害者平均 0.267　隨機 ±ε（白箱） 0.560"/>
+</svg>
+<!-- /CHART:ch02_eps -->
+<figcaption>圖 2.1　FGSM 的 ε 掃描（代理 resnet110）。實線是白箱，虛線是 8 個受害者的平均（同一批 PNG），灰線是同樣大小的隨機 ±ε 雜訊在 resnet110 上的準確率（浮點數圖片，取自 2.3 節的表）。滑鼠移到圖上可看數值。</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<thead><tr><th class="num">ε</th><th class="num">印出的（白箱）</th><th class="num">白箱（PNG）</th><th class="num">8 個受害者平均</th><th class="num">受害者 ensemble</th><th class="num">L∞</th></tr></thead>
+<tbody>
+<tr><td class="num">0（原圖）</td><td class="num">0.950</td><td class="num">0.950</td><td class="num">0.963</td><td class="num">0.985</td><td class="num">0</td></tr>
+<tr><td class="num">1</td><td class="num">0.735</td><td class="num">0.735</td><td class="num">0.891</td><td class="num">0.905</td><td class="num">1</td></tr>
+<tr><td class="num">2</td><td class="num">0.665</td><td class="num">0.665</td><td class="num">0.843</td><td class="num">0.865</td><td class="num">2</td></tr>
+<tr><td class="num">4</td><td class="num">0.660</td><td class="num">0.660</td><td class="num">0.778</td><td class="num">0.795</td><td class="num">4</td></tr>
+<tr><td class="num">8</td><td class="num">0.595</td><td class="num">0.590</td><td class="num">0.626</td><td class="num">0.665</td><td class="num">8</td></tr>
+<tr><td class="num">16</td><td class="num">0.310</td><td class="num">0.315</td><td class="num"><strong>0.267</strong></td><td class="num">0.270</td><td class="num">16</td></tr>
+</tbody>
+</table></div>
+<p>「受害者 ensemble」是把 8 個受害者的 logits 加起來、取最大的那一類，模擬投影片說的「助教用一般模型的 ensemble」。它的原圖準確率 0.985，比任何單一受害者都高，被攻擊後也比 8 個的平均高一點：ensemble 本身就是一種防禦，第 5 章會從攻擊者的角度再用到這件事。</p>
+<p>白箱與黑箱的曲線形狀很不一樣。白箱在 ε = 1 就掉了 21.5 個百分點，之後到 ε = 4 幾乎是平的；黑箱則是一路穩定往下，ε = 1、2、4、8 各降 7、5、6、15 個百分點。白箱一開始的大跌，是那群「輕輕一推就倒」的圖（2.3 節），而它們倒下的方式很依賴 resnet110 自己的細節，換一個模型就未必倒。黑箱的穩定下降，比較像是「雜訊越大、越多模型都受不了」。</p>
+<p>最反直覺的是 ε = 16：黑箱的 0.267 比白箱的 0.315 還低。FGSM 用的是 resnet110 在原圖上的梯度，走了 16 這麼大一步之後，resnet110 的 loss 早就沿著曲線彎下來了（2.3 節：線性預測 33.5、實際 3.8），步伐超過了它的最佳點。別的模型的 loss 曲面不同，對它們來說同一個方向可能還沒到頂。這是第一個證據，說明「在代理上最有效」和「轉移到別人身上最有效」不是同一件事——第 4 章的 I-FGSM 會把這個問題放大到極端。</p>
+<p>以 Simple 基準線（≤ 0.70）來看，ε = 8 的 FGSM 在本機黑箱上是 0.626，「應該」過得了。但本機黑箱只是近似，投影片也只說 Simple 的提示是 FGSM，沒有說哪個代理。第 3 章會看到，換一個代理模型，FGSM 的黑箱準確率可以從 0.57 到 0.72。</p>
+
+<h2 id="fooled">2.5　被騙成什麼</h2>
+<p>ε = 8 時，resnet110 原本答對的 190 張裡，有 71 張被 FGSM 騙倒（浮點數圖片；原本答錯的 10 張，沒有一張被「騙對」）。被騙倒的圖變成哪一類？最多的組合是：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>真實類別 → 被認成</th><th class="num">張數</th></tr></thead>
+<tbody>
+<tr><td>狗 → 貓</td><td class="num">11</td></tr>
+<tr><td>飛機 → 鳥</td><td class="num">6</td></tr>
+<tr><td>飛機 → 貓</td><td class="num">4</td></tr>
+<tr><td>鹿 → 鳥</td><td class="num">4</td></tr>
+<tr><td>汽車 → 青蛙</td><td class="num">3</td></tr>
+<tr><td>貓 → 狗</td><td class="num">3</td></tr>
+<tr><td>馬 → 貓</td><td class="num">3</td></tr>
+</tbody>
+</table></div>
+<p>狗變貓、貓變狗、飛機變鳥、鹿變鳥：大多是人看起來也有幾分像的類別。這很合理：非目標攻擊只是讓正確類別的 loss 上升，而 cross entropy 的梯度會把機率推給「目前第二高」的類別，通常就是最像的那一類。報告題的 dog2.png 被騙成貓（第 7 章），就是最常見的這一種。如果想讓狗變成卡車，就要做目標攻擊：改成讓「卡車」這一類的 loss 下降，代價是需要更大的改動。</p>
+
+<h2 id="today">2.6　FGSM 在今天</h2>
+<div class="note"><h4>現在的做法：FGSM 很少單獨拿來攻擊，卻是對抗訓練的主力</h4>
+<p>今天的攻擊評估幾乎不再單用 FGSM：它只走一步，太容易被防禦騙過（第 7 章會看到原因），評估模型穩健性的標準工具是多步的 PGD 與 AutoAttack。但 FGSM 在另一個地方復活了：<strong>對抗訓練</strong>（adversarial training，訓練時把對抗樣本也放進去，讓模型學會不被騙）。用多步攻擊做對抗訓練非常慢，2020 年的 “Fast is better than free” 證明，只要 FGSM 從一個隨機起點出發，單步的 FGSM 對抗訓練就能達到接近多步的效果，速度快很多倍。對大型語言模型，對應的做法是在 embedding 上做一步梯度擾動來訓練（例如 FreeLB 一系列方法）。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>FGSM 對輸入取梯度，<code>x + ε · sign(grad)</code>：一步、梯度上升、只用正負號。<code>loss.backward()</code> 也順便算了所有權重的梯度，攻擊用不到。</li>
+<li>在 L∞ 限制下，一次泰勒近似的最佳解就是 ε · sign(g)；換成 L2 限制，最佳解是沿梯度方向（FGM）。</li>
+<li>線性假說：3,072 個微小改動對準了梯度就能累積成大效果；隨機方向的同樣改動幾乎沒影響（ε = 1：FGSM 0.735、隨機 0.95）。但 loss 只在起點附近接近線性，ε = 8 時一次近似把 loss 高估了近 7 倍。</li>
+<li>resnet110 的 FGSM（PNG）：白箱 0.735／0.665／0.660／0.590／0.315（ε = 1／2／4／8／16），8 個受害者平均 0.891／0.843／0.778／0.626／0.267。ε = 16 時黑箱比白箱更低：在代理上的最佳一步，不等於轉移的最佳一步。</li>
+<li>被騙倒的圖大多變成相近的類別（狗→貓 11 張最多）。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 把 <code>fgsm</code> 的第 31 行改成 <code>x_adv = x_adv - epsilon * grad.sign()</code>（減號），會發生什麼事？</summary>
+<p>變成沿著梯度下降的方向走，讓正確類別的 loss <strong>下降</strong>：模型會對每張圖更有信心，原本答錯的圖可能反而被「修正」成答對。白箱準確率預期會上升或持平（一大步走過頭時仍可能有少數例外）。這是推論，本書沒有實際跑。</p></details>
+<details class="quiz"><summary>2. 如果作業的限制改成 L2：‖δ‖₂ ≤ ε₂。FGSM 的第 31 行該怎麼改？</summary>
+<p>改成沿梯度本身的方向、把長度縮放到 ε₂：<code>x_adv + epsilon2 * grad / grad.norm(p=2, dim=(1, 2, 3), keepdim=True)</code>（每張圖各自除以自己的 L2 範數）。取正負號會讓 L2 長度變成 ε × √3072，違反限制。</p></details>
+<details class="quiz"><summary>3. 2.3 節裡，沿 FGSM 方向 t = 1 時準確率 0.735，t = 2、4 時是 0.665、0.660。為什麼 t 從 2 到 4 幾乎沒變？</summary>
+<p>FGSM 的方向是用原圖的梯度算出來的。對一部分圖片來說，這個方向一開始就讓 loss 迅速上升、很快越過決策邊界（t = 1、2 就倒了）；另一部分圖片沿這個方向走，loss 很快就彎下來不再上升（2.3 節的線性預測遠高於實際），走更遠也越不過邊界。要打倒它們，要在途中重新算梯度、換方向——這正是 I-FGSM（第 4 章）。</p></details>
+<details class="quiz"><summary>4. 把 <code>loss_fn</code> 改成 <code>nn.CrossEntropyLoss(reduction='sum')</code>，FGSM 存下的圖片會改變嗎？</summary>
+<p>圖片不會改變（在決定性模式下）。sum 與 mean 只差一個常數倍數 8，每個像素梯度的正負號不變，<code>grad.sign()</code> 完全相同。會變的是印出的 <code>fgsm_loss</code>：<code>gen_adv_examples</code> 用同一個 <code>loss_fn</code> 算 loss，再乘上 batch 大小累加（第 1 章），改成 sum 之後印出的數字會大 8 倍。這是推論，本書沒有實際跑。</p></details>
+<details class="quiz"><summary>5. ε = 16 時，8 個受害者的平均（0.267）比白箱（0.315）還低。這代表「用 resnet110 當代理，攻擊別人比攻擊它自己還容易」嗎？</summary>
+<p>不完全是。它代表的是：FGSM 這「一大步」對 resnet110 來說走過頭了（loss 曲線已經彎下來），對別的模型則剛好有效。如果改用針對 resnet110 的多步攻擊（I-FGSM），白箱準確率可以降到 0，遠低於黑箱。比較的是同一個方法在兩邊的效果，不是「誰比較容易被攻擊」。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Ian Goodfellow、Jonathon Shlens、Christian Szegedy，<a href="https://arxiv.org/abs/1412.6572">Explaining and Harnessing Adversarial Examples</a>（ICLR 2015）：FGSM 與線性假說的原始論文。第 3 節是本章 2.3 節的論證。</li>
+<li>Eric Wong、Leslie Rice、J. Zico Kolter，<a href="https://arxiv.org/abs/2001.03994">Fast is better than free: Revisiting adversarial training</a>（ICLR 2020）：隨機起點的 FGSM 對抗訓練。</li>
+<li>Chen Zhu 等，<a href="https://arxiv.org/abs/1909.11764">FreeLB: Enhanced Adversarial Training for Natural Language Understanding</a>（ICLR 2020）：把梯度擾動用在語言模型的 embedding 上。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch01.html">← 第 1 章</a><a href="ch03.html">第 3 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW10 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW10 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

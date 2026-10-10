@@ -1,0 +1,34 @@
+fgsm_eps1.6	--attack fgsm --eps 1.6
+mi_decay0	--attack mifgsm --decay 0
+mi_decay0.5	--attack mifgsm --decay 0.5
+mi_decay1.0	--attack mifgsm --decay 1.0
+mi_decay2.0	--attack mifgsm --decay 2.0
+mi_it10	--attack mifgsm --iters 10
+mi_it50	--attack mifgsm --iters 50
+dim_ifgsm_p0.25_s0	--attack dim_ifgsm --dim_p 0.25 --seed 0
+dim_ifgsm_p0.25_s1	--attack dim_ifgsm --dim_p 0.25 --seed 1
+dim_ifgsm_p0.25_s2	--attack dim_ifgsm --dim_p 0.25 --seed 2
+dim_ifgsm_p0.5_s0	--attack dim_ifgsm --dim_p 0.5 --seed 0
+dim_ifgsm_p0.5_s1	--attack dim_ifgsm --dim_p 0.5 --seed 1
+dim_ifgsm_p0.5_s2	--attack dim_ifgsm --dim_p 0.5 --seed 2
+dim_ifgsm_p0.75_s0	--attack dim_ifgsm --dim_p 0.75 --seed 0
+dim_ifgsm_p0.75_s1	--attack dim_ifgsm --dim_p 0.75 --seed 1
+dim_ifgsm_p0.75_s2	--attack dim_ifgsm --dim_p 0.75 --seed 2
+dim_ifgsm_p1.0_s0	--attack dim_ifgsm --dim_p 1.0 --seed 0
+dim_ifgsm_p1.0_s1	--attack dim_ifgsm --dim_p 1.0 --seed 1
+dim_ifgsm_p1.0_s2	--attack dim_ifgsm --dim_p 1.0 --seed 2
+dim_mi_p0.5_s0	--attack dim_mifgsm --dim_p 0.5 --seed 0
+dim_mi_p0.5_s1	--attack dim_mifgsm --dim_p 0.5 --seed 1
+dim_mi_p0.5_s2	--attack dim_mifgsm --dim_p 0.5 --seed 2
+dim_mi_p1.0_s0	--attack dim_mifgsm --dim_p 1.0 --seed 0
+dim_mi_p1.0_s1	--attack dim_mifgsm --dim_p 1.0 --seed 1
+dim_mi_p1.0_s2	--attack dim_mifgsm --dim_p 1.0 --seed 2
+dim_mi_max34_s0	--attack dim_mifgsm --dim_p 0.5 --dim_max 34 --seed 0
+dim_mi_max34_s1	--attack dim_mifgsm --dim_p 0.5 --dim_max 34 --seed 1
+dim_mi_max34_s2	--attack dim_mifgsm --dim_p 0.5 --dim_max 34 --seed 2
+dim_mi_max40_s0	--attack dim_mifgsm --dim_p 0.5 --dim_max 40 --seed 0
+dim_mi_max40_s1	--attack dim_mifgsm --dim_p 0.5 --dim_max 40 --seed 1
+dim_mi_max40_s2	--attack dim_mifgsm --dim_p 0.5 --dim_max 40 --seed 2
+dim_mi_max48_s0	--attack dim_mifgsm --dim_p 0.5 --dim_max 48 --seed 0
+dim_mi_max48_s1	--attack dim_mifgsm --dim_p 0.5 --dim_max 48 --seed 1
+dim_mi_max48_s2	--attack dim_mifgsm --dim_p 0.5 --dim_max 48 --seed 2
