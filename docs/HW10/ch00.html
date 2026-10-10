@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 0 章　全貌 — HW10 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW10 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製）
+   版面：單欄 1080px——近黑的冷灰底、紙白的字、珊瑚紅只用在標題記號與強調（「攻擊」的顏色）；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：原圖 灰、FGSM 藍、I-FGSM 橘、MI-FGSM 綠、DIM 紫、ensemble 洋紅、JPEG 防禦 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與前幾本相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #ef7a6d;      /* 珊瑚紅：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(239, 122, 109, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #ef7a6d;
+  /* 角色色 */
+  --r-clean: #8b949e; --r-fgsm: #3987e5; --r-ifgsm: #d95926; --r-mi: #199e70;
+  --r-dim: #9085e9; --r-ens: #d55181; --r-jpeg: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "x′ = x + ε · sign(∇ₓ L)　→　代理模型（白箱）　→　助教的模型（黑箱）　·　CIFAR-10 200 張　ε = 8";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fdf1ef; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #1c1616; border-color: rgba(239, 122, 109, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1f0d0b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.clean { --rc: var(--r-clean); } .role.fgsm { --rc: var(--r-fgsm); } .role.ifgsm { --rc: var(--r-ifgsm); }
+.role.mi { --rc: var(--r-mi); } .role.dim { --rc: var(--r-dim); } .role.ens { --rc: var(--r-ens); }
+.role.jpeg { --rc: var(--r-jpeg); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="index.html">← 目錄</a><a href="ch01.html">第 1 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW10 讀碼教材</p>
+  <h1>第 0 章　全貌：200 張圖、ε = 8、看不見的模型</h1>
+  <p class="chap-lead">這一章先把整份作業跑一遍：題目要什麼、為什麼叫「黑箱」、範例拿來當代理的 resnet110 長什麼樣子、指令怎麼下、印出什麼。讀完這章，你會看到一個在原圖上答對 95% 的模型，被每個像素最多改 8 的雜訊打到只剩 0.5%；也會看到這些雜訊拿去騙別的模型時，效果一下子掉了一大截。另外還有一件讓人不安的事：同一份程式跑兩次，存下來的圖片不一樣。</p>
+</header>
+<main>
+
+<h2 id="task">0.1　題目：讓模型認錯，但人看不出來</h2>
+<p>HW10 的任務是 <strong>adversarial attack</strong>（對抗攻擊）。給你 200 張 CIFAR-10 的圖片：32×32 像素的彩色小圖，分成飛機、汽車、鳥、貓、鹿、狗、青蛙、馬、船、卡車 10 類，每類 20 張。你要對每一張圖加上一點「雜訊」（perturbation，擾動），讓助教的分類模型把它認錯。交出去的是 200 張改過的 PNG，評分只看一個數字：助教的模型在這 200 張圖上的<strong>準確率，越低越好</strong>。</p>
+<p>當然不能亂改。如果可以把狗的照片整張塗成卡車，模型認錯是理所當然的事。作業用一個限制把「看不出來」寫成數字：</p>
+<div class="eq">對每一張圖、每一個像素、每一個顏色通道：| 改過的值 − 原本的值 | ≤ ε，　ε = 8（0–255 的尺度）</div>
+<p>這種限制叫 <strong>L∞ 範數</strong>（L-infinity norm）的限制：把「改過的圖減原圖」看成一個很長的向量，L∞ 範數就是這個向量裡絕對值最大的那一個元素。L∞ ≤ 8 的意思是「任何一個像素都不能改超過 8」，但每一個像素都可以改到 8。8 是 255 的 3.1%，對 32×32 的小圖來說，肉眼幾乎分辨不出差別。投影片 p.12 並排放了原圖、ε = 8、ε = 16 三張圖：ε = 16 的那張已經看得出一層顆粒，ε = 8 的則幾乎和原圖一樣。JudgeBoi（評分網站）會檢查每一張圖，超過 8 就整份退件。</p>
+<p>這份作業做的是 <strong>non-targeted attack</strong>（非目標攻擊）：只要模型認錯就好，錯成哪一類都可以。另一種是 targeted attack（目標攻擊）：指定「要讓模型把狗認成貓」，比較難，本作業不做。</p>
+<p>四條基準線（JudgeBoi 上的準確率）：Simple ≤ 0.70、Medium ≤ 0.50、Strong ≤ 0.30、Boss ≤ 0.15。投影片給的提示依序是 FGSM；ensemble 攻擊加 I-FGSM；挑對代理模型或用很多模型加 MI-FGSM；再加上 DIM。這些名詞在第 2、4、5、6 章依序出現，現在只要知道它們是一步步加強的攻擊方法。投影片也強調，每一條基準線在 Colab 上都應該 20 分鐘內跑完，而且只用 pytorchcv 的公開模型就能全部通過。</p>
+
+<h2 id="blackbox">0.2　白箱、黑箱與代理模型</h2>
+<p>要讓模型認錯，最直接的方法是問模型自己：「我往哪個方向改這張圖，你的 loss 會上升得最快？」答案就是 loss 對<strong>輸入圖片</strong>的梯度。訓練模型時，我們對<strong>權重</strong>取梯度、讓 loss 下降；攻擊時反過來，權重固定不動，對<strong>輸入</strong>取梯度、讓 loss 上升。這需要能看到模型內部、能做反向傳播，叫做 <strong>white-box attack</strong>（白箱攻擊）。</p>
+<p>可是這份作業的對手是助教的模型，你看不到它的架構和權重，只能交圖、拿到一個準確率（每天 5 次）。這叫 <strong>black-box attack</strong>（黑箱攻擊）。投影片 p.4 的做法是：找一個你看得到的模型當 <strong>proxy model</strong>（代理模型，也叫 surrogate model），在代理上做白箱攻擊，再把產生的圖交出去，賭它們也能騙過黑箱。這個賭注之所以有機會贏，是因為對抗樣本有 <strong>transferability</strong>（轉移性）：在一個模型上找到的雜訊，常常也能讓另一個在同樣資料上訓練的模型認錯。轉移性不是百分之百——這份作業的難處，全部在於怎麼讓轉移性變高。</p>
+<p>投影片 p.15 透露了一點黑箱的資訊：助教的模型是「幾個一般模型的 ensemble」，「可能加上一些被動防禦」，而且「猜中助教用了哪些模型不會讓攻擊變好」。JudgeBoi 現在已經關閉，所以本書在本機自己搭一個黑箱：從 pytorchcv 裡挑 8 個和代理模型<strong>不同家族</strong>的模型當受害者，量它們各自的準確率，也把它們的 logits 加起來當成一個 ensemble 量一次；另外在受害者前面加上 JPEG 壓縮，模擬「被動防禦」。這個本機黑箱怎麼挑、為什麼這樣挑，是第 3 章的主題。本書的數字因此不能直接和基準線比，但能拿來比較不同攻擊方法的相對好壞。</p>
+<div class="note"><h4>先看一眼轉移性有多難</h4>
+<p>範例的代理是 resnet110。0.5 節會看到，它在自己身上的 I-FGSM 攻擊把準確率打到 0.005（200 張只剩 1 張答對）；同一批圖拿去給 8 個受害者分類，平均準確率是 0.485。白箱幾乎全滅、黑箱只降了一半——這個落差就是全書要處理的問題（第 4 章）。</p>
+</div>
+
+<h2 id="model">0.3　模型總覽：resnet110_cifar10</h2>
+<p>範例用 <code>pytorchcv</code> 套件提供的 <code>resnet110_cifar10</code> 當代理模型。pytorchcv 是一個收集了數百個影像分類模型與預訓練權重的套件，其中 85 個是在 CIFAR-10 上訓練的（名稱都以 <code>_cifar10</code> 結尾）。作業<strong>允許</strong>使用預訓練模型，所以代理不必自己訓練，載入就能用：</p>
+<figure class="listing"><figcaption>hw10.py:30–35 — 載入代理模型與 loss</figcaption>
+<pre class="py" data-hot="32"><code>model_names = opt.models.split(',')
+if len(model_names) == 1:
+    model = ptcv_get_model(model_names[0], pretrained=True).to(device)
+else:
+    model = ensembleNet(model_names).to(device)
+loss_fn = nn.CrossEntropyLoss()</code></pre></figure>
+<p><code>ptcv_get_model(name, pretrained=True)</code> 第一次執行時會從 GitHub（osmr/imgclsmob 的 release）下載權重，存到 <code>~/.torch/models/</code>。resnet110 的權重檔約 7 MB。<code>--models</code> 給好幾個名字時，改用第 5 章的 <code>ensembleNet</code>；不給就是 notebook 原本的 resnet110。</p>
+<p>resnet110 是 2015 年 ResNet 論文裡專為 CIFAR-10 設計的版本，和 ImageNet 版的 ResNet（例如 HW13 的老師模型 ResNet-18）長得不太一樣：輸入只有 32×32，所以沒有一開始的 7×7 卷積與 max pooling，通道數也小得多（16、32、64）。pytorchcv 用一個函式從「層數」推出整個架構：</p>
+<figure class="listing"><figcaption>.venv/lib/python3.12/site-packages/pytorchcv/models/resnet_cifar.py:339–344 — resnet110_cifar10()</figcaption>
+<pre class="py" data-hot="341-342"><code>    return get_resnet_cifar(
+        num_classes=num_classes,
+        blocks=110,
+        bottleneck=False,
+        model_name="resnet110_cifar10",
+        **kwargs)</code></pre></figure>
+<figure class="listing"><figcaption>.venv/lib/python3.12/site-packages/pytorchcv/models/resnet_cifar.py:127–134 — get_resnet_cifar() 從層數推出每個 stage 的 unit 數與通道數</figcaption>
+<pre class="py" data-hot="129,131"><code>    else:
+        assert ((blocks - 2) % 6 == 0)
+        layers = [(blocks - 2) // 6] * 3
+
+    channels_per_layers = [16, 32, 64]
+    init_block_channels = 16
+
+    channels = [[ci] * li for (ci, li) in zip(channels_per_layers, layers)]</code></pre></figure>
+<p>「110 層」是這樣算的：一開始 1 個卷積，最後 1 個全連接層，中間 3 個 stage，每個 stage 有 (110 − 2) ÷ 6 = 18 個殘差單元（residual unit），每個單元 2 個 3×3 卷積：1 + 3 × 18 × 2 + 1 = 110。同一個函式給 <code>blocks=20</code> 就是 resnet20（每個 stage 3 個單元），給 56 就是 resnet56——第 3 章會看到這一家族的模型當代理時表現差多少。</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 430" role="img" aria-label="resnet110_cifar10 的架構與每一步的張量形狀：輸入 B 乘 3 乘 32 乘 32；init_block 一個 3 乘 3 卷積加 BN 加 ReLU，得到 B 乘 16 乘 32 乘 32；stage1 有 18 個殘差單元，形狀不變；stage2 有 18 個單元，第一個單元 stride 2，得到 B 乘 32 乘 16 乘 16；stage3 有 18 個單元，得到 B 乘 64 乘 8 乘 8；8 乘 8 平均池化得到 B 乘 64；全連接層 64 到 10 得到 B 乘 10 的 logits。右側是單一殘差單元：兩個 3 乘 3 卷積加 BN，第一個後面有 ReLU，和捷徑相加後再 ReLU；stride 2 的單元捷徑是 1 乘 1 卷積加 BN">
+  <defs>
+    <marker id="ar0" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#9aa5b1"/>
+    </marker>
+  </defs>
+  <text class="s-mono" x="20" y="28">輸入 (B, 3, 32, 32)</text>
+  <line x1="120" y1="36" x2="120" y2="52" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#ar0)"/>
+
+  <rect x="20" y="56" width="500" height="44" rx="8" class="s-box"/>
+  <text class="s-lbl" x="36" y="83" font-weight="700">init_block</text>
+  <text class="s-sm" x="140" y="83">3×3 卷積 3→16、BN、ReLU</text>
+  <text class="s-mono" x="510" y="83" text-anchor="end">(B, 16, 32, 32)　464</text>
+
+  <rect x="20" y="112" width="500" height="44" rx="8" class="s-box"/>
+  <text class="s-lbl" x="36" y="139" font-weight="700">stage1</text>
+  <text class="s-sm" x="140" y="139">18 個殘差單元，16 通道</text>
+  <text class="s-mono" x="510" y="139" text-anchor="end">(B, 16, 32, 32)　84,096</text>
+
+  <rect x="20" y="168" width="500" height="44" rx="8" class="s-box"/>
+  <text class="s-lbl" x="36" y="195" font-weight="700">stage2</text>
+  <text class="s-sm" x="140" y="195">18 個單元，第 1 個 stride 2</text>
+  <text class="s-mono" x="510" y="195" text-anchor="end">(B, 32, 16, 16)　330,048</text>
+
+  <rect x="20" y="224" width="500" height="44" rx="8" class="s-box"/>
+  <text class="s-lbl" x="36" y="251" font-weight="700">stage3</text>
+  <text class="s-sm" x="140" y="251">18 個單元，第 1 個 stride 2</text>
+  <text class="s-mono" x="510" y="251" text-anchor="end">(B, 64, 8, 8)　1,315,456</text>
+
+  <rect x="20" y="280" width="500" height="44" rx="8" class="s-box"/>
+  <text class="s-lbl" x="36" y="307" font-weight="700">final_pool</text>
+  <text class="s-sm" x="140" y="307">8×8 平均池化，攤平</text>
+  <text class="s-mono" x="510" y="307" text-anchor="end">(B, 64)　0</text>
+
+  <rect x="20" y="336" width="500" height="44" rx="8" class="s-box" stroke="#ef7a6d"/>
+  <text class="s-lbl" x="36" y="363" font-weight="700">output</text>
+  <text class="s-sm" x="140" y="363">Linear 64→10：每一類一個 logit</text>
+  <text class="s-mono" x="510" y="363" text-anchor="end">(B, 10)　650</text>
+
+  <text class="s-sm" x="20" y="410">合計 1,730,714 個參數（另有 8,399 個 BN 的 running 統計量，不算參數）</text>
+
+  <rect x="560" y="56" width="330" height="324" rx="10" class="s-box"/>
+  <text class="s-lbl" x="725" y="84" text-anchor="middle" font-weight="700">一個殘差單元（ResUnit）</text>
+  <text class="s-sm" x="745" y="112" text-anchor="middle">捷徑（stride 2 時改成 1×1 卷積＋BN）</text>
+  <text class="s-mono" x="640" y="132" text-anchor="middle">x</text>
+  <line x1="660" y1="128" x2="660" y2="144" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#ar0)"/>
+  <rect x="585" y="148" width="150" height="36" rx="6" fill="#181e25" stroke="#2a343f"/>
+  <text class="s-sm" x="660" y="171" text-anchor="middle">3×3 卷積、BN、ReLU</text>
+  <line x1="660" y1="186" x2="660" y2="206" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#ar0)"/>
+  <rect x="585" y="210" width="150" height="36" rx="6" fill="#181e25" stroke="#2a343f"/>
+  <text class="s-sm" x="660" y="233" text-anchor="middle">3×3 卷積、BN</text>
+  <line x1="660" y1="248" x2="660" y2="276" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#ar0)"/>
+  <circle cx="660" cy="292" r="13" fill="#181e25" stroke="#9aa5b1"/>
+  <text class="s-lbl" x="660" y="297" text-anchor="middle">+</text>
+  <path d="M660,124 L840,124 L840,292 L677,292" fill="none" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#ar0)"/>
+  <line x1="660" y1="306" x2="660" y2="330" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#ar0)"/>
+  <text class="s-sm" x="660" y="350" text-anchor="middle">ReLU</text>
+</svg>
+<figcaption>圖 0.1　resnet110_cifar10 的架構。左側每一列右邊是輸出形狀（B 是 batch 大小）與這一段的參數量；右側是每個殘差單元的內部。形狀用 forward hook 實際量過，參數量是 PyTorch 數出來的，和下表的手算相同。</figcaption>
+</figure>
+
+<p>每個殘差單元的 <code>forward</code> 只有幾行：主幹（兩個卷積）算出來的結果，加上原本的輸入（捷徑），再過一次 ReLU。通道數或解析度改變的那兩個單元（stage2、stage3 的第一個），原本的輸入形狀對不上，捷徑要先過一個 1×1、stride 2 的卷積：</p>
+<figure class="listing"><figcaption>.venv/lib/python3.12/site-packages/pytorchcv/models/resnet.py:221–229 — ResUnit.forward()</figcaption>
+<pre class="py" data-hot="227"><code>    def forward(self, x):
+        if self.resize_identity:
+            identity = self.identity_conv(x)
+        else:
+            identity = x
+        x = self.body(x)
+        x = x + identity
+        x = self.activ(x)
+        return x</code></pre></figure>
+<p>參數量可以手算。卷積都沒有 bias，一個 3×3 卷積的參數是「輸入通道 × 輸出通道 × 9」；每個 BN 有 γ、β 兩個參數乘以通道數：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>部分</th><th>手算</th><th class="num">參數</th></tr></thead>
+<tbody>
+<tr><td>init_block</td><td>3×16×9 ＋ BN 2×16</td><td class="num">464</td></tr>
+<tr><td>stage1</td><td>18 × (2 × 16×16×9 ＋ 2 × 2×16) = 18 × 4,672</td><td class="num">84,096</td></tr>
+<tr><td>stage2</td><td>第 1 個：16×32×9 ＋ 32×32×9 ＋ 捷徑 16×32 ＋ 3 個 BN 3×64 = 14,528；其餘 17 × 18,560</td><td class="num">330,048</td></tr>
+<tr><td>stage3</td><td>第 1 個：32×64×9 ＋ 64×64×9 ＋ 捷徑 32×64 ＋ 3 個 BN 3×128 = 57,728；其餘 17 × 73,984</td><td class="num">1,315,456</td></tr>
+<tr><td>output</td><td>64×10 ＋ 10</td><td class="num">650</td></tr>
+<tr><td><strong>合計</strong></td><td>和 <code>sum(p.numel() for p in model.parameters())</code> 相同</td><td class="num"><strong>1,730,714</strong></td></tr>
+</tbody>
+</table></div>
+<p>全部 111 個卷積（109 個 3×3、2 個 1×1 捷徑）、111 個 BN、1 個全連接層。76% 的參數在 64 通道的 stage3。這個大小在 2022 年的標準裡算很小：HW13 的老師模型 ResNet-18 有 11,182,155 個參數，是它的 6 倍多。但小不代表弱，它在這 200 張圖上答對 95%（0.5 節），和 pytorchcv 裡大上 20 倍的模型差不多（第 3 章）。</p>
+<p>對攻擊來說，模型的哪些細節重要？只有兩件事：模型必須是可微分的（ReLU、BN、平均池化都是），以及模型在攻擊時處於 <strong>eval 模式</strong>。BN 在 train 模式下會用「這一個 batch」的平均與變異數做正規化，同一張圖放在不同的 batch 裡，輸出就不同；eval 模式改用訓練時累積的 running 統計量，每張圖的輸出只和它自己有關。<code>gen_adv_examples</code> 第一行就是 <code>model.eval()</code>（第 1 章）。</p>
+
+<h2 id="run">0.4　跑一次</h2>
+<p>200 張圖從 Kaggle 的壓縮檔解開成 <code>HW10/data/</code>，底下是 10 個以類別命名的資料夾。在 <code>HW10/</code> 底下執行：</p>
+<pre class="shell cmd">$ cd HW10
+$ ../.venv/bin/python hw10.py</pre>
+<p>主程式在讀進資料之後，做三件事：量原圖的準確率、跑兩種攻擊並存檔、把存好的資料夾打包：</p>
+<figure class="listing"><figcaption>hw10.py:37–49 — 量原圖、攻擊、存檔、打包</figcaption>
+<pre class="py" data-hot="42,45,49"><code>benign_acc, benign_loss = epoch_benign(model, adv_loader, loss_fn)
+print(f'benign_acc = {benign_acc:.5f}, benign_loss = {benign_loss:.5f}')
+
+attacks = {'fgsm': fgsm, 'ifgsm': ifgsm, 'mifgsm': mifgsm}
+for name in opt.attacks.split(','):
+    adv_examples, acc, loss = gen_adv_examples(model, adv_loader, attacks[name], loss_fn)
+    print(f'{name}_acc = {acc:.5f}, {name}_loss = {loss:.5f}')
+
+    create_dir(root, name, adv_examples, adv_names)
+
+# Compress the images: submit the .tgz file to JudgeBoi
+for name in opt.attacks.split(','):
+    subprocess.run(f'tar zcvf ../{name}.tgz *', shell=True, cwd=name)</code></pre></figure>
+<p>輸出（決定性模式，0.5 節）：</p>
+<pre class="shell">number of images = 200
+benign_acc = 0.95000, benign_loss = 0.22679       «1»
+fgsm_acc = 0.59500, fgsm_loss = 2.48333           «2»
+ifgsm_acc = 0.00500, ifgsm_loss = 17.49289        «3»
+airplane/                                         «4»
+airplane/airplane12.png
+airplane/airplane18.png
+...（tar 每個 .tgz 列出 210 行：10 個資料夾、200 張圖）</pre>
+<ol class="notes">
+<li><span class="mk">1</span>原圖上答對 190 張（0.95）。這是「攻擊之前」的基準：本來就認錯的 10 張，攻擊不必費力。</li>
+<li><span class="mk">2</span>FGSM：對每張圖只算一次梯度、往梯度的正負號方向一口氣走 8，準確率降到 0.595。第 2 章。</li>
+<li><span class="mk">3</span>I-FGSM：走 20 小步、每步 0.8，每步之後剪回「離原圖不超過 8」的範圍。準確率 0.005，loss 從 0.23 升到 17.5。第 4 章。</li>
+<li><span class="mk">4</span>tar 的輸出。檔案的順序是檔案系統回傳的順序，不是字母順序；這不影響 JudgeBoi，它依檔名比對類別。</li>
+</ol>
+<p>跑完之後 <code>HW10/</code> 底下多了 <code>fgsm/</code>、<code>ifgsm/</code> 兩個資料夾，結構和 <code>data/</code> 一樣（<code>&lt;類別&gt;/&lt;類別&gt;&lt;編號&gt;.png</code>），以及要交出去的 <code>fgsm.tgz</code>、<code>ifgsm.tgz</code>，各約 500 KB，遠低於 JudgeBoi 的 2 MB 上限。整支程式在本機十幾秒就跑完：200 張 32×32 的圖，對 GPU 來說是很小的工作量，I-FGSM 的 20 次前向加反向佔了大部分時間。</p>
+<p>注意 <span class="mk">2</span>、<span class="mk">3</span> 這兩個數字是 <strong>resnet110 自己</strong>的準確率，也就是白箱的成績，不是交出去之後的成績。把同一批 PNG 拿給本機的 8 個受害者分類，FGSM 的平均準確率是 0.626、I-FGSM 是 0.485（第 3 章的工具量的）。白箱上 I-FGSM 遠勝 FGSM（0.005 對 0.595），到了黑箱只贏 0.14。而且 <span class="mk">2</span> 也不完全是交出去的那 200 張 PNG 的準確率：把 <code>fgsm/</code> 讀回來重新量，是 0.590，不是 0.595。差的那一張，是因為程式量的是存檔之前的浮點數圖片，存成 PNG 要先剪到 0–255、再四捨五入成整數（第 1 章）。</p>
+
+<h2 id="nondet">0.5　同一份程式跑兩次，存下的圖不一樣</h2>
+<p>上面的輸出是在「決定性模式」下跑的。如果直接執行 <code>hw10.py</code>（一般模式），每次的結果會有一點不同。把 notebook 原樣串成的參照腳本連續跑兩次：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>一般模式</th><th class="num">第 1 次</th><th class="num">第 2 次</th></tr></thead>
+<tbody>
+<tr><td><code>benign_acc</code>／<code>benign_loss</code></td><td class="num">0.95000／0.22679</td><td class="num">0.95000／0.22679</td></tr>
+<tr><td><code>fgsm_acc</code>／<code>fgsm_loss</code></td><td class="num">0.59500／2.48256</td><td class="num">0.59500／2.48250</td></tr>
+<tr><td><code>ifgsm_acc</code>／<code>ifgsm_loss</code></td><td class="num">0.01000／17.48673</td><td class="num">0.00500／17.61542</td></tr>
+</tbody>
+</table></div>
+<p>原圖的準確率與 loss 完全相同：只有前向傳播的時候，結果是固定的。一用到反向傳播就不同了。比對兩次存下的 PNG：<code>fgsm/</code> 有 28 張圖不同，但總共只差 32 個像素，每一個都是「+8 變成 −8」或反過來；<code>ifgsm/</code> 則有 <strong>195 張</strong>圖不同，差了 402,938 個像素，佔全部 614,400 個像素值的 66%。</p>
+<p>原因在 GPU 上的卷積反向傳播。PyTorch 的卷積交給 NVIDIA 的 cuDNN 函式庫計算，cuDNN 有好幾種演算法，有些在反向傳播時讓很多執行緒同時把部分和加到同一個位置；加法的先後順序每次不同，浮點數的捨入誤差就不同。誤差只在小數點後很多位，但 FGSM 只看梯度的<strong>正負號</strong>：一個像素的梯度如果剛好非常接近 0，捨入誤差就足以讓它從 +0.0000001 變成 −0.0000001，這個像素就從 +8 翻成 −8。FGSM 只走一步，所以只有 32 個像素翻轉；I-FGSM 走 20 步，第一步翻轉的那幾個像素讓第二步的輸入不同，第二步的梯度跟著不同，差異一步步擴散，到最後大部分像素都不一樣了。<code>torch.backends.cudnn.deterministic</code> 這個開關 notebook 沒有設，但即使設了，也只管 cuDNN 的卷積。</p>
+<p>PyTorch 提供了全面的開關 <code>torch.use_deterministic_algorithms(True)</code>：所有運算改用決定性的版本，沒有決定性版本的就直接報錯。本書寫了一個不改原檔就能套用的小工具 <code>docs/tools/hw10_det.py</code>（前幾本書也用同一個做法）：</p>
+<pre class="shell cmd">$ CUBLAS_WORKSPACE_CONFIG=:4096:8 ../.venv/bin/python ../docs/tools/hw10_det.py hw10.py</pre>
+<p>開了之後連跑兩次，200 張 PNG 逐位元相同。<code>CUBLAS_WORKSPACE_CONFIG</code> 是 NVIDIA 的矩陣運算函式庫 cuBLAS 要求的設定，不設 PyTorch 會報錯提醒你。</p>
+<div class="warn"><h4>這件事對作業的影響</h4>
+<p>對交作業來說，一般模式的不確定性無傷大雅：準確率只差 0.005（一張圖）。但它讓「比較兩種做法」變得不可靠——改了一行程式、準確率變了 0.01，你分不出是改動的效果還是運氣。所以本書所有的實驗都開決定性模式，同一個設定跑兩次結果完全相同；帶隨機性的方法（第 6 章的 DIM、第 5 章自己訓練的代理）另外換 3 個種子，用種子之間的差距判斷改良是不是真的。</p>
+</div>
+
+<h2 id="split">0.6　notebook 拆成哪些檔</h2>
+<p>原版是一份 Colab notebook。本 repo 把它拆成六個檔（<a href="index.html#layer-env">目錄頁</a>有對照表）：<code>config.py</code>、<code>dataset.py</code>、<code>attack.py</code>、<code>ensemble.py</code>、<code>hw10.py</code>、<code>report.py</code>。notebook 有三個留給學生的 TODO，本 repo 都補上了：<code>mifgsm</code> 的動量（第 6 章）、<code>ensembleNet</code> 的 <code>forward</code>（第 5 章）、報告題的 JPEG 壓縮（第 7 章）。其中 <code>ensembleNet</code> 的原版是語法錯誤——<code>for</code> 迴圈裡只有註解——所以原版 notebook 從那一格開始就不能「從頭執行到底」。</p>
+<p>拆完之後怎麼確定沒有改變結果？做法和前幾本書一樣：用 <code>docs/tools/hw10_make_ref.py</code> 把 notebook 的程式格原樣串成一支「參照」腳本。只改跑不起來的部分：<code>!pip</code>、<code>!wget</code>、<code>!unzip</code> 這類 shell 指令註解掉（套件已安裝、資料已解開），<code>%cd</code> 換成 <code>os.chdir</code>，<code>!tar</code> 換成 <code>subprocess.run</code>，語法錯誤的 ensemble 兩格跳過。然後在決定性模式下各跑一次參照腳本與 <code>hw10.py</code>，比對印出的每一行與存下的 400 張 PNG：全部相同。在一般模式下做這個比對是沒有意義的，0.5 節已經看到，連參照腳本自己跑兩次都對不上。</p>
+<p>報告題的 JPEG 防禦要用 imgaug 套件，它最後一版是 2020 年的 0.4.0，在 NumPy 2 底下一 import 就失敗（它用了 NumPy 2 刪掉的 <code>np.sctypes</code>）。本書不改它，而是另外放一個小 shim（<code>docs/tools/hw10_npshim_sitecustomize.py</code>）在 import 之前把 <code>np.sctypes</code> 補回去；第 7 章會再談這件事，以及為什麼 imgaug 的「壓縮率 70」其實是 JPEG 品質 31。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>HW10 是非目標的對抗攻擊：對 200 張 CIFAR-10 圖片加雜訊，每個像素最多改 8（L∞ ≤ 8），讓助教的模型準確率越低越好。基準線 0.70／0.50／0.30／0.15。</li>
+<li>攻擊對輸入取梯度、讓 loss 上升。看不到助教的模型（黑箱），只能在看得到的代理模型上做白箱攻擊，賭雜訊能轉移。JudgeBoi 已關閉，本書用 8 個不同家族的模型（加上 JPEG 防禦）當本機黑箱。</li>
+<li>範例的代理 resnet110_cifar10：3 個 stage × 18 個殘差單元，1,730,714 個參數，在 200 張原圖上答對 0.95。攻擊時必須是 eval 模式。</li>
+<li>範例在 resnet110 自己身上：FGSM 0.595、I-FGSM 0.005；同一批圖給 8 個受害者，平均 0.626 與 0.485。白箱強、黑箱弱，是全書的核心問題。</li>
+<li>GPU 的卷積反向傳播不是決定性的：一般模式跑兩次，I-FGSM 的 200 張圖有 195 張不同。全書的實驗都用 <code>hw10_det.py</code> 開決定性模式。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 有人把一張圖左上角的一個像素從 100 改成 200，其他像素都不動。它違反了 ε = 8 的限制嗎？如果改成「每個像素都 +8」呢？</summary>
+<p>第一種違反：L∞ 看的是改最多的那一個像素，|200 − 100| = 100 &gt; 8。第二種不違反：每個像素都改了 8，最大值是 8，剛好等於 ε。L∞ 限制的是「單一像素改多少」，不限制「改了幾個像素」——這和 L0（改了幾個像素）、L2（改動的總能量）是不同的量法。</p></details>
+<details class="quiz"><summary>2. 訓練模型與攻擊模型，都要呼叫 <code>loss.backward()</code>。兩者在「對誰取梯度」與「往哪個方向走」上有什麼不同？</summary>
+<p>訓練對<strong>權重</strong>取梯度，往梯度的反方向走（讓 loss 下降），輸入固定。攻擊對<strong>輸入圖片</strong>取梯度，往梯度的方向走（讓 loss 上升），權重固定。所以攻擊前要把輸入設成 <code>requires_grad = True</code>，而且不需要 optimizer（第 2 章）。</p></details>
+<details class="quiz"><summary>3. 用 <code>get_resnet_cifar</code> 的公式，resnet56 每個 stage 有幾個殘差單元？它的參數量大約是 resnet110 的幾分之幾？</summary>
+<p>(56 − 2) ÷ 6 = 9 個。殘差單元的數量是 resnet110 的一半，而幾乎所有參數都在殘差單元裡，所以參數量大約是一半。pytorchcv 數出來是 855,770，正好約為 1,730,714 的 49%（第 3 章的模型表）。</p></details>
+<details class="quiz"><summary>4. 一般模式下，FGSM 跑兩次只差 32 個像素，I-FGSM 卻有 40 萬個像素不同。為什麼步數越多差越多？</summary>
+<p>FGSM 只算一次梯度，捨入誤差只會讓「梯度剛好接近 0」的少數像素翻轉正負號。I-FGSM 每一步的輸入是上一步的結果；第一步只要有一個像素不同，第二步的前向與梯度就全部不同，差異會一步步放大，20 步之後大部分像素都走了不同的路。這和訓練時「第 100 步就分岔」是同一個現象。</p></details>
+<details class="quiz"><summary>5. 範例印出 <code>ifgsm_acc = 0.00500</code>。能不能說「交出去就能過 Boss 基準線（≤ 0.15）」？</summary>
+<p>不能。0.005 是代理模型 resnet110 自己的準確率（白箱）。基準線量的是助教的黑箱模型；同一批圖在本機 8 個受害者上平均還有 0.485，連 Medium 都不到。再加上助教可能有防禦，差距會更大。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Christian Szegedy 等，<a href="https://arxiv.org/abs/1312.6199">Intriguing properties of neural networks</a>（2013）：最早指出「加上看不出來的雜訊就能讓分類器認錯」，而且這些雜訊能轉移到別的模型。</li>
+<li>Ian Goodfellow 等，<a href="https://arxiv.org/abs/1412.6572">Explaining and Harnessing Adversarial Examples</a>（2014）：FGSM 的論文，第 2 章的主角。</li>
+<li>Kaiming He 等，<a href="https://arxiv.org/abs/1512.03385">Deep Residual Learning for Image Recognition</a>（2015）：ResNet 的論文；第 4.2 節是本章的 CIFAR-10 版本（ResNet-20／56／110）。</li>
+<li>PyTorch 文件 <a href="https://pytorch.org/docs/stable/notes/randomness.html">Reproducibility</a>：哪些運算不是決定性的，以及 <code>use_deterministic_algorithms</code> 的說明。</li>
+</ul>
+
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="index.html">← 目錄</a><a href="ch01.html">第 1 章 →</a></nav>
+<footer class="chap-footer"><p>ML2022 Spring HW10 讀碼教材。作業內容與範例程式出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群）；書中數字皆為本機實測。</p></footer>
+<script id="book-js">
+/* HW10 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

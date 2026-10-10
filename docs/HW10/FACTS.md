@@ -6,6 +6,8 @@
 - notebook `HW10/HW10.ipynb` 拆成 `config.py`（cells 3、5、6）、`dataset.py`（8）、`attack.py`（10、12、14；mifgsm 的 TODO 已補）、`ensemble.py`（24；TODO 補成 logits 相加）、`hw10.py`（8、16、18、20、22）、`report.py`（28、30、32；JPEG TODO 已補）。
 - 參照版：`docs/tools/hw10_make_ref.py`（跳過 cell 24、26：ensembleNet 是語法錯誤）。`%cd` → `os.chdir`、`!tar` → `subprocess.run`；`!pip`、`!wget`、`!unzip`、`!rm` 註解掉。
 - **預設模式不可重現**：參照版跑兩次，fgsm/ 有 28 張 PNG 不同（cuDNN 卷積反向）；兩次印出的 fgsm_loss 2.48256／2.48250，ifgsm_acc 0.01000／0.00500、ifgsm_loss 17.48673／17.61542。另一次（第一次跑參照版）fgsm_acc 0.59000、ifgsm 0.00500／17.61329。決定性模式下兩次完全相同。
+- 兩次一般模式（ref1、ref2）的差異：fgsm/ 28 張圖、共 32 個像素不同（每個差 16，即 +8 變 −8）；ifgsm/ 195 張圖、402,938 個像素不同（最大差 16）。
+- `.tgz`：fgsm.tgz 508,434 bytes、ifgsm.tgz 483,326 bytes（決定性參照版）；tar 列出 210 項（10 個目錄 + 200 張），順序是檔案系統順序（不是排序）。
 - 決定性模式：hw10.py 與參照版的 fgsm/、ifgsm/ 逐位元相同；`hw10_exp.py`（`--attack fgsm|ifgsm`）與 hw10.py 逐位元相同。
 - 參照版（含 imgaug 失敗前）整支約 15 秒（非決定性、非乾淨計時）。
 - pytorchcv 0.0.74 裝進 .venv；權重在 `~/.torch/models`（下載自 github.com/osmr/imgclsmob releases），全部 70 個共 2.5 GB。
@@ -45,3 +47,7 @@
 ## JPEG
 - imgaug `JpegCompression(compression=70)` → PIL quality = round(1 + 99·(1 − 70/101)) = 31。`hw10_exp.py` 的 `jpeg()` 與 imgaug 在 fgsm/ 的 200 張 × 壓縮率 10、50、70、90 共 800 組逐位元相同。
 - resnet110 白箱，受害者端加 JPEG70：FGSM 0.66、I-FGSM 0.665（verify 時量的）。
+
+## 實驗 A（hw10_runs.jsonl；8 受害者平均，V＝無防禦、Vj＝JPEG70、ens＝受害者 logits 相加）
+- **JPEG70 對乾淨圖的代價很大**：clean（不攻擊）V 0.962 → Vj 0.664；受害者 ensemble 0.985 → 0.735。resnet110 白箱 clean 0.95。
+- 見 docs/tools/hw10_runs.jsonl；第一批摘要：fgsm ε=1/2/4/8/16 → V 0.891/0.842/0.778/0.626/0.267；I-FGSM 步數 1/2/5/10/20/50/100 → V 0.891/0.814/0.759/0.589/0.485/0.446/0.441（白箱 0.735/0.585/0.270/0.030/0.005/0/0）；步長 0.2/0.4/0.8/1.6/3.2/8 → V 0.757/0.619/0.485/0.452/0.442/0.465。
