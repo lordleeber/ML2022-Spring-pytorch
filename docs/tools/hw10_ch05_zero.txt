@@ -1,0 +1,2 @@
+sum images with all-zero input gradient: 159 | median top1-top2 logit margin 93.7 | images with max softmax prob == 1.0 in float32: 197
+mean images with all-zero input gradient: 0 | median top1-top2 logit margin 5.9 | images with max softmax prob == 1.0 in float32: 0

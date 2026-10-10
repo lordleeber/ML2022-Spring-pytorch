@@ -101,6 +101,20 @@ def ch04_traj():
   return charts.legend(series) + '\n' + svg
 
 
+def ch05_epochs():
+  # paper B: I-FGSM with our own checkpoints as surrogates, mean of the 8 victims, mean of 3 seeds
+  ep = [1, 2, 3, 5, 10, 15, 20, 30, 40, 45, 60]
+  cur = lambda a: [round(mean([vavg(f'u_{a}_s{s}_e{e}') for s in range(3)]), 4) for e in ep]
+  series = [dict(name='r20', label='自訓 resnet20', values=cur('resnet20'), color=C['ifgsm']),
+            dict(name='r56', label='自訓 resnet56', values=cur('resnet56'), color=C['ifgsm'], dash='6 4'),
+            dict(name='p20', label='預訓 resnet20', values=[vavg('single_ifgsm_resnet20')] * len(ep), color=C['clean']),
+            dict(name='p56', label='預訓 resnet56', values=[vavg('single_ifgsm_resnet56')] * len(ep), color=C['clean'], dash='6 4')]
+  svg = charts.line_chart(series, len(ep), 0.4, 1.0, [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], xlabel='代理訓練到第幾個 epoch（第 30、45 個 epoch 之後學習率各乘 0.1；橫軸不是等距）',
+                          ylabel='8 個受害者平均準確率', fmt='{:.3f}', height=340, xticks=[(i, str(e)) for i, e in enumerate(ep)], xname=lambda i: f'第 {ep[i]} 個 epoch',
+                          aria='用自己訓練的 checkpoint 當代理做 I-FGSM，8 個受害者的平均準確率（3 個種子平均）。resnet20：第 1 個 epoch 0.879，一路下降到第 30 個 epoch 0.539，第 40 個 epoch 最低 0.435，之後回升到第 60 個 epoch 0.485。resnet56：0.924 降到第 40 個 epoch 0.438，第 60 個 epoch 回升到 0.588。pytorchcv 預訓練的 resnet20 是 0.535、resnet56 是 0.502')
+  return charts.legend(series) + '\n' + svg
+
+
 def put(page, name, html):
   path = os.path.join(root, 'docs/HW10', page)
   s = open(path).read()
@@ -114,7 +128,7 @@ def put(page, name, html):
   print('chart', name, '->', page)
 
 
-TABLE = {'ch02_eps': ('ch02.html', ch02_eps), 'ch03_single': ('ch03.html', ch03_single), 'ch04_traj': ('ch04.html', ch04_traj)}
+TABLE = {'ch02_eps': ('ch02.html', ch02_eps), 'ch03_single': ('ch03.html', ch03_single), 'ch04_traj': ('ch04.html', ch04_traj), 'ch05_epochs': ('ch05.html', ch05_epochs)}
 for name in sys.argv[2:]:
   page, fn = TABLE[name]
   put(page, name, fn())

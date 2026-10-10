@@ -1,0 +1,13 @@
+14:45:16 START resnet20_cifar10 s0
+14:54:55 OK resnet20_cifar10 s0
+14:54:55 START resnet20_cifar10 s1
+15:04:21 OK resnet20_cifar10 s1
+15:04:21 START resnet20_cifar10 s2
+15:14:15 OK resnet20_cifar10 s2
+15:14:15 START resnet56_cifar10 s0
+15:35:14 OK resnet56_cifar10 s0
+15:35:14 START resnet56_cifar10 s1
+15:55:48 OK resnet56_cifar10 s1
+15:55:48 START resnet56_cifar10 s2
+16:14:04 OK resnet56_cifar10 s2
+16:14:04 ALLDONE

@@ -37,3 +37,9 @@
 - paper B 要實測：下載 CIFAR-10 訓練集（torchvision），自己訓練「訓練不足」的代理模型。
 - 受害池依家族分開：代理用 resnet／preresnet／se*／densenet／nin；受害者 8 個（wrn28_10、wrn40_8、pyramidnet110_a48、resnext29_32x4d、ror3_110、rir、shakeshakeresnet26_2x32d、diaresnet56），各量無防禦與 JPEG70。
 - 節奏照 HW07：每章寫完驗證就推、接著寫下一章；規格內的 GPU 實驗一組一組自己排。長任務每 30 分鐘回報。
+
+## 狀態（2026-10-10 14:50）
+- 已推上 master：index、outline、ch00–ch04（樣板在 docs/tools/hw10_book/，珊瑚紅；圖表 make_charts.py）。
+- 實驗：A（98 組）完成；B（ensemble 19 組）、C（MI／DIM 34 組）依序在跑（hw10_queue.sh）；U：resnet20／56 × 3 種子從頭訓練中（hw10_queue_U.sh，C 完成後跑 66 組 checkpoint 攻擊）。B、C、U 的 attack_s 因與訓練並行而不乾淨，計時最後另外量。
+- 作業 200 張 = CIFAR-10 測試集每類前 20 張（hw10_overlap.json）；CIFAR-10 在 HW10/cifar10/（gitignore），checkpoint 在 HW10/surrogates/（gitignore）。
+- ch07 工具已寫好：hw10_bpda.py（JPEG 前向、反向恆等）、hw10_jpeg_sweep.py；D 組規格等 B、C、U 結果出來再定。

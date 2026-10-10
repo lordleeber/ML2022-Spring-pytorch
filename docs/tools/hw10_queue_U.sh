@@ -1,9 +1,9 @@
 #!/bin/bash
-# paper B: after grid C finishes, train resnet20 / resnet56 from scratch (3 seeds, 60 epochs, checkpoints kept in HW10/surrogates/),
-# then attack with every checkpoint (I-FGSM) through the normal grid runner.
+# paper B: train resnet20 / resnet56 from scratch (3 seeds, 60 epochs, checkpoints kept in HW10/surrogates/) right away
+# (in parallel with grids B/C: their attack_s timings are therefore not clean), then, once grid C is done,
+# attack with every checkpoint (I-FGSM) through the normal grid runner.
 R=/home/valtec/poyi/GitHubLL/ML2022-Spring-pytorch
 cd $R
-while ! grep -q ALLDONE docs/tools/hw10_logs/hw10_grid_C.progress 2>/dev/null; do sleep 20; done
 P=docs/tools/hw10_logs/hw10_train.progress
 for arch in resnet20_cifar10 resnet56_cifar10; do
   for seed in 0 1 2; do
@@ -15,6 +15,7 @@ for arch in resnet20_cifar10 resnet56_cifar10; do
   done
 done
 echo "$(date +%T) ALLDONE" >> $P
+while ! grep -q ALLDONE docs/tools/hw10_logs/hw10_grid_C.progress 2>/dev/null; do sleep 20; done
 : > docs/tools/hw10_grid_U.txt
 for arch in resnet20_cifar10 resnet56_cifar10; do
   a=${arch%_cifar10}
