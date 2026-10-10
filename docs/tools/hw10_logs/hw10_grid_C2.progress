@@ -1,3 +1,27 @@
 17:10:26 START c2_u6_ifgsm
 17:10:56 OK c2_u6_ifgsm
 17:10:56 START c2_u6_mi
+17:11:20 OK c2_u6_mi
+17:11:20 START c2_u6_dimmi_s0
+17:11:47 OK c2_u6_dimmi_s0
+17:11:47 START c2_u6_dimmi_s1
+17:12:15 OK c2_u6_dimmi_s1
+17:12:15 START c2_u6_dimmi_s2
+17:12:41 OK c2_u6_dimmi_s2
+17:12:41 START c2_k8_mean_ifgsm
+17:17:57 OK c2_k8_mean_ifgsm
+17:17:57 START c2_k8_mi
+17:23:09 OK c2_k8_mi
+17:23:09 START c2_k8_dimmi_s0
+17:28:21 OK c2_k8_dimmi_s0
+17:28:21 START c2_k8_dimmi_s1
+17:33:30 OK c2_k8_dimmi_s1
+17:33:30 START c2_k8_dimmi_s2
+17:38:43 OK c2_k8_dimmi_s2
+17:38:43 START c2_mix_dimmi_s0
+17:44:19 OK c2_mix_dimmi_s0
+17:44:19 START c2_mix_dimmi_s1
+17:49:54 OK c2_mix_dimmi_s1
+17:49:54 START c2_mix_dimmi_s2
+17:55:28 OK c2_mix_dimmi_s2
+17:55:28 ALLDONE

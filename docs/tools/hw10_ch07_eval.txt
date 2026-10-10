@@ -1,0 +1,7 @@
+training flag right after get_model: True
+./data/dog/dog2.png train: dog 40.45%
+./data/dog/dog2.png eval: dog 99.64%
+./fgsm/dog/dog2.png train: dog 30.17%
+./fgsm/dog/dog2.png eval: cat 72.20%
+init_block BN running_mean max change after one train-mode forward: 0.08494790643453598
+then eval on benign dog2: dog 99.06%

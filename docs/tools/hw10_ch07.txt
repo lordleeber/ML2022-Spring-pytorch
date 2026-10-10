@@ -1,0 +1,16 @@
+fgsm_eps8: delta RMS 7.928  high-frequency share 0.943
+  rate 10 (quality 90): delta after JPEG RMS 8.278  high-frequency share 0.918  cosine(delta, delta_j) 0.548  | JPEG error on the benign image RMS 5.813
+  rate 20 (quality 80): delta after JPEG RMS 8.235  high-frequency share 0.897  cosine(delta, delta_j) 0.349  | JPEG error on the benign image RMS 7.581
+  rate 70 (quality 31): delta after JPEG RMS 7.418  high-frequency share 0.775  cosine(delta, delta_j) 0.103  | JPEG error on the benign image RMS 12.344
+ifgsm_it20: delta RMS 4.354  high-frequency share 0.923
+  rate 10 (quality 90): delta after JPEG RMS 5.325  high-frequency share 0.876  cosine(delta, delta_j) 0.367  | JPEG error on the benign image RMS 5.813
+  rate 20 (quality 80): delta after JPEG RMS 5.543  high-frequency share 0.856  cosine(delta, delta_j) 0.223  | JPEG error on the benign image RMS 7.581
+  rate 70 (quality 31): delta after JPEG RMS 5.701  high-frequency share 0.761  cosine(delta, delta_j) 0.080  | JPEG error on the benign image RMS 12.344
+single_ifgsm_nin: delta RMS 5.822  high-frequency share 0.882
+  rate 10 (quality 90): delta after JPEG RMS 6.714  high-frequency share 0.867  cosine(delta, delta_j) 0.541  | JPEG error on the benign image RMS 5.813
+  rate 20 (quality 80): delta after JPEG RMS 7.165  high-frequency share 0.855  cosine(delta, delta_j) 0.385  | JPEG error on the benign image RMS 7.581
+  rate 70 (quality 31): delta after JPEG RMS 7.555  high-frequency share 0.736  cosine(delta, delta_j) 0.157  | JPEG error on the benign image RMS 12.344
+dim_mi_p0.5_s0: delta RMS 6.760  high-frequency share 0.909
+  rate 10 (quality 90): delta after JPEG RMS 7.125  high-frequency share 0.881  cosine(delta, delta_j) 0.472  | JPEG error on the benign image RMS 5.813
+  rate 20 (quality 80): delta after JPEG RMS 7.198  high-frequency share 0.860  cosine(delta, delta_j) 0.304  | JPEG error on the benign image RMS 7.581
+  rate 70 (quality 31): delta after JPEG RMS 7.234  high-frequency share 0.764  cosine(delta, delta_j) 0.111  | JPEG error on the benign image RMS 12.344
