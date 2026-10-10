@@ -253,13 +253,13 @@ td.num { font-family: var(--font-mono); }
 <header class="chap-header">
   <p class="book-title">ML2022 Spring · HW10 讀碼教材</p>
   <h1>教學大綱</h1>
-  <p class="chap-lead">這一頁是全書的設計圖，列出每一章對應哪些檔案、要回答什麼問題、用哪些實測數字。2026-10-10 經使用者核可。寫作途中如果發現大綱和程式不符，以程式為準，並回頭修改這一頁。</p>
+  <p class="chap-lead">（2026-10-10 全書完成：下面的實驗規格已更新成實際跑過的內容，共 241 組攻擊、6 次代理訓練。）這一頁是全書的設計圖，列出每一章對應哪些檔案、要回答什麼問題、用哪些實測數字。2026-10-10 經使用者核可。寫作途中如果發現大綱和程式不符，以程式為準，並回頭修改這一頁。</p>
 </header>
 <main>
 
 <h2 id="principles">寫法</h2>
 <ul>
-<li>每一章都對應真實的檔案與函式，程式碼逐字引用並標注 <code>檔名:行號</code>，行號以 commit <code>d817a0a</code> 為準。</li>
+<li>每一章都對應真實的檔案與函式，程式碼逐字引用並標注 <code>檔名:行號</code>，行號以 commit <code>d817a0a</code>（主線程式）與 <code>c629b04</code>（實驗工具）為準。</li>
 <li>具象先於抽象：先打開一張被攻擊過的 PNG，看它和原圖差幾個像素值，再談梯度；先看單一代理模型的攻擊轉移到別的模型剩多少，再談 ensemble。</li>
 <li>每一個數字都在本機實測，原始紀錄在 <code>docs/tools/hw10_runs.jsonl</code>。「改 X 會怎樣」的題目一律實際跑過，只靠推論、沒有跑的會註明。</li>
 <li><strong>同一份程式在 GPU 上跑兩次，存下的對抗圖片就不一樣</strong>（第 0、2 章）。所以實驗一律在決定性模式下跑；帶隨機性的攻擊（DIM）與自己訓練的代理模型各跑 3 個種子，報平均與範圍。</li>
@@ -295,11 +295,13 @@ td.num { font-family: var(--font-mono); }
 <tr><td>3</td><td>ε 在正規化之後的空間裡是 <code>8/255/std</code>，三個通道各不相同；直接寫 <code>8/255</code> 會讓限制小了約 5 倍</td><td><code>config.py</code></td><td>1</td></tr>
 <tr><td>4</td><td>類別編號來自資料夾的字母排序，剛好和 CIFAR-10 的類別順序相同；檔名排序是 airplane1、airplane10、airplane11……（字串排序）</td><td><code>dataset.py</code></td><td>1</td></tr>
 <tr><td>5</td><td>I-FGSM 的步長 0.8 × 20 步 = 16，比 ε = 8 大一倍，剪回 ε 球這一步一定會發生</td><td><code>attack.py</code> 的 <code>ifgsm</code></td><td>4</td></tr>
-<tr><td>6</td><td><code>ensembleNet</code> 宣告了 <code>self.softmax</code> 卻沒有用到；TODO 的註解說「把 logits 加起來」，加總與平均、與機率平均的梯度方向不同</td><td><code>ensemble.py</code></td><td>5</td></tr>
+<tr><td>6</td><td><code>ensembleNet</code> 宣告了 <code>self.softmax</code> 卻沒有用到；TODO 的註解說「把 logits 加起來」，加總與平均、與機率平均的梯度方向不同；<strong>16 個模型相加時 softmax 在 float32 飽和、梯度全為 0，159 張圖完全沒被改動</strong>（寫作中發現）</td><td><code>ensemble.py</code></td><td>5</td></tr>
 <tr><td>7</td><td>imgaug 的 <code>JpegCompression(compression=70)</code> 換算成 PIL 的品質是 31，不是 70；「壓縮率 70%」容易被讀成「品質 70」</td><td><code>report.py</code>、imgaug</td><td>7</td></tr>
 <tr><td>8</td><td>imgaug 0.4.0（2020 年）在 NumPy 2 下 import 就失敗（<code>np.sctypes</code> 已移除）；opencv 5 也和它不相容</td><td><code>report.py</code></td><td>0、7</td></tr>
 <tr><td>9</td><td>報告題的程式沒有呼叫 <code>model.eval()</code>，靠的是前面 <code>gen_adv_examples</code> 已經把模型切到 eval 模式；單獨執行那一格，BatchNorm 會用 batch 統計量</td><td>notebook cell [30]、<code>report.py</code></td><td>7</td></tr>
 <tr><td>10</td><td><code>create_dir</code> 先把原圖整個複製過去再覆蓋；目錄已經存在時不會清空，舊的檔案會留著</td><td><code>attack.py</code></td><td>1</td></tr>
+<tr><td>11</td><td><code>loss.backward()</code> 也算了所有權重的梯度，從來沒清（寫作中發現）</td><td>所有攻擊函式</td><td>2</td></tr>
+<tr><td>12</td><td>pytorchcv 的模型載入時是 train 模式；train 模式的前向即使在 <code>no_grad</code> 下也會改掉 BN 統計量（寫作中發現）</td><td><code>report.py</code></td><td>7</td></tr>
 </tbody>
 </table></div>
 
@@ -308,11 +310,13 @@ td.num { font-family: var(--font-mono); }
 <div class="tablewrap"><table>
 <thead><tr><th>組</th><th>內容</th><th>章</th></tr></thead>
 <tbody>
-<tr><td>A</td><td>以 resnet110 為代理：不攻擊；FGSM ε = 1、2、4、8、16；I-FGSM 步數 1、2、5、10、20、50、100；步長 0.2、0.4、0.8、1.6、3.2、8。40 個代理模型各跑 FGSM 與 I-FGSM</td><td>2、3、4</td></tr>
-<tr><td>B</td><td>Ensemble（I-FGSM）：notebook 的三個模型 × 四種聚合方式；從代理池隨機抽 2、4、8、16 個（各 3 次）；同家族 vs 跨家族</td><td>5</td></tr>
-<tr><td>U</td><td>paper B：在 CIFAR-10 訓練集上從頭訓練 resnet20、resnet56（扣掉與作業 200 張重複的圖），60 個 epoch，存下第 1、2、3、5、10、15、20、30、40、45、60 個 epoch 的 checkpoint，3 個種子；每個 checkpoint 當代理跑 I-FGSM</td><td>5</td></tr>
-<tr><td>C</td><td>MI-FGSM 的 decay 0、0.5、1、2；DIM 的機率 0.25–1 與縮放上限，3 個種子；ensemble ＋ 訓練不足的代理 ＋ DIM-MI-FGSM</td><td>6</td></tr>
-<tr><td>D</td><td>JPEG 品質掃描（壓縮率 10–90）× 原圖與各攻擊；把 JPEG 放進攻擊迴圈（前向做真的 JPEG、反向當成恆等函數）</td><td>7</td></tr>
+<tr><td>A</td><td>以 resnet110 為代理：不攻擊；FGSM ε = 1、2、4、8、16；I-FGSM 步數 1、2、5、10、20、50、100；步長 0.2、0.4、0.8、1.6、3.2、8。40 個代理模型各跑 FGSM 與 I-FGSM。共 98 組</td><td>2、3、4</td></tr>
+<tr><td>B</td><td>Ensemble（I-FGSM）：notebook 的三個模型 × 四種聚合方式（＋FGSM）；從代理池隨機抽 2、4、8、16 個（各 3 次）；同家族 vs 跨家族。共 19 組</td><td>5</td></tr>
+<tr><td>B2</td><td>（規格外的修正）16 個代理的 logits 相加會飽和失效，改用 logits 平均重跑 3 次抽樣，第 1 次另跑機率平均與 loss 相加。共 5 組</td><td>5</td></tr>
+<tr><td>U</td><td>paper B：在 CIFAR-10 訓練集上從頭訓練 resnet20、resnet56（作業的 200 張都在測試集，不必排除），60 個 epoch，存下第 1、2、3、5、10、15、20、30、40、45、60 個 epoch，3 個種子；66 個 checkpoint 各當一次代理跑 I-FGSM</td><td>5</td></tr>
+<tr><td>C</td><td>MI-FGSM 的 decay 0、0.5、1、2 與步數 10、50；DIM-I-FGSM p = 0.25、0.5、0.75、1（3 種子）；DIM-MI p = 0.5、1 與縮放上限 34、40、48（3 種子）；FGSM ε = 1.6。共 34 組</td><td>6</td></tr>
+<tr><td>C2、C3</td><td>組合：自訓 6 個（第 40 epoch）、預訓練 8 個、兩者合起來 × I-FGSM／MI／DIM-MI（DIM-MI 3 種子）。共 15 組</td><td>6</td></tr>
+<tr><td>D</td><td>JPEG 品質掃描（壓縮率 10–90，<code>hw10_jpeg_sweep.py</code>，對已存的 PNG 評估）；BPDA（<code>hw10_bpda.py</code>）：JPEG 品質 80／31 ＋ resnet110 的 I-FGSM，品質 80 ＋ 自訓 6 個的 MI 與 DIM-MI。共 4 組攻擊</td><td>7</td></tr>
 </tbody>
 </table></div>
 

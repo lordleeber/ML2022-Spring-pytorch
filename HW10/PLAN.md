@@ -1,5 +1,7 @@
 # HW10 對抗攻擊（Adversarial Attack）— 研究筆記
 
+> **2026-10-10 完成**：教材 docs/HW10（index、outline、ch00–ch08）全部推上 master；241 組攻擊（A 98、B 19、B2 5、C 34、U 66、C2 13、C3 2、D 4）加 6 次代理訓練，數字都在 docs/HW10/FACTS.md。
+
 > 2026-10-08 由前一個 session 整理。總覽見 [docs/HW_STUDY_OVERVIEW.md](../docs/HW_STUDY_OVERVIEW.md)。候選（本機可量、實驗便宜）。
 
 ## 題目（本資料夾 `HW10.ipynb`、`HW10.pdf`（31 頁），從官方 repo 複製）

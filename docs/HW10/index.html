@@ -355,6 +355,23 @@ td.num { font-family: var(--font-mono); }
 </table></div>
 <p>投影片說每條基準線在 Colab 上都應該 20 分鐘內跑完，而且只用 pytorchcv 的模型就能全部通過。JudgeBoi 已經關閉，本書的數字都是本機黑箱上的準確率，不能直接和上表比。</p>
 
+<h2 id="results">先看結果</h2>
+<p>全書的主要結果如下（存成 PNG 之後，本機 8 個受害者的平均準確率，越低越好；有範圍的是 3 個種子；完整總表在<a href="ch08.html#all">第 8 章</a>）。「JPEG 品質 80」是受害者先做溫和的 JPEG 壓縮再分類，模擬投影片說的「被動防禦」。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>代理與攻擊</th><th class="num">無防禦</th><th class="num">JPEG 品質 80</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>原圖（不攻擊）</td><td class="num">0.962</td><td class="num">0.901</td><td>第 3、7 章</td></tr>
+<tr><td>範例：resnet110，FGSM</td><td class="num">0.626</td><td class="num">0.731</td><td>第 2 章</td></tr>
+<tr><td>範例：resnet110，I-FGSM</td><td class="num">0.485</td><td class="num">0.841</td><td>第 4 章</td></tr>
+<tr><td>挑對單一代理：nin，I-FGSM</td><td class="num">0.362</td><td class="num">0.603</td><td>第 3 章</td></tr>
+<tr><td>resnet110，DIM-MI-FGSM</td><td class="num">0.266（0.256–0.278）</td><td class="num">0.681</td><td>第 6 章</td></tr>
+<tr><td>8 個 pytorchcv 模型的 ensemble，I-FGSM</td><td class="num">0.037（0.033–0.039）</td><td class="num">0.714</td><td>第 5 章</td></tr>
+<tr><td>自己訓練到第 40 個 epoch 的 6 個代理，DIM-MI-FGSM</td><td class="num">0.204</td><td class="num">0.350</td><td>第 5、6 章</td></tr>
+<tr><td>以上兩組合起來（14 個代理），DIM-MI-FGSM</td><td class="num"><strong>0.016</strong></td><td class="num"><strong>0.274</strong></td><td>第 6 章</td></tr>
+</tbody>
+</table></div>
+<p>三個主要發現。<strong>第一，無防禦時，代理的數量決定一切</strong>：8 個代理的 I-FGSM 就剩 0.04；而單一代理之間差 32 個百分點，和模型大小、準確率都無關。<strong>第二，有被動防禦時，MI、DIM 與「訓練不足的代理」才是關鍵</strong>：同樣 14 個代理，I-FGSM 在品質 80 的 JPEG 之下是 0.492，DIM-MI 是 0.274；自己訓練、停在第一次降學習率後不久的 checkpoint，轉移性比訓練完的模型好。<strong>第三，程式裡藏著幾個不會報錯的陷阱</strong>：GPU 上同一份程式跑兩次，I-FGSM 有 195 張圖不同；照 TODO 把 16 個模型的 logits 相加，softmax 飽和、159 張圖一個像素都沒改；pytorchcv 的模型預設是 train 模式，少了 <code>eval()</code> 報告題的答案就不同；作業的「壓縮率 70」其實是 JPEG 品質 31，連乾淨圖都只剩 0.664。</p>
+
 <h2 id="prereq">預備知識</h2>
 <ul>
 <li>Python 與 PyTorch 的基本用法：<code>nn.Module</code>、<code>DataLoader</code>、<code>loss.backward()</code>、<code>requires_grad</code>。</li>
@@ -394,13 +411,15 @@ $ ../.venv/bin/python report.py    # 視覺化與報告題（需要 imgaug，見
 <tr><td><code>hw10_train_surrogate.py</code></td><td>在 CIFAR-10 上從頭訓練代理模型、存下各階段的 checkpoint（paper B）</td></tr>
 <tr><td><code>hw10_eval_dir.py</code></td><td>讀存好的 PNG 目錄，量準確率與 L∞</td></tr>
 <tr><td><code>hw10_npshim_sitecustomize.py</code></td><td>讓 imgaug 0.4.0 在 NumPy 2 下能 import 的 shim</td></tr>
-<tr><td><code>hw10_zoo.jsonl</code>、<code>hw10_pilot.jsonl</code>、<code>hw10_runs.jsonl</code></td><td>全部實驗的原始紀錄</td></tr>
-<tr><td><code>hw10_book/</code></td><td>本書樣板（<code>book.css</code>、<code>book.js</code>、<code>apply_template.py</code>）、圖表（<code>charts.py</code>）、程式引用填入（<code>fill_listings.py</code>）</td></tr>
+<tr><td><code>hw10_bpda.py</code>、<code>hw10_run_grid_bpda.sh</code></td><td>JPEG 感知的代理（前向 JPEG、反向恆等）</td></tr>
+<tr><td><code>hw10_jpeg_sweep.py</code>、<code>hw10_overlap.py</code>、<code>hw10_facts.py</code>、<code>hw10_ch01.py</code>–<code>hw10_ch07_eval.py</code>、<code>hw10_timing.sh</code></td><td>JPEG 強度掃描、作業圖片與 CIFAR-10 的比對、各章的事實量測、乾淨計時</td></tr>
+<tr><td><code>hw10_zoo.jsonl</code>、<code>hw10_pilot.jsonl</code>、<code>hw10_runs.jsonl</code>、<code>hw10_jpeg.jsonl</code>、<code>hw10_train.jsonl</code>、<code>hw10_logs/</code></td><td>全部實驗的原始紀錄（241 組攻擊、6 次代理訓練）</td></tr>
+<tr><td><code>hw10_book/</code></td><td>本書樣板（<code>book.css</code>、<code>book.js</code>、<code>apply_template.py</code>）、圖表（<code>charts.py</code>、<code>make_charts.py</code>）、總表（<code>ladder.py</code>、<code>c2_table.py</code>）、程式引用填入（<code>fill_listings.py</code>）</td></tr>
 </tbody>
 </table></div>
 
 <h2 id="version">版本聲明</h2>
-<p>本書的程式碼引用以 commit <code>d817a0a</code> 為準。環境：RTX PRO 4000 Blackwell 24 GB、Python 3.12、torch 2.11.0+cu128、torchvision 0.26.0、pytorchcv 0.0.74、NumPy 2.5.3；imgaug 0.4.0 裝在共用環境之外。所有數字都在決定性模式下量得，事實與原始數據在 <code>docs/HW10/FACTS.md</code>。本書沒有做冷讀（cold-read）審閱。</p>
+<p>本書的程式碼引用以 commit <code>d817a0a</code>（<code>HW10/</code> 的主線程式）與 <code>c629b04</code>（<code>docs/tools/</code> 的實驗工具）為準。環境：RTX PRO 4000 Blackwell 24 GB、Python 3.12、torch 2.11.0+cu128、torchvision 0.26.0、pytorchcv 0.0.74、NumPy 2.5.3；imgaug 0.4.0 裝在共用環境之外。所有數字都在決定性模式下量得，事實與原始數據在 <code>docs/HW10/FACTS.md</code>。本書沒有做冷讀（cold-read）審閱。</p>
 
 </main>
 <nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="outline.html">教學大綱</a><a href="ch00.html">開始閱讀 →</a></nav>
