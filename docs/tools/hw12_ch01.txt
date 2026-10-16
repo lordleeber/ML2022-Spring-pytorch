@@ -1,0 +1,23 @@
+== raw Gymnasium API vs the shim
+gymnasium reset -> tuple 2 items; info = {}
+gymnasium step  -> 5 items: obs, reward, terminated, truncated, info = (np.float64(-0.762201422388614), False, False, {})
+wrappers: <TimeLimit<OrderEnforcing<PassiveEnvChecker<LunarLander<LunarLander-v3>>>>>
+shim reset      -> ndarray (8,)
+shim step       -> 4 items: obs, reward, done, info
+
+== one action held for 20 steps from the same start (seed 7)
+0 不動     dvx +0.000 dvy -0.532 dangle +0.089 dangvel -0.001 reward sum -25.58
+1 左側引擎   dvx -0.193 dvy -0.558 dangle +0.508 dangvel +0.806 reward sum -82.01
+2 主引擎    dvx -0.067 dvy +0.339 dangle +0.085 dangvel -0.010 reward sum -32.25
+3 右側引擎   dvx +0.196 dvy -0.545 dangle -0.325 dangvel -0.791 reward sum -41.60
+
+== constant-action policies on the 100 evaluation seeds (100000-100099)
+always 0 不動     mean   -130.3 min   -208.9 max     32.9 steps   70.9 {'crashed': 100}
+always 1 左側引擎   mean   -572.1 min   -982.3 max   -323.6 steps   67.6 {'crashed': 100}
+always 2 主引擎    mean   -883.0 min  -4282.9 max   -398.4 steps  125.5 {'crashed': 100}
+always 3 右側引擎   mean   -589.1 min  -1150.0 max   -345.5 steps   68.6 {'crashed': 100}
+
+== the sample's "Final" (mean last reward of 5 episodes) over its 400 batches, seed 543
+distinct values: 102 batches whose Final is a multiple of 20 (every episode ended at +-100): 303 of 400
+most common: [(-100.0, 261), (-60.0, 33), (-20.0, 7), (-80.450118, 1), (-80.376639, 1), (-80.524252, 1), (-78.87422, 1), (-80.805532, 1)]
+values off the +-100 grid: [-83.406678, -81.068884, -80.903675, -80.805532, -80.524252, -80.450118, -80.376639, -80.282116, -80.211621, -80.126902]

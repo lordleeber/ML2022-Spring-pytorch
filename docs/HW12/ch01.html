@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 1 章　環境 — HW12 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW12 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製；由 HW10 的樣板複製、改色）
+   版面：單欄 1080px——近黑的冷灰底、紙白的字、月面青只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：範例 灰、reward-to-go 藍、baseline 橘、A2C 綠、PPO 紫、DQN 洋紅、JudgeBoi 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與前幾本相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #5cc8d6;      /* 月面青：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(92, 200, 214, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #5cc8d6;
+  /* 角色色 */
+  --r-sample: #8b949e; --r-rtg: #3987e5; --r-base: #d95926; --r-a2c: #199e70;
+  --r-ppo: #9085e9; --r-dqn: #d55181; --r-judge: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "s → π_θ(a|s) → a → 環境 → r, s′　·　θ ← θ + α ∇ log π_θ(a|s) · A　·　LunarLander　8 維狀態　4 個動作";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fdf1ef; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #121b1d; border-color: rgba(92, 200, 214, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1f0d0b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.sample { --rc: var(--r-sample); } .role.rtg { --rc: var(--r-rtg); } .role.base { --rc: var(--r-base); }
+.role.a2c { --rc: var(--r-a2c); } .role.ppo { --rc: var(--r-ppo); } .role.dqn { --rc: var(--r-dqn); }
+.role.judge { --rc: var(--r-judge); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW12 讀碼教材</p>
+  <h1>第 1 章　環境：LunarLander 給了什麼、怎麼給分</h1>
+  <p class="chap-lead">策略網路只看得到 8 個數字，也只能從 4 個動作裡選一個；它學到什麼，完全取決於環境怎麼給分。這一章打開 Gymnasium 的原始碼，逐項看狀態、動作、獎勵與結束條件，再看 2021 年的程式是怎麼透過一層轉接跑在新版 Gymnasium 上的。最後一節談四條亂數流——它解釋了為什麼 notebook 開頭那幾格「看看就好」的程式，會讓同一個種子的分數相差 135 分。</p>
+</header>
+<main>
+
+<h2 id="explore">1.1　從 notebook 的探索格開始</h2>
+<p>範例 notebook 在訓練之前，先用幾格程式介紹環境。拆檔後它們留在 <code>train.py</code> 的開頭：</p>
+<figure class="listing"><figcaption>train.py:21–40 — 探索格（notebook cell [11]–[24]）</figcaption>
+<pre class="py" data-hot="26,28,30,35,39,40"><code>env = make_env()
+
+# ---- What Lunar Lander? (cells [11]-[24]) ----
+print(env.observation_space)
+print(env.action_space)
+initial_state = env.reset()
+print(initial_state)
+random_action = env.action_space.sample()
+print(random_action)
+observation, reward, done, info = env.step(random_action)
+print(done)
+print(reward)
+
+# Random agent (cell [24]); the frames it drew are dropped, see gym_compat.py
+env.reset()
+
+done = False
+while not done:
+    action = env.action_space.sample()
+    observation, reward, done, _ = env.step(action)</code></pre></figure>
+<p>這二十行把和環境打交道的四個動詞都用了一次：<code>reset()</code> 開始新的一局並回傳第一個狀態；<code>action_space.sample()</code> 隨機挑一個合法的動作；<code>step(action)</code> 執行一步，回傳下一個狀態、這一步的獎勵、這一局結束了沒有、以及額外資訊；最後一格讓一個完全隨機的代理人玩一整局。原版 notebook 在每一步都呼叫 <code>env.render()</code> 畫出一張圖，在 Colab 上看小艇怎麼摔下去；拆檔時拿掉了畫圖（1.6 節說明為什麼不影響結果），其他的呼叫一個都沒拿掉。0.5 節看過它們印出的內容：第一個狀態、隨機動作 3、那一步的獎勵 −1.051。最後那一局隨機亂按，在本機走了 120 步就墜毀了。</p>
+<p>這幾格看起來只是展示，1.7 節會說明它們為什麼必須保留。先把它們印出來的東西一項一項讀懂。</p>
+
+<h2 id="state">1.2　8 個狀態數字</h2>
+<p>狀態由環境的 <code>step()</code> 在每一步最後組出來。下面是 Gymnasium 1.4 的原始碼（裝在共用的 <code>.venv</code> 裡）：</p>
+<figure class="listing"><figcaption>.venv/lib/python3.12/site-packages/gymnasium/envs/box2d/lunar_lander.py:624–634 — LunarLander.step() 組出狀態</figcaption>
+<pre class="py" data-hot="625,626,627,628,629,630,631,632"><code>        state = [
+            (pos.x - VIEWPORT_W / SCALE / 2) / (VIEWPORT_W / SCALE / 2),
+            (pos.y - (self.helipad_y + LEG_DOWN / SCALE)) / (VIEWPORT_H / SCALE / 2),
+            vel.x * (VIEWPORT_W / SCALE / 2) / FPS,
+            vel.y * (VIEWPORT_H / SCALE / 2) / FPS,
+            self.lander.angle,
+            20.0 * self.lander.angularVelocity / FPS,
+            1.0 if self.legs[0].ground_contact else 0.0,
+            1.0 if self.legs[1].ground_contact else 0.0,
+        ]
+        assert len(state) == 8</code></pre></figure>
+<div class="tablewrap"><table>
+<thead><tr><th>索引</th><th>意思</th><th>換算方式</th><th>0.5 節第一個狀態的值</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>水平位置 x</td><td>以畫面中央為 0，除以半個畫面寬；降落區永遠在 x = 0</td><td class="num">−0.0013</td></tr>
+<tr><td>1</td><td>高度 y</td><td>以降落區（加上腳長）為 0，除以半個畫面高</td><td class="num">1.398</td></tr>
+<tr><td>2、3</td><td>速度 vx、vy</td><td>物理引擎的速度換算成「每一格畫面移動多少」的尺度；vy 負的是往下</td><td class="num">−0.128、−0.554</td></tr>
+<tr><td>4</td><td>角度</td><td>弧度，0 是正立</td><td class="num">0.0015</td></tr>
+<tr><td>5</td><td>角速度</td><td>乘了 20 再除以每秒格數 50</td><td class="num">0.029</td></tr>
+<tr><td>6、7</td><td>左腳、右腳有沒有碰到地面</td><td>1 或 0</td><td class="num">0、0</td></tr>
+</tbody>
+</table></div>
+<p>這 8 個數字已經是整理好的物理量，而且大致落在 −1 到 1 附近：位置與速度都除以畫面大小。這是策略網路能這麼小的原因之一——不需要從像素裡「看」出小艇在哪裡（2021 年的 notebook 雖然用 <code>render()</code> 畫圖，網路從來沒看過那些圖）。狀態也沒有包含地形：網路看不到月面的高低起伏，只知道自己離降落區多遠、兩隻腳有沒有著地。</p>
+<p>0.5 節提過，2021 年印出的狀態空間是 <code>Box(-inf, inf, (8,), float32)</code>，本機印的卻是每個數字都有上下界。Gymnasium 的版本紀錄寫得很清楚：v3 把 x、y 的宣告範圍從 ±1.5 改成 ±2.5、速度從 ±5 改成 ±10、角度從 ±π 改成 ±2π。這只是「宣告」：環境照樣回傳物理算出來的值，不會把它剪到範圍內；範例程式也從來沒用到這個範圍。</p>
+
+<h2 id="actions">1.3　四個動作做了什麼</h2>
+<p>Gymnasium 的說明文件只寫了 0「不動」、1「開左側姿態引擎」、2「開主引擎」、3「開右側姿態引擎」。為了知道它們實際的效果，本書的 <code>docs/tools/hw12_ch01.py</code> 從同一個起點（環境種子 7）出發，每個動作連按 20 步，看速度與角度改變了多少：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>連按 20 步</th><th class="num">Δvx</th><th class="num">Δvy</th><th class="num">Δ角度</th><th class="num">Δ角速度</th><th class="num">20 步的獎勵合計</th></tr></thead>
+<tbody>
+<tr><td>0 不動</td><td class="num">+0.000</td><td class="num">−0.532</td><td class="num">+0.089</td><td class="num">−0.001</td><td class="num">−25.58</td></tr>
+<tr><td>1 左側引擎</td><td class="num">−0.193</td><td class="num">−0.558</td><td class="num">+0.508</td><td class="num">+0.806</td><td class="num">−82.01</td></tr>
+<tr><td>2 主引擎</td><td class="num">−0.067</td><td class="num">+0.339</td><td class="num">+0.085</td><td class="num">−0.010</td><td class="num">−32.25</td></tr>
+<tr><td>3 右側引擎</td><td class="num">+0.196</td><td class="num">−0.545</td><td class="num">−0.325</td><td class="num">−0.791</td><td class="num">−41.60</td></tr>
+</tbody>
+</table></div>
+<p>不動的時候，重力讓小艇每 20 步多往下掉 0.53。主引擎是唯一能對抗重力的動作：20 步把 vy 往上推了 0.34（抵掉重力之後還有剩）。兩個側面引擎主要是讓小艇<strong>旋轉</strong>（角速度 ±0.8），附帶一點水平推力，方向相反。要左右移動，得先側一點、再用主引擎往斜的方向推——這是策略網路必須自己發現的「操作手法」。</p>
+<p>再看「永遠只按同一個鍵」的策略，在第 0 章那 100 個評估種子上的分數：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>策略</th><th class="num">平均總獎勵</th><th class="num">最低</th><th class="num">最高</th><th class="num">平均步數</th><th>結局</th></tr></thead>
+<tbody>
+<tr><td>永遠 0（自由落體）</td><td class="num">−130.3</td><td class="num">−208.9</td><td class="num">32.9</td><td class="num">70.9</td><td>100 局墜毀</td></tr>
+<tr><td>永遠 1</td><td class="num">−572.1</td><td class="num">−982.3</td><td class="num">−323.6</td><td class="num">67.6</td><td>100 局墜毀</td></tr>
+<tr><td>永遠 2（主引擎）</td><td class="num">−883.0</td><td class="num">−4,282.9</td><td class="num">−398.4</td><td class="num">125.5</td><td>100 局墜毀（飛出畫面）</td></tr>
+<tr><td>永遠 3</td><td class="num">−589.1</td><td class="num">−1,150.0</td><td class="num">−345.5</td><td class="num">68.6</td><td>100 局墜毀</td></tr>
+<tr><td>均勻隨機（第 0 章）</td><td class="num">−184.5</td><td class="num">−588.2</td><td class="num">24.0</td><td class="num">92</td><td>100 局墜毀</td></tr>
+</tbody>
+</table></div>
+<p>兩個數字值得記住。第一，<strong>什麼都不做是 −130.3</strong>，比隨機亂按還好；範例的 −42.4 只比它好 88 分。第二，<strong>永遠開主引擎是 −883.0</strong>：小艇一路往上飛，越飛越遠，每一步都在扣分，最後飛出畫面。這個數字在第 3 章會再出現——學習率設太大的範例，最後就會收斂到這個策略。</p>
+
+<h2 id="reward">1.4　每一步的獎勵怎麼算</h2>
+<p>獎勵是本作業唯一的學習訊號，值得逐行讀。它緊接在狀態之後：</p>
+<figure class="listing"><figcaption>.venv/lib/python3.12/site-packages/gymnasium/envs/box2d/lunar_lander.py:636–660 — LunarLander.step() 的獎勵與結束條件</figcaption>
+<pre class="py" data-hot="638,639,640,641,642,646,650,652,655,657,658,660"><code>        reward = 0
+        shaping = (
+            -100 * np.sqrt(state[0] * state[0] + state[1] * state[1])
+            - 100 * np.sqrt(state[2] * state[2] + state[3] * state[3])
+            - 100 * abs(state[4])
+            + 10 * state[6]
+            + 10 * state[7]
+        )  # And ten points for legs contact, the idea is if you
+        # lose contact again after landing, you get negative reward
+        if self.prev_shaping is not None:
+            reward = shaping - self.prev_shaping
+        self.prev_shaping = shaping
+
+        reward -= (
+            m_power * 0.30
+        )  # less fuel spent is better, about -30 for heuristic landing
+        reward -= s_power * 0.03
+
+        terminated = False
+        if self.game_over or abs(state[0]) &gt;= 1.0:
+            terminated = True
+            reward = -100
+        if not self.lander.awake:
+            terminated = True
+            reward = +100</code></pre></figure>
+<p>先算一個叫 <code>shaping</code> 的「位能」：離降落區越遠扣越多（−100 × 距離）、速度越快扣越多（−100 × 速率）、越歪扣越多（−100 × |角度|）、每隻著地的腳加 10。<strong>每一步的獎勵是位能的變化量</strong>（這一步的 shaping 減上一步的），再扣油錢：主引擎每步 0.30、側面引擎每步 0.03（離散動作的推力固定是 1）。最後兩個 <code>if</code> 處理結束：小艇本體碰到地面（<code>game_over</code>）或飛出畫面左右邊界（|x| ≥ 1）是墜毀；小艇完全靜止下來、物理引擎讓它「睡著」（<code>not awake</code>）是成功降落。</p>
+<p>「獎勵 = 位能的變化」有一個好性質：一局的獎勵加總時，中間的位能全部互相抵消，只剩「最後的位能 − 一開始的位能」。所以只要最後停在降落區、速度為 0、姿態正、兩腳著地，shaping 部分的總和就是固定的，和路上怎麼飛無關；走過的路只會透過油錢和中途墜毀影響總分。這種設計叫 potential-based reward shaping，它給了每一步一個「有沒有更接近目標」的即時訊號，卻不改變最佳策略。</p>
+<div class="warn"><h4>文件與程式不一致：±100 是「設成」，不是「加上」</h4>
+<p>Gymnasium 的說明文件（同一個檔案第 122 行）寫：「The episode receive an additional reward of -100 or +100 points for crashing or landing safely respectively.」——額外加減 100。程式卻是 <code>reward = -100</code> 與 <code>reward = +100</code>：直接<strong>覆蓋</strong>掉那一步算好的位能差與油錢。所以一局結束時，最後一步的獎勵不多不少就是 ±100。差別看似很小，卻決定了範例印出的「Final」是什麼（1.5 節）。</p>
+</div>
+<p>用第 0 章那 5 局測試驗證這個拆法。<code>docs/tools/hw12_facts.py</code> 逐步從狀態重算位能差與油錢，和環境回傳的獎勵相差不到 0.001，然後分項加總：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>局</th><th class="num">步數</th><th class="num">總分</th><th class="num">位能差合計</th><th class="num">主引擎</th><th class="num">側面引擎</th><th class="num">結束那一步</th><th>動作次數 [0, 1, 2, 3]</th></tr></thead>
+<tbody>
+<tr><td>1</td><td class="num">312</td><td class="num">−34.25</td><td class="num">123.38</td><td class="num">−53.7</td><td class="num">−3.93</td><td class="num">−100</td><td>[1, 57, 180, 74]</td></tr>
+<tr><td>2</td><td class="num">238</td><td class="num">−161.82</td><td class="num">−19.91</td><td class="num">−38.7</td><td class="num">−3.21</td><td class="num">−100</td><td>[1, 61, 129, 47]</td></tr>
+<tr><td>3</td><td class="num">286</td><td class="num">−170.98</td><td class="num">−22.62</td><td class="num">−44.4</td><td class="num">−3.96</td><td class="num">−100</td><td>[5, 68, 148, 65]</td></tr>
+<tr><td>4</td><td class="num">479</td><td class="num">257.59</td><td class="num">216.66</td><td class="num">−53.7</td><td class="num">−5.37</td><td class="num">+100</td><td>[121, 83, 179, 96]</td></tr>
+<tr><td>5</td><td class="num">219</td><td class="num">−22.56</td><td class="num">114.22</td><td class="num">−33.6</td><td class="num">−3.18</td><td class="num">−100</td><td>[0, 47, 113, 59]</td></tr>
+</tbody>
+</table></div>
+<p>第 1 局和第 5 局的位能差合計都是正的一百多分：小艇其實已經飛到降落區附近、速度也慢下來了，最後一刻卻摔了，−100 把整局拉成負分。第 4 局是唯一成功的一局，逐步看它的軌跡（<code>docs/tools/hw12_facts.txt</code>）：一開始連續按右側引擎修正初始推力造成的偏移（動作 3 的機率 0.997），中段主引擎與兩側引擎交替；第 280 步右腳先著地、第 320 步變成只有左腳著地（彈了一下），第 360 步兩腳都著地之後，策略幾乎只選「不動」（機率 0.919），小艇靜止到第 478 步，拿到 +100。這一局光是停在地上等物理引擎判定「睡著」就花了一百多步。</p>
+
+<h2 id="end">1.5　一局什麼時候結束、「Final」量的是什麼</h2>
+<p>一局有三種結束方式：</p>
+<ul>
+<li><strong>墜毀</strong>（terminated，最後一步 −100）：小艇本體碰地，或水平飛出畫面。</li>
+<li><strong>降落</strong>（terminated，最後一步 +100）：完全靜止。注意它不要求停在旗子中間——停在旁邊也算「降落」，只是位能差那部分會少很多。</li>
+<li><strong>截斷</strong>（truncated）：撐滿 1,000 步還沒結束。這個上限不在 <code>LunarLander</code> 裡，而是 <code>gymnasium.make</code> 根據註冊資訊（<code>max_episode_steps=1000</code>）自動包上的 <code>TimeLimit</code> 外層。截斷時最後一步的獎勵就是普通的位能差減油錢。</li>
+</ul>
+<p>範例在訓練時記錄每一局「最後一步的獎勵」，進度條上的 Final 是 5 局的平均。依照 1.4 節，如果 5 局都以墜毀或降落結束，Final 只可能是 −100、−60、−20、20、60、100 這幾個值——（降落局數 − 墜毀局數）× 20。<code>hw12_ch01.py</code> 檢查了種子 543 的 400 批：303 批落在這組數字上（最常見的是 −100，261 批：5 局全墜毀）；其餘 97 批是 −80.1 到 −83.4 這類數字，代表 5 局裡有 1 局撐滿了 1,000 步、4 局墜毀。範例把 Final 當成「有沒有成功降落」的指標，大致上沒錯，只是它其實是「降落與墜毀的局數差」，截斷的局會混進一個接近 0 的普通值。</p>
+
+<h2 id="shim">1.6　從 Gym 到 Gymnasium：一層轉接</h2>
+<p>2021 年的程式是寫給 <code>gym 0.18.3</code> 的。OpenAI 的 Gym 在 2022 年交給 Farama 基金會維護，改名 Gymnasium，介面改了三處：<code>reset()</code> 回傳 <code>(obs, info)</code> 兩個值，而且要用 <code>reset(seed=...)</code> 設種子（舊版用 <code>env.seed()</code>）；<code>step()</code> 回傳五個值，把舊的 <code>done</code> 拆成 <code>terminated</code>（任務本身結束）與 <code>truncated</code>（被時間上限截斷）。<code>hw12_ch01.py</code> 直接呼叫新版介面：</p>
+<pre class="shell">gymnasium reset -&gt; tuple 2 items; info = {}
+gymnasium step  -&gt; 5 items: obs, reward, terminated, truncated, info = (np.float64(-0.762201422388614), False, False, {})
+wrappers: &lt;TimeLimit&lt;OrderEnforcing&lt;PassiveEnvChecker&lt;LunarLander&lt;LunarLander-v3&gt;&gt;&gt;&gt;&gt;
+shim reset      -&gt; ndarray (8,)
+shim step       -&gt; 4 items: obs, reward, done, info</pre>
+<p>本書不改範例程式，而是加一個轉接層，讓範例裡的 <code>import gym</code> 換成 <code>import gym_compat as gym</code> 之後，其他每一行照舊：</p>
+<figure class="listing"><figcaption>gym_compat.py:14–36 — OldAPIEnv、make()</figcaption>
+<pre class="py" data-hot="21,22,25,26,27,30,31,32,36"><code>class OldAPIEnv:
+    def __init__(self, env):
+        self.env = env
+        self.observation_space = env.observation_space
+        self.action_space = env.action_space
+        self._next_seed = None
+
+    def seed(self, seed=None):
+        self._next_seed = seed
+        return [seed]
+
+    def reset(self):
+        obs, _ = self.env.reset(seed=self._next_seed)
+        self._next_seed = None
+        return obs
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        return obs, reward, terminated or truncated, info
+
+
+def make(name):
+    return OldAPIEnv(gymnasium.make(RENAMED.get(name, name)))</code></pre></figure>
+<p>三個重點。<code>seed()</code> 不馬上設種子，而是記下來交給下一次 <code>reset()</code>；之後的 <code>reset()</code> 不帶種子，就延續同一條亂數流——這正是舊版 <code>env.seed()</code> 的語意（設一次種子，之後每一局接著抽）。<code>step()</code> 把 <code>terminated or truncated</code> 合成舊的 <code>done</code>，所以範例和以前一樣分不出「墜毀」和「撐滿 1,000 步」；第 5 章的 critic 需要分清楚這兩者，所以實驗工具直接呼叫 Gymnasium 的五值介面。<code>make()</code> 把 <code>LunarLander-v2</code> 換成 <code>v3</code>，因為 Gymnasium 1.4 已經不註冊 v2 了。</p>
+<p>v2 到 v3 改了什麼？Gymnasium 原始碼的版本紀錄列了三項：reset 時重設風與亂流（預設關閉，本作業用不到）、修正「world 沒有完全銷毀」造成的非決定性、放寬 observation 的宣告範圍（1.2 節）。物理與獎勵沒有改。所以本書的分數可以和 2021 年的「分布」比較，但不能逐局比較：同一個種子產生的地形不一樣（0.5 節）。</p>
+<p>畫面的部分，轉接層選擇不支援。Gymnasium 只有在建立環境時指定 <code>render_mode</code> 才能畫圖，而且指定之後，引擎噴射的粒子會變成物理世界裡的物體；原始碼的註解說它們「只是裝飾，不影響物理」，但本書沒有去驗證這句話。拿掉 <code>render()</code> 最保險：拆檔後的程式和參照腳本都不畫圖，兩者逐位元相同（0.6 節）。</p>
+
+<h2 id="rng">1.7　四條亂數流，與探索格的 135 分</h2>
+<p>範例的 <code>fix()</code> 設了一大串種子：</p>
+<figure class="listing"><figcaption>env_setup.py:10–21 — seed、fix()</figcaption>
+<pre class="py" data-hot="12,13,14,17,18"><code>seed = 543 # Do not change this
+def fix(env, seed):
+  env.seed(seed)
+  env.action_space.seed(seed)
+  torch.manual_seed(seed)
+  torch.cuda.manual_seed(seed)
+  torch.cuda.manual_seed_all(seed)
+  np.random.seed(seed)
+  random.seed(seed)
+  torch.use_deterministic_algorithms(True)  # notebook: torch.set_deterministic(True), removed from torch
+  torch.backends.cudnn.benchmark = False
+  torch.backends.cudnn.deterministic = True</code></pre></figure>
+<p>在這份作業裡，真正被用到的亂數流有三條：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>亂數流</th><th>誰在用</th><th>種子從哪來</th></tr></thead>
+<tbody>
+<tr><td>環境的 <code>np_random</code></td><td>每次 <code>reset()</code>：12 個地形高度、初始推力的 2 個分量（<code>lunar_lander.py</code> 第 344、395–396 行）；每一步：引擎噴射擾動的 2 個數（第 525 行，不管按哪個鍵都抽）</td><td><code>env.seed()</code>，經轉接層交給第一次 <code>reset()</code></td></tr>
+<tr><td><code>action_space</code> 自己的亂數</td><td>只有探索格的 <code>action_space.sample()</code></td><td><code>env.action_space.seed()</code></td></tr>
+<tr><td>torch 的全域亂數</td><td>建立網路時的初始權重；每一步 <code>Categorical.sample()</code> 取樣動作</td><td><code>torch.manual_seed()</code></td></tr>
+</tbody>
+</table></div>
+<p>NumPy 的全域亂數與 Python 的 <code>random</code> 雖然設了種子，整份程式卻沒有用到它們；CUDA 與 cuDNN 的設定也一樣，因為整份作業都在 CPU 上跑（第 2 章）。<code>torch.use_deterministic_algorithms(True)</code> 是 2021 年 <code>torch.set_deterministic(True)</code> 的新名字——舊名在 torch 1.8 就已經印出「deprecated」的警告（notebook 的存檔裡看得到），現在已經被移除。</p>
+<p>現在可以解釋探索格了。它們呼叫了兩次 <code>reset()</code>、加上隨機那一局的每一步（本機是 120 步），每一次都從環境的 <code>np_random</code> 抽亂數。拿掉它們，訓練的第一局就會從亂數流的另一個位置開始，得到另一個地形與推力；之後每一局都跟著錯開。torch 的亂數不受影響（探索格沒有碰到 torch），所以網路的初始權重一模一樣——差別<strong>只</strong>在環境出的題目。結果（A 組的 <code>A_noexplore</code>，種子 543）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>種子 543</th><th class="num">judge</th><th class="num">閉迴路 stochastic</th><th class="num">閉迴路 greedy</th></tr></thead>
+<tbody>
+<tr><td>保留探索格（<code>train.py</code>）</td><td class="num">−26.4</td><td class="num">−34.4</td><td class="num">2.3</td></tr>
+<tr><td>拿掉探索格</td><td class="num">108.6</td><td class="num">−11.1</td><td class="num">17.9</td></tr>
+</tbody>
+</table></div>
+<p>judge 差了 135 分，從 2021 年配分表的最低一級跳到第三級；但在 100 個沒看過的地形上，兩個策略只差 23 分（stochastic）與 16 分（greedy），都還是在 0 分附近。這是全書反覆出現的主題的第一個例子：<strong>改變訓練時看到的亂數，就足以讓 judge 分數大幅變動，而這種變動大多不代表策略真的變好</strong>。第 0 章 21 個種子的 judge 標準差是 65.6，這 135 分大約就是兩個標準差（131）。第 7 章會把 judge 的雜訊拆開來量。</p>
+<div class="note"><h4>現在的做法：每一局各自給種子，或乾脆平行跑很多個環境</h4>
+<p>「設一次種子，之後的局延續同一條亂數流」的寫法，讓任何對環境的額外呼叫都會改變整個實驗。現在的 RL 函式庫通常把評估環境與訓練環境分開，評估時每一局都明確地 <code>reset(seed=...)</code>；訓練時則用向量化環境（Gymnasium 的 <code>VectorEnv</code>）一次跑很多個環境，每個環境有自己的種子。本書的實驗工具在評估時就是這樣做的：judge 與閉迴路都用另外建立的環境，評估完把所有亂數狀態還原，所以評估不會改變訓練。</p>
+</div>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>狀態是 8 個已經正規化的物理量：位置、速度、角度、角速度、兩隻腳是否著地；不包含地形。</li>
+<li>主引擎是唯一能對抗重力的動作；兩個側面引擎主要讓小艇旋轉。永遠不動 −130.3，永遠開主引擎 −883.0（飛出畫面）。</li>
+<li>每一步的獎勵是位能（距離、速度、角度、腳）的變化量減油錢；一局的位能差合計只看起點和終點。</li>
+<li>結束時程式把獎勵<strong>設成</strong> ±100，文件卻寫「額外加」。所以範例的 Final 其實是（降落 − 墜毀局數）× 20，截斷的局除外。</li>
+<li>轉接層 <code>gym_compat.py</code> 讓 2021 年的程式照原樣跑在 Gymnasium 1.4 上；v3 的物理與獎勵沒變，但地形的亂數流不同。</li>
+<li>真正用到的亂數流是環境的 <code>np_random</code>、<code>action_space</code> 的亂數與 torch 的亂數。探索格推進了環境的亂數，拿掉它們 judge 差 135 分，閉迴路只差 20 分左右。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 小艇停在降落區正中央、靜止、兩腳著地時，位能 <code>shaping</code> 是多少？如果它停在旗子外面（x = 0.5，其他相同）呢？</summary>
+<p>正中央：距離、速度、角度都是 0，兩腳各加 10，shaping = 20。x = 0.5 時距離項是 −100 × 0.5 = −50，shaping = −30。兩者都會在靜止時拿到 +100（降落不要求在旗子中間），但位能差合計會少 50 分。</p></details>
+<details class="quiz"><summary>2. 某一批的 Final 是 60。這一批 5 局裡最多可能有幾局墜毀？</summary>
+<p>若 5 局都以 ±100 結束，（降落 − 墜毀）× 20 = 60，降落 − 墜毀 = 3，加上降落 + 墜毀 = 5，得到降落 4 局、墜毀 1 局。若有截斷的局，它的最後一步是接近 0 的普通值，例如 4 局降落、1 局截斷時 Final ≈ 80，不會剛好是 60。所以最多 1 局墜毀。</p></details>
+<details class="quiz"><summary>3. 如果把 <code>gym_compat.py</code> 的 <code>seed()</code> 改成「每一次 <code>reset()</code> 都用同一個種子」，訓練會變成什麼樣子？</summary>
+<p>每一局的地形與初始推力都會一模一樣：環境的亂數每局都從同一個起點開始。連每一步的噴射擾動也一樣——它不管按哪個鍵都會抽兩個數，所以第 t 步抽到的永遠是同一組。策略只會練習同一張地圖，很容易對它過擬合；換到 judge 或閉迴路的其他地形就不一定行。這是推論，本書沒有實際跑。</p></details>
+<details class="quiz"><summary>4. 探索格只改變了環境的亂數，沒有碰 torch。為什麼網路最後的權重還是不同？</summary>
+<p>初始權重確實相同，但訓練資料不同：第一局的地形與推力變了，小艇飛出不同的軌跡，得到不同的狀態與獎勵，第一次更新就不同；之後策略不同，又產生不同的資料。強化學習的資料由策略與環境共同產生，任何一邊的亂數改變都會一路放大。</p></details>
+<details class="quiz"><summary>5. 為什麼範例分不出「墜毀」與「撐滿 1,000 步」？這對範例本身有影響嗎？</summary>
+<p>轉接層（以及 2021 年的舊版 Gym）把 terminated 與 truncated 合成一個 <code>done</code>。範例用的是瞬時獎勵，不需要知道一局是怎麼結束的，所以沒有影響；只有統計 Final 時，截斷的局會混進一個普通值（1.5 節）。需要估計「之後還能拿多少分」的方法（第 5 章的 critic）才必須分清楚：墜毀之後沒有未來，截斷只是時間到了。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Gymnasium，<a href="https://gymnasium.farama.org/introduction/migration_guide/">Migration Guide — v0.21 to v1.0.0</a>：<code>reset</code>、<code>step</code>、<code>seed</code> 介面改動的官方說明，包括 terminated 與 truncated 的區別。</li>
+<li>Andrew Y. Ng、Daishi Harada、Stuart Russell，<a href="https://people.eecs.berkeley.edu/~russell/papers/icml99-shaping.pdf">Policy Invariance Under Reward Transformations</a>（ICML 1999）：potential-based reward shaping 為什麼不改變最佳策略。</li>
+<li>Gymnasium 原始碼，<a href="https://github.com/Farama-Foundation/Gymnasium/blob/main/gymnasium/envs/box2d/lunar_lander.py">lunar_lander.py</a>：本章引用的狀態、獎勵、結束條件與手寫控制器 <code>heuristic</code>。</li>
+</ul>
+
+<footer class="chap-footer"><p>ML2022 Spring HW12 讀碼教材。作業內容出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群），範例程式出自 2021 年的同一門課；書中數字皆為本機實測。</p></footer>
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch00.html">← 第 0 章</a><a href="ch02.html">第 2 章 →</a></nav>
+<script id="book-js">
+/* HW12 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>
