@@ -343,14 +343,14 @@ class PolicyGradientAgent():
 <div class="tablewrap"><table>
 <thead><tr><th>每一步</th><th class="num">時間（µs）</th></tr></thead>
 <tbody>
-<tr><td>策略網路在 CPU：前向 + <code>Categorical</code> 取樣 + <code>log_prob</code> + <code>.item()</code></td><td class="num" id="t-cpu">224.4</td></tr>
-<tr><td>同樣的事在 GPU（RTX PRO 4000 Blackwell）</td><td class="num" id="t-gpu">1,283.6</td></tr>
-<tr><td>LunarLander 的一步物理模擬（Box2D，CPU）</td><td class="num" id="t-env">33.9</td></tr>
+<tr><td>策略網路在 CPU：前向 + <code>Categorical</code> 取樣 + <code>log_prob</code> + <code>.item()</code></td><td class="num" id="t-cpu">85.8</td></tr>
+<tr><td>同樣的事在 GPU（RTX PRO 4000 Blackwell）</td><td class="num" id="t-gpu">667.5</td></tr>
+<tr><td>LunarLander 的一步物理模擬（Box2D，CPU）</td><td class="num" id="t-env">18.4</td></tr>
 </tbody>
 </table></div>
-<p id="t-note">（這組數字是在 CPU 同時跑著 20 個訓練的情況下量的，只能看相對大小；乾淨的數字在本書最後一次更新時補上。）</p>
-<p>GPU 慢了好幾倍，原因是每一步都要付固定成本：把 8 個數字從 CPU 記憶體搬到 GPU、啟動三次矩陣乘法與 softmax 的 kernel、等 GPU 算完、再把一個整數搬回來交給 CPU 上的環境。這些固定成本每次是幾十微秒，而真正的計算——484 個參數的乘加——小到可以忽略。GPU 擅長的是一次算很多，例如一次送進幾千個狀態；這份作業的迴圈一次只有一個。</p>
-<p>另一個有趣的數字是：<strong>網路比物理還貴</strong>。Box2D 模擬一步只要幾十微秒，策略網路加上取樣卻要好幾倍。大部分時間花在 Python 與 PyTorch 的固定開銷上：建立張量、建立 <code>Categorical</code> 物件（它預設還會檢查參數是否合法）、記錄計算圖。範例訓練 2,000 局（約 52 萬步）要 2 分多鐘，物理模擬只佔其中一小部分，大部分花在這五行 <code>sample()</code> 與每批一次的更新。</p>
+<p id="t-note">（在全部實驗結束、機器閒置時量的，<code>docs/tools/hw12_timing.txt</code>。）</p>
+<p>GPU 慢了 7.8 倍，原因是每一步都要付固定成本：把 8 個數字從 CPU 記憶體搬到 GPU、啟動三次矩陣乘法與 softmax 的 kernel、等 GPU 算完、再把一個整數搬回來交給 CPU 上的環境。這些固定成本每次是幾十微秒，而真正的計算——484 個參數的乘加——小到可以忽略。GPU 擅長的是一次算很多，例如一次送進幾千個狀態；這份作業的迴圈一次只有一個。</p>
+<p>另一個有趣的數字是：<strong>網路比物理還貴</strong>。Box2D 模擬一步只要 18.4 微秒，策略網路加上取樣卻要 85.8 微秒，是 4.7 倍。大部分時間花在 Python 與 PyTorch 的固定開銷上：建立張量、建立 <code>Categorical</code> 物件（它預設還會檢查參數是否合法）、記錄計算圖。範例訓練 2,000 局（約 52 萬步）要 2 分多鐘，物理模擬只佔其中一小部分，大部分花在這五行 <code>sample()</code> 與每批一次的更新。</p>
 <div class="note"><h4>現在的做法：向量化環境，一次跑很多局</h4>
 <p>現在的 RL 函式庫（例如 Stable-Baselines3、CleanRL）訓練 LunarLander 時，通常同時開 8 到 16 個環境（Gymnasium 的 <code>VectorEnv</code>），每一步把所有環境的狀態疊成一個 batch 一次送進網路。網路的固定開銷被 16 個環境分攤，GPU 也才有東西可以平行。第 6 章的 PPO 收集資料的方式已經比較接近這個樣子（先收一大批，再一次用很多個 minibatch 更新），但本書為了和範例對照，環境仍然一次只開一個。</p>
 </div>

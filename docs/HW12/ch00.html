@@ -389,7 +389,7 @@ torch.from_numpy(rewards) looks like  torch.Size([508])</pre>
 </ol>
 <p>接著是 400 批的訓練，每批印四行形狀，進度條上顯示這一批的平均總獎勵（Total）與「最後一步獎勵」的平均（Final）。在本機跑完的最後一行是：</p>
 <pre class="shell">Total:  106.5, Final:  20.0: 100%|██████████| 400/400 [02:15&lt;00:00,  2.94it/s]</pre>
-<p>2 分 15 秒跑完，比投影片說的 30 分鐘快很多（2021 年的 Colab 上是 674 秒）。最後一批的平均總獎勵是 106.5，看起來不錯——但只是 5 局的平均。把 400 批全部畫出來：</p>
+<p>2 分 15 秒跑完（這次同時還有另一個行程在跑；機器閒置時單獨跑是 2 分 10 秒，<code>docs/tools/hw12_timing.txt</code>），比投影片說的 30 分鐘快很多（2021 年的 Colab 上是 674 秒）。最後一批的平均總獎勵是 106.5，看起來不錯——但只是 5 局的平均。把 400 批全部畫出來：</p>
 <figure class="fig">
 <!-- CHART:ch00_curve -->
 <div class="legend"><span><i style="background:#3a4552"></i>每批 5 局的平均</span><span><i style="background:#c9d1d9"></i>最近 20 批的平均</span></div>

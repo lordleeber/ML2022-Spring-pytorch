@@ -232,7 +232,44 @@ def ch06_curves():
     return charts.legend(series) + '\n' + svg
 
 
+def ch07_scatter():
+    # every snapshot of every training run: x = closed-loop stochastic (100 unseen seeds), y = judge (5 episodes, seed 543)
+    W2, H2, ML, MR, MT, MB = 900, 520, 64, 150, 20, 46
+    x0, x1, y0, y1 = -450, 300, -450, 300
+    pw, ph = W2 - ML - MR, H2 - MT - MB
+    X = lambda v: ML + pw * (min(max(v, x0), x1) - x0) / (x1 - x0)
+    Y = lambda v: MT + ph * (1 - (min(max(v, y0), y1) - y0) / (y1 - y0))
+    groups = [('A 範例與旋鈕', 'A_', C['sample']), ('B 回報', 'B_', C['rtg']), ('C baseline／critic', 'C_', C['base']),
+              ('D 技巧', 'D_', C['a2c']), ('E PPO', 'E_ppo', C['ppo']), ('E DQN', 'E_dqn', C['dqn'])]
+    out = [f'<svg viewBox="0 0 {W2} {H2}" role="img" aria-label="ARIA">']
+    for t in (-400, -200, 0, 200):
+        out.append(f'<line x1="{ML}" y1="{Y(t):.1f}" x2="{ML + pw}" y2="{Y(t):.1f}" stroke="#2a343f" stroke-width="1"/>')
+        out.append(f'<text class="s-mono" x="{ML - 8}" y="{Y(t) + 4:.1f}" text-anchor="end">{t}</text>')
+        out.append(f'<line x1="{X(t):.1f}" y1="{MT}" x2="{X(t):.1f}" y2="{MT + ph}" stroke="#2a343f" stroke-width="1"/>')
+        out.append(f'<text class="s-mono" x="{X(t):.1f}" y="{MT + ph + 18}" text-anchor="middle">{t}</text>')
+    out.append(f'<line x1="{X(x0):.1f}" y1="{Y(y0):.1f}" x2="{X(x1):.1f}" y2="{Y(y1):.1f}" stroke="#4a5562" stroke-width="1" stroke-dasharray="4 4"/>')
+    out.append(f'<text class="s-sm" x="{ML + pw / 2:.1f}" y="{H2 - 6}" text-anchor="middle">閉迴路 stochastic（100 個沒看過的地形）</text>')
+    out.append(f'<text class="s-sm" x="16" y="{MT + ph / 2:.1f}" text-anchor="middle" transform="rotate(-90 16 {MT + ph / 2:.1f})">judge（種子 543，5 局）</text>')
+    n = 0
+    for gi, (label, prefix, color) in enumerate(groups):
+        for r in RUNS:
+            if not r['tag'].startswith(prefix):
+                continue
+            for k, s in r['snapshots'].items():
+                xv, yv = s['closed_stochastic']['mean'], s['judge_mean']
+                out.append(f'<circle cx="{X(xv):.1f}" cy="{Y(yv):.1f}" r="3" fill="{color}" opacity="0.75" '
+                           f'data-tip="{charts._esc(r["tag"])} 種子 {r["seed"]}（{"2,000 局" if k == "ep" else "100 萬步"}）：閉迴路 {xv:.1f}／judge {yv:.1f}"/>')
+                n += 1
+        ly = MT + 16 + gi * 20
+        out.append(f'<circle cx="{ML + pw + 18}" cy="{ly - 4}" r="4" fill="{color}"/>')
+        out.append(f'<text class="s-lbl" x="{ML + pw + 28}" y="{ly}">{charts._esc(label)}</text>')
+    out.append('</svg>')
+    aria = f'全部 {n} 個快照的 judge 分數對閉迴路分數的散佈圖；虛線是兩者相等。兩者整體相關係數 0.971，但個別點偏離對角線可達 100 分以上。超出 −450 到 300 的點畫在邊界上。'
+    return '\n'.join(out).replace('ARIA', charts._esc(aria))
+
+
 CHARTS = {'ch00_curve': ('ch00.html', ch00_curve), 'ch00_seeds': ('ch00.html', ch00_seeds),
+          'ch07_scatter': ('ch07.html', ch07_scatter),
           'ch06_scores': ('ch06.html', ch06_scores), 'ch06_outcomes': ('ch06.html', ch06_outcomes),
           'ch06_curves': ('ch06.html', ch06_curves),
           'ch05_scores': ('ch05.html', ch05_scores), 'ch05_outcomes': ('ch05.html', ch05_outcomes),

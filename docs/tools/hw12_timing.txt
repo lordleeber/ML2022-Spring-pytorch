@@ -1,0 +1,5 @@
+torch 2.11.0+cu128 cuda True NVIDIA RTX PRO 4000 Blackwell
+policy forward + sample + log_prob + item on cpu: 85.8 us/step (last of 3 repetitions)
+policy forward + sample + log_prob + item on cuda: 667.5 us/step (last of 3 repetitions)
+LunarLander step (random actions, with resets): 18.4 us/step
+train.py alone on the idle machine (OMP_NUM_THREADS=1): wall 132.59 s, user 132.15 s; progress bar 400/400 [02:10]; stdout identical to hw12_logs/ch00/train_stdout.txt

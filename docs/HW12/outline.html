@@ -278,7 +278,7 @@ td.num { font-family: var(--font-mono); }
   <li>閉迴路 greedy：同樣 100 個種子，每一步取機率最大的動作。</li>
   </ul>
   JudgeBoi 已經關閉，本機的 judge 就是 notebook 自己的「Server」格。2022 年沒有公布門檻，本書用 2021 年的配分表（&lt;0、0–99、100–199、200–240、≥241）當參考線，並註明出處。</li>
-<li>只用 CPU。網路只有 484 個參數，每一步只算一個狀態，GPU 反而慢約 8 倍（每步 435 µs 對 52 µs）。實驗一次 20 個行程並行。</li>
+<li>只用 CPU。網路只有 484 個參數，每一步只算一個狀態，GPU 反而慢 7.8 倍（每步 667.5 µs 對 85.8 µs）。實驗一次 20 個行程並行。</li>
 <li>新名詞在全書第一次出現的地方解釋。2022 年的寫法已經過時的地方，加「現在的做法」框；RL 的現況（RLHF、PPO、GRPO 這類用在大型語言模型上的作法）集中在第 6 章與第 8 章。</li>
 <li>圖表的顏色代表方法，全書一致：<span class="role sample">範例</span>、<span class="role rtg">reward-to-go</span>、<span class="role base">baseline</span>、<span class="role a2c">A2C</span>、<span class="role ppo">PPO</span>、<span class="role dqn">DQN</span>、<span class="role judge">judge 分數</span>。</li>
 <li>最後一章是總結章（題庫、名詞對照、速查），不寫附錄。全書使用繁體中文與台灣用語。</li>

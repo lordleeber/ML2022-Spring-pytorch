@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 7 章　評分：動作序列與運氣 — HW12 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW12 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製；由 HW10 的樣板複製、改色）
+   版面：單欄 1080px——近黑的冷灰底、紙白的字、月面青只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：範例 灰、reward-to-go 藍、baseline 橘、A2C 綠、PPO 紫、DQN 洋紅、JudgeBoi 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與前幾本相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #5cc8d6;      /* 月面青：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(92, 200, 214, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #5cc8d6;
+  /* 角色色 */
+  --r-sample: #8b949e; --r-rtg: #3987e5; --r-base: #d95926; --r-a2c: #199e70;
+  --r-ppo: #9085e9; --r-dqn: #d55181; --r-judge: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "s → π_θ(a|s) → a → 環境 → r, s′　·　θ ← θ + α ∇ log π_θ(a|s) · A　·　LunarLander　8 維狀態　4 個動作";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fdf1ef; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #121b1d; border-color: rgba(92, 200, 214, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1f0d0b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.sample { --rc: var(--r-sample); } .role.rtg { --rc: var(--r-rtg); } .role.base { --rc: var(--r-base); }
+.role.a2c { --rc: var(--r-a2c); } .role.ppo { --rc: var(--r-ppo); } .role.dqn { --rc: var(--r-dqn); }
+.role.judge { --rc: var(--r-judge); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="ch08.html">第 8 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW12 讀碼教材</p>
+  <h1>第 7 章　評分：交出去的不是策略，是五串動作</h1>
+  <p class="chap-lead">前六章都用兩種分數：作業的 judge 與本書的閉迴路。這一章專門談 judge：它量的是什麼、有多少是運氣、可以怎麼被「挑」高，以及評分程式本身有哪些漏洞。結論是：同一個策略重跑測試，judge 的標準差可以有 70 分；從 100 次重跑裡挑最好的一次交出去，範例本身就能從 −47 變成 237。最後回答報告題 2：MuZero。</p>
+</header>
+<main>
+
+<h2 id="code">7.1　測試與評分的程式</h2>
+<figure class="listing"><figcaption>test.py:19–41 — 測試 5 局、記下動作（notebook cell [38]）</figcaption>
+<pre class="py" data-hot="19,21,26,32,33,34,41"><code>fix(env, seed)
+agent.network.eval()  # set the network into evaluation mode
+NUM_OF_TEST = 5 # Do not revise this !!!
+test_total_reward = []
+action_list = []
+for i in range(NUM_OF_TEST):
+  actions = []
+  state = env.reset()
+
+  total_reward = 0
+
+  done = False
+  while not done:
+      action, _ = agent.sample(state)
+      actions.append(action)
+      state, reward, done, _ = env.step(action)
+
+      total_reward += reward
+
+  print(total_reward)
+  test_total_reward.append(total_reward)
+
+  action_list.append(actions) # save the result of testing</code></pre></figure>
+<figure class="listing"><figcaption>judge.py:13–37 — notebook 的「Server」格：重播動作</figcaption>
+<pre class="py" data-hot="15,19,22,23,29,31,33,34"><code>action_list = np.load(PATH,allow_pickle=True) # The action list you upload
+seed = 543 # Do not revise this
+fix(env, seed)
+# notebook: agent.network.eval() here; replaying actions never calls the network, so it is dropped
+
+test_total_reward = []
+if len(action_list) != 5:
+  print("Wrong format of file !!!")
+  exit(0)
+for actions in action_list:
+  state = env.reset()
+
+  total_reward = 0
+
+  done = False
+
+  for action in actions:
+
+      state, reward, done, _ = env.step(action)
+      total_reward += reward
+      if done:
+        break
+
+  print(f"Your reward is : %.2f"%total_reward)
+  test_total_reward.append(total_reward)</code></pre></figure>
+<p>兩段程式的結構幾乎一樣：<code>fix(env, 543)</code> 之後連續玩 5 局。差別在動作從哪裡來：<code>test.py</code> 每一步問策略（第 32 行），<code>judge.py</code> 只是照著存下的序列一個一個送進環境（第 29–31 行），從頭到尾沒有看過狀態。這叫<strong>開迴路</strong>（open loop）：控制輸入事先決定好，不根據回饋調整。策略本身是<strong>閉迴路</strong>（closed loop）：每一步看到狀態才決定動作。</p>
+<p>兩者之所以能得到相同的分數，是因為環境是決定性的：同樣的種子、同樣的動作序列，Gymnasium 的 LunarLander 產生完全相同的軌跡（v3 修掉的正是一個讓這件事不成立的錯誤，第 1 章）。本書的實驗工具在每一次評估都先重播一次，<code>assert</code> 重播的分數和測試時逐位元相同；全書 600 多次評估沒有一次失敗。</p>
+
+<h2 id="openloop">7.2　開迴路：把同一串動作換一個地形</h2>
+<p>開迴路的分數只對那一個地形有意義。<code>docs/tools/hw12_ch07.py</code> 把種子 543 上存下的 5 串動作，原封不動地重播在 100 個其他的環境種子上，和策略自己去玩那 100 個種子比較：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>策略</th><th class="num">judge（種子 543）</th><th class="num">同一串動作重播在種子 1–100</th><th class="num">策略自己玩種子 1–100</th></tr></thead>
+<tbody>
+<tr><td>範例（種子 543，2,000 局）</td><td class="num">−26.4</td><td class="num">−359.6（−493.8 到 −234.3）</td><td class="num">−31.0</td></tr>
+<tr><td>A2C GAE λ 0.99（種子 0，100 萬步）</td><td class="num">213.8</td><td class="num">−292.1（−425.9 到 −136.8）</td><td class="num">213.0</td></tr>
+</tbody>
+</table></div>
+<p>一個 213 分的好策略，它交出去的動作序列換一個地形就是 −292 分，比隨機亂按（−184.5）還差。地形不同、初始推力不同，第一步之後就和當初的軌跡分開了，之後的每一個動作都是在回應一個不存在的狀態。這說明了 judge 量的東西本質上是什麼：<strong>不是策略，而是「這個策略在這 5 局裡擲出的一串骰子」</strong>。好的策略比較容易擲出好的骰子，但兩者不是同一件事。</p>
+
+<h2 id="luck">7.3　同一個策略，judge 有多少是運氣</h2>
+<p><code>test.py</code> 用 <code>agent.sample()</code> 取樣動作，取樣用的是 torch 的亂數；<code>fix()</code> 把它設成 543，所以每次跑 <code>test.py</code> 都得到同一串動作。但「543」本身沒有什麼特別，換一個 torch 種子，同一個策略、同一個環境就會擲出另一串骰子。<code>hw12_ch07.py</code> 對六個策略各重跑 100 次測試（torch 種子 0–99，環境種子固定 543）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>策略</th><th class="num">100 次 judge 的平均</th><th class="num">標準差</th><th class="num">最低</th><th class="num">最高</th><th class="num">greedy 的 judge</th></tr></thead>
+<tbody>
+<tr><td>範例（種子 543，2,000 局）</td><td class="num">−47.3</td><td class="num">71.3</td><td class="num">−213.6</td><td class="num">237.0</td><td class="num">−49.1</td></tr>
+<tr><td>範例（種子 0，2,000 局）</td><td class="num">35.1</td><td class="num">70.1</td><td class="num">−134.7</td><td class="num">192.0</td><td class="num">22.6</td></tr>
+<tr><td>reward-to-go γ 0.99（種子 0，100 萬步）</td><td class="num">79.6</td><td class="num">18.1</td><td class="num">51.2</td><td class="num">143.5</td><td class="num">−32.4</td></tr>
+<tr><td>A2C GAE λ 0.99（種子 0，100 萬步）</td><td class="num">198.7</td><td class="num">40.9</td><td class="num">54.9</td><td class="num">268.6</td><td class="num">240.0</td></tr>
+<tr><td>PPO 隱藏層 64（種子 0，100 萬步）</td><td class="num">169.5</td><td class="num">38.4</td><td class="num">62.1</td><td class="num">254.5</td><td class="num">225.7</td></tr>
+<tr><td>DQN（種子 0，100 萬步）</td><td class="num">183.2</td><td class="num">0.0</td><td class="num">183.2</td><td class="num">183.2</td><td class="num">183.2</td></tr>
+</tbody>
+</table></div>
+<p>範例的 judge，光是換 torch 種子，標準差就是 71.3：同一個策略可以交出 −213.6 分，也可以交出 237.0 分。好的策略也有 40 分左右的起伏。只有 DQN 例外——它的動作是 Q 值的 argmax，沒有任何隨機，重跑幾次都一樣。</p>
+<p>把視野放大到全書：</p>
+<figure class="fig">
+<!-- CHART:ch07_scatter -->
+<svg viewBox="0 0 900 520" role="img" aria-label="全部 605 個快照的 judge 分數對閉迴路分數的散佈圖；虛線是兩者相等。兩者整體相關係數 0.971，但個別點偏離對角線可達 100 分以上。超出 −450 到 300 的點畫在邊界上。">
+<line x1="64" y1="443.7" x2="750" y2="443.7" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="56" y="447.7" text-anchor="end">-400</text>
+<line x1="109.7" y1="20" x2="109.7" y2="474" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="109.7" y="492" text-anchor="middle">-400</text>
+<line x1="64" y1="322.7" x2="750" y2="322.7" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="56" y="326.7" text-anchor="end">-200</text>
+<line x1="292.7" y1="20" x2="292.7" y2="474" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="292.7" y="492" text-anchor="middle">-200</text>
+<line x1="64" y1="201.6" x2="750" y2="201.6" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="56" y="205.6" text-anchor="end">0</text>
+<line x1="475.6" y1="20" x2="475.6" y2="474" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="475.6" y="492" text-anchor="middle">0</text>
+<line x1="64" y1="80.5" x2="750" y2="80.5" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="56" y="84.5" text-anchor="end">200</text>
+<line x1="658.5" y1="20" x2="658.5" y2="474" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="658.5" y="492" text-anchor="middle">200</text>
+<line x1="64.0" y1="474.0" x2="750.0" y2="20.0" stroke="#4a5562" stroke-width="1" stroke-dasharray="4 4"/>
+<text class="s-sm" x="407.0" y="514" text-anchor="middle">閉迴路 stochastic（100 個沒看過的地形）</text>
+<text class="s-sm" x="16" y="247.0" text-anchor="middle" transform="rotate(-90 16 247.0)">judge（種子 543，5 局）</text>
+<circle cx="430.4" cy="210.9" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 8（2,000 局）：閉迴路 -49.4／judge -15.3"/>
+<circle cx="425.1" cy="248.3" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 8（100 萬步）：閉迴路 -55.2／judge -77.1"/>
+<circle cx="439.6" cy="262.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 3（2,000 局）：閉迴路 -39.3／judge -99.8"/>
+<circle cx="436.8" cy="271.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 3（100 萬步）：閉迴路 -42.4／judge -114.6"/>
+<circle cx="421.4" cy="193.4" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 18（2,000 局）：閉迴路 -59.2／judge 13.6"/>
+<circle cx="425.0" cy="263.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 18（100 萬步）：閉迴路 -55.3／judge -101.5"/>
+<circle cx="512.3" cy="187.8" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 0（2,000 局）：閉迴路 40.2／judge 22.8"/>
+<circle cx="501.7" cy="270.4" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 0（100 萬步）：閉迴路 28.6／judge -113.6"/>
+<circle cx="434.0" cy="257.4" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 11（2,000 局）：閉迴路 -45.4／judge -92.2"/>
+<circle cx="357.9" cy="254.2" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 11（100 萬步）：閉迴路 -128.6／judge -86.9"/>
+<circle cx="412.7" cy="238.2" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 10（2,000 局）：閉迴路 -68.8／judge -60.5"/>
+<circle cx="427.2" cy="168.2" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 10（100 萬步）：閉迴路 -53.0／judge 55.1"/>
+<circle cx="429.1" cy="223.9" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 2（2,000 局）：閉迴路 -50.8／judge -36.9"/>
+<circle cx="565.1" cy="156.4" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 2（100 萬步）：閉迴路 97.9／judge 74.7"/>
+<circle cx="444.2" cy="217.6" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 543（2,000 局）：閉迴路 -34.4／judge -26.4"/>
+<circle cx="469.6" cy="142.8" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 543（100 萬步）：閉迴路 -6.5／judge 97.2"/>
+<circle cx="461.6" cy="257.9" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 7（2,000 局）：閉迴路 -15.3／judge -93.0"/>
+<circle cx="487.2" cy="235.3" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 7（100 萬步）：閉迴路 12.7／judge -55.7"/>
+<circle cx="429.6" cy="283.3" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 16（2,000 局）：閉迴路 -50.3／judge -135.0"/>
+<circle cx="402.3" cy="220.3" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 16（100 萬步）：閉迴路 -80.2／judge -30.9"/>
+<circle cx="460.0" cy="226.3" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 4（2,000 局）：閉迴路 -17.0／judge -40.9"/>
+<circle cx="419.7" cy="244.8" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 4（100 萬步）：閉迴路 -61.1／judge -71.3"/>
+<circle cx="425.1" cy="226.4" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 5（2,000 局）：閉迴路 -55.2／judge -41.0"/>
+<circle cx="425.7" cy="259.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 5（100 萬步）：閉迴路 -54.5／judge -94.9"/>
+<circle cx="361.0" cy="244.7" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 9（2,000 局）：閉迴路 -125.3／judge -71.2"/>
+<circle cx="386.1" cy="231.7" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 9（100 萬步）：閉迴路 -97.8／judge -49.7"/>
+<circle cx="404.4" cy="301.2" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 12（2,000 局）：閉迴路 -77.9／judge -164.5"/>
+<circle cx="442.7" cy="229.3" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 12（100 萬步）：閉迴路 -35.9／judge -45.8"/>
+<circle cx="457.4" cy="204.6" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 17（2,000 局）：閉迴路 -19.9／judge -5.0"/>
+<circle cx="393.4" cy="209.2" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 17（100 萬步）：閉迴路 -89.9／judge -12.5"/>
+<circle cx="444.3" cy="226.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 15（2,000 局）：閉迴路 -34.2／judge -40.2"/>
+<circle cx="472.2" cy="168.8" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 15（100 萬步）：閉迴路 -3.7／judge 54.2"/>
+<circle cx="464.6" cy="157.1" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 6（2,000 局）：閉迴路 -12.0／judge 73.5"/>
+<circle cx="380.9" cy="256.2" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 6（100 萬步）：閉迴路 -103.6／judge -90.2"/>
+<circle cx="482.1" cy="139.5" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 13（2,000 局）：閉迴路 7.1／judge 102.6"/>
+<circle cx="459.9" cy="224.4" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 13（100 萬步）：閉迴路 -17.2／judge -37.6"/>
+<circle cx="419.6" cy="267.8" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 14（2,000 局）：閉迴路 -61.2／judge -109.3"/>
+<circle cx="365.9" cy="264.9" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 14（100 萬步）：閉迴路 -120.0／judge -104.5"/>
+<circle cx="433.4" cy="285.4" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 1（2,000 局）：閉迴路 -46.1／judge -138.5"/>
+<circle cx="455.4" cy="234.6" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 1（100 萬步）：閉迴路 -22.1／judge -54.5"/>
+<circle cx="406.7" cy="228.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 19（2,000 局）：閉迴路 -75.3／judge -43.7"/>
+<circle cx="478.3" cy="220.2" r="3" fill="#8b949e" opacity="0.75" data-tip="A_sample 種子 19（100 萬步）：閉迴路 2.9／judge -30.7"/>
+<circle cx="422.0" cy="234.5" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 0（2,000 局）：閉迴路 -58.6／judge -54.4"/>
+<circle cx="464.4" cy="212.7" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 0（100 萬步）：閉迴路 -12.2／judge -18.3"/>
+<circle cx="339.7" cy="286.8" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 0（2,000 局）：閉迴路 -148.6／judge -140.7"/>
+<circle cx="431.9" cy="253.8" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 0（100 萬步）：閉迴路 -47.7／judge -86.2"/>
+<circle cx="289.2" cy="339.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 0（2,000 局）：閉迴路 -203.8／judge -226.9"/>
+<circle cx="353.6" cy="281.3" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 0（100 萬步）：閉迴路 -133.4／judge -131.7"/>
+<circle cx="273.9" cy="284.7" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 1（2,000 局）：閉迴路 -220.5／judge -137.3"/>
+<circle cx="363.8" cy="297.7" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 1（100 萬步）：閉迴路 -122.2／judge -158.8"/>
+<circle cx="433.1" cy="162.7" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 1（2,000 局）：閉迴路 -46.5／judge 64.2"/>
+<circle cx="429.5" cy="219.3" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 1（100 萬步）：閉迴路 -50.4／judge -29.2"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 1（2,000 局）：閉迴路 -572.1／judge -571.7"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 1（100 萬步）：閉迴路 -573.0／judge -571.7"/>
+<circle cx="333.7" cy="292.7" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 4（2,000 局）：閉迴路 -155.2／judge -150.5"/>
+<circle cx="365.6" cy="275.4" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 4（100 萬步）：閉迴路 -120.2／judge -122.0"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 3（2,000 局）：閉迴路 -765.9／judge -770.9"/>
+<circle cx="337.0" cy="291.8" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 3（100 萬步）：閉迴路 -151.6／judge -149.0"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 2（2,000 局）：閉迴路 -883.0／judge -1068.0"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 2（100 萬步）：閉迴路 -883.0／judge -1068.0"/>
+<circle cx="283.6" cy="331.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 2（2,000 局）：閉迴路 -210.0／judge -213.8"/>
+<circle cx="345.5" cy="269.7" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 2（100 萬步）：閉迴路 -142.2／judge -112.5"/>
+<circle cx="242.1" cy="320.1" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 4（2,000 局）：閉迴路 -255.3／judge -195.8"/>
+<circle cx="316.1" cy="297.9" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 4（100 萬步）：閉迴路 -174.4／judge -159.0"/>
+<circle cx="306.8" cy="299.9" r="3" fill="#8b949e" opacity="0.75" data-tip="A_random 種子 543（2,000 局）：閉迴路 -184.5／judge -162.3"/>
+<circle cx="198.8" cy="341.3" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 2（2,000 局）：閉迴路 -302.6／judge -230.8"/>
+<circle cx="449.2" cy="173.1" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 2（100 萬步）：閉迴路 -28.9／judge 47.1"/>
+<circle cx="260.3" cy="304.5" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 5（2,000 局）：閉迴路 -235.4／judge -170.0"/>
+<circle cx="350.4" cy="295.1" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 5（100 萬步）：閉迴路 -136.9／judge -154.4"/>
+<circle cx="271.2" cy="370.2" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 3（2,000 局）：閉迴路 -223.5／judge -278.5"/>
+<circle cx="344.0" cy="320.4" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 3（100 萬步）：閉迴路 -143.8／judge -196.3"/>
+<circle cx="454.7" cy="163.1" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 5（2,000 局）：閉迴路 -22.9／judge 63.7"/>
+<circle cx="452.8" cy="283.2" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 5（100 萬步）：閉迴路 -24.9／judge -134.7"/>
+<circle cx="405.1" cy="244.1" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 4（2,000 局）：閉迴路 -77.1／judge -70.1"/>
+<circle cx="417.0" cy="214.9" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 4（100 萬步）：閉迴路 -64.1／judge -22.0"/>
+<circle cx="476.2" cy="187.5" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 5（2,000 局）：閉迴路 0.6／judge 23.3"/>
+<circle cx="415.9" cy="192.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 5（100 萬步）：閉迴路 -65.3／judge 15.9"/>
+<circle cx="443.3" cy="188.8" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 3（2,000 局）：閉迴路 -35.3／judge 21.1"/>
+<circle cx="449.1" cy="153.4" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 3（100 萬步）：閉迴路 -29.0／judge 79.6"/>
+<circle cx="444.8" cy="149.7" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 6（2,000 局）：閉迴路 -33.7／judge 85.8"/>
+<circle cx="365.6" cy="265.7" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 6（100 萬步）：閉迴路 -120.3／judge -105.8"/>
+<circle cx="345.9" cy="286.4" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 6（2,000 局）：閉迴路 -141.8／judge -140.0"/>
+<circle cx="350.2" cy="272.3" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 6（100 萬步）：閉迴路 -137.1／judge -116.8"/>
+<circle cx="280.5" cy="328.8" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 7（2,000 局）：閉迴路 -213.3／judge -210.1"/>
+<circle cx="342.3" cy="261.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 7（100 萬步）：閉迴路 -145.8／judge -98.2"/>
+<circle cx="260.1" cy="262.1" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 6（2,000 局）：閉迴路 -235.6／judge -99.9"/>
+<circle cx="369.6" cy="265.5" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 6（100 萬步）：閉迴路 -115.9／judge -105.6"/>
+<circle cx="407.7" cy="245.8" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 7（2,000 局）：閉迴路 -74.2／judge -73.1"/>
+<circle cx="490.0" cy="303.1" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 7（100 萬步）：閉迴路 15.7／judge -167.6"/>
+<circle cx="244.0" cy="351.3" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 8（2,000 局）：閉迴路 -253.2／judge -247.3"/>
+<circle cx="325.6" cy="305.5" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 8（100 萬步）：閉迴路 -164.0／judge -171.6"/>
+<circle cx="349.9" cy="282.6" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 7（2,000 局）：閉迴路 -137.4／judge -133.9"/>
+<circle cx="458.0" cy="199.1" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 7（100 萬步）：閉迴路 -19.2／judge 4.1"/>
+<circle cx="403.4" cy="245.4" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 8（2,000 局）：閉迴路 -79.0／judge -72.3"/>
+<circle cx="376.7" cy="315.7" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 8（100 萬步）：閉迴路 -108.1／judge -188.5"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 9（2,000 局）：閉迴路 -883.0／judge -1068.0"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 9（100 萬步）：閉迴路 -883.0／judge -1068.0"/>
+<circle cx="231.5" cy="362.1" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 8（2,000 局）：閉迴路 -266.8／judge -265.1"/>
+<circle cx="234.8" cy="376.6" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-2 種子 8（100 萬步）：閉迴路 -263.2／judge -289.1"/>
+<circle cx="253.9" cy="365.2" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 9（2,000 局）：閉迴路 -242.4／judge -270.3"/>
+<circle cx="378.9" cy="284.3" r="3" fill="#8b949e" opacity="0.75" data-tip="A_lr1e-4 種子 9（100 萬步）：閉迴路 -105.8／judge -136.7"/>
+<circle cx="465.5" cy="135.9" r="3" fill="#8b949e" opacity="0.75" data-tip="A_noexplore 種子 543（2,000 局）：閉迴路 -11.1／judge 108.6"/>
+<circle cx="475.3" cy="139.4" r="3" fill="#8b949e" opacity="0.75" data-tip="A_noexplore 種子 543（100 萬步）：閉迴路 -0.3／judge 102.8"/>
+<circle cx="487.3" cy="168.3" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 9（2,000 局）：閉迴路 12.8／judge 54.9"/>
+<circle cx="430.3" cy="197.2" r="3" fill="#8b949e" opacity="0.75" data-tip="A_nonorm 種子 9（100 萬步）：閉迴路 -49.5／judge 7.3"/>
+<circle cx="768" cy="32" r="4" fill="#8b949e"/>
+<text class="s-lbl" x="778" y="36">A 範例與旋鈕</text>
+<circle cx="356.4" cy="279.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 1（2,000 局）：閉迴路 -130.3／judge -128.3"/>
+<circle cx="356.4" cy="279.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 1（100 萬步）：閉迴路 -130.3／judge -128.3"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 0（2,000 局）：閉迴路 -572.1／judge -571.7"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 0（100 萬步）：閉迴路 -572.1／judge -571.7"/>
+<circle cx="366.9" cy="240.8" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 2（2,000 局）：閉迴路 -118.9／judge -64.8"/>
+<circle cx="478.0" cy="191.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 2（100 萬步）：閉迴路 2.6／judge 17.5"/>
+<circle cx="442.2" cy="226.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 2（2,000 局）：閉迴路 -36.5／judge -40.7"/>
+<circle cx="403.7" cy="267.1" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 2（100 萬步）：閉迴路 -78.7／judge -108.3"/>
+<circle cx="438.3" cy="235.4" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 1（2,000 局）：閉迴路 -40.8／judge -55.8"/>
+<circle cx="419.0" cy="231.5" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 1（100 萬步）：閉迴路 -61.8／judge -49.5"/>
+<circle cx="448.6" cy="220.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 2（2,000 局）：閉迴路 -29.5／judge -30.8"/>
+<circle cx="510.9" cy="195.4" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 2（100 萬步）：閉迴路 38.6／judge 10.3"/>
+<circle cx="446.6" cy="200.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 0（2,000 局）：閉迴路 -31.7／judge 1.5"/>
+<circle cx="489.9" cy="180.6" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 0（100 萬步）：閉迴路 15.6／judge 34.7"/>
+<circle cx="500.1" cy="242.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 2（2,000 局）：閉迴路 26.8／judge -67.8"/>
+<circle cx="389.1" cy="240.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 2（100 萬步）：閉迴路 -94.5／judge -63.5"/>
+<circle cx="383.3" cy="267.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 1（2,000 局）：閉迴路 -101.0／judge -108.0"/>
+<circle cx="539.7" cy="140.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 1（100 萬步）：閉迴路 70.1／judge 100.6"/>
+<circle cx="455.7" cy="269.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 0（2,000 局）：閉迴路 -21.7／judge -111.8"/>
+<circle cx="440.9" cy="179.6" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 0（100 萬步）：閉迴路 -37.9／judge 36.3"/>
+<circle cx="465.6" cy="201.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 0（2,000 局）：閉迴路 -11.0／judge 0.6"/>
+<circle cx="409.4" cy="215.9" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 0（100 萬步）：閉迴路 -72.4／judge -23.6"/>
+<circle cx="517.8" cy="183.1" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 1（2,000 局）：閉迴路 46.2／judge 30.5"/>
+<circle cx="583.8" cy="100.8" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 1（100 萬步）：閉迴路 118.3／judge 166.5"/>
+<circle cx="445.1" cy="225.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 1（2,000 局）：閉迴路 -33.4／judge -39.7"/>
+<circle cx="534.6" cy="176.4" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 1（100 萬步）：閉迴路 64.5／judge 41.6"/>
+<circle cx="538.8" cy="150.8" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 2（2,000 局）：閉迴路 69.1／judge 84.0"/>
+<circle cx="506.8" cy="204.6" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 2（100 萬步）：閉迴路 34.1／judge -5.0"/>
+<circle cx="509.4" cy="198.4" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 2（2,000 局）：閉迴路 37.0／judge 5.3"/>
+<circle cx="550.1" cy="122.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 2（100 萬步）：閉迴路 81.5／judge 131.0"/>
+<circle cx="511.4" cy="107.6" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 1（2,000 局）：閉迴路 39.1／judge 155.3"/>
+<circle cx="508.3" cy="225.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 1（100 萬步）：閉迴路 35.8／judge -38.6"/>
+<circle cx="611.2" cy="144.5" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 1（2,000 局）：閉迴路 148.3／judge 94.3"/>
+<circle cx="445.4" cy="216.1" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 1（100 萬步）：閉迴路 -33.0／judge -24.0"/>
+<circle cx="412.8" cy="244.5" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 0（2,000 局）：閉迴路 -68.7／judge -70.8"/>
+<circle cx="433.8" cy="237.5" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 0（100 萬步）：閉迴路 -45.7／judge -59.2"/>
+<circle cx="485.5" cy="148.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 0（2,000 局）：閉迴路 10.8／judge 87.4"/>
+<circle cx="439.3" cy="229.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 0（100 萬步）：閉迴路 -39.7／judge -46.4"/>
+<circle cx="595.5" cy="123.8" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 0（2,000 局）：閉迴路 131.1／judge 128.5"/>
+<circle cx="548.9" cy="152.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 0（100 萬步）：閉迴路 80.1／judge 81.6"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 2（2,000 局）：閉迴路 -589.1／judge -544.6"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 2（100 萬步）：閉迴路 -589.1／judge -544.6"/>
+<circle cx="356.4" cy="279.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 3（2,000 局）：閉迴路 -130.3／judge -128.3"/>
+<circle cx="356.4" cy="279.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 3（100 萬步）：閉迴路 -130.3／judge -128.3"/>
+<circle cx="397.1" cy="233.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 3（2,000 局）：閉迴路 -85.8／judge -51.8"/>
+<circle cx="515.3" cy="181.9" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 3（100 萬步）：閉迴路 43.4／judge 32.5"/>
+<circle cx="343.0" cy="273.4" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 4（2,000 局）：閉迴路 -145.0／judge -118.6"/>
+<circle cx="104.9" cy="417.4" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 4（100 萬步）：閉迴路 -405.3／judge -356.6"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 4（2,000 局）：閉迴路 -589.1／judge -544.6"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 4（100 萬步）：閉迴路 -589.1／judge -544.6"/>
+<circle cx="453.5" cy="230.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 3（2,000 局）：閉迴路 -24.1／judge -47.3"/>
+<circle cx="447.8" cy="225.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 3（100 萬步）：閉迴路 -30.3／judge -38.7"/>
+<circle cx="485.9" cy="204.9" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 3（2,000 局）：閉迴路 11.2／judge -5.4"/>
+<circle cx="553.8" cy="166.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 3（100 萬步）：閉迴路 85.5／judge 58.4"/>
+<circle cx="370.8" cy="304.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 3（2,000 局）：閉迴路 -114.5／judge -169.7"/>
+<circle cx="412.0" cy="250.5" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 3（100 萬步）：閉迴路 -69.5／judge -80.9"/>
+<circle cx="367.2" cy="278.8" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 5（2,000 局）：閉迴路 -118.5／judge -127.6"/>
+<circle cx="524.3" cy="189.1" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 5（100 萬步）：閉迴路 53.3／judge 20.7"/>
+<circle cx="371.7" cy="282.1" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 4（2,000 局）：閉迴路 -113.5／judge -133.0"/>
+<circle cx="434.0" cy="229.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 4（100 萬步）：閉迴路 -45.5／judge -45.7"/>
+<circle cx="357.0" cy="262.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 4（2,000 局）：閉迴路 -129.6／judge -100.3"/>
+<circle cx="405.1" cy="254.4" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 4（100 萬步）：閉迴路 -77.1／judge -87.2"/>
+<circle cx="372.0" cy="276.8" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 4（2,000 局）：閉迴路 -113.2／judge -124.2"/>
+<circle cx="469.9" cy="189.8" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 4（100 萬步）：閉迴路 -6.3／judge 19.5"/>
+<circle cx="405.6" cy="254.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 4（2,000 局）：閉迴路 -76.5／judge -86.9"/>
+<circle cx="689.3" cy="49.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 4（100 萬步）：閉迴路 233.7／judge 251.7"/>
+<circle cx="465.4" cy="193.4" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 3（2,000 局）：閉迴路 -11.2／judge 13.6"/>
+<circle cx="497.2" cy="195.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 3（100 萬步）：閉迴路 23.6／judge 10.6"/>
+<circle cx="452.8" cy="208.5" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 5（2,000 局）：閉迴路 -24.9／judge -11.4"/>
+<circle cx="367.2" cy="276.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 5（100 萬步）：閉迴路 -118.6／judge -123.3"/>
+<circle cx="476.2" cy="203.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 4（2,000 局）：閉迴路 0.6／judge -2.7"/>
+<circle cx="445.0" cy="226.5" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 4（100 萬步）：閉迴路 -33.4／judge -41.2"/>
+<circle cx="542.2" cy="200.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 3（2,000 局）：閉迴路 72.8／judge 1.5"/>
+<circle cx="562.2" cy="153.1" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 3（100 萬步）：閉迴路 94.7／judge 80.2"/>
+<circle cx="396.4" cy="275.9" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 5（2,000 局）：閉迴路 -86.5／judge -122.7"/>
+<circle cx="400.1" cy="250.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 5（100 萬步）：閉迴路 -82.5／judge -80.4"/>
+<circle cx="490.2" cy="189.4" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 5（2,000 局）：閉迴路 16.0／judge 20.1"/>
+<circle cx="573.1" cy="137.8" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 5（100 萬步）：閉迴路 106.6／judge 105.5"/>
+<circle cx="401.3" cy="256.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 5（2,000 局）：閉迴路 -81.3／judge -89.9"/>
+<circle cx="367.9" cy="259.9" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 5（100 萬步）：閉迴路 -117.7／judge -96.3"/>
+<circle cx="432.8" cy="234.5" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 5（2,000 局）：閉迴路 -46.8／judge -54.4"/>
+<circle cx="552.6" cy="213.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 5（100 萬步）：閉迴路 84.2／judge -20.0"/>
+<circle cx="356.4" cy="279.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 5（2,000 局）：閉迴路 -130.3／judge -128.3"/>
+<circle cx="356.4" cy="279.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 5（100 萬步）：閉迴路 -130.3／judge -128.3"/>
+<circle cx="404.6" cy="247.8" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 6（2,000 局）：閉迴路 -77.7／judge -76.3"/>
+<circle cx="506.9" cy="186.9" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 6（100 萬步）：閉迴路 34.3／judge 24.3"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 6（2,000 局）：閉迴路 -883.0／judge -1068.0"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 6（100 萬步）：閉迴路 -883.0／judge -1068.0"/>
+<circle cx="410.2" cy="230.5" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 6（2,000 局）：閉迴路 -71.5／judge -47.7"/>
+<circle cx="441.4" cy="227.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 6（100 萬步）：閉迴路 -37.4／judge -43.0"/>
+<circle cx="356.4" cy="279.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 7（2,000 局）：閉迴路 -130.3／judge -128.3"/>
+<circle cx="356.4" cy="279.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 7（100 萬步）：閉迴路 -130.3／judge -128.3"/>
+<circle cx="384.5" cy="246.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 7（2,000 局）：閉迴路 -99.6／judge -73.6"/>
+<circle cx="463.2" cy="229.5" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 7（100 萬步）：閉迴路 -13.6／judge -46.1"/>
+<circle cx="434.2" cy="212.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 6（2,000 局）：閉迴路 -45.2／judge -18.4"/>
+<circle cx="472.3" cy="196.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 6（100 萬步）：閉迴路 -3.6／judge 8.0"/>
+<circle cx="369.3" cy="278.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 8（2,000 局）：閉迴路 -116.2／judge -127.4"/>
+<circle cx="566.6" cy="127.1" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 8（100 萬步）：閉迴路 99.5／judge 123.1"/>
+<circle cx="436.4" cy="202.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 6（2,000 局）：閉迴路 -42.9／judge -0.9"/>
+<circle cx="533.5" cy="137.8" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 6（100 萬步）：閉迴路 63.2／judge 105.5"/>
+<circle cx="491.2" cy="172.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 6（2,000 局）：閉迴路 17.1／judge 48.5"/>
+<circle cx="414.3" cy="249.1" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 6（100 萬步）：閉迴路 -67.1／judge -78.5"/>
+<circle cx="409.6" cy="300.5" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 7（2,000 局）：閉迴路 -72.1／judge -163.4"/>
+<circle cx="524.6" cy="194.5" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 7（100 萬步）：閉迴路 53.6／judge 11.7"/>
+<circle cx="551.0" cy="173.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 6（2,000 局）：閉迴路 82.4／judge 47.0"/>
+<circle cx="368.9" cy="159.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 6（100 萬步）：閉迴路 -116.6／judge 70.1"/>
+<circle cx="425.9" cy="227.5" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 7（2,000 局）：閉迴路 -54.4／judge -42.7"/>
+<circle cx="468.9" cy="265.4" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 7（100 萬步）：閉迴路 -7.3／judge -105.3"/>
+<circle cx="441.9" cy="203.4" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 7（2,000 局）：閉迴路 -36.8／judge -2.9"/>
+<circle cx="494.5" cy="171.5" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 7（100 萬步）：閉迴路 20.7／judge 49.7"/>
+<circle cx="500.5" cy="210.6" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 7（2,000 局）：閉迴路 27.2／judge -14.9"/>
+<circle cx="559.4" cy="194.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 7（100 萬步）：閉迴路 91.6／judge 12.1"/>
+<circle cx="381.6" cy="219.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 7（2,000 局）：閉迴路 -102.7／judge -29.1"/>
+<circle cx="432.9" cy="234.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 7（100 萬步）：閉迴路 -46.7／judge -53.6"/>
+<circle cx="314.0" cy="319.8" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 8（2,000 局）：閉迴路 -176.6／judge -195.2"/>
+<circle cx="419.7" cy="243.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 8（100 萬步）：閉迴路 -61.2／judge -69.6"/>
+<circle cx="447.8" cy="224.1" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 8（2,000 局）：閉迴路 -30.4／judge -37.2"/>
+<circle cx="408.8" cy="250.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 8（100 萬步）：閉迴路 -73.0／judge -80.5"/>
+<circle cx="542.1" cy="107.9" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 8（2,000 局）：閉迴路 72.7／judge 154.7"/>
+<circle cx="451.0" cy="224.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 8（100 萬步）：閉迴路 -26.9／judge -38.1"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 8（2,000 局）：閉迴路 -572.1／judge -571.7"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 8（100 萬步）：閉迴路 -572.1／judge -571.7"/>
+<circle cx="376.8" cy="268.1" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 8（2,000 局）：閉迴路 -108.0／judge -109.9"/>
+<circle cx="614.9" cy="60.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 8（100 萬步）：閉迴路 152.3／judge 233.7"/>
+<circle cx="393.6" cy="255.1" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 8（2,000 局）：閉迴路 -89.7／judge -88.3"/>
+<circle cx="445.0" cy="225.9" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 8（100 萬步）：閉迴路 -33.5／judge -40.1"/>
+<circle cx="366.5" cy="277.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 9（2,000 局）：閉迴路 -119.2／judge -125.8"/>
+<circle cx="376.0" cy="225.9" r="3" fill="#3987e5" opacity="0.75" data-tip="B_total 種子 9（100 萬步）：閉迴路 -108.9／judge -40.2"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 9（2,000 局）：閉迴路 -589.1／judge -544.6"/>
+<circle cx="64.0" cy="474.0" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99_nonorm 種子 9（100 萬步）：閉迴路 -589.1／judge -544.6"/>
+<circle cx="408.4" cy="248.9" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 9（2,000 局）：閉迴路 -73.5／judge -78.1"/>
+<circle cx="378.0" cy="258.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.9 種子 9（100 萬步）：閉迴路 -106.7／judge -93.5"/>
+<circle cx="421.4" cy="224.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 9（2,000 局）：閉迴路 -59.3／judge -37.5"/>
+<circle cx="554.6" cy="143.3" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.999 種子 9（100 萬步）：閉迴路 86.3／judge 96.3"/>
+<circle cx="393.9" cy="266.9" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 9（2,000 局）：閉迴路 -89.3／judge -107.9"/>
+<circle cx="484.2" cy="165.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg1.0 種子 9（100 萬步）：閉迴路 9.4／judge 60.1"/>
+<circle cx="499.4" cy="173.1" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 9（2,000 局）：閉迴路 26.0／judge 47.1"/>
+<circle cx="471.4" cy="210.5" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.99 種子 9（100 萬步）：閉迴路 -4.6／judge -14.7"/>
+<circle cx="463.7" cy="214.7" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 9（2,000 局）：閉迴路 -13.0／judge -21.6"/>
+<circle cx="603.7" cy="121.2" r="3" fill="#3987e5" opacity="0.75" data-tip="B_rtg0.95 種子 9（100 萬步）：閉迴路 140.1／judge 132.9"/>
+<circle cx="768" cy="52" r="4" fill="#3987e5"/>
+<text class="s-lbl" x="778" y="56">B 回報</text>
+<circle cx="665.8" cy="45.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 0（2,000 局）：閉迴路 208.0／judge 257.2"/>
+<circle cx="656.6" cy="72.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 0（100 萬步）：閉迴路 197.9／judge 213.8"/>
+<circle cx="493.5" cy="197.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 0（2,000 局）：閉迴路 19.5／judge 7.5"/>
+<circle cx="465.8" cy="205.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 0（100 萬步）：閉迴路 -10.7／judge -6.2"/>
+<circle cx="605.7" cy="73.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 0（2,000 局）：閉迴路 142.3／judge 211.7"/>
+<circle cx="601.1" cy="104.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 0（100 萬步）：閉迴路 137.2／judge 161.0"/>
+<circle cx="458.3" cy="158.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 1（2,000 局）：閉迴路 -18.9／judge 71.7"/>
+<circle cx="505.6" cy="155.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 1（100 萬步）：閉迴路 32.8／judge 75.6"/>
+<circle cx="532.7" cy="185.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 1（2,000 局）：閉迴路 62.4／judge 26.3"/>
+<circle cx="599.1" cy="96.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 1（100 萬步）：閉迴路 135.1／judge 173.5"/>
+<circle cx="591.2" cy="118.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 1（2,000 局）：閉迴路 126.4／judge 137.8"/>
+<circle cx="591.2" cy="118.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 1（100 萬步）：閉迴路 126.4／judge 137.8"/>
+<circle cx="706.5" cy="67.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 0（2,000 局）：閉迴路 252.4／judge 222.2"/>
+<circle cx="699.1" cy="87.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 0（100 萬步）：閉迴路 244.4／judge 188.7"/>
+<circle cx="588.4" cy="109.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 1（2,000 局）：閉迴路 123.3／judge 151.8"/>
+<circle cx="553.4" cy="181.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 1（100 萬步）：閉迴路 85.0／judge 33.1"/>
+<circle cx="576.2" cy="136.0" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 0（2,000 局）：閉迴路 110.0／judge 108.4"/>
+<circle cx="550.9" cy="120.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 0（100 萬步）：閉迴路 82.4／judge 134.5"/>
+<circle cx="576.6" cy="116.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 1（2,000 局）：閉迴路 110.4／judge 139.9"/>
+<circle cx="575.7" cy="122.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 1（100 萬步）：閉迴路 109.5／judge 131.0"/>
+<circle cx="594.4" cy="147.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 1（2,000 局）：閉迴路 129.9／judge 89.4"/>
+<circle cx="586.8" cy="129.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 1（100 萬步）：閉迴路 121.5／judge 119.5"/>
+<circle cx="566.3" cy="119.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 1（2,000 局）：閉迴路 99.2／judge 136.1"/>
+<circle cx="569.2" cy="113.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 1（100 萬步）：閉迴路 102.4／judge 145.6"/>
+<circle cx="587.0" cy="110.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 0（2,000 局）：閉迴路 121.8／judge 150.6"/>
+<circle cx="585.4" cy="103.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 0（100 萬步）：閉迴路 120.1／judge 162.4"/>
+<circle cx="571.0" cy="114.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 0（100 萬步）：閉迴路 104.3／judge 144.3"/>
+<circle cx="579.0" cy="122.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 0（2,000 局）：閉迴路 113.1／judge 130.7"/>
+<circle cx="602.6" cy="112.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 0（100 萬步）：閉迴路 138.8／judge 146.5"/>
+<circle cx="604.2" cy="126.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 0（2,000 局）：閉迴路 140.6／judge 124.5"/>
+<circle cx="529.2" cy="208.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 0（100 萬步）：閉迴路 58.6／judge -11.9"/>
+<circle cx="531.4" cy="176.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 0（2,000 局）：閉迴路 61.0／judge 42.1"/>
+<circle cx="586.7" cy="134.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 1（100 萬步）：閉迴路 121.5／judge 111.5"/>
+<circle cx="588.7" cy="124.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 1（2,000 局）：閉迴路 123.7／judge 127.6"/>
+<circle cx="397.5" cy="262.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 1（100 萬步）：閉迴路 -85.4／judge -101.0"/>
+<circle cx="413.6" cy="251.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 1（2,000 局）：閉迴路 -67.8／judge -83.1"/>
+<circle cx="438.2" cy="233.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 1（100 萬步）：閉迴路 -40.9／judge -52.2"/>
+<circle cx="370.9" cy="277.0" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 1（2,000 局）：閉迴路 -114.5／judge -124.6"/>
+<circle cx="384.9" cy="265.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 0（100 萬步）：閉迴路 -99.2／judge -105.7"/>
+<circle cx="396.4" cy="258.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 0（2,000 局）：閉迴路 -86.6／judge -93.3"/>
+<circle cx="593.1" cy="148.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 2（2,000 局）：閉迴路 128.5／judge 87.5"/>
+<circle cx="594.5" cy="132.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 2（100 萬步）：閉迴路 130.0／judge 114.4"/>
+<circle cx="560.9" cy="95.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 2（2,000 局）：閉迴路 93.2／judge 175.2"/>
+<circle cx="533.2" cy="147.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 2（100 萬步）：閉迴路 63.0／judge 88.7"/>
+<circle cx="540.8" cy="140.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 2（2,000 局）：閉迴路 71.3／judge 100.5"/>
+<circle cx="555.1" cy="114.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 2（100 萬步）：閉迴路 86.9／judge 143.9"/>
+<circle cx="608.1" cy="91.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 2（2,000 局）：閉迴路 144.9／judge 182.4"/>
+<circle cx="641.2" cy="136.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 2（100 萬步）：閉迴路 181.1／judge 106.9"/>
+<circle cx="559.6" cy="108.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 2（2,000 局）：閉迴路 91.9／judge 154.3"/>
+<circle cx="592.3" cy="110.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 2（100 萬步）：閉迴路 127.6／judge 150.4"/>
+<circle cx="553.9" cy="179.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 2（2,000 局）：閉迴路 85.6／judge 37.2"/>
+<circle cx="602.8" cy="117.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 2（100 萬步）：閉迴路 139.1／judge 138.3"/>
+<circle cx="598.1" cy="136.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 2（100 萬步）：閉迴路 133.9／judge 108.1"/>
+<circle cx="609.3" cy="137.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 2（2,000 局）：閉迴路 146.1／judge 105.5"/>
+<circle cx="568.6" cy="138.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 3（2,000 局）：閉迴路 101.6／judge 104.6"/>
+<circle cx="608.2" cy="93.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 3（100 萬步）：閉迴路 145.0／judge 178.7"/>
+<circle cx="599.3" cy="112.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 2（2,000 局）：閉迴路 135.2／judge 147.1"/>
+<circle cx="577.1" cy="119.0" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 2（100 萬步）：閉迴路 111.0／judge 136.5"/>
+<circle cx="582.9" cy="88.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 3（2,000 局）：閉迴路 117.3／judge 187.2"/>
+<circle cx="523.4" cy="129.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 3（100 萬步）：閉迴路 52.2／judge 118.9"/>
+<circle cx="594.6" cy="125.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 3（2,000 局）：閉迴路 130.1／judge 125.4"/>
+<circle cx="604.0" cy="117.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 3（100 萬步）：閉迴路 140.4／judge 138.9"/>
+<circle cx="657.5" cy="81.0" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 2（2,000 局）：閉迴路 198.9／judge 199.3"/>
+<circle cx="659.8" cy="83.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 2（100 萬步）：閉迴路 201.4／judge 194.6"/>
+<circle cx="604.7" cy="100.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 3（100 萬步）：閉迴路 141.2／judge 167.5"/>
+<circle cx="586.9" cy="148.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 3（2,000 局）：閉迴路 121.7／judge 87.3"/>
+<circle cx="602.4" cy="121.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 3（2,000 局）：閉迴路 138.6／judge 132.5"/>
+<circle cx="601.5" cy="116.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 3（100 萬步）：閉迴路 137.7／judge 140.1"/>
+<circle cx="456.7" cy="174.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 3（100 萬步）：閉迴路 -20.7／judge 44.8"/>
+<circle cx="450.9" cy="227.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 3（2,000 局）：閉迴路 -27.0／judge -43.2"/>
+<circle cx="542.1" cy="170.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 3（2,000 局）：閉迴路 72.7／judge 52.0"/>
+<circle cx="574.4" cy="121.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 3（100 萬步）：閉迴路 108.0／judge 131.8"/>
+<circle cx="390.6" cy="276.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 2（100 萬步）：閉迴路 -92.9／judge -123.0"/>
+<circle cx="401.4" cy="254.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 2（2,000 局）：閉迴路 -81.2／judge -87.1"/>
+<circle cx="561.5" cy="167.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 3（100 萬步）：閉迴路 93.9／judge 56.7"/>
+<circle cx="577.8" cy="126.0" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 3（2,000 局）：閉迴路 111.7／judge 124.9"/>
+<circle cx="587.9" cy="123.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 3（100 萬步）：閉迴路 122.7／judge 129.3"/>
+<circle cx="573.3" cy="129.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 3（2,000 局）：閉迴路 106.8／judge 119.1"/>
+<circle cx="416.4" cy="245.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 3（100 萬步）：閉迴路 -64.8／judge -72.4"/>
+<circle cx="423.1" cy="243.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 3（2,000 局）：閉迴路 -57.4／judge -68.6"/>
+<circle cx="389.7" cy="260.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 4（2,000 局）：閉迴路 -93.9／judge -97.0"/>
+<circle cx="513.7" cy="200.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 4（100 萬步）：閉迴路 41.6／judge 1.4"/>
+<circle cx="572.7" cy="176.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 4（2,000 局）：閉迴路 106.1／judge 41.2"/>
+<circle cx="591.9" cy="123.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 4（100 萬步）：閉迴路 127.2／judge 128.5"/>
+<circle cx="565.8" cy="113.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 4（2,000 局）：閉迴路 98.6／judge 145.3"/>
+<circle cx="600.2" cy="115.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 4（100 萬步）：閉迴路 136.2／judge 142.3"/>
+<circle cx="507.7" cy="168.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 5（2,000 局）：閉迴路 35.0／judge 54.4"/>
+<circle cx="689.2" cy="47.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 5（100 萬步）：閉迴路 233.6／judge 254.1"/>
+<circle cx="573.6" cy="107.0" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 6（2,000 局）：閉迴路 107.1／judge 156.3"/>
+<circle cx="588.2" cy="166.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 6（100 萬步）：閉迴路 123.1／judge 58.0"/>
+<circle cx="544.1" cy="149.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 6（2,000 局）：閉迴路 74.9／judge 85.7"/>
+<circle cx="614.5" cy="114.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 6（100 萬步）：閉迴路 151.9／judge 143.4"/>
+<circle cx="646.3" cy="117.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 4（2,000 局）：閉迴路 186.6／judge 139.4"/>
+<circle cx="687.2" cy="67.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 4（100 萬步）：閉迴路 231.3／judge 220.8"/>
+<circle cx="477.5" cy="240.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 5（2,000 局）：閉迴路 2.1／judge -64.6"/>
+<circle cx="627.6" cy="70.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 5（100 萬步）：閉迴路 166.2／judge 216.3"/>
+<circle cx="565.4" cy="138.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 5（2,000 局）：閉迴路 98.2／judge 104.2"/>
+<circle cx="532.0" cy="125.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 5（100 萬步）：閉迴路 61.6／judge 126.2"/>
+<circle cx="639.0" cy="56.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 5（2,000 局）：閉迴路 178.6／judge 240.0"/>
+<circle cx="653.1" cy="78.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 5（100 萬步）：閉迴路 194.1／judge 203.7"/>
+<circle cx="570.7" cy="108.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 5（2,000 局）：閉迴路 103.9／judge 153.5"/>
+<circle cx="591.2" cy="137.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 5（100 萬步）：閉迴路 126.4／judge 106.4"/>
+<circle cx="382.2" cy="280.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 4（2,000 局）：閉迴路 -102.1／judge -130.7"/>
+<circle cx="390.7" cy="249.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 4（100 萬步）：閉迴路 -92.9／judge -79.5"/>
+<circle cx="593.2" cy="121.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 4（2,000 局）：閉迴路 128.6／judge 132.0"/>
+<circle cx="601.9" cy="109.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 4（100 萬步）：閉迴路 138.1／judge 151.8"/>
+<circle cx="585.0" cy="153.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 5（2,000 局）：閉迴路 119.6／judge 79.7"/>
+<circle cx="696.8" cy="42.0" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 5（100 萬步）：閉迴路 241.9／judge 263.6"/>
+<circle cx="583.7" cy="108.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 4（2,000 局）：閉迴路 118.2／judge 153.5"/>
+<circle cx="582.8" cy="94.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 4（100 萬步）：閉迴路 117.2／judge 176.2"/>
+<circle cx="466.6" cy="209.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 4（2,000 局）：閉迴路 -9.8／judge -13.7"/>
+<circle cx="567.3" cy="123.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 4（100 萬步）：閉迴路 100.2／judge 129.1"/>
+<circle cx="431.1" cy="206.0" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 4（2,000 局）：閉迴路 -48.7／judge -7.3"/>
+<circle cx="489.9" cy="197.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 4（100 萬步）：閉迴路 15.6／judge 6.1"/>
+<circle cx="644.5" cy="50.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 5（2,000 局）：閉迴路 184.7／judge 249.9"/>
+<circle cx="589.7" cy="94.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 5（100 萬步）：閉迴路 124.8／judge 177.5"/>
+<circle cx="602.5" cy="115.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 5（2,000 局）：閉迴路 138.8／judge 142.7"/>
+<circle cx="579.1" cy="129.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 5（100 萬步）：閉迴路 113.2／judge 119.4"/>
+<circle cx="601.6" cy="118.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 5（2,000 局）：閉迴路 137.8／judge 137.5"/>
+<circle cx="606.3" cy="112.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 5（100 萬步）：閉迴路 142.9／judge 147.1"/>
+<circle cx="554.9" cy="211.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 6（2,000 局）：閉迴路 86.7／judge -16.8"/>
+<circle cx="596.7" cy="113.0" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 6（100 萬步）：閉迴路 132.4／judge 146.4"/>
+<circle cx="418.7" cy="244.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 4（100 萬步）：閉迴路 -62.2／judge -71.1"/>
+<circle cx="400.4" cy="259.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 4（2,000 局）：閉迴路 -82.2／judge -96.1"/>
+<circle cx="422.6" cy="242.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 5（100 萬步）：閉迴路 -58.0／judge -67.7"/>
+<circle cx="387.8" cy="261.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 5（2,000 局）：閉迴路 -96.0／judge -99.6"/>
+<circle cx="630.6" cy="137.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 6（2,000 局）：閉迴路 169.5／judge 105.5"/>
+<circle cx="486.5" cy="237.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 6（100 萬步）：閉迴路 12.0／judge -59.8"/>
+<circle cx="543.4" cy="128.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 6（2,000 局）：閉迴路 74.1／judge 120.8"/>
+<circle cx="522.7" cy="184.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 6（100 萬步）：閉迴路 51.5／judge 28.6"/>
+<circle cx="587.4" cy="114.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 6（2,000 局）：閉迴路 122.2／judge 144.3"/>
+<circle cx="581.0" cy="171.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 6（100 萬步）：閉迴路 115.3／judge 49.8"/>
+<circle cx="657.7" cy="74.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 7（2,000 局）：閉迴路 199.1／judge 209.3"/>
+<circle cx="670.1" cy="50.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 7（100 萬步）：閉迴路 212.7／judge 249.2"/>
+<circle cx="662.2" cy="104.0" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 6（2,000 局）：閉迴路 204.1／judge 161.2"/>
+<circle cx="657.4" cy="120.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 6（100 萬步）：閉迴路 198.8／judge 134.2"/>
+<circle cx="527.0" cy="251.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 6（2,000 局）：閉迴路 56.2／judge -82.0"/>
+<circle cx="559.3" cy="114.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 6（100 萬步）：閉迴路 91.5／judge 143.2"/>
+<circle cx="493.6" cy="206.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 7（2,000 局）：閉迴路 19.7／judge -7.8"/>
+<circle cx="543.6" cy="162.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 7（100 萬步）：閉迴路 74.3／judge 64.3"/>
+<circle cx="685.5" cy="59.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 7（2,000 局）：閉迴路 229.4／judge 235.1"/>
+<circle cx="689.3" cy="62.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 7（100 萬步）：閉迴路 233.6／judge 230.3"/>
+<circle cx="643.2" cy="86.0" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 8（2,000 局）：閉迴路 183.3／judge 191.0"/>
+<circle cx="660.7" cy="43.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 8（100 萬步）：閉迴路 202.4／judge 260.7"/>
+<circle cx="475.0" cy="215.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 7（2,000 局）：閉迴路 -0.7／judge -23.1"/>
+<circle cx="591.2" cy="65.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 7（100 萬步）：閉迴路 126.4／judge 225.4"/>
+<circle cx="685.8" cy="83.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 7（2,000 局）：閉迴路 229.8／judge 194.8"/>
+<circle cx="671.9" cy="44.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 7（100 萬步）：閉迴路 214.6／judge 260.1"/>
+<circle cx="482.0" cy="220.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 7（2,000 局）：閉迴路 7.0／judge -30.9"/>
+<circle cx="549.2" cy="202.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 7（100 萬步）：閉迴路 80.5／judge -2.1"/>
+<circle cx="536.6" cy="139.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 7（2,000 局）：閉迴路 66.7／judge 102.5"/>
+<circle cx="516.6" cy="210.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 7（100 萬步）：閉迴路 44.8／judge -14.1"/>
+<circle cx="606.5" cy="118.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 6（2,000 局）：閉迴路 143.1／judge 137.6"/>
+<circle cx="594.1" cy="112.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 6（100 萬步）：閉迴路 129.6／judge 147.9"/>
+<circle cx="583.0" cy="119.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 7（2,000 局）：閉迴路 117.4／judge 135.2"/>
+<circle cx="572.9" cy="87.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 7（100 萬步）：閉迴路 106.3／judge 189.2"/>
+<circle cx="703.8" cy="87.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 8（2,000 局）：閉迴路 249.5／judge 188.2"/>
+<circle cx="678.5" cy="121.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 8（100 萬步）：閉迴路 221.9／judge 132.5"/>
+<circle cx="600.2" cy="115.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 7（100 萬步）：閉迴路 136.2／judge 142.6"/>
+<circle cx="599.1" cy="113.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 7（2,000 局）：閉迴路 135.0／judge 145.1"/>
+<circle cx="690.0" cy="45.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 8（2,000 局）：閉迴路 234.4／judge 257.7"/>
+<circle cx="698.7" cy="43.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 8（100 萬步）：閉迴路 243.9／judge 261.5"/>
+<circle cx="395.9" cy="259.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 7（100 萬步）：閉迴路 -87.1／judge -96.3"/>
+<circle cx="371.2" cy="265.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 7（2,000 局）：閉迴路 -114.2／judge -105.1"/>
+<circle cx="398.8" cy="261.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 6（100 萬步）：閉迴路 -84.0／judge -98.9"/>
+<circle cx="398.4" cy="257.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 6（2,000 局）：閉迴路 -84.4／judge -91.7"/>
+<circle cx="507.7" cy="186.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 8（2,000 局）：閉迴路 35.0／judge 25.0"/>
+<circle cx="568.5" cy="113.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 8（100 萬步）：閉迴路 101.5／judge 145.8"/>
+<circle cx="663.3" cy="49.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 9（2,000 局）：閉迴路 205.3／judge 251.9"/>
+<circle cx="663.8" cy="61.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_ci5 種子 9（100 萬步）：閉迴路 205.7／judge 231.2"/>
+<circle cx="637.8" cy="58.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 8（2,000 局）：閉迴路 177.3／judge 237.1"/>
+<circle cx="671.1" cy="79.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 8（100 萬步）：閉迴路 213.8／judge 201.8"/>
+<circle cx="528.3" cy="172.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 8（2,000 局）：閉迴路 57.6／judge 48.6"/>
+<circle cx="515.3" cy="168.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 8（100 萬步）：閉迴路 43.4／judge 55.2"/>
+<circle cx="546.8" cy="208.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 9（2,000 局）：閉迴路 77.9／judge -10.7"/>
+<circle cx="537.5" cy="167.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 9（100 萬步）：閉迴路 67.6／judge 56.8"/>
+<circle cx="677.9" cy="83.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 9（2,000 局）：閉迴路 221.2／judge 195.0"/>
+<circle cx="675.6" cy="33.7" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc 種子 9（100 萬步）：閉迴路 218.7／judge 277.4"/>
+<circle cx="591.6" cy="120.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 9（2,000 局）：閉迴路 126.8／judge 134.5"/>
+<circle cx="579.4" cy="120.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_rtg_adam 種子 9（100 萬步）：閉迴路 113.5／judge 134.4"/>
+<circle cx="556.3" cy="130.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 8（2,000 局）：閉迴路 88.3／judge 117.5"/>
+<circle cx="570.9" cy="155.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 8（100 萬步）：閉迴路 104.2／judge 76.4"/>
+<circle cx="462.3" cy="183.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 9（2,000 局）：閉迴路 -14.5／judge 29.9"/>
+<circle cx="408.7" cy="255.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_mc_sgd 種子 9（100 萬步）：閉迴路 -73.2／judge -88.6"/>
+<circle cx="553.4" cy="124.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 9（2,000 局）：閉迴路 85.0／judge 127.5"/>
+<circle cx="483.8" cy="191.6" r="3" fill="#d95926" opacity="0.75" data-tip="C_n5 種子 9（100 萬步）：閉迴路 8.9／judge 16.5"/>
+<circle cx="573.2" cy="116.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 9（2,000 局）：閉迴路 106.7／judge 140.1"/>
+<circle cx="547.0" cy="209.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_n20 種子 9（100 萬步）：閉迴路 78.0／judge -12.4"/>
+<circle cx="688.7" cy="47.9" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 9（2,000 局）：閉迴路 233.0／judge 253.9"/>
+<circle cx="651.1" cy="81.0" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.99 種子 9（100 萬步）：閉迴路 191.8／judge 199.2"/>
+<circle cx="312.8" cy="314.4" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 8（100 萬步）：閉迴路 -178.0／judge -186.3"/>
+<circle cx="300.4" cy="319.2" r="3" fill="#d95926" opacity="0.75" data-tip="C_td0 種子 8（2,000 局）：閉迴路 -191.6／judge -194.3"/>
+<circle cx="575.0" cy="125.0" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 8（100 萬步）：閉迴路 108.7／judge 126.6"/>
+<circle cx="567.9" cy="102.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 8（2,000 局）：閉迴路 100.9／judge 163.8"/>
+<circle cx="527.5" cy="174.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 9（100 萬步）：閉迴路 56.8／judge 44.3"/>
+<circle cx="543.7" cy="156.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95 種子 9（2,000 局）：閉迴路 74.4／judge 75.2"/>
+<circle cx="399.3" cy="257.3" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 8（100 萬步）：閉迴路 -83.4／judge -92.1"/>
+<circle cx="397.3" cy="261.1" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 8（2,000 局）：閉迴路 -85.6／judge -98.3"/>
+<circle cx="390.5" cy="262.5" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 9（100 萬步）：閉迴路 -93.1／judge -100.5"/>
+<circle cx="418.4" cy="242.8" r="3" fill="#d95926" opacity="0.75" data-tip="C_gae0.95_ci5 種子 9（2,000 局）：閉迴路 -62.6／judge -68.1"/>
+<circle cx="768" cy="72" r="4" fill="#d95926"/>
+<text class="s-lbl" x="778" y="76">C baseline／critic</text>
+<circle cx="660.8" cy="67.6" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 2（2,000 局）：閉迴路 202.5／judge 221.4"/>
+<circle cx="672.3" cy="58.2" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 2（100 萬步）：閉迴路 215.0／judge 236.9"/>
+<circle cx="624.1" cy="122.7" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 4（2,000 局）：閉迴路 162.4／judge 130.4"/>
+<circle cx="696.5" cy="34.4" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 4（100 萬步）：閉迴路 241.5／judge 276.3"/>
+<circle cx="607.2" cy="105.2" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 3（2,000 局）：閉迴路 143.9／judge 159.3"/>
+<circle cx="653.4" cy="71.3" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 3（100 萬步）：閉迴路 194.4／judge 215.2"/>
+<circle cx="701.5" cy="32.2" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 1（2,000 局）：閉迴路 247.0／judge 279.9"/>
+<circle cx="680.0" cy="46.2" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 1（100 萬步）：閉迴路 223.4／judge 256.8"/>
+<circle cx="660.4" cy="110.1" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 1（2,000 局）：閉迴路 202.1／judge 151.1"/>
+<circle cx="631.5" cy="41.1" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 1（100 萬步）：閉迴路 170.5／judge 265.2"/>
+<circle cx="706.7" cy="41.5" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 4（2,000 局）：閉迴路 252.6／judge 264.5"/>
+<circle cx="697.7" cy="90.2" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 4（100 萬步）：閉迴路 242.8／judge 184.0"/>
+<circle cx="652.7" cy="70.8" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 0（2,000 局）：閉迴路 193.6／judge 216.1"/>
+<circle cx="717.7" cy="51.9" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 0（100 萬步）：閉迴路 264.7／judge 247.4"/>
+<circle cx="667.3" cy="69.6" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 3（2,000 局）：閉迴路 209.6／judge 218.1"/>
+<circle cx="677.0" cy="101.5" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 3（100 萬步）：閉迴路 220.2／judge 165.3"/>
+<circle cx="598.9" cy="109.8" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 2（2,000 局）：閉迴路 134.8／judge 151.6"/>
+<circle cx="598.9" cy="109.8" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 2（100 萬步）：閉迴路 134.8／judge 151.6"/>
+<circle cx="609.5" cy="126.0" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 0（100 萬步）：閉迴路 146.4／judge 124.8"/>
+<circle cx="620.1" cy="133.6" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 0（2,000 局）：閉迴路 158.0／judge 112.4"/>
+<circle cx="598.0" cy="109.9" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 4（100 萬步）：閉迴路 133.8／judge 151.5"/>
+<circle cx="572.3" cy="151.5" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 4（2,000 局）：閉迴路 105.7／judge 82.8"/>
+<circle cx="598.0" cy="87.0" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 0（100 萬步）：閉迴路 133.8／judge 189.3"/>
+<circle cx="589.3" cy="139.5" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 0（2,000 局）：閉迴路 124.3／judge 102.6"/>
+<circle cx="613.6" cy="115.7" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 2（100 萬步）：閉迴路 150.9／judge 142.0"/>
+<circle cx="601.7" cy="140.8" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 2（2,000 局）：閉迴路 137.9／judge 100.5"/>
+<circle cx="595.2" cy="114.0" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 0（100 萬步）：閉迴路 130.7／judge 144.7"/>
+<circle cx="586.0" cy="117.5" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 0（2,000 局）：閉迴路 120.7／judge 138.9"/>
+<circle cx="596.9" cy="107.1" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 3（100 萬步）：閉迴路 132.7／judge 156.0"/>
+<circle cx="599.7" cy="147.2" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 3（2,000 局）：閉迴路 135.7／judge 89.8"/>
+<circle cx="600.8" cy="111.2" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 2（100 萬步）：閉迴路 136.9／judge 149.4"/>
+<circle cx="585.3" cy="105.9" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 2（2,000 局）：閉迴路 119.9／judge 158.1"/>
+<circle cx="598.3" cy="118.8" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 3（100 萬步）：閉迴路 134.1／judge 136.8"/>
+<circle cx="588.9" cy="138.0" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 3（2,000 局）：閉迴路 123.9／judge 105.1"/>
+<circle cx="601.8" cy="108.6" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 4（100 萬步）：閉迴路 138.0／judge 153.7"/>
+<circle cx="563.2" cy="140.1" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 4（2,000 局）：閉迴路 95.8／judge 101.5"/>
+<circle cx="602.9" cy="94.1" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 1（100 萬步）：閉迴路 139.2／judge 177.6"/>
+<circle cx="606.2" cy="109.4" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 1（2,000 局）：閉迴路 142.8／judge 152.3"/>
+<circle cx="602.4" cy="109.7" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 1（100 萬步）：閉迴路 138.6／judge 151.9"/>
+<circle cx="608.2" cy="132.2" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 1（2,000 局）：閉迴路 145.0／judge 114.6"/>
+<circle cx="617.1" cy="86.9" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 5（2,000 局）：閉迴路 154.7／judge 189.4"/>
+<circle cx="681.6" cy="32.6" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 5（100 萬步）：閉迴路 225.3／judge 279.3"/>
+<circle cx="627.5" cy="113.4" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 6（2,000 局）：閉迴路 166.1／judge 145.6"/>
+<circle cx="680.4" cy="125.5" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 6（100 萬步）：閉迴路 223.9／judge 125.8"/>
+<circle cx="627.9" cy="44.4" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 5（2,000 局）：閉迴路 166.5／judge 259.6"/>
+<circle cx="634.4" cy="71.6" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 5（100 萬步）：閉迴路 173.6／judge 214.8"/>
+<circle cx="656.6" cy="121.9" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 6（2,000 局）：閉迴路 197.9／judge 131.7"/>
+<circle cx="707.8" cy="66.6" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 6（100 萬步）：閉迴路 253.8／judge 222.9"/>
+<circle cx="650.2" cy="68.5" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 7（2,000 局）：閉迴路 190.9／judge 219.9"/>
+<circle cx="697.2" cy="89.0" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 7（100 萬步）：閉迴路 242.2／judge 186.0"/>
+<circle cx="588.9" cy="123.0" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 5（100 萬步）：閉迴路 123.8／judge 129.8"/>
+<circle cx="574.0" cy="113.9" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 5（2,000 局）：閉迴路 107.6／judge 144.8"/>
+<circle cx="532.0" cy="156.4" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 5（100 萬步）：閉迴路 61.6／judge 74.7"/>
+<circle cx="572.5" cy="109.7" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 5（2,000 局）：閉迴路 105.9／judge 151.8"/>
+<circle cx="555.5" cy="131.8" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 6（100 萬步）：閉迴路 87.3／judge 115.4"/>
+<circle cx="556.7" cy="174.2" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 6（2,000 局）：閉迴路 88.7／judge 45.3"/>
+<circle cx="615.6" cy="106.2" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 7（100 萬步）：閉迴路 153.0／judge 157.6"/>
+<circle cx="589.2" cy="104.0" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 7（2,000 局）：閉迴路 124.3／judge 161.2"/>
+<circle cx="612.2" cy="122.5" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 9（2,000 局）：閉迴路 149.4／judge 130.6"/>
+<circle cx="606.7" cy="122.7" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 9（100 萬步）：閉迴路 143.4／judge 130.4"/>
+<circle cx="602.0" cy="106.7" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 6（100 萬步）：閉迴路 138.2／judge 156.7"/>
+<circle cx="596.1" cy="105.8" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 6（2,000 局）：閉迴路 131.7／judge 158.3"/>
+<circle cx="537.3" cy="196.6" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 9（100 萬步）：閉迴路 67.4／judge 8.2"/>
+<circle cx="535.3" cy="180.1" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 9（2,000 局）：閉迴路 65.3／judge 35.5"/>
+<circle cx="582.1" cy="95.7" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 7（100 萬步）：閉迴路 116.4／judge 174.9"/>
+<circle cx="599.6" cy="115.0" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 7（2,000 局）：閉迴路 135.6／judge 143.1"/>
+<circle cx="603.1" cy="126.8" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 8（2,000 局）：閉迴路 139.4／judge 123.5"/>
+<circle cx="584.2" cy="138.7" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 8（100 萬步）：閉迴路 118.8／judge 103.9"/>
+<circle cx="612.3" cy="100.3" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 8（100 萬步）：閉迴路 149.5／judge 167.4"/>
+<circle cx="609.9" cy="114.5" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent 種子 8（2,000 局）：閉迴路 146.8／judge 143.9"/>
+<circle cx="562.3" cy="143.5" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 8（100 萬步）：閉迴路 94.8／judge 96.0"/>
+<circle cx="611.0" cy="117.1" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64 種子 8（2,000 局）：閉迴路 148.1／judge 139.6"/>
+<circle cx="601.4" cy="115.1" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 7（100 萬步）：閉迴路 137.6／judge 142.8"/>
+<circle cx="602.1" cy="118.0" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 7（2,000 局）：閉迴路 138.3／judge 138.0"/>
+<circle cx="601.1" cy="90.5" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 8（100 萬步）：閉迴路 137.2／judge 183.5"/>
+<circle cx="600.0" cy="126.2" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 8（2,000 局）：閉迴路 136.0／judge 124.5"/>
+<circle cx="552.8" cy="144.0" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 9（100 萬步）：閉迴路 84.4／judge 95.2"/>
+<circle cx="677.4" cy="63.9" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip 種子 9（2,000 局）：閉迴路 220.6／judge 227.5"/>
+<circle cx="589.2" cy="123.9" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 9（100 萬步）：閉迴路 124.2／judge 128.3"/>
+<circle cx="603.1" cy="139.5" r="3" fill="#199e70" opacity="0.75" data-tip="D_h64_ent_clip_b10 種子 9（2,000 局）：閉迴路 139.4／judge 102.6"/>
+<circle cx="768" cy="92" r="4" fill="#199e70"/>
+<text class="s-lbl" x="778" y="96">D 技巧</text>
+<circle cx="616.9" cy="108.2" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 4（2,000 局）：閉迴路 154.4／judge 154.3"/>
+<circle cx="617.9" cy="49.3" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 4（100 萬步）：閉迴路 155.6／judge 251.7"/>
+<circle cx="629.6" cy="118.3" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 0（2,000 局）：閉迴路 168.4／judge 137.7"/>
+<circle cx="615.0" cy="81.8" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 0（100 萬步）：閉迴路 152.4／judge 197.9"/>
+<circle cx="686.4" cy="59.3" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 3（2,000 局）：閉迴路 230.5／judge 235.1"/>
+<circle cx="685.7" cy="52.4" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 3（100 萬步）：閉迴路 229.7／judge 246.4"/>
+<circle cx="700.1" cy="26.6" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 2（2,000 局）：閉迴路 245.4／judge 289.0"/>
+<circle cx="692.4" cy="45.9" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 2（100 萬步）：閉迴路 237.0／judge 257.2"/>
+<circle cx="585.3" cy="148.0" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 3（100 萬步）：閉迴路 120.0／judge 88.6"/>
+<circle cx="578.2" cy="112.5" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 3（2,000 局）：閉迴路 112.1／judge 147.2"/>
+<circle cx="696.0" cy="40.9" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 1（100 萬步）：閉迴路 241.0／judge 265.5"/>
+<circle cx="699.0" cy="43.8" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 1（2,000 局）：閉迴路 244.2／judge 260.7"/>
+<circle cx="658.5" cy="64.5" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 4（100 萬步）：閉迴路 200.0／judge 226.6"/>
+<circle cx="680.7" cy="77.6" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 4（2,000 局）：閉迴路 224.3／judge 204.8"/>
+<circle cx="645.5" cy="79.3" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 0（100 萬步）：閉迴路 185.7／judge 202.1"/>
+<circle cx="656.3" cy="70.4" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 0（2,000 局）：閉迴路 197.5／judge 216.8"/>
+<circle cx="597.0" cy="160.0" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 4（100 萬步）：閉迴路 132.8／judge 68.8"/>
+<circle cx="609.4" cy="103.4" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 4（2,000 局）：閉迴路 146.3／judge 162.2"/>
+<circle cx="646.1" cy="74.2" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 1（100 萬步）：閉迴路 186.4／judge 210.4"/>
+<circle cx="678.3" cy="57.8" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 1（2,000 局）：閉迴路 221.6／judge 237.5"/>
+<circle cx="451.7" cy="264.5" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 1（100 萬步）：閉迴路 -26.1／judge -104.0"/>
+<circle cx="626.8" cy="64.1" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 1（2,000 局）：閉迴路 165.3／judge 227.2"/>
+<circle cx="470.6" cy="207.9" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 2（100 萬步）：閉迴路 -5.4／judge -10.4"/>
+<circle cx="549.5" cy="191.4" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 2（2,000 局）：閉迴路 80.8／judge 16.9"/>
+<circle cx="409.2" cy="252.0" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 2（100 萬步）：閉迴路 -72.6／judge -83.2"/>
+<circle cx="469.8" cy="160.4" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 2（2,000 局）：閉迴路 -6.4／judge 68.0"/>
+<circle cx="490.0" cy="256.4" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 3（100 萬步）：閉迴路 15.8／judge -90.5"/>
+<circle cx="513.5" cy="175.1" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 3（2,000 局）：閉迴路 41.4／judge 43.7"/>
+<circle cx="446.0" cy="228.5" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 0（100 萬步）：閉迴路 -32.3／judge -44.4"/>
+<circle cx="475.1" cy="199.7" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 0（2,000 局）：閉迴路 -0.5／judge 3.1"/>
+<circle cx="721.0" cy="32.4" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 5（2,000 局）：閉迴路 268.3／judge 279.5"/>
+<circle cx="725.6" cy="28.3" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 5（100 萬步）：閉迴路 273.3／judge 286.3"/>
+<circle cx="641.1" cy="63.9" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 5（100 萬步）：閉迴路 180.9／judge 227.5"/>
+<circle cx="666.7" cy="62.0" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 5（2,000 局）：閉迴路 208.9／judge 230.7"/>
+<circle cx="533.1" cy="165.7" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 5（100 萬步）：閉迴路 62.9／judge 59.2"/>
+<circle cx="552.4" cy="118.1" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 5（2,000 局）：閉迴路 84.0／judge 137.9"/>
+<circle cx="581.7" cy="142.4" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 6（100 萬步）：閉迴路 116.0／judge 97.7"/>
+<circle cx="648.2" cy="69.3" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 6（2,000 局）：閉迴路 188.7／judge 218.5"/>
+<circle cx="693.7" cy="88.5" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 6（2,000 局）：閉迴路 238.4／judge 186.9"/>
+<circle cx="687.1" cy="32.7" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 6（100 萬步）：閉迴路 231.3／judge 279.1"/>
+<circle cx="567.1" cy="132.2" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 6（100 萬步）：閉迴路 100.0／judge 114.6"/>
+<circle cx="591.8" cy="118.4" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 6（2,000 局）：閉迴路 127.0／judge 137.5"/>
+<circle cx="651.6" cy="55.2" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 7（2,000 局）：閉迴路 192.4／judge 241.9"/>
+<circle cx="679.5" cy="70.8" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 7（100 萬步）：閉迴路 222.9／judge 216.0"/>
+<circle cx="619.1" cy="121.6" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 8（2,000 局）：閉迴路 156.8／judge 132.2"/>
+<circle cx="604.7" cy="66.2" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 8（100 萬步）：閉迴路 141.2／judge 223.7"/>
+<circle cx="687.6" cy="85.0" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 8（2,000 局）：閉迴路 231.7／judge 192.6"/>
+<circle cx="710.5" cy="64.0" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 8（100 萬步）：閉迴路 256.8／judge 227.4"/>
+<circle cx="596.4" cy="86.4" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 9（2,000 局）：閉迴路 132.0／judge 190.2"/>
+<circle cx="603.5" cy="102.9" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 9（100 萬步）：閉迴路 139.9／judge 163.0"/>
+<circle cx="587.4" cy="119.8" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 7（100 萬步）：閉迴路 122.2／judge 135.1"/>
+<circle cx="651.0" cy="121.0" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo 種子 7（2,000 局）：閉迴路 191.8／judge 133.1"/>
+<circle cx="443.2" cy="189.9" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 7（100 萬步）：閉迴路 -35.4／judge 19.3"/>
+<circle cx="475.6" cy="181.4" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 7（2,000 局）：閉迴路 -0.0／judge 33.5"/>
+<circle cx="663.4" cy="71.2" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 9（100 萬步）：閉迴路 205.3／judge 215.3"/>
+<circle cx="676.5" cy="73.6" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_ent 種子 9（2,000 局）：閉迴路 219.6／judge 211.4"/>
+<circle cx="543.8" cy="183.6" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 8（100 萬步）：閉迴路 74.6／judge 29.8"/>
+<circle cx="600.8" cy="99.1" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 8（2,000 局）：閉迴路 136.9／judge 169.4"/>
+<circle cx="454.2" cy="190.6" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 9（100 萬步）：閉迴路 -23.4／judge 18.1"/>
+<circle cx="469.6" cy="213.1" r="3" fill="#9085e9" opacity="0.75" data-tip="E_ppo_h16 種子 9（2,000 局）：閉迴路 -6.5／judge -18.9"/>
+<circle cx="768" cy="112" r="4" fill="#9085e9"/>
+<text class="s-lbl" x="778" y="116">E PPO</text>
+<circle cx="593.6" cy="70.5" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 4（2,000 局）：閉迴路 129.0／judge 216.6"/>
+<circle cx="600.9" cy="178.1" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 4（100 萬步）：閉迴路 137.0／judge 38.9"/>
+<circle cx="605.3" cy="133.2" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 3（2,000 局）：閉迴路 141.8／judge 113.0"/>
+<circle cx="597.1" cy="105.1" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 3（100 萬步）：閉迴路 132.8／judge 159.5"/>
+<circle cx="635.3" cy="65.5" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 2（2,000 局）：閉迴路 174.6／judge 224.8"/>
+<circle cx="643.2" cy="74.3" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 2（100 萬步）：閉迴路 183.2／judge 210.2"/>
+<circle cx="702.1" cy="39.1" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 0（2,000 局）：閉迴路 247.6／judge 268.5"/>
+<circle cx="671.7" cy="90.7" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 0（100 萬步）：閉迴路 214.4／judge 183.2"/>
+<circle cx="569.9" cy="129.2" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 1（100 萬步）：閉迴路 103.1／judge 119.6"/>
+<circle cx="442.3" cy="218.9" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 1（2,000 局）：閉迴路 -36.4／judge -28.6"/>
+<circle cx="711.0" cy="45.0" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 5（2,000 局）：閉迴路 257.4／judge 258.6"/>
+<circle cx="681.8" cy="32.5" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 5（100 萬步）：閉迴路 225.4／judge 279.4"/>
+<circle cx="416.6" cy="214.8" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 6（2,000 局）：閉迴路 -64.5／judge -21.9"/>
+<circle cx="686.4" cy="60.1" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 6（100 萬步）：閉迴路 230.4／judge 233.7"/>
+<circle cx="707.8" cy="51.4" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 7（2,000 局）：閉迴路 253.9／judge 248.1"/>
+<circle cx="675.8" cy="96.4" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 7（100 萬步）：閉迴路 218.9／judge 173.8"/>
+<circle cx="577.6" cy="78.8" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 8（2,000 局）：閉迴路 111.5／judge 202.9"/>
+<circle cx="631.3" cy="77.2" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 8（100 萬步）：閉迴路 170.2／judge 205.6"/>
+<circle cx="679.3" cy="51.6" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 9（2,000 局）：閉迴路 222.7／judge 247.7"/>
+<circle cx="695.8" cy="36.4" r="3" fill="#d55181" opacity="0.75" data-tip="E_dqn 種子 9（100 萬步）：閉迴路 240.7／judge 272.9"/>
+<circle cx="768" cy="132" r="4" fill="#d55181"/>
+<text class="s-lbl" x="778" y="136">E DQN</text>
+</svg>
+<!-- /CHART:ch07_scatter -->
+<figcaption>圖 7.1　A–E 組全部 605 個快照（每次訓練 2,000 局與 100 萬步各一個）的 judge 對閉迴路 stochastic。虛線是兩者相等；超出畫面範圍的點畫在邊界上。</figcaption>
+</figure>
+<p>605 個快照的相關係數是 0.971（拿掉崩潰的 41 個之後是 0.933）：跨越不同的方法，judge 大致能分出好壞。但個別的點離對角線很遠：judge 與閉迴路平均差 33.3 分，22% 的快照差超過 50 分，3.8% 差超過 100 分；最極端的一個（reward-to-go γ 0.99 的某個種子）judge 是 70.1，閉迴路卻是 −116.6。第 0 章看到，在同一個方法之內（範例的 21 個種子），兩者的相關只有 0.53——當方法之間的差距不大時，judge 的雜訊足以把排名翻過來。</p>
+
+<h2 id="pick">7.4　挑最好的一次：評分的漏洞</h2>
+<p>既然 judge 有這麼大的運氣成分，最直接的「提分」方法就是多跑幾次測試、挑最高的那串動作交出去。從上面 100 次重跑裡隨機抽 K 次、取最高，重複 200 次求平均：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>策略</th><th class="num">K = 1</th><th class="num">K = 5</th><th class="num">K = 20</th><th class="num">K = 100</th></tr></thead>
+<tbody>
+<tr><td>範例（種子 543）</td><td class="num">−45.2</td><td class="num">36.0</td><td class="num">106.4</td><td class="num">237.0</td></tr>
+<tr><td>範例（種子 0）</td><td class="num">36.6</td><td class="num">117.6</td><td class="num">168.0</td><td class="num">192.0</td></tr>
+<tr><td>reward-to-go γ 0.99（種子 0）</td><td class="num">78.3</td><td class="num">105.3</td><td class="num">125.5</td><td class="num">143.5</td></tr>
+<tr><td>A2C GAE λ 0.99（種子 0）</td><td class="num">203.8</td><td class="num">242.4</td><td class="num">261.9</td><td class="num">268.6</td></tr>
+<tr><td>PPO 隱藏層 64（種子 0）</td><td class="num">171.3</td><td class="num">209.5</td><td class="num">231.9</td><td class="num">254.5</td></tr>
+</tbody>
+</table></div>
+<p>範例只要重跑 20 次挑最好的，平均就從 −45 變成 106——從 2021 年配分表的最低一級跳到第三級；重跑 100 次，可以交出 237 分，落在 200–240 那一級。策略一個參數都沒改。這不是「修改預測檔」（規則明令禁止），交出去的仍是策略自己產生的動作；但它量的已經不是策略，而是「你願意擲幾次骰子」。投影片 p.7 還寫著 JudgeBoi「the highest one is automatically selected」：每天 5 次上傳、取所有上傳裡最高的一次，評分系統本身就內建了一個 K 等於上傳次數的「挑最好」。</p>
+<div class="warn"><h4>固定的評分種子 = 一個可以過擬合的測試集</h4>
+<p>這和監督式學習裡「對著測試集調參數」是同一個問題，只是更嚴重：環境種子固定、評分只有 5 局，任何能多試幾次的東西（測試的亂數、訓練的種子、超參數）都可以被挑來對這 5 局過擬合。第 1 章探索格的 135 分落差、本節的 −45 → 237，都是這個問題的不同面貌。比較方法的時候，本書一律以閉迴路的 100 個新地形為準；judge 只當作「作業會怎麼給分」的參考。</p>
+</div>
+
+<h2 id="greedy">7.5　測試時該擲骰子還是選最大？</h2>
+<p>上表最右欄是 greedy（每一步取機率最大的動作）的 judge。結果因策略而異：A2C GAE 0.99 從 stochastic 平均 198.7 升到 240.0、PPO 從 169.5 升到 225.7；reward-to-go 卻從 79.6 掉到 −32.4——它的 greedy 策略會懸停（第 4 章）；範例差不多（−47.3 對 −49.1）。所以「測試改成 greedy」不是通則。正確的做法是用閉迴路評估決定：在 100 個新地形上，greedy 與 stochastic 哪一個平均比較高，就用哪一個；第 6 章的表裡都有這兩欄。greedy 還有一個好處：沒有隨機，judge 的分數不再隨測試的亂數變動，也就沒有 7.4 節「挑」的空間。</p>
+
+<h2 id="length">7.6　judge.py 沒有檢查長度</h2>
+<p>投影片 p.10 寫著：「Your agent should output done after the last input of your action list, action list with mismatched length will be rejected。」最後一個動作必須剛好讓環境結束，長度不符就退件。但 notebook 自己的「Server」格只檢查有沒有 5 串（第 19 行），遇到 done 就 <code>break</code>（第 33–34 行），沒有任何長度檢查。把範例（種子 543）的動作序列改一改再送進 <code>judge.py</code>：</p>
+<pre class="shell">lengths [312, 238, 286, 479, 219] judge [-34.25, -161.82, -170.98, 257.59, -22.56]
+first half of every list: judge [7.52, -149.14, -417.48, -484.74, -383.01] mean -285.37 episodes that reached done: [False, False, True, True, True]   «1»
+50 extra actions per list: judge [-34.25, -161.82, -170.98, 257.59, -22.56] mean -26.4                                                                «2»
+lists rotated by one episode: judge [-413.54, -359.8, -313.69, -34.01, -286.73] mean -281.55 ended: [True, True, True, True, True]                     «3»</pre>
+<ol class="notes">
+<li><span class="mk">1</span>每串只交前一半：前兩局在動作用完時還沒結束（<code>done</code> 是 False），<code>judge.py</code> 照樣給分。更有趣的是後三局：它們的動作沒有被截斷到「不夠」，分數卻完全變了。因為環境的亂數是一條連續的流（第 1 章 1.7 節），前一局少走了幾步，就少抽了幾個噴射擾動的亂數，下一局的地形與初始推力就不同了。</li>
+<li><span class="mk">2</span>每串多加 50 個動作：遇到 done 就 break，多出來的動作被忽略，分數完全不變。投影片說這種長度不符的序列應該被退件，notebook 的模擬卻照樣接受。</li>
+<li><span class="mk">3</span>把 5 串的順序輪轉一格（第 2 串當第 1 串……）：每一串都在錯的地形上重播，平均 −281.6。</li>
+</ol>
+<p>第一點也說明了為什麼 JudgeBoi 要求「最後一個動作剛好結束」：5 局是在同一個環境上接連玩的，任何一局的長度不對，後面每一局的地形都會跟著錯開，評分就失去意義。真正的 JudgeBoi 大概做了這個檢查（投影片這麼說，本書無法驗證）；notebook 的模擬沒有，所以學生用它自我檢查時，看不出自己的檔案會被退件。要補上只需要在 <code>for action in actions</code> 迴圈之後檢查兩件事：<code>done</code> 是 True，而且 <code>break</code> 發生在最後一個動作。</p>
+
+<h2 id="muzero">7.7　報告題 2：MuZero</h2>
+<p>題目引用 MuZero 論文（Schrittwieser 等人，arXiv 1911.08265）的一句話，問下列哪一個敘述<strong>不正確</strong>：（a）它是樹狀搜尋加上模型的方法；（b）它的代理人不知道真正的轉移函數；（c）它在訓練時使用 MCTS；（d）它不需要知道所模擬遊戲的規則。依論文逐項看：</p>
+<ul>
+<li>（a）論文摘要說 MuZero「combining a tree-based search with a learned model」：正確。</li>
+<li>（b）MuZero 學的是一個隱藏狀態上的動態模型，不重建也不知道真正的環境轉移：正確。</li>
+<li>（d）摘要說它在圍棋、西洋棋、將棋上「without any knowledge of the game rules」：正確。</li>
+<li>（c）MuZero 在<strong>與環境互動、產生訓練資料時</strong>每一步都跑 MCTS 決定動作，而且用 MCTS 的訪問次數當作策略的訓練目標；但<strong>更新參數的那一步</strong>只是把學到的模型展開幾步、對獎勵、價值、策略三個目標算 loss，並不在其中執行搜尋。</li>
+</ul>
+<p>四個敘述裡，只有（c）的對錯取決於「訓練」怎麼解讀：若指整個學習流程（含自我對弈），它是對的；若指參數更新本身，它是錯的。(a)、(b)、(d) 都是摘要裡直接寫明的事實，所以照「依論文作答」的要求，最可能被判為不正確的是（c）。本書沒有官方答案可以核對，這是依論文內容的推論。這題和本作業的關係在於對照：本作業的方法都是 model-free（不學環境模型，直接從獎勵學策略或價值），MuZero 則是 model-based——先學一個能預測未來的模型，再在模型裡搜尋。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>judge 是開迴路：照著存下的動作重播，不看狀態。同一串動作換一個地形，213 分的策略會變成 −292 分。</li>
+<li>測試時取樣，judge 就帶著測試亂數的運氣：範例重跑 100 次，標準差 71.3、從 −213.6 到 237.0。DQN 這類確定的策略沒有這個問題。</li>
+<li>重跑 K 次挑最好的：範例 K = 20 時平均 106.4、K = 100 時 237.0。JudgeBoi「取最高一次」本身就內建了這個效應；固定的評分種子是一個可以過擬合的測試集。</li>
+<li>greedy 測試對某些策略好、對懸停的策略很差，應以閉迴路評估決定。</li>
+<li>notebook 的 <code>judge.py</code> 不檢查長度：多的動作被忽略、少的照樣給分；而 5 局共用一條亂數流，一局的長度錯了，後面每一局都會錯開。</li>
+<li>報告題 2：(a)(b)(d) 是論文摘要明寫的；(c) 視「訓練」的解讀而定，最可能是答案（本書推論）。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 為什麼 judge 必須用和 test.py 同一個環境種子？如果評分系統換了種子會怎樣？</summary>
+<p>交出去的只有動作，沒有策略；只有在同一個種子（同樣的地形、推力、每一步的擾動）下，重播才會得到和測試時相同的軌跡。換了種子，同一串動作就是在別的地形上盲目操作，7.2 節顯示好策略也會掉到 −292 分。</p></details>
+<details class="quiz"><summary>2. 如果把 <code>NUM_OF_TEST</code> 從 5 改成 100，7.4 節的「挑最好」還有效嗎？</summary>
+<p>效果會小很多。judge 是 100 局的平均，單次測試的標準差大約降為原本的 √(5/100) ≈ 0.22 倍（若各局近似獨立），重跑多次之間的差異也跟著變小，挑最好的收益也縮小。投影片要求「Do not revise this」，是為了讓評分格式固定；評分的雜訊則是這個格式的代價。這是推論，本書沒有實際跑。</p></details>
+<details class="quiz"><summary>3. 在 <code>judge.py</code> 補上長度檢查，最簡單的寫法是什麼？</summary>
+<p>在內層迴圈用 <code>for i, action in enumerate(actions)</code>，迴圈結束後檢查 <code>done and i == len(actions) - 1</code>：遇到 done 時剛好是最後一個動作。任何一局不符合就印出錯誤、不給分。</p></details>
+<details class="quiz"><summary>4. 某同學訓練了 10 個種子，每個測一次 judge，交出最高的那個。這和 7.4 節的「重跑測試挑最好」有什麼差別？哪一個比較能代表他的方法？</summary>
+<p>兩者都是在挑 judge 的最大值：前者挑訓練的運氣（10 個不同的策略），後者挑測試的運氣（同一個策略）。前者交出去的至少是一個在種子 543 上表現好的策略，但它在其他地形上不一定好（第 0 章：judge 與閉迴路在同一方法內的相關只有 0.53）。都不能代表方法；要代表方法，應該報 10 個種子在新地形上的平均與範圍。</p></details>
+<details class="quiz"><summary>5. 本作業的演算法都是 model-free。MuZero 這類 model-based 方法在 LunarLander 上有什麼潛在的好處？</summary>
+<p>學到環境模型之後，可以在模型裡「想像」很多條未來的軌跡、搜尋最好的動作，不必每一個嘗試都真的去環境裡摔一次，樣本效率通常較高；也能在每一步做規劃，比較不容易卡在懸停這類需要「先冒險下降、之後才拿到 +100」的局部最佳解。代價是要多學一個模型，模型錯了，規劃也會錯。這是一般性的說明，本書沒有實作 model-based 方法。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Julian Schrittwieser 等，<a href="https://arxiv.org/abs/1911.08265">Mastering Atari, Go, Chess and Shogi by Planning with a Learned Model</a>（Nature，2020）：MuZero，報告題 2 的出處。</li>
+<li>Peter Henderson 等，<a href="https://arxiv.org/abs/1709.06560">Deep Reinforcement Learning that Matters</a>（AAAI 2018）：種子、評估方式與實作細節如何讓 RL 的結果難以比較。</li>
+<li>Rishabh Agarwal 等，<a href="https://arxiv.org/abs/2108.13264">Deep Reinforcement Learning at the Edge of the Statistical Precipice</a>（NeurIPS 2021）：少量種子下如何報告 RL 結果（區間估計，而不是單一分數）。</li>
+</ul>
+
+<footer class="chap-footer"><p>ML2022 Spring HW12 讀碼教材。作業內容出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群），範例程式出自 2021 年的同一門課；書中數字皆為本機實測。</p></footer>
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch06.html">← 第 6 章</a><a href="ch08.html">第 8 章 →</a></nav>
+<script id="book-js">
+/* HW12 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

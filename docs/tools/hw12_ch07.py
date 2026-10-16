@@ -86,7 +86,7 @@ def replay(actions, env_seed=543, mode='judge'):
 
 def main():
     POLICIES = [('A_sample_s543', 'ep'), ('A_sample_s0', 'ep'), ('B_rtg0.99_s0', 'steps'), ('C_gae0.99_s0', 'steps'),
-                ('E_ppo_s1', 'steps'), ('E_dqn_s0', 'steps')]
+                ('E_ppo_s0', 'steps'), ('E_dqn_s0', 'steps')]
     K = 100
     print(f'== 1. the same policy, test.py rerun with {K} torch seeds (environment seed 543 every time)')
     for name, snap in POLICIES:
