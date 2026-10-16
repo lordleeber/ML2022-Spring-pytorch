@@ -47,8 +47,8 @@ def ch00_curve():
     log = json.load(open(os.path.join(root, 'docs/tools/hw12_logs/ch00/train_log.json')))
     tot = log['avg_total_rewards']
     roll = [float(np.mean(tot[max(0, i - 19):i + 1])) for i in range(len(tot))]
-    series = [dict(name='b', label='每批 5 局的平均', values=[round(v, 1) for v in tot], color='#4a5562'),
-              dict(name='m', label='最近 20 批的平均', values=[round(v, 1) for v in roll], color=C['sample'])]
+    series = [dict(name='b', label='每批 5 局的平均', values=[round(v, 1) for v in tot], color='#3a4552'),
+              dict(name='m', label='最近 20 批的平均', values=[round(v, 1) for v in roll], color='#c9d1d9')]
     n = len(tot)
     svg = charts.line_chart(series, n, -500, 300, [-400, -200, 0, 200], xlabel='第幾批（每批 5 局）', ylabel='平均總獎勵',
                             aria=f'範例（種子 543）400 批的訓練曲線。每批 5 局的平均總獎勵從第 1 批的 {tot[0]:.1f} 開始，'
@@ -58,7 +58,26 @@ def ch00_curve():
     return charts.legend(series) + '\n' + svg
 
 
-CHARTS = {'ch00_curve': ('ch00.html', ch00_curve)}
+def ch00_seeds():
+    # the sample on 21 training seeds, three ways of scoring the same policies; references from hw12_facts.txt
+    rows = []
+    for label, snap, key, color in [('judge（固定 5 局）', 'ep', 'judge', C['judge']),
+                                     ('閉迴路 stochastic（100 局）', 'ep', 'stochastic', C['sample']),
+                                     ('閉迴路 greedy（100 局）', 'ep', 'greedy', C['sample']),
+                                     ('訓練到 100 萬步，stochastic', 'steps', 'stochastic', C['sample'])]:
+        v = snap_values('A_sample', snap, key)
+        rows.append({'label': label, 'color': color, 'values': v, 'mean': float(np.mean(v))})
+    rows.append({'label': '參考：隨機亂按', 'color': '#4a5562', 'values': [RANDOM]})
+    rows.append({'label': '參考：手寫控制器', 'color': C['extra'], 'values': [HEURISTIC]})
+    m = [r['mean'] for r in rows[:4]]
+    return charts.dot_rows(rows, -250, 300, [-200, -100, 0, 100, 200, 300], label_w=230, vfmt='{:.1f}',
+                           xlabel='平均總獎勵（每個點是一個訓練種子；白色短線是平均）',
+                           aria=f'範例在 21 個訓練種子上的分數。訓練 2,000 局後：judge 平均 {m[0]:.1f}，閉迴路 stochastic 平均 {m[1]:.1f}，'
+                                f'greedy 平均 {m[2]:.1f}；訓練到 100 萬步後 stochastic 平均 {m[3]:.1f}。參考線：隨機亂按 {RANDOM}、'
+                                f'Gymnasium 的手寫控制器 {HEURISTIC}。')
+
+
+CHARTS = {'ch00_curve': ('ch00.html', ch00_curve), 'ch00_seeds': ('ch00.html', ch00_seeds)}
 
 
 def put(page, name, content):

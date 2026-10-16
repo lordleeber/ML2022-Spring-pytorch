@@ -58,3 +58,19 @@
 - pilot（critic 每次更新 Adam 1e-3 跑 5 步）：GAE λ 0.95 + Adam 3e-3 三個種子 ep 快照 judge −87.8、stochastic −78.5、greedy −113.1，**greedy 100 局有 98–99 局被截斷（懸停）**；hidden 64 也一樣（−95.0）。MC baseline + Adam 3e-3：judge 133.0、stochastic 133.2；reward-to-go + Adam 3e-3：stochastic 121.6、greedy 21.8（83% 截斷）。PPO（hidden 64、lr 3e-4）1M 步 stochastic 129.3（−5.4 到 241.0）；DQN（hidden 64、lr 5e-4）1M 步 166.9（103.1 到 214.4）。
 - pilot2（critic 50 步）：GAE λ 0.95 → ep stochastic 30.4、1M 步 66.2；**GAE λ 0.99 → ep judge 182.0、stochastic 178.9**；n-step 20 → stochastic 104.3；MC → 154.8；MC + SGD 0.001（p.5 照字面、範例的優化器）→ 88.6；GAE 0.95 + 熵 0.01 → 71.8。
 - 解讀（假設，待 C 組的 ci5 對照驗證；第 5 章）：critic 擬合不足時 V ≈ 0，GAE 的優勢 ≈ 以 γλ ≈ 0.94 折扣的短視報酬（有效視野約 16 步），看不到 +100 的降落獎勵 → 懸停。critic 練夠、或 λ 拉高到 0.99，就恢復。
+
+### A 組（範例與它的旋鈕；`hw12_specs/A.txt`，2026-10-16）
+- A_sample ep（n=21，平均 2000 局、522568 步、train 320 s）：judge -47.7 ± 65.6（-164.5 到 102.6）；stochastic -42.4 ± 33.2（-125.3 到 40.2）；greedy -6.3 ± 34.6（-80.5 到 48.5）；greedy 結局 降落/墜毀/截斷 26.6/70.7/2.7；stochastic 降落 17.2；≥200 比例 greedy 0.21
+- A_sample steps（n=21，平均 3343 局、1000961 步、train 625 s）：judge -42.4 ± 61.8（-114.6 到 97.2）；stochastic -42.1 ± 52.8（-128.6 到 97.9）；greedy -33.2 ± 53.7（-125.0 到 96.8）；greedy 結局 降落/墜毀/截斷 25.0/70.6/4.3；stochastic 降落 21.0；≥200 比例 greedy 0.18
+- A_nonorm ep（n=10，平均 2000 局、413259 步、train 250 s）：judge -21.1 ± 92.9（-230.8 到 85.8）；stochastic -71.7 ± 81.6（-302.6 到 12.8）；greedy -55.6 ± 86.3（-297.0 到 32.6）；greedy 結局 降落/墜毀/截斷 17.0/79.9/3.1；stochastic 降落 12.9；≥200 比例 greedy 0.15
+- A_nonorm steps（n=10，平均 3908 局、1000715 步、train 612 s）：judge -53.2 ± 86.6（-188.5 到 79.6）；stochastic -47.2 ± 39.6（-120.3 到 15.7）；greedy -57.4 ± 49.0（-142.6 到 29.5）；greedy 結局 降落/墜毀/截斷 13.7/78.0/8.3；stochastic 降落 14.7；≥200 比例 greedy 0.10
+- A_lr1e-4 ep（n=10，平均 2000 局、214557 步、train 125 s）：judge -205.0 ± 53.8（-278.5 到 -99.9）；stochastic -229.3 ± 17.0（-255.3 到 -203.8）；greedy -817.6 ± 111.1（-883.0 到 -503.4）；greedy 結局 降落/墜毀/截斷 0.0/100.0/0.0；stochastic 降落 0.0；≥200 比例 greedy 0.00
+- A_lr1e-4 steps（n=10，平均 6346 局、1000909 步、train 585 s）：judge -142.5 ± 29.7（-196.3 到 -98.2）；stochastic -138.4 ± 19.8（-174.4 到 -105.8）；greedy -958.1 ± 196.1（-1361.1 到 -594.0）；greedy 結局 降落/墜毀/截斷 0.1/62.4/37.5；stochastic 降落 0.1；≥200 比例 greedy 0.00
+- A_lr1e-2 ep（n=10，平均 2000 局、204538 步、train 119 s）：judge -428.6 ± 389.4（-1068.0 到 23.3）；stochastic -395.3 ± 326.6（-883.0 到 0.6）；greedy -394.7 ± 327.5（-883.0 到 7.2）；greedy 結局 降落/墜毀/截斷 2.6/97.4/0.0；stochastic 降落 2.7；≥200 比例 greedy 0.02
+- A_lr1e-2 steps（n=10，平均 9691 局、1000460 步、train 580 s）：judge -345.1 ± 394.9（-1068.0 到 15.9）；stochastic -314.3 ± 321.3（-883.0 到 -19.2）；greedy -317.5 ± 319.3（-883.0 到 -3.6）；greedy 結局 降落/墜毀/截斷 5.0/94.0/1.0；stochastic 降落 5.4；≥200 比例 greedy 0.04
+- A_random ep（n=1，平均 2000 局、0 步、train 0 s）：judge -162.3 ± 0.0（-162.3 到 -162.3）；stochastic -184.5 ± 0.0（-184.5 到 -184.5）；greedy -184.5 ± 0.0（-184.5 到 -184.5）；greedy 結局 降落/墜毀/截斷 0.0/100.0/0.0；stochastic 降落 0.0；≥200 比例 greedy 0.00
+- A_noexplore ep（n=1，平均 2000 局、471776 步、train 240 s）：judge 108.6 ± 0.0（108.6 到 108.6）；stochastic -11.1 ± 0.0（-11.1 到 -11.1）；greedy 17.9 ± 0.0（17.9 到 17.9）；greedy 結局 降落/墜毀/截斷 28.0/70.0/2.0；stochastic 降落 16.0；≥200 比例 greedy 0.26
+- A_noexplore steps（n=1，平均 3535 局、1000430 步、train 495 s）：judge 102.8 ± 0.0（102.8 到 102.8）；stochastic -0.3 ± 0.0（-0.3 到 -0.3）；greedy 46.4 ± 0.0（46.4 到 46.4）；greedy 結局 降落/墜毀/截斷 38.0/54.0/8.0；stochastic 降落 24.0；≥200 比例 greedy 0.26
+- A_sample ep 快照：judge 與閉迴路 stochastic 的相關係數 0.53（21 個種子）；judge ≥ 0 的種子 ep 4／21、steps 4／21。
+- A_sample 的 ep 快照與 Phase 0 的數字完全相同（同一條程式路徑）。種子 543 的 1M 快照：judge 97.2、stochastic −6.5、greedy 2.7（3,330 局）。
+- 範例訓練到 100 萬步（約 3,343 局，多 1.6 倍）沒有變好：stochastic −42.4 → −42.1。

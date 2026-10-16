@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 0 章　全貌 — HW12 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW12 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製；由 HW10 的樣板複製、改色）
+   版面：單欄 1080px——近黑的冷灰底、紙白的字、月面青只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：範例 灰、reward-to-go 藍、baseline 橘、A2C 綠、PPO 紫、DQN 洋紅、JudgeBoi 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與前幾本相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #5cc8d6;      /* 月面青：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(92, 200, 214, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #5cc8d6;
+  /* 角色色 */
+  --r-sample: #8b949e; --r-rtg: #3987e5; --r-base: #d95926; --r-a2c: #199e70;
+  --r-ppo: #9085e9; --r-dqn: #d55181; --r-judge: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "s → π_θ(a|s) → a → 環境 → r, s′　·　θ ← θ + α ∇ log π_θ(a|s) · A　·　LunarLander　8 維狀態　4 個動作";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fdf1ef; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #121b1d; border-color: rgba(92, 200, 214, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1f0d0b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.sample { --rc: var(--r-sample); } .role.rtg { --rc: var(--r-rtg); } .role.base { --rc: var(--r-base); }
+.role.a2c { --rc: var(--r-a2c); } .role.ppo { --rc: var(--r-ppo); } .role.dqn { --rc: var(--r-dqn); }
+.role.judge { --rc: var(--r-judge); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="index.html">← 目錄</a><a href="ch01.html">第 1 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW12 讀碼教材</p>
+  <h1>第 0 章　全貌：一艘小艇、四個動作、五局定分數</h1>
+  <p class="chap-lead">這一章先把整份作業走一遍：強化學習的幾個基本名詞、作業要交什麼、範例程式從哪裡來、策略網路長什麼樣子，然後把範例從頭跑到尾，看它交出去會拿幾分。結論先講：範例本身在 21 個訓練種子上的平均是負分，而且同一個策略換一種量法，分數可以差很多。後面八章都在回答這兩件事——怎麼讓它學會降落，以及分數到底量到了什麼。</p>
+</header>
+<main>
+
+<h2 id="rl">0.1　強化學習的六個名詞</h2>
+<p>前面幾份作業都是監督式學習：每一筆資料都附了正確答案，模型猜錯多少，loss 就算多少。強化學習沒有正確答案。它只有一個會回應你的世界，和一個分數。以本作業的登月小艇為例，把六個名詞對上去：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>名詞</th><th>意思</th><th>在本作業裡</th></tr></thead>
+<tbody>
+<tr><td>環境（environment）</td><td>代理人以外的一切，會依照物理規則演變</td><td>Gymnasium 的 <code>LunarLander</code>：月面地形、重力、小艇本身（第 1 章）</td></tr>
+<tr><td>狀態（state，s）</td><td>環境此刻的描述，代理人看得到的部分</td><td>8 個數字：位置 x、y，速度 vx、vy，角度、角速度，兩隻腳有沒有著地</td></tr>
+<tr><td>動作（action，a）</td><td>代理人每一步能做的選擇</td><td>4 選 1：0 不動、1 開左側引擎、2 開主引擎、3 開右側引擎</td></tr>
+<tr><td>獎勵（reward，r）</td><td>每做一步，環境回報的一個分數</td><td>靠近降落區、速度變慢、姿態變正就加分；開引擎扣一點油錢；墜毀那一步是 −100，平穩停下那一步是 +100</td></tr>
+<tr><td>一局（episode）與回報（return）</td><td>從開始到結束的一整串狀態、動作、獎勵；回報是這一局的獎勵總和</td><td>小艇墜毀、飛出畫面、停下來，或撐滿 1,000 步就結束；回報 ≥ 200 算是「解決」</td></tr>
+<tr><td>策略（policy，π）</td><td>代理人從狀態決定動作的規則</td><td>一個小型神經網路，輸入 8 個數字，輸出 4 個動作各自的機率（0.4 節）</td></tr>
+</tbody>
+</table></div>
+<p>和監督式學習最大的差別有兩個。第一，<strong>資料是自己產生的</strong>：策略決定了小艇怎麼飛，也就決定了會看到哪些狀態；策略一變，資料的分布就跟著變。第二，<strong>分數來得晚而且模糊</strong>：一局可能有幾百步，最後那一步墜毀扣 100 分，可是真正的錯誤可能發生在一百步之前——那時主引擎開得不夠。要把一局的成敗分給其中的每一個動作，這叫信用分配（credit assignment），是第 3 到第 5 章的主題。</p>
+<p>本作業用的方法叫策略梯度（policy gradient）：直接調整策略網路的參數，讓「這一局表現好」時做過的動作，下次被選中的機率變高；表現差時做過的動作，機率變低。怎麼定義「好」與「差」，就是範例程式、投影片 p.4 與 p.5、以及之後各種改良之間唯一的差別。</p>
+
+<h2 id="task">0.2　作業要交什麼、怎麼評分</h2>
+<p>2022 年的投影片（<code>HW12/HW12_slides_en_2022.pdf</code>）列了兩個演算法：p.4 的 Policy Gradient（做出來可以拿 3 分）與 p.5 的 Actor-Critic（4 分）。繳交與配分如下：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>項目</th><th class="num">配分</th><th>內容</th></tr></thead>
+<tbody>
+<tr><td>程式</td><td class="num">2</td><td>上傳到 NTU COOL；不合理的程式總分打九折</td></tr>
+<tr><td>動作序列</td><td class="num">4</td><td>上傳 <code>.npy</code> 到 JudgeBoi（小於 2 MB），系統在固定的環境上重播動作、算 5 局的平均總獎勵；沒有 private set，取最高的一次；動作數和每一局的長度不符就退件</td></tr>
+<tr><td>報告</td><td class="num">4</td><td>第 1 題（2 分）：從 REINFORCE with baseline、Q Actor-Critic、A2C、A3C 中選一個實作，說明和 Policy Gradient 的差別；第 2 題（2 分）：MuZero 論文的選擇題</td></tr>
+</tbody>
+</table></div>
+<p>投影片 p.13 還有三個限制：預設不用 GPU、建議用 Colab、訓練應該在 30 分鐘內跑完。2022 年的投影片沒有寫分數門檻，本書用 2021 年投影片的配分表當參考線（<a href="index.html#about">目錄頁</a>）：5 局平均 &lt;0、0–99、100–199、200–240、≥241 分別對應 2 到 6 分。JudgeBoi 已經關閉，本書用 notebook 自己附的「Server」格（拆成 <code>judge.py</code>）代替它——那一格正是用來模擬評分網站的。</p>
+<p>注意評分只看<strong>一個固定的環境種子上的 5 局</strong>。第 7 章會花一整章談這件事的後果；這一章先記住：交出去的不是策略，而是 5 串動作。</p>
+
+<h2 id="source">0.3　範例程式從哪裡來</h2>
+<p>這是本系列第一本「範例程式找不到」的書。2022 年的官方 repo 沒有 HW12 的資料夾，投影片 p.2 寫著「Other details can be found in the sample code」，卻沒有附連結；網路上也搜不到 2022 年的 notebook。</p>
+<p>2021 年的官方 repo（<code>ga642381/ML2021-Spring</code>）還留著 HW12 的英文與中文 notebook。把兩年的投影片並排看：題目、環境、p.4 與 p.5 的兩個演算法框完全相同，「Sample Result」那一頁更是同一張圖——兩條訓練曲線連雜訊的形狀都一樣。改變的只有配分（2021 年 PG 8 分、AC 10 分，總分以 JudgeBoi 為準）和 2022 年新增的報告題。所以 2022 年的範例很可能就是 2021 年那一份；但這是推測，本書一律稱它為「2021 年的範例」。</p>
+<p>英文版與中文版的程式邏輯相同，中文版多了計時、<code>!pip freeze</code>、存檔與讀檔的 <code>save</code>／<code>load</code>，測試時關掉了畫面。本書以英文版 <code>HW12_EN.ipynb</code> 為準。兩份 notebook 的存檔裡都留著 2021 年在 Colab 上跑出來的輸出，這是很珍貴的對照：當年第一批收集了 448 步、測試 5 局的平均是 −147.26（英文版）與 −30.32（中文版，訓練花了 674 秒）。範例自己跑出來的分數就是負的。</p>
+
+<h2 id="model">0.4　模型總覽</h2>
+<p>整份作業只有一個神經網路：策略網路 <code>PolicyGradientNetwork</code>，定義在 <code>model.py</code>。</p>
+<figure class="listing"><figcaption>model.py:9–20 — PolicyGradientNetwork</figcaption>
+<pre class="py" data-hot="13,14,15,20"><code>class PolicyGradientNetwork(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(8, 16)
+        self.fc2 = nn.Linear(16, 16)
+        self.fc3 = nn.Linear(16, 4)
+
+    def forward(self, state):
+        hid = torch.tanh(self.fc1(state))
+        hid = torch.tanh(self.fc2(hid))
+        return F.softmax(self.fc3(hid), dim=-1)</code></pre></figure>
+<p>三層全連接：8 個狀態數字進來，經過兩層各 16 個神經元（啟動函數是 tanh），最後一層輸出 4 個數字，softmax 把它們變成加起來等於 1 的機率。網路本身不決定動作；呼叫它的 <code>sample()</code> 照這 4 個機率擲一次骰子（第 2 章）。</p>
+
+<figure class="fig">
+<svg viewBox="0 0 900 250" role="img" aria-label="策略網路的架構：8 維狀態進入 fc1（8 乘 16，加 tanh，144 個參數），再進 fc2（16 乘 16，加 tanh，272 個參數），再進 fc3（16 乘 4，68 個參數），softmax 輸出 4 個動作的機率，最後由 Categorical 取樣出一個動作；總共 484 個參數">
+  <defs>
+    <marker id="ar0" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#9aa5b1"/>
+    </marker>
+  </defs>
+  <rect x="10" y="60" width="110" height="90" rx="10" class="s-box"/>
+  <text class="s-lbl" x="65" y="95" text-anchor="middle" font-weight="700">狀態 s</text>
+  <text class="s-mono" x="65" y="120" text-anchor="middle">(N, 8)</text>
+
+  <rect x="160" y="40" width="150" height="130" rx="10" class="s-box" stroke="#5cc8d6"/>
+  <text class="s-lbl" x="235" y="72" text-anchor="middle" font-weight="700">fc1 + tanh</text>
+  <text class="s-mono" x="235" y="98" text-anchor="middle">Linear(8, 16)</text>
+  <text class="s-mono" x="235" y="122" text-anchor="middle">(N, 16)</text>
+  <text class="s-sm" x="235" y="152" text-anchor="middle">128 + 16 = 144</text>
+
+  <rect x="350" y="40" width="150" height="130" rx="10" class="s-box" stroke="#5cc8d6"/>
+  <text class="s-lbl" x="425" y="72" text-anchor="middle" font-weight="700">fc2 + tanh</text>
+  <text class="s-mono" x="425" y="98" text-anchor="middle">Linear(16, 16)</text>
+  <text class="s-mono" x="425" y="122" text-anchor="middle">(N, 16)</text>
+  <text class="s-sm" x="425" y="152" text-anchor="middle">256 + 16 = 272</text>
+
+  <rect x="540" y="40" width="150" height="130" rx="10" class="s-box" stroke="#5cc8d6"/>
+  <text class="s-lbl" x="615" y="72" text-anchor="middle" font-weight="700">fc3 + softmax</text>
+  <text class="s-mono" x="615" y="98" text-anchor="middle">Linear(16, 4)</text>
+  <text class="s-mono" x="615" y="122" text-anchor="middle">(N, 4) 機率</text>
+  <text class="s-sm" x="615" y="152" text-anchor="middle">64 + 4 = 68</text>
+
+  <rect x="730" y="60" width="160" height="90" rx="10" class="s-box"/>
+  <text class="s-lbl" x="810" y="92" text-anchor="middle" font-weight="700">取樣一個動作</text>
+  <text class="s-mono" x="810" y="117" text-anchor="middle">Categorical</text>
+  <text class="s-sm" x="810" y="138" text-anchor="middle">0、1、2、3 之一</text>
+
+  <line x1="122" y1="105" x2="154" y2="105" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#ar0)"/>
+  <line x1="312" y1="105" x2="344" y2="105" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#ar0)"/>
+  <line x1="502" y1="105" x2="534" y2="105" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#ar0)"/>
+  <line x1="692" y1="105" x2="724" y2="105" stroke="#9aa5b1" stroke-width="1.5" marker-end="url(#ar0)"/>
+  <text class="s-sm" x="450" y="215" text-anchor="middle">參數合計 144 + 272 + 68 = 484</text>
+</svg>
+<figcaption>圖 0.1　策略網路。框內第三行是輸出的形狀（N 是一次送進去的狀態數；訓練與測試時 N 省略，一次只送一個狀態，形狀是 (8,) → (4,)），最下面一行是權重加偏差的參數量。</figcaption>
+</figure>
+
+<p>參數量用手算：每一層的權重是「輸入數 × 輸出數」，偏差是「輸出數」。fc1 是 8 × 16 + 16 = 144，fc2 是 16 × 16 + 16 = 272，fc3 是 16 × 4 + 4 = 68，合計 484。本書的事實腳本 <code>docs/tools/hw12_facts.py</code> 讓 PyTorch 自己數一次：</p>
+<pre class="shell">fc1.weight   (16, 8)    128
+fc1.bias     (16,)      16
+fc2.weight   (16, 16)   256
+fc2.bias     (16,)      16
+fc3.weight   (4, 16)    64
+fc3.bias     (4,)       4
+total 484
+shapes: in (3, 8) fc1 (3, 16) out (3, 4)</pre>
+<p>484 個參數，比 HW01 的回歸模型（2,033 個）還小。這不是疏忽：LunarLander 的狀態只有 8 個數字，而且是已經整理好的物理量，不需要大網路去「看」。小網路也讓每一步的計算極便宜——便宜到搬到 GPU 上反而變慢（第 2 章）。第 6 章會把隱藏層加寬到 64，看看容量是不是瓶頸。</p>
+
+<h2 id="run">0.5　跑一次範例</h2>
+<p>notebook 拆成 <code>HW12/</code> 底下的六個檔（<a href="index.html#layer-env">目錄頁</a>有對照表）。訓練、測試、評分是三支腳本：</p>
+<pre class="shell cmd">$ cd HW12
+$ OMP_NUM_THREADS=1 ../.venv/bin/python train.py
+$ ../.venv/bin/python test.py
+$ ../.venv/bin/python judge.py</pre>
+<p><code>OMP_NUM_THREADS=1</code> 讓 PyTorch 只用一個執行緒。每一步只算一個 8 維的狀態，拆給多個執行緒也沒有東西可以平行；本書所有實驗都這樣跑，改成一次並行 20 個訓練。<code>train.py</code> 開頭先照 notebook 印出環境的樣子：</p>
+<pre class="shell">Box([ -2.5        -2.5       -10.        -10.         -6.2831855 -10.
+  -0.         -0.       ], [ 2.5        2.5       10.        10.         6.2831855 10.
+  1.         1.       ], (8,), float32)                                  «1»
+Discrete(4)
+[-1.2619973e-03  1.3984586e+00 -1.2784091e-01 -5.5384123e-01
+  1.4691149e-03  2.8957864e-02  0.0000000e+00  0.0000000e+00]            «2»
+3
+False
+-1.0511407416545058
+rewards looks like  (508,)                                               «3»
+log_probs looks like  (508,)
+logs prob looks like  torch.Size([508])
+torch.from_numpy(rewards) looks like  torch.Size([508])</pre>
+<ol class="notes">
+<li><span class="mk">1</span>狀態空間：8 個數字各自的上下界。2021 年的 Colab 印的是 <code>Box(-inf, inf, (8,), float32)</code>，因為 Gymnasium 的 v3 版把宣告的範圍改成有限值（第 1 章）。這只是宣告，物理沒變。</li>
+<li><span class="mk">2</span>第一次 <code>reset()</code> 的狀態：小艇在正中間（x ≈ 0）、高度 1.40、正在往下掉（vy = −0.55）。2021 年印的是 <code>[0.00396109 1.4083536 0.40119505 …]</code>——同樣是種子 543，數字卻不同，因為 Gymnasium 產生地形與初始推力的亂數流和舊版 Gym 不一樣。本書的數字因此無法和 2021 年逐一對照，只能比分布。</li>
+<li><span class="mk">3</span>第一批（5 局）總共 508 步。2021 年是 448 步。</li>
+</ol>
+<p>接著是 400 批的訓練，每批印四行形狀，進度條上顯示這一批的平均總獎勵（Total）與「最後一步獎勵」的平均（Final）。在本機跑完的最後一行是：</p>
+<pre class="shell">Total:  106.5, Final:  20.0: 100%|██████████| 400/400 [02:15&lt;00:00,  2.94it/s]</pre>
+<p>2 分 15 秒跑完，比投影片說的 30 分鐘快很多（2021 年的 Colab 上是 674 秒）。最後一批的平均總獎勵是 106.5，看起來不錯——但只是 5 局的平均。把 400 批全部畫出來：</p>
+<figure class="fig">
+<!-- CHART:ch00_curve -->
+<div class="legend"><span><i style="background:#3a4552"></i>每批 5 局的平均</span><span><i style="background:#c9d1d9"></i>最近 20 批的平均</span></div>
+<svg viewBox="0 0 900 340" role="img" aria-label="範例（種子 543）400 批的訓練曲線。每批 5 局的平均總獎勵從第 1 批的 -93.7 開始，最近 20 批的平均在第 400 批是 -58.7；最後一批是 106.5。">
+<line x1="56" y1="259.8" x2="780" y2="259.8" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="263.8" text-anchor="end">-400</text>
+<line x1="56" y1="191.2" x2="780" y2="191.2" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="195.2" text-anchor="end">-200</text>
+<line x1="56" y1="122.8" x2="780" y2="122.8" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="126.8" text-anchor="end">0</text>
+<line x1="56" y1="54.2" x2="780" y2="54.2" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="58.2" text-anchor="end">200</text>
+<text class="s-mono" x="56.0" y="312" text-anchor="middle">1</text>
+<text class="s-mono" x="235.6" y="312" text-anchor="middle">100</text>
+<text class="s-mono" x="417.1" y="312" text-anchor="middle">200</text>
+<text class="s-mono" x="598.5" y="312" text-anchor="middle">300</text>
+<text class="s-mono" x="780.0" y="312" text-anchor="middle">400</text>
+<line x1="56" y1="294" x2="780" y2="294" stroke="#4a5562" stroke-width="1"/>
+<text class="s-sm" x="418.0" y="334" text-anchor="middle">第幾批（每批 5 局）</text>
+<text class="s-sm" x="14" y="157.0" text-anchor="middle" transform="rotate(-90 14 157.0)">平均總獎勵</text>
+<polyline points="56.0,154.8 57.8,179.7 59.6,179.3 61.4,168.6 63.3,180.8 65.1,216.2 66.9,189.0 68.7,216.2 70.5,203.3 72.3,185.9 74.1,232.5 76.0,223.0 77.8,182.3 79.6,187.7 81.4,177.3 83.2,202.4 85.0,179.5 86.8,210.7 88.7,179.5 90.5,228.2 92.3,216.6 94.1,192.0 95.9,186.5 97.7,200.0 99.5,192.4 101.4,202.2 103.2,211.3 105.0,183.7 106.8,173.5 108.6,180.8 110.4,250.7 112.3,189.5 114.1,211.5 115.9,190.5 117.7,204.0 119.5,199.3 121.3,173.6 123.1,191.0 125.0,181.4 126.8,242.8 128.6,197.9 130.4,200.7 132.2,208.9 134.0,173.7 135.8,198.8 137.7,199.5 139.5,192.0 141.3,196.7 143.1,214.1 144.9,235.9 146.7,176.6 148.5,171.7 150.4,184.6 152.2,221.7 154.0,204.0 155.8,214.5 157.6,202.3 159.4,195.2 161.2,194.9 163.1,176.0 164.9,195.3 166.7,200.9 168.5,207.1 170.3,202.3 172.1,179.2 173.9,218.3 175.8,192.9 177.6,189.8 179.4,217.7 181.2,174.7 183.0,185.1 184.8,197.4 186.6,243.5 188.5,195.7 190.3,190.7 192.1,201.5 193.9,191.1 195.7,197.1 197.5,242.0 199.3,190.9 201.2,189.0 203.0,238.8 204.8,186.6 206.6,211.6 208.4,212.1 210.2,227.0 212.1,155.7 213.9,188.7 215.7,217.7 217.5,213.5 219.3,192.4 221.1,224.9 222.9,186.1 224.8,155.2 226.6,224.5 228.4,219.2 230.2,178.3 232.0,225.4 233.8,191.7 235.6,186.3 237.5,193.5 239.3,199.9 241.1,202.7 242.9,158.4 244.7,174.8 246.5,206.5 248.3,220.8 250.2,182.4 252.0,192.7 253.8,215.9 255.6,186.1 257.4,170.2 259.2,218.2 261.0,189.9 262.9,284.4 264.7,159.6 266.5,176.9 268.3,170.2 270.1,159.5 271.9,181.4 273.7,194.0 275.6,176.2 277.4,175.5 279.2,159.7 281.0,162.7 282.8,220.9 284.6,173.6 286.4,217.3 288.3,159.6 290.1,139.6 291.9,164.3 293.7,168.3 295.5,156.4 297.3,165.0 299.1,181.4 301.0,225.1 302.8,167.6 304.6,163.7 306.4,180.3 308.2,191.6 310.0,168.6 311.8,168.7 313.7,172.5 315.5,179.2 317.3,168.2 319.1,153.8 320.9,159.1 322.7,175.6 324.6,217.5 326.4,174.8 328.2,174.7 330.0,164.0 331.8,146.2 333.6,217.3 335.4,132.0 337.3,160.9 339.1,138.6 340.9,170.6 342.7,163.3 344.5,173.4 346.3,165.7 348.1,173.2 350.0,154.6 351.8,268.8 353.6,138.4 355.4,139.4 357.2,130.4 359.0,124.2 360.8,108.3 362.7,133.9 364.5,173.8 366.3,180.2 368.1,173.8 369.9,130.3 371.7,166.4 373.5,123.0 375.4,120.7 377.2,163.6 379.0,173.1 380.8,218.1 382.6,167.4 384.4,156.0 386.2,137.4 388.1,124.4 389.9,120.5 391.7,123.8 393.5,181.7 395.3,193.1 397.1,168.6 398.9,200.5 400.8,179.4 402.6,180.1 404.4,166.8 406.2,192.1 408.0,131.3 409.8,98.9 411.6,162.6 413.5,155.4 415.3,177.8 417.1,134.1 418.9,164.6 420.7,197.7 422.5,124.3 424.4,209.7 426.2,86.0 428.0,156.4 429.8,190.8 431.6,129.8 433.4,130.3 435.2,146.6 437.1,192.0 438.9,118.8 440.7,222.6 442.5,115.6 444.3,142.3 446.1,121.1 447.9,138.3 449.8,247.6 451.6,119.8 453.4,122.5 455.2,120.8 457.0,159.8 458.8,172.1 460.6,119.6 462.5,167.3 464.3,151.6 466.1,141.8 467.9,206.5 469.7,123.7 471.5,177.4 473.3,173.1 475.2,145.9 477.0,115.8 478.8,271.1 480.6,113.1 482.4,105.0 484.2,130.0 486.0,153.3 487.9,230.4 489.7,111.7 491.5,166.1 493.3,108.8 495.1,148.0 496.9,192.0 498.7,169.7 500.6,137.6 502.4,170.7 504.2,131.3 506.0,182.1 507.8,164.3 509.6,214.4 511.4,120.7 513.3,111.1 515.1,205.7 516.9,156.6 518.7,193.6 520.5,149.1 522.3,176.3 524.2,155.5 526.0,188.8 527.8,140.5 529.6,145.0 531.4,137.9 533.2,166.0 535.0,165.8 536.9,160.7 538.7,163.7 540.5,189.4 542.3,119.0 544.1,149.4 545.9,207.3 547.7,116.8 549.6,141.1 551.4,172.1 553.2,154.3 555.0,150.3 556.8,137.1 558.6,158.3 560.4,120.7 562.3,165.1 564.1,201.8 565.9,175.2 567.7,151.9 569.5,185.2 571.3,147.3 573.1,167.5 575.0,142.2 576.8,139.4 578.6,152.1 580.4,192.8 582.2,151.9 584.0,93.7 585.8,179.7 587.7,103.4 589.5,180.9 591.3,105.1 593.1,184.7 594.9,123.4 596.7,132.6 598.5,159.1 600.4,157.2 602.2,161.6 604.0,136.5 605.8,162.7 607.6,147.8 609.4,118.5 611.2,160.7 613.1,150.3 614.9,161.2 616.7,136.0 618.5,150.4 620.3,131.8 622.1,116.2 623.9,109.8 625.8,168.5 627.6,178.5 629.4,192.3 631.2,193.5 633.0,126.4 634.8,159.1 636.7,129.4 638.5,158.5 640.3,147.9 642.1,150.2 643.9,196.9 645.7,183.0 647.5,174.6 649.4,155.7 651.2,144.8 653.0,144.9 654.8,121.2 656.6,199.7 658.4,80.4 660.2,135.8 662.1,205.6 663.9,113.3 665.7,182.8 667.5,151.6 669.3,133.0 671.1,146.9 672.9,135.6 674.8,175.6 676.6,118.7 678.4,121.2 680.2,194.2 682.0,120.8 683.8,166.4 685.6,62.0 687.5,162.4 689.3,120.0 691.1,124.7 692.9,170.1 694.7,144.9 696.5,145.0 698.3,165.1 700.2,169.4 702.0,115.4 703.8,132.9 705.6,169.8 707.4,166.6 709.2,151.6 711.0,121.2 712.9,132.2 714.7,124.5 716.5,116.5 718.3,138.5 720.1,117.4 721.9,168.0 723.7,157.6 725.6,177.8 727.4,126.9 729.2,115.7 731.0,171.7 732.8,153.6 734.6,146.1 736.5,154.1 738.3,189.9 740.1,106.5 741.9,175.9 743.7,147.7 745.5,158.6 747.3,164.3 749.2,161.5 751.0,121.1 752.8,149.0 754.6,133.1 756.4,173.0 758.2,118.5 760.0,70.9 761.9,186.7 763.7,126.1 765.5,165.9 767.3,149.1 769.1,156.5 770.9,118.4 772.7,130.6 774.6,164.4 776.4,139.0 778.2,184.1 780.0,86.3" fill="none" stroke="#3a4552" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,154.8 57.8,167.3 59.6,171.3 61.4,170.6 63.3,172.7 65.1,179.9 66.9,181.2 68.7,185.6 70.5,187.6 72.3,187.4 74.1,191.5 76.0,194.1 77.8,193.2 79.6,192.8 81.4,191.8 83.2,192.4 85.0,191.7 86.8,192.8 88.7,192.0 90.5,193.9 92.3,196.9 94.1,197.6 95.9,197.9 97.7,199.5 99.5,200.1 101.4,199.4 103.2,200.5 105.0,198.9 106.8,197.4 108.6,197.1 110.4,198.0 112.3,196.4 114.1,197.8 115.9,198.0 117.7,199.3 119.5,199.1 121.3,198.8 123.1,197.9 125.0,197.9 126.8,198.7 128.6,197.7 130.4,198.2 132.2,199.3 134.0,198.0 135.8,198.3 137.7,198.2 139.5,197.2 141.3,197.9 143.1,199.9 144.9,202.6 146.7,198.9 148.5,198.0 150.4,196.7 152.2,198.2 154.0,198.2 155.8,199.0 157.6,200.4 159.4,200.6 161.2,201.3 163.1,198.0 164.9,197.9 166.7,197.9 168.5,197.8 170.3,199.2 172.1,198.2 173.9,199.2 175.8,199.2 177.6,198.9 179.4,199.1 181.2,196.0 183.0,196.4 184.8,197.7 186.6,200.6 188.5,199.3 190.3,198.7 192.1,198.0 193.9,197.5 195.7,197.6 197.5,199.9 199.3,200.7 201.2,200.3 203.0,202.2 204.8,201.2 206.6,201.7 208.4,203.3 210.2,203.8 212.1,201.9 213.9,201.8 215.7,201.8 217.5,203.8 219.3,204.1 221.1,205.5 222.9,202.7 224.8,200.6 226.6,202.3 228.4,203.2 230.2,202.6 232.0,204.0 233.8,201.5 235.6,201.2 237.5,201.5 239.3,199.5 241.1,200.3 242.9,197.7 244.7,195.8 246.5,194.8 248.3,198.0 250.2,197.7 252.0,196.5 253.8,196.6 255.6,196.3 257.4,193.5 259.2,195.2 261.0,196.9 262.9,199.9 264.7,196.9 266.5,196.8 268.3,194.1 270.1,192.4 271.9,192.2 273.7,192.2 275.6,191.0 277.4,189.7 279.2,189.7 281.0,189.1 282.8,189.8 284.6,187.5 286.4,189.2 288.3,187.6 290.1,183.8 291.9,182.7 293.7,182.6 295.5,179.5 297.3,178.3 299.1,173.1 301.0,176.4 302.8,175.9 304.6,175.6 306.4,176.6 308.2,177.1 310.0,175.9 311.8,175.5 313.7,175.4 315.5,176.3 317.3,176.6 319.1,173.2 320.9,172.5 322.7,170.4 324.6,173.3 326.4,175.1 328.2,175.6 330.0,175.4 331.8,174.9 333.6,177.5 335.4,175.0 337.3,171.8 339.1,170.4 340.9,170.7 342.7,169.8 344.5,169.0 346.3,168.8 348.1,169.0 350.0,168.1 351.8,172.6 353.6,171.1 355.4,170.4 357.2,169.0 359.0,166.4 360.8,160.9 362.7,158.9 364.5,158.8 366.3,159.7 368.1,161.0 369.9,156.7 371.7,158.4 373.5,156.5 375.4,155.6 377.2,155.3 379.0,155.8 380.8,158.0 382.6,158.1 384.4,157.2 386.2,156.3 388.1,149.1 389.9,148.2 391.7,147.5 393.5,150.0 395.3,153.5 397.1,156.5 398.9,159.8 400.8,160.1 402.6,160.1 404.4,159.7 406.2,162.8 408.0,161.1 409.8,159.9 411.6,162.0 413.5,161.6 415.3,161.8 417.1,157.6 418.9,157.5 420.7,159.5 422.5,158.9 424.4,163.2 426.2,161.4 428.0,163.1 429.8,163.5 431.6,160.4 433.4,158.4 435.2,155.7 437.1,156.3 438.9,153.3 440.7,156.1 442.5,152.3 444.3,152.8 446.1,153.9 447.9,152.7 449.8,157.3 451.6,154.4 453.4,153.8 455.2,151.7 457.0,149.7 458.8,152.1 460.6,147.6 462.5,151.7 464.3,151.5 466.1,149.0 467.9,152.9 469.7,152.5 471.5,154.1 473.3,153.1 475.2,154.5 477.0,149.1 478.8,156.9 480.6,155.5 482.4,154.6 484.2,154.2 486.0,149.5 487.9,155.0 489.7,154.5 491.5,156.8 493.3,154.2 495.1,153.0 496.9,156.6 498.7,156.8 500.6,156.0 502.4,157.5 504.2,153.7 506.0,156.7 507.8,156.0 509.6,158.1 511.4,156.8 513.3,156.6 515.1,153.3 516.9,155.5 518.7,159.9 520.5,160.9 522.3,162.0 524.2,158.3 526.0,162.1 527.8,160.8 529.6,162.7 531.4,162.1 533.2,160.8 535.0,160.6 536.9,161.8 538.7,161.5 540.5,164.4 542.3,161.2 544.1,160.5 545.9,160.1 547.7,159.9 549.6,161.4 551.4,159.7 553.2,159.6 555.0,157.4 556.8,156.8 558.6,155.9 560.4,154.2 562.3,153.0 564.1,156.1 565.9,157.6 567.7,158.3 569.5,159.3 571.3,158.3 573.1,158.7 575.0,157.6 576.8,155.1 578.6,156.8 580.4,158.9 582.2,156.1 584.0,155.0 585.8,156.9 587.7,153.5 589.5,154.8 591.3,152.6 593.1,154.9 594.9,153.2 596.7,153.8 598.5,153.5 600.4,151.2 602.2,150.6 604.0,149.8 605.8,148.7 607.6,148.7 609.4,146.2 611.2,147.2 613.1,147.7 614.9,148.2 616.7,145.3 618.5,145.3 620.3,147.2 622.1,144.0 623.9,144.3 625.8,143.7 627.6,147.4 629.4,147.8 631.2,151.2 633.0,150.9 634.8,150.9 636.7,149.6 638.5,149.4 640.3,150.0 642.1,149.4 643.9,151.8 645.7,155.0 647.5,155.7 649.4,156.0 651.2,155.2 653.0,155.6 654.8,154.2 656.6,157.5 658.4,155.8 660.2,157.1 662.1,158.9 663.9,155.7 665.7,155.2 667.5,153.1 669.3,153.4 671.1,152.8 672.9,153.1 674.8,154.0 676.6,152.5 678.4,151.1 680.2,150.9 682.0,147.8 683.8,147.4 685.6,142.7 687.5,143.6 689.3,142.3 691.1,142.5 692.9,141.0 694.7,144.3 696.5,144.7 698.3,142.7 700.2,145.5 702.0,142.1 703.8,141.2 705.6,143.1 707.4,144.0 709.2,144.8 711.0,142.1 712.9,142.8 714.7,143.0 716.5,139.1 718.3,139.9 720.1,137.5 721.9,142.8 723.7,142.6 725.6,145.5 727.4,145.6 729.2,142.9 731.0,144.2 732.8,144.6 734.6,143.7 736.5,142.9 738.3,146.6 740.1,145.3 741.9,145.6 743.7,144.7 745.5,145.0 747.3,147.2 749.2,148.6 751.0,148.5 752.8,150.1 754.6,149.8 756.4,152.6 758.2,150.1 760.0,145.8 761.9,146.2 763.7,146.2 765.5,148.7 767.3,147.6 769.1,147.7 770.9,146.3 772.7,145.1 774.6,143.9 776.4,145.5 778.2,145.9 780.0,142.9" fill="none" stroke="#c9d1d9" stroke-width="2" stroke-linejoin="round"/>
+<rect x="786.0" y="82.3" width="8" height="8" rx="2" fill="#3a4552"/>
+<text class="s-lbl" x="798.0" y="90.3">每批 5 局的平均</text>
+<rect x="786.0" y="138.9" width="8" height="8" rx="2" fill="#c9d1d9"/>
+<text class="s-lbl" x="798.0" y="146.9">最近 20 批的平均</text>
+<rect x="55.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 1 批：每批 5 局的平均 -93.7　最近 20 批的平均 -93.7"/>
+<rect x="56.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 2 批：每批 5 局的平均 -166.4　最近 20 批的平均 -130.0"/>
+<rect x="58.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 3 批：每批 5 局的平均 -165.1　最近 20 批的平均 -141.7"/>
+<rect x="60.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 4 批：每批 5 局的平均 -133.9　最近 20 批的平均 -139.8"/>
+<rect x="62.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 5 批：每批 5 局的平均 -169.5　最近 20 批的平均 -145.7"/>
+<rect x="64.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 6 批：每批 5 局的平均 -272.9　最近 20 批的平均 -166.9"/>
+<rect x="66.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 7 批：每批 5 局的平均 -193.4　最近 20 批的平均 -170.7"/>
+<rect x="67.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 8 批：每批 5 局的平均 -272.8　最近 20 批的平均 -183.5"/>
+<rect x="69.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 9 批：每批 5 局的平均 -235.1　最近 20 批的平均 -189.2"/>
+<rect x="71.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 10 批：每批 5 局的平均 -184.4　最近 20 批的平均 -188.7"/>
+<rect x="73.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 11 批：每批 5 局的平均 -320.5　最近 20 批的平均 -200.7"/>
+<rect x="75.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 12 批：每批 5 局的平均 -292.8　最近 20 批的平均 -208.4"/>
+<rect x="76.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 13 批：每批 5 局的平均 -173.9　最近 20 批的平均 -205.7"/>
+<rect x="78.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 14 批：每批 5 局的平均 -189.7　最近 20 批的平均 -204.6"/>
+<rect x="80.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 15 批：每批 5 局的平均 -159.3　最近 20 批的平均 -201.6"/>
+<rect x="82.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 16 批：每批 5 局的平均 -232.7　最近 20 批的平均 -203.5"/>
+<rect x="84.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 17 批：每批 5 局的平均 -165.6　最近 20 批的平均 -201.3"/>
+<rect x="85.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 18 批：每批 5 局的平均 -256.8　最近 20 批的平均 -204.4"/>
+<rect x="87.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 19 批：每批 5 局的平均 -165.8　最近 20 批的平均 -202.3"/>
+<rect x="89.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 20 批：每批 5 局的平均 -307.8　最近 20 批的平均 -207.6"/>
+<rect x="91.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 21 批：每批 5 局的平均 -274.1　最近 20 批的平均 -216.6"/>
+<rect x="93.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 22 批：每批 5 局的平均 -202.1　最近 20 批的平均 -218.4"/>
+<rect x="95.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 23 批：每批 5 局的平均 -186.2　最近 20 批的平均 -219.5"/>
+<rect x="96.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 24 批：每批 5 局的平均 -225.5　最近 20 批的平均 -224.1"/>
+<rect x="98.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 25 批：每批 5 局的平均 -203.3　最近 20 批的平均 -225.7"/>
+<rect x="100.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 26 批：每批 5 局的平均 -232.0　最近 20 批的平均 -223.7"/>
+<rect x="102.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 27 批：每批 5 局的平均 -258.5　最近 20 批的平均 -227.0"/>
+<rect x="104.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 28 批：每批 5 局的平均 -177.9　最近 20 批的平均 -222.2"/>
+<rect x="105.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 29 批：每批 5 局的平均 -148.2　最近 20 批的平均 -217.9"/>
+<rect x="107.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 30 批：每批 5 局的平均 -169.6　最近 20 批的平均 -217.1"/>
+<rect x="109.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 31 批：每批 5 局的平均 -373.6　最近 20 批的平均 -219.8"/>
+<rect x="111.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 32 批：每批 5 局的平均 -194.9　最近 20 批的平均 -214.9"/>
+<rect x="113.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 33 批：每批 5 局的平均 -259.0　最近 20 批的平均 -219.1"/>
+<rect x="115.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 34 批：每批 5 局的平均 -197.9　最近 20 批的平均 -219.6"/>
+<rect x="116.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 35 批：每批 5 局的平均 -237.2　最近 20 批的平均 -223.4"/>
+<rect x="118.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 36 批：每批 5 局的平均 -223.4　最近 20 批的平均 -223.0"/>
+<rect x="120.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 37 批：每批 5 局的平均 -148.6　最近 20 批的平均 -222.1"/>
+<rect x="122.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 38 批：每批 5 局的平均 -199.4　最近 20 批的平均 -219.3"/>
+<rect x="124.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 39 批：每批 5 局的平均 -171.2　最近 20 批的平均 -219.5"/>
+<rect x="125.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 40 批：每批 5 局的平均 -350.6　最近 20 批的平均 -221.7"/>
+<rect x="127.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 41 批：每批 5 局的平均 -219.3　最近 20 批的平均 -218.9"/>
+<rect x="129.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 42 批：每批 5 局的平均 -227.7　最近 20 批的平均 -220.2"/>
+<rect x="131.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 43 批：每批 5 局的平均 -251.5　最近 20 批的平均 -223.5"/>
+<rect x="133.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 44 批：每批 5 局的平均 -148.9　最近 20 批的平均 -219.6"/>
+<rect x="134.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 45 批：每批 5 局的平均 -221.9　最近 20 批的平均 -220.6"/>
+<rect x="136.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 46 批：每批 5 局的平均 -224.0　最近 20 批的平均 -220.2"/>
+<rect x="138.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 47 批：每批 5 局的平均 -202.2　最近 20 批的平均 -217.4"/>
+<rect x="140.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 48 批：每批 5 局的平均 -215.9　最近 20 批的平均 -219.3"/>
+<rect x="142.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 49 批：每批 5 局的平均 -266.8　最近 20 批的平均 -225.2"/>
+<rect x="144.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 50 批：每批 5 局的平均 -330.3　最近 20 批的平均 -233.2"/>
+<rect x="145.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 51 批：每批 5 局的平均 -157.2　最近 20 批的平均 -222.4"/>
+<rect x="147.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 52 批：每批 5 局的平均 -142.8　最近 20 批的平均 -219.8"/>
+<rect x="149.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 53 批：每批 5 局的平均 -180.7　最近 20 批的平均 -215.9"/>
+<rect x="151.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 54 批：每批 5 局的平均 -288.9　最近 20 批的平均 -220.4"/>
+<rect x="153.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 55 批：每批 5 局的平均 -237.2　最近 20 批的平均 -220.4"/>
+<rect x="154.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 56 批：每批 5 局的平均 -267.8　最近 20 批的平均 -222.6"/>
+<rect x="156.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 57 批：每批 5 局的平均 -232.3　最近 20 批的平均 -226.8"/>
+<rect x="158.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 58 批：每批 5 局的平均 -211.6　最近 20 批的平均 -227.4"/>
+<rect x="160.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 59 批：每批 5 局的平均 -210.7　最近 20 批的平均 -229.4"/>
+<rect x="162.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 60 批：每批 5 局的平均 -155.5　最近 20 批的平均 -219.7"/>
+<rect x="164.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 61 批：每批 5 局的平均 -211.9　最近 20 批的平均 -219.3"/>
+<rect x="165.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 62 批：每批 5 局的平均 -228.1　最近 20 批的平均 -219.3"/>
+<rect x="167.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 63 批：每批 5 局的平均 -246.2　最近 20 批的平均 -219.0"/>
+<rect x="169.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 64 批：每批 5 局的平均 -232.4　最近 20 批的平均 -223.2"/>
+<rect x="171.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 65 批：每批 5 局的平均 -164.7　最近 20 批的平均 -220.4"/>
+<rect x="173.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 66 批：每批 5 局的平均 -279.0　最近 20 批的平均 -223.1"/>
+<rect x="174.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 67 批：每批 5 局的平均 -204.9　最近 20 批的平均 -223.2"/>
+<rect x="176.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 68 批：每批 5 局的平均 -195.7　最近 20 批的平均 -222.2"/>
+<rect x="178.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 69 批：每批 5 局的平均 -277.2　最近 20 批的平均 -222.8"/>
+<rect x="180.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 70 批：每批 5 局的平均 -151.7　最近 20 批的平均 -213.8"/>
+<rect x="182.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 71 批：每批 5 局的平均 -181.9　最近 20 批的平均 -215.1"/>
+<rect x="183.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 72 批：每批 5 局的平均 -218.1　最近 20 批的平均 -218.8"/>
+<rect x="185.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 73 批：每批 5 局的平均 -352.7　最近 20 批的平均 -227.4"/>
+<rect x="187.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 74 批：每批 5 局的平均 -213.1　最近 20 批的平均 -223.6"/>
+<rect x="189.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 75 批：每批 5 局的平均 -198.3　最近 20 批的平均 -221.7"/>
+<rect x="191.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 76 批：每批 5 局的平均 -229.8　最近 20 批的平均 -219.8"/>
+<rect x="193.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 77 批：每批 5 局的平均 -199.6　最近 20 批的平均 -218.2"/>
+<rect x="194.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 78 批：每批 5 局的平均 -217.0　最近 20 批的平均 -218.4"/>
+<rect x="196.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 79 批：每批 5 局的平均 -348.3　最近 20 批的平均 -225.3"/>
+<rect x="198.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 80 批：每批 5 局的平均 -198.9　最近 20 批的平均 -227.5"/>
+<rect x="200.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 81 批：每批 5 局的平均 -193.4　最近 20 批的平均 -226.5"/>
+<rect x="202.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 82 批：每批 5 局的平均 -338.8　最近 20 批的平均 -232.1"/>
+<rect x="203.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 83 批：每批 5 局的平均 -186.3　最近 20 批的平均 -229.1"/>
+<rect x="205.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 84 批：每批 5 局的平均 -259.3　最近 20 批的平均 -230.4"/>
+<rect x="207.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 85 批：每批 5 局的平均 -260.8　最近 20 批的平均 -235.2"/>
+<rect x="209.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 86 批：每批 5 局的平均 -304.3　最近 20 批的平均 -236.5"/>
+<rect x="211.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 87 批：每批 5 局的平均 -96.1　最近 20 批的平均 -231.1"/>
+<rect x="213.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 88 批：每批 5 局的平均 -192.5　最近 20 批的平均 -230.9"/>
+<rect x="214.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 89 批：每批 5 局的平均 -277.2　最近 20 批的平均 -230.9"/>
+<rect x="216.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 90 批：每批 5 局的平均 -265.0　最近 20 批的平均 -236.6"/>
+<rect x="218.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 91 批：每批 5 局的平均 -203.3　最近 20 批的平均 -237.6"/>
+<rect x="220.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 92 批：每批 5 局的平均 -298.3　最近 20 批的平均 -241.6"/>
+<rect x="222.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 93 批：每批 5 局的平均 -184.9　最近 20 批的平均 -233.3"/>
+<rect x="223.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 94 批：每批 5 局的平均 -94.6　最近 20 批的平均 -227.3"/>
+<rect x="225.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 95 批：每批 5 局的平均 -297.2　最近 20 批的平均 -232.3"/>
+<rect x="227.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 96 批：每批 5 局的平均 -281.6　最近 20 批的平均 -234.9"/>
+<rect x="229.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 97 批：每批 5 局的平均 -162.3　最近 20 批的平均 -233.0"/>
+<rect x="231.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 98 批：每批 5 局的平均 -299.7　最近 20 批的平均 -237.1"/>
+<rect x="232.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 99 批：每批 5 局的平均 -201.2　最近 20 批的平均 -229.8"/>
+<rect x="234.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 100 批：每批 5 局的平均 -185.6　最近 20 批的平均 -229.1"/>
+<rect x="236.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 101 批：每批 5 局的平均 -206.5　最近 20 批的平均 -229.8"/>
+<rect x="238.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 102 批：每批 5 局的平均 -225.3　最近 20 批的平均 -224.1"/>
+<rect x="240.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 103 批：每批 5 局的平均 -233.5　最近 20 批的平均 -226.5"/>
+<rect x="242.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 104 批：每批 5 局的平均 -104.2　最近 20 批的平均 -218.7"/>
+<rect x="243.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 105 批：每批 5 局的平均 -151.9　最近 20 批的平均 -213.3"/>
+<rect x="245.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 106 批：每批 5 局的平均 -244.4　最近 20 批的平均 -210.3"/>
+<rect x="247.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 107 批：每批 5 局的平均 -286.3　最近 20 批的平均 -219.8"/>
+<rect x="249.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 108 批：每批 5 局的平均 -174.2　最近 20 批的平均 -218.9"/>
+<rect x="251.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 109 批：每批 5 局的平均 -204.3　最近 20 批的平均 -215.2"/>
+<rect x="252.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 110 批：每批 5 局的平均 -272.0　最近 20 批的平均 -215.6"/>
+<rect x="254.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 111 批：每批 5 局的平均 -185.0　最近 20 批的平均 -214.7"/>
+<rect x="256.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 112 批：每批 5 局的平均 -138.6　最近 20 批的平均 -206.7"/>
+<rect x="258.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 113 批：每批 5 局的平均 -278.6　最近 20 批的平均 -211.4"/>
+<rect x="260.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 114 批：每批 5 局的平均 -196.0　最近 20 批的平均 -216.4"/>
+<rect x="261.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 115 批：每批 5 局的平均 -471.9　最近 20 批的平均 -225.2"/>
+<rect x="263.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 116 批：每批 5 局的平均 -107.5　最近 20 批的平均 -216.5"/>
+<rect x="265.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 117 批：每批 5 局的平均 -158.0　最近 20 批的平均 -216.2"/>
+<rect x="267.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 118 批：每批 5 局的平均 -138.5　最近 20 批的平均 -208.2"/>
+<rect x="269.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 119 批：每批 5 局的平均 -107.3　最近 20 批的平均 -203.5"/>
+<rect x="271.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 120 批：每批 5 局的平均 -171.3　最近 20 批的平均 -202.8"/>
+<rect x="272.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 121 批：每批 5 局的平均 -207.9　最近 20 批的平均 -202.8"/>
+<rect x="274.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 122 批：每批 5 局的平均 -156.2　最近 20 批的平均 -199.4"/>
+<rect x="276.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 123 批：每批 5 局的平均 -154.0　最近 20 批的平均 -195.4"/>
+<rect x="278.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 124 批：每批 5 局的平均 -107.9　最近 20 批的平均 -195.6"/>
+<rect x="280.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 125 批：每批 5 局的平均 -116.6　最近 20 批的平均 -193.8"/>
+<rect x="281.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 126 批：每批 5 局的平均 -286.7　最近 20 批的平均 -195.9"/>
+<rect x="283.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 127 批：每批 5 局的平均 -148.6　最近 20 批的平均 -189.0"/>
+<rect x="285.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 128 批：每批 5 局的平均 -276.2　最近 20 批的平均 -194.1"/>
+<rect x="287.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 129 批：每批 5 局的平均 -107.7　最近 20 批的平均 -189.3"/>
+<rect x="289.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 130 批：每批 5 局的平均 -49.1　最近 20 批的平均 -178.2"/>
+<rect x="291.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 131 批：每批 5 局的平均 -121.3　最近 20 批的平均 -175.0"/>
+<rect x="292.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 132 批：每批 5 局的平均 -133.0　最近 20 批的平均 -174.7"/>
+<rect x="294.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 133 批：每批 5 局的平均 -98.2　最近 20 批的平均 -165.7"/>
+<rect x="296.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 134 批：每批 5 局的平均 -123.4　最近 20 批的平均 -162.1"/>
+<rect x="298.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 135 批：每批 5 局的平均 -171.2　最近 20 批的平均 -147.0"/>
+<rect x="300.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 136 批：每批 5 局的平均 -298.7　最近 20 批的平均 -156.6"/>
+<rect x="301.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 137 批：每批 5 局的平均 -130.9　最近 20 批的平均 -155.2"/>
+<rect x="303.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 138 批：每批 5 局的平均 -119.7　最近 20 批的平均 -154.3"/>
+<rect x="305.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 139 批：每批 5 局的平均 -168.1　最近 20 批的平均 -157.3"/>
+<rect x="307.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 140 批：每批 5 局的平均 -201.0　最近 20 批的平均 -158.8"/>
+<rect x="309.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 141 批：每批 5 局的平均 -133.8　最近 20 批的平均 -155.1"/>
+<rect x="310.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 142 批：每批 5 局的平均 -134.2　最近 20 批的平均 -154.0"/>
+<rect x="312.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 143 批：每批 5 局的平均 -145.3　最近 20 批的平均 -153.6"/>
+<rect x="314.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 144 批：每批 5 局的平均 -164.9　最近 20 批的平均 -156.4"/>
+<rect x="316.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 145 批：每批 5 局的平均 -132.8　最近 20 批的平均 -157.2"/>
+<rect x="318.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 146 批：每批 5 局的平均 -90.6　最近 20 批的平均 -147.4"/>
+<rect x="320.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 147 批：每批 5 局的平均 -106.0　最近 20 批的平均 -145.3"/>
+<rect x="321.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 148 批：每批 5 局的平均 -154.4　最近 20 批的平均 -139.2"/>
+<rect x="323.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 149 批：每批 5 局的平均 -276.5　最近 20 批的平均 -147.7"/>
+<rect x="325.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 150 批：每批 5 局的平均 -152.1　最近 20 批的平均 -152.8"/>
+<rect x="327.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 151 批：每批 5 局的平均 -151.6　最近 20 批的平均 -154.3"/>
+<rect x="329.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 152 批：每批 5 局的平均 -120.5　最近 20 批的平均 -153.7"/>
+<rect x="330.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 153 批：每批 5 局的平均 -68.6　最近 20 批的平均 -152.2"/>
+<rect x="332.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 154 批：每批 5 局的平均 -276.0　最近 20 批的平均 -159.9"/>
+<rect x="334.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 155 批：每批 5 局的平均 -26.9　最近 20 批的平均 -152.6"/>
+<rect x="336.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 156 批：每批 5 局的平均 -111.4　最近 20 批的平均 -143.3"/>
+<rect x="338.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 157 批：每批 5 局的平均 -46.2　最近 20 批的平均 -139.0"/>
+<rect x="340.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 158 批：每批 5 局的平均 -139.6　最近 20 批的平均 -140.0"/>
+<rect x="341.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 159 批：每批 5 局的平均 -118.5　最近 20 批的平均 -137.5"/>
+<rect x="343.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 160 批：每批 5 局的平均 -147.9　最近 20 批的平均 -134.9"/>
+<rect x="345.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 161 批：每批 5 局的平均 -125.5　最近 20 批的平均 -134.5"/>
+<rect x="347.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 162 批：每批 5 局的平均 -147.4　最近 20 批的平均 -135.1"/>
+<rect x="349.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 163 批：每批 5 局的平均 -92.9　最近 20 批的平均 -132.5"/>
+<rect x="350.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 164 批：每批 5 局的平均 -426.3　最近 20 批的平均 -145.6"/>
+<rect x="352.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 165 批：每批 5 局的平均 -45.7　最近 20 批的平均 -141.2"/>
+<rect x="354.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 166 批：每批 5 局的平均 -48.6　最近 20 批的平均 -139.1"/>
+<rect x="356.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 167 批：每批 5 局的平均 -22.2　最近 20 批的平均 -135.0"/>
+<rect x="358.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 168 批：每批 5 局的平均 -4.3　最近 20 批的平均 -127.4"/>
+<rect x="359.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 169 批：每批 5 局的平均 42.2　最近 20 批的平均 -111.5"/>
+<rect x="361.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 170 批：每批 5 局的平均 -32.6　最近 20 批的平均 -105.5"/>
+<rect x="363.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 171 批：每批 5 局的平均 -149.0　最近 20 批的平均 -105.4"/>
+<rect x="365.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 172 批：每批 5 局的平均 -167.8　最近 20 批的平均 -107.8"/>
+<rect x="367.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 173 批：每批 5 局的平均 -149.0　最近 20 批的平均 -111.8"/>
+<rect x="369.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 174 批：每批 5 局的平均 -22.0　最近 20 批的平均 -99.1"/>
+<rect x="370.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 175 批：每批 5 局的平均 -127.3　最近 20 批的平均 -104.1"/>
+<rect x="372.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 176 批：每批 5 局的平均 -0.7　最近 20 批的平均 -98.6"/>
+<rect x="374.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 177 批：每批 5 局的平均 6.0　最近 20 批的平均 -96.0"/>
+<rect x="376.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 178 批：每批 5 局的平均 -119.2　最近 20 批的平均 -94.9"/>
+<rect x="378.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 179 批：每批 5 局的平均 -146.9　最近 20 批的平均 -96.4"/>
+<rect x="379.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 180 批：每批 5 局的平均 -278.4　最近 20 批的平均 -102.9"/>
+<rect x="381.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 181 批：每批 5 局的平均 -130.4　最近 20 批的平均 -103.1"/>
+<rect x="383.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 182 批：每批 5 局的平均 -97.1　最近 20 批的平均 -100.6"/>
+<rect x="385.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 183 批：每批 5 局的平均 -42.8　最近 20 批的平均 -98.1"/>
+<rect x="387.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 184 批：每批 5 局的平均 -4.9　最近 20 批的平均 -77.0"/>
+<rect x="389.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 185 批：每批 5 局的平均 6.5　最近 20 批的平均 -74.4"/>
+<rect x="390.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 186 批：每批 5 局的平均 -3.2　最近 20 批的平均 -72.2"/>
+<rect x="392.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 187 批：每批 5 局的平均 -172.1　最近 20 批的平均 -79.7"/>
+<rect x="394.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 188 批：每批 5 局的平均 -205.4　最近 20 批的平均 -89.7"/>
+<rect x="396.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 189 批：每批 5 局的平均 -134.0　最近 20 批的平均 -98.5"/>
+<rect x="398.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 190 批：每批 5 局的平均 -226.9　最近 20 批的平均 -108.2"/>
+<rect x="399.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 191 批：每批 5 局的平均 -165.4　最近 20 批的平均 -109.0"/>
+<rect x="401.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 192 批：每批 5 局的平均 -167.3　最近 20 批的平均 -109.0"/>
+<rect x="403.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 193 批：每批 5 局的平均 -128.6　最近 20 批的平均 -108.0"/>
+<rect x="405.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 194 批：每批 5 局的平均 -202.6　最近 20 批的平均 -117.0"/>
+<rect x="407.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 195 批：每批 5 局的平均 -25.1　最近 20 批的平均 -111.9"/>
+<rect x="408.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 196 批：每批 5 局的平均 69.6　最近 20 批的平均 -108.4"/>
+<rect x="410.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 197 批：每批 5 局的平均 -116.3　最近 20 批的平均 -114.5"/>
+<rect x="412.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 198 批：每批 5 局的平均 -95.3　最近 20 批的平均 -113.3"/>
+<rect x="414.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 199 批：每批 5 局的平均 -160.7　最近 20 批的平均 -114.0"/>
+<rect x="416.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 200 批：每批 5 局的平均 -33.2　最近 20 批的平均 -101.8"/>
+<rect x="418.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 201 批：每批 5 局的平均 -122.3　最近 20 批的平均 -101.4"/>
+<rect x="419.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 202 批：每批 5 局的平均 -218.9　最近 20 批的平均 -107.4"/>
+<rect x="421.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 203 批：每批 5 局的平均 -4.4　最近 20 批的平均 -105.5"/>
+<rect x="423.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 204 批：每批 5 局的平均 -254.0　最近 20 批的平均 -118.0"/>
+<rect x="425.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 205 批：每批 5 局的平均 107.4　最近 20 批的平均 -112.9"/>
+<rect x="427.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 206 批：每批 5 局的平均 -98.2　最近 20 批的平均 -117.7"/>
+<rect x="428.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 207 批：每批 5 局的平均 -198.6　最近 20 批的平均 -119.0"/>
+<rect x="430.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 208 批：每批 5 局的平均 -20.6　最近 20 批的平均 -109.8"/>
+<rect x="432.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 209 批：每批 5 局的平均 -22.0　最近 20 批的平均 -104.2"/>
+<rect x="434.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 210 批：每批 5 局的平均 -69.6　最近 20 批的平均 -96.3"/>
+<rect x="436.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 211 批：每批 5 局的平均 -202.3　最近 20 批的平均 -98.1"/>
+<rect x="438.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 212 批：每批 5 局的平均 11.6　最近 20 批的平均 -89.2"/>
+<rect x="439.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 213 批：每批 5 局的平均 -291.4　最近 20 批的平均 -97.3"/>
+<rect x="441.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 214 批：每批 5 局的平均 20.8　最近 20 批的平均 -86.2"/>
+<rect x="443.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 215 批：每批 5 局的平均 -57.0　最近 20 批的平均 -87.8"/>
+<rect x="445.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 216 批：每批 5 局的平均 4.8　最近 20 批的平均 -91.0"/>
+<rect x="447.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 217 批：每批 5 局的平均 -45.4　最近 20 批的平均 -87.5"/>
+<rect x="448.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 218 批：每批 5 局的平均 -364.4　最近 20 批的平均 -100.9"/>
+<rect x="450.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 219 批：每批 5 局的平均 8.5　最近 20 批的平均 -92.5"/>
+<rect x="452.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 220 批：每批 5 局的平均 0.6　最近 20 批的平均 -90.8"/>
+<rect x="454.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 221 批：每批 5 局的平均 5.7　最近 20 批的平均 -84.4"/>
+<rect x="456.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 222 批：每批 5 局的平均 -108.1　最近 20 批的平均 -78.8"/>
+<rect x="457.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 223 批：每批 5 局的平均 -144.2　最近 20 批的平均 -85.8"/>
+<rect x="459.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 224 批：每批 5 局的平均 9.1　最近 20 批的平均 -72.7"/>
+<rect x="461.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 225 批：每批 5 局的平均 -130.1　最近 20 批的平均 -84.5"/>
+<rect x="463.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 226 批：每批 5 局的平均 -84.3　最近 20 批的平均 -83.8"/>
+<rect x="465.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 227 批：每批 5 局的平均 -55.7　最近 20 批的平均 -76.7"/>
+<rect x="467.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 228 批：每批 5 局的平均 -244.4　最近 20 批的平均 -87.9"/>
+<rect x="468.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 229 批：每批 5 局的平均 -2.8　最近 20 批的平均 -86.9"/>
+<rect x="470.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 230 批：每批 5 局的平均 -159.5　最近 20 批的平均 -91.4"/>
+<rect x="472.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 231 批：每批 5 局的平均 -147.0　最近 20 批的平均 -88.7"/>
+<rect x="474.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 232 批：每批 5 局的平均 -67.5　最近 20 批的平均 -92.6"/>
+<rect x="476.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 233 批：每批 5 局的平均 20.2　最近 20 批的平均 -77.0"/>
+<rect x="477.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 234 批：每批 5 局的平均 -433.1　最近 20 批的平均 -99.7"/>
+<rect x="479.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 235 批：每批 5 局的平均 28.3　最近 20 批的平均 -95.5"/>
+<rect x="481.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 236 批：每批 5 局的平均 51.7　最近 20 批的平均 -93.1"/>
+<rect x="483.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 237 批：每批 5 局的平均 -21.3　最近 20 批的平均 -91.9"/>
+<rect x="485.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 238 批：每批 5 局的平均 -89.3　最近 20 批的平均 -78.2"/>
+<rect x="487.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 239 批：每批 5 局的平均 -314.4　最近 20 批的平均 -94.3"/>
+<rect x="488.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 240 批：每批 5 局的平均 32.3　最近 20 批的平均 -92.7"/>
+<rect x="490.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 241 批：每批 5 局的平均 -126.5　最近 20 批的平均 -99.3"/>
+<rect x="492.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 242 批：每批 5 局的平均 40.6　最近 20 批的平均 -91.9"/>
+<rect x="494.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 243 批：每批 5 局的平均 -73.7　最近 20 批的平均 -88.4"/>
+<rect x="496.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 244 批：每批 5 局的平均 -202.3　最近 20 批的平均 -98.9"/>
+<rect x="497.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 245 批：每批 5 局的平均 -137.1　最近 20 批的平均 -99.3"/>
+<rect x="499.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 246 批：每批 5 局的平均 -43.3　最近 20 批的平均 -97.2"/>
+<rect x="501.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 247 批：每批 5 局的平均 -139.9　最近 20 批的平均 -101.5"/>
+<rect x="503.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 248 批：每批 5 局的平均 -25.0　最近 20 批的平均 -90.5"/>
+<rect x="505.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 249 批：每批 5 局的平均 -173.4　最近 20 批的平均 -99.0"/>
+<rect x="506.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 250 批：每批 5 局的平均 -121.4　最近 20 批的平均 -97.1"/>
+<rect x="508.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 251 批：每批 5 局的平均 -267.5　最近 20 批的平均 -103.1"/>
+<rect x="510.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 252 批：每批 5 局的平均 6.1　最近 20 批的平均 -99.5"/>
+<rect x="512.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 253 批：每批 5 局的平均 33.9　最近 20 批的平均 -98.8"/>
+<rect x="514.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 254 批：每批 5 局的平均 -242.3　最近 20 批的平均 -89.2"/>
+<rect x="516.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 255 批：每批 5 局的平均 -98.9　最近 20 批的平均 -95.6"/>
+<rect x="517.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 256 批：每批 5 局的平均 -207.0　最近 20 批的平均 -108.5"/>
+<rect x="519.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 257 批：每批 5 局的平均 -76.9　最近 20 批的平均 -111.3"/>
+<rect x="521.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 258 批：每批 5 局的平均 -156.4　最近 20 批的平均 -114.7"/>
+<rect x="523.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 259 批：每批 5 局的平均 -95.5　最近 20 批的平均 -103.7"/>
+<rect x="525.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 260 批：每批 5 局的平均 -192.8　最近 20 批的平均 -115.0"/>
+<rect x="526.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 261 批：每批 5 局的平均 -51.7　最近 20 批的平均 -111.2"/>
+<rect x="528.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 262 批：每批 5 局的平均 -64.9　最近 20 批的平均 -116.5"/>
+<rect x="530.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 263 批：每批 5 局的平均 -44.1　最近 20 批的平均 -115.0"/>
+<rect x="532.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 264 批：每批 5 局的平均 -126.3　最近 20 批的平均 -111.2"/>
+<rect x="534.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 265 批：每批 5 局的平均 -125.6　最近 20 批的平均 -110.6"/>
+<rect x="535.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 266 批：每批 5 局的平均 -110.9　最近 20 批的平均 -114.0"/>
+<rect x="537.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 267 批：每批 5 局的平均 -119.6　最近 20 批的平均 -113.0"/>
+<rect x="539.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 268 批：每批 5 局的平均 -194.7　最近 20 批的平均 -121.5"/>
+<rect x="541.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 269 批：每批 5 局的平均 11.0　最近 20 批的平均 -112.3"/>
+<rect x="543.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 270 批：每批 5 局的平均 -77.7　最近 20 批的平均 -110.1"/>
+<rect x="545.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 271 批：每批 5 局的平均 -247.0　最近 20 批的平均 -109.1"/>
+<rect x="546.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 272 批：每批 5 局的平均 17.4　最近 20 批的平均 -108.5"/>
+<rect x="548.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 273 批：每批 5 局的平均 -53.5　最近 20 批的平均 -112.9"/>
+<rect x="550.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 274 批：每批 5 局的平均 -144.1　最近 20 批的平均 -108.0"/>
+<rect x="552.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 275 批：每批 5 局的平均 -92.1　最近 20 批的平均 -107.6"/>
+<rect x="554.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 276 批：每批 5 局的平均 -80.4　最近 20 批的平均 -101.3"/>
+<rect x="555.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 277 批：每批 5 局的平均 -42.0　最近 20 批的平均 -99.5"/>
+<rect x="557.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 278 批：每批 5 局的平均 -103.9　最近 20 批的平均 -96.9"/>
+<rect x="559.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 279 批：每批 5 局的平均 5.9　最近 20 批的平均 -91.8"/>
+<rect x="561.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 280 批：每批 5 局的平均 -123.7　最近 20 批的平均 -88.4"/>
+<rect x="563.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 281 批：每批 5 局的平均 -230.9　最近 20 批的平均 -97.3"/>
+<rect x="565.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 282 批：每批 5 局的平均 -153.1　最近 20 批的平均 -101.8"/>
+<rect x="566.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 283 批：每批 5 局的平均 -85.0　最近 20 批的平均 -103.8"/>
+<rect x="568.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 284 批：每批 5 局的平均 -182.3　最近 20 批的平均 -106.6"/>
+<rect x="570.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 285 批：每批 5 局的平均 -71.7　最近 20 批的平均 -103.9"/>
+<rect x="572.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 286 批：每批 5 局的平均 -130.8　最近 20 批的平均 -104.9"/>
+<rect x="574.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 287 批：每批 5 局的平均 -56.9　最近 20 批的平均 -101.8"/>
+<rect x="575.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 288 批：每批 5 局的平均 -48.7　最近 20 批的平均 -94.5"/>
+<rect x="577.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 289 批：每批 5 局的平均 -85.6　最近 20 批的平均 -99.3"/>
+<rect x="579.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 290 批：每批 5 局的平均 -204.5　最近 20 批的平均 -105.6"/>
+<rect x="581.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 291 批：每批 5 局的平均 -85.0　最近 20 批的平均 -97.5"/>
+<rect x="583.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 292 批：每批 5 局的平均 84.9　最近 20 批的平均 -94.2"/>
+<rect x="584.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 293 批：每批 5 局的平均 -166.3　最近 20 批的平均 -99.8"/>
+<rect x="586.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 294 批：每批 5 局的平均 56.5　最近 20 批的平均 -89.8"/>
+<rect x="588.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 295 批：每批 5 局的平均 -169.7　最近 20 批的平均 -93.6"/>
+<rect x="590.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 296 批：每批 5 局的平均 51.4　最近 20 批的平均 -87.1"/>
+<rect x="592.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 297 批：每批 5 局的平均 -180.9　最近 20 批的平均 -94.0"/>
+<rect x="594.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 298 批：每批 5 局的平均 -1.8　最近 20 批的平均 -88.9"/>
+<rect x="595.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 299 批：每批 5 局的平均 -28.7　最近 20 批的平均 -90.6"/>
+<rect x="597.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 300 批：每批 5 局的平均 -106.0　最近 20 批的平均 -89.7"/>
+<rect x="599.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 301 批：每批 5 局的平均 -100.6　最近 20 批的平均 -83.2"/>
+<rect x="601.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 302 批：每批 5 局的平均 -113.5　最近 20 批的平均 -81.3"/>
+<rect x="603.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 303 批：每批 5 局的平均 -40.1　最近 20 批的平均 -79.0"/>
+<rect x="604.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 304 批：每批 5 局的平均 -116.6　最近 20 批的平均 -75.7"/>
+<rect x="606.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 305 批：每批 5 局的平均 -73.1　最近 20 批的平均 -75.8"/>
+<rect x="608.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 306 批：每批 5 局的平均 12.3　最近 20 批的平均 -68.6"/>
+<rect x="610.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 307 批：每批 5 局的平均 -110.8　最近 20 批的平均 -71.3"/>
+<rect x="612.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 308 批：每批 5 局的平均 -80.4　最近 20 批的平均 -72.9"/>
+<rect x="614.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 309 批：每批 5 局的平均 -112.2　最近 20 批的平均 -74.2"/>
+<rect x="615.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 310 批：每批 5 局的平均 -38.6　最近 20 批的平均 -65.9"/>
+<rect x="617.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 311 批：每批 5 局的平均 -80.8　最近 20 批的平均 -65.7"/>
+<rect x="619.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 312 批：每批 5 局的平均 -26.5　最近 20 批的平均 -71.3"/>
+<rect x="621.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 313 批：每批 5 局的平均 19.2　最近 20 批的平均 -62.0"/>
+<rect x="623.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 314 批：每批 5 局的平均 37.7　最近 20 批的平均 -63.0"/>
+<rect x="624.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 315 批：每批 5 局的平均 -133.6　最近 20 批的平均 -61.2"/>
+<rect x="626.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 316 批：每批 5 局的平均 -162.8　最近 20 批的平均 -71.9"/>
+<rect x="628.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 317 批：每批 5 局的平均 -203.1　最近 20 批的平均 -73.0"/>
+<rect x="630.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 318 批：每批 5 局的平均 -206.5　最近 20 批的平均 -83.2"/>
+<rect x="632.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 319 批：每批 5 局的平均 -10.8　最近 20 批的平均 -82.3"/>
+<rect x="633.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 320 批：每批 5 局的平均 -106.0　最近 20 批的平均 -82.3"/>
+<rect x="635.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 321 批：每批 5 局的平均 -19.3　最近 20 批的平均 -78.3"/>
+<rect x="637.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 322 批：每批 5 局的平均 -104.5　最近 20 批的平均 -77.8"/>
+<rect x="639.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 323 批：每批 5 局的平均 -73.5　最近 20 批的平均 -79.5"/>
+<rect x="641.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 324 批：每批 5 局的平均 -80.1　最近 20 批的平均 -77.7"/>
+<rect x="643.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 325 批：每批 5 局的平均 -216.6　最近 20 批的平均 -84.8"/>
+<rect x="644.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 326 批：每批 5 局的平均 -175.9　最近 20 批的平均 -94.3"/>
+<rect x="646.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 327 批：每批 5 局的平均 -151.3　最近 20 批的平均 -96.3"/>
+<rect x="648.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 328 批：每批 5 局的平均 -96.2　最近 20 批的平均 -97.1"/>
+<rect x="650.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 329 批：每批 5 局的平均 -64.4　最近 20 批的平均 -94.7"/>
+<rect x="652.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 330 批：每批 5 局的平均 -64.7　最近 20 批的平均 -96.0"/>
+<rect x="653.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 331 批：每批 5 局的平均 4.6　最近 20 批的平均 -91.7"/>
+<rect x="655.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 332 批：每批 5 局的平均 -224.7　最近 20 批的平均 -101.6"/>
+<rect x="657.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 333 批：每批 5 局的平均 123.7　最近 20 批的平均 -96.4"/>
+<rect x="659.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 334 批：每批 5 局的平均 -38.2　最近 20 批的平均 -100.2"/>
+<rect x="661.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 335 批：每批 5 局的平均 -241.9　最近 20 批的平均 -105.6"/>
+<rect x="663.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 336 批：每批 5 局的平均 27.6　最近 20 批的平均 -96.1"/>
+<rect x="664.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 337 批：每批 5 局的平均 -175.2　最近 20 批的平均 -94.7"/>
+<rect x="666.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 338 批：每批 5 局的平均 -84.2　最近 20 批的平均 -88.6"/>
+<rect x="668.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 339 批：每批 5 局的平均 -29.9　最近 20 批的平均 -89.5"/>
+<rect x="670.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 340 批：每批 5 局的平均 -70.6　最近 20 批的平均 -87.8"/>
+<rect x="672.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 341 批：每批 5 局的平均 -37.5　最近 20 批的平均 -88.7"/>
+<rect x="673.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 342 批：每批 5 局的平均 -154.3　最近 20 批的平均 -91.2"/>
+<rect x="675.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 343 批：每批 5 局的平均 11.7　最近 20 批的平均 -86.9"/>
+<rect x="677.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 344 批：每批 5 局的平均 4.4　最近 20 批的平均 -82.7"/>
+<rect x="679.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 345 批：每批 5 局的平均 -208.5　最近 20 批的平均 -82.3"/>
+<rect x="681.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 346 批：每批 5 局的平均 5.6　最近 20 批的平均 -73.2"/>
+<rect x="682.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 347 批：每批 5 局的平均 -127.3　最近 20 批的平均 -72.0"/>
+<rect x="684.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 348 批：每批 5 局的平均 177.5　最近 20 批的平均 -58.3"/>
+<rect x="686.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 349 批：每批 5 局的平均 -115.7　最近 20 批的平均 -60.9"/>
+<rect x="688.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 350 批：每批 5 局的平均 8.1　最近 20 批的平均 -57.2"/>
+<rect x="690.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 351 批：每批 5 局的平均 -5.8　最近 20 批的平均 -57.8"/>
+<rect x="692.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 352 批：每批 5 局的平均 -138.3　最近 20 批的平均 -53.4"/>
+<rect x="693.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 353 批：每批 5 局的平均 -64.6　最近 20 批的平均 -62.9"/>
+<rect x="695.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 354 批：每批 5 局的平均 -64.9　最近 20 批的平均 -64.2"/>
+<rect x="697.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 355 批：每批 5 局的平均 -123.6　最近 20 批的平均 -58.3"/>
+<rect x="699.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 356 批：每批 5 局的平均 -136.2　最近 20 批的平均 -66.5"/>
+<rect x="701.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 357 批：每批 5 局的平均 21.5　最近 20 批的平均 -56.6"/>
+<rect x="702.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 358 批：每批 5 局的平均 -29.5　最近 20 批的平均 -53.9"/>
+<rect x="704.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 359 批：每批 5 局的平均 -137.5　最近 20 批的平均 -59.3"/>
+<rect x="706.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 360 批：每批 5 局的平均 -127.9　最近 20 批的平均 -62.1"/>
+<rect x="708.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 361 批：每批 5 局的平均 -84.3　最近 20 批的平均 -64.5"/>
+<rect x="710.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 362 批：每批 5 局的平均 4.6　最近 20 批的平均 -56.5"/>
+<rect x="712.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 363 批：每批 5 局的平均 -27.7　最近 20 批的平均 -58.5"/>
+<rect x="713.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 364 批：每批 5 局的平均 -5.0　最近 20 批的平均 -59.0"/>
+<rect x="715.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 365 批：每批 5 局的平均 18.2　最近 20 批的平均 -47.6"/>
+<rect x="717.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 366 批：每批 5 局的平均 -46.0　最近 20 批的平均 -50.2"/>
+<rect x="719.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 367 批：每批 5 局的平均 15.7　最近 20 批的平均 -43.1"/>
+<rect x="721.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 368 批：每批 5 局的平均 -132.1　最近 20 批的平均 -58.6"/>
+<rect x="722.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 369 批：每批 5 局的平均 -101.7　最近 20 批的平均 -57.9"/>
+<rect x="724.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 370 批：每批 5 局的平均 -160.7　最近 20 批的平均 -66.3"/>
+<rect x="726.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 371 批：每批 5 局的平均 -12.1　最近 20 批的平均 -66.6"/>
+<rect x="728.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 372 批：每批 5 局的平均 20.6　最近 20 批的平均 -58.7"/>
+<rect x="730.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 373 批：每批 5 局的平均 -142.9　最近 20 批的平均 -62.6"/>
+<rect x="731.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 374 批：每批 5 局的平均 -90.0　最近 20 批的平均 -63.8"/>
+<rect x="733.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 375 批：每批 5 局的平均 -68.3　最近 20 批的平均 -61.1"/>
+<rect x="735.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 376 批：每批 5 局的平均 -91.4　最近 20 批的平均 -58.8"/>
+<rect x="737.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 377 批：每批 5 局的平均 -196.0　最近 20 批的平均 -69.7"/>
+<rect x="739.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 378 批：每批 5 局的平均 47.5　最近 20 批的平均 -65.9"/>
+<rect x="741.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 379 批：每批 5 局的平均 -155.2　最近 20 批的平均 -66.7"/>
+<rect x="742.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 380 批：每批 5 局的平均 -72.8　最近 20 批的平均 -64.0"/>
+<rect x="744.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 381 批：每批 5 局的平均 -104.6　最近 20 批的平均 -65.0"/>
+<rect x="746.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 382 批：每批 5 局的平均 -121.2　最近 20 批的平均 -71.3"/>
+<rect x="748.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 383 批：每批 5 局的平均 -113.1　最近 20 批的平均 -75.6"/>
+<rect x="750.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 384 批：每批 5 局的平均 4.9　最近 20 批的平均 -75.1"/>
+<rect x="751.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 385 批：每批 5 局的平均 -76.5　最近 20 批的平均 -79.8"/>
+<rect x="753.7" y="20" width="1.8" height="274" fill="transparent" data-tip="第 386 批：每批 5 局的平均 -30.2　最近 20 批的平均 -79.0"/>
+<rect x="755.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 387 批：每批 5 局的平均 -146.8　最近 20 批的平均 -87.1"/>
+<rect x="757.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 388 批：每批 5 局的平均 12.3　最近 20 批的平均 -79.9"/>
+<rect x="759.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 389 批：每批 5 局的平均 151.5　最近 20 批的平均 -67.3"/>
+<rect x="760.9" y="20" width="1.8" height="274" fill="transparent" data-tip="第 390 批：每批 5 局的平均 -186.6　最近 20 批的平均 -68.5"/>
+<rect x="762.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 391 批：每批 5 局的平均 -9.8　最近 20 批的平均 -68.4"/>
+<rect x="764.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 392 批：每批 5 局的平均 -126.0　最近 20 批的平均 -75.8"/>
+<rect x="766.4" y="20" width="1.8" height="274" fill="transparent" data-tip="第 393 批：每批 5 局的平均 -76.9　最近 20 批的平均 -72.5"/>
+<rect x="768.2" y="20" width="1.8" height="274" fill="transparent" data-tip="第 394 批：每批 5 局的平均 -98.6　最近 20 批的平均 -72.9"/>
+<rect x="770.0" y="20" width="1.8" height="274" fill="transparent" data-tip="第 395 批：每批 5 局的平均 12.8　最近 20 批的平均 -68.8"/>
+<rect x="771.8" y="20" width="1.8" height="274" fill="transparent" data-tip="第 396 批：每批 5 局的平均 -22.9　最近 20 批的平均 -65.4"/>
+<rect x="773.6" y="20" width="1.8" height="274" fill="transparent" data-tip="第 397 批：每批 5 局的平均 -121.5　最近 20 批的平均 -61.7"/>
+<rect x="775.5" y="20" width="1.8" height="274" fill="transparent" data-tip="第 398 批：每批 5 局的平均 -47.4　最近 20 批的平均 -66.4"/>
+<rect x="777.3" y="20" width="1.8" height="274" fill="transparent" data-tip="第 399 批：每批 5 局的平均 -179.2　最近 20 批的平均 -67.6"/>
+<rect x="779.1" y="20" width="1.8" height="274" fill="transparent" data-tip="第 400 批：每批 5 局的平均 106.5　最近 20 批的平均 -58.7"/>
+</svg>
+<!-- /CHART:ch00_curve -->
+<figcaption>圖 0.2　範例（種子 543）的訓練曲線，取自 <code>train.py</code> 存下的 <code>train_log.json</code>。灰色細線是每一批 5 局的平均，起伏極大；粗線是最近 20 批的移動平均。</figcaption>
+</figure>
+<p>前 20 批的平均是 −207.6，之後很快爬到 −100 附近，然後就停在那裡上下亂跳：單一批最高 177.5（第 348 批），最後 50 批的平均只有 −65.2。最後一批的 106.5 是運氣好碰上的一批。和投影片 p.6 左邊那條曲線（大約從 −500 爬到 0 上下、晃到 200）的樣子很像——那張圖多半就是範例跑出來的。</p>
+<p>測試腳本在種子 543 的環境上跑 5 局，<code>judge.py</code> 重播存下的動作：</p>
+<pre class="shell">Your reward is : -34.25
+Your reward is : -161.82
+Your reward is : -170.98
+Your reward is : 257.59                                                  «1»
+Your reward is : -22.56
+Your final reward is : -26.40                                            «2»</pre>
+<ol class="notes">
+<li><span class="mk">1</span>5 局裡只有第 4 局降落成功，拿了 257.59；其他 4 局都墜毀。第 1 章會把這一局逐步拆開，看分數是怎麼加出來的。</li>
+<li><span class="mk">2</span>平均 −26.40，落在 2021 年配分表最低的那一級（&lt;0）。</li>
+</ol>
+
+<h2 id="verify">0.6　拆檔有沒有拆壞</h2>
+<p>這本書讀的不是原版 notebook，而是拆成六個檔、再加上轉接層的版本，所以第一件事是證明兩者等價。做法和 HW13、HW14 相同：<code>docs/tools/hw12_make_ref.py</code> 把 notebook 的程式格原樣串成一支「參照腳本」，只改動在現在的環境跑不起來的行（每一行都保留原文，標上 <code># [ref]</code>），腳本最後把訓練曲線、網路權重、動作序列、評分存成一個檔。然後跑拆好的三支腳本，用 <code>docs/tools/hw12_check_split.py</code> 逐項比對：</p>
+<pre class="shell">avg_total_rewards      OK
+avg_final_rewards      OK
+network                OK                                                «1»
+action_list            OK
+judge_rewards (2 dp)   OK
+episodes per test: [312, 238, 286, 479, 219]</pre>
+<ol class="notes">
+<li><span class="mk">1</span>網路的 6 個參數張量用 <code>torch.equal</code> 比較，逐位元相同；兩條訓練曲線的 400 個浮點數也完全相同。兩邊印出的 stdout 用 <code>diff</code> 比對，也逐字相同。</li>
+</ol>
+<p>參照腳本需要改的行有這幾類：<code>import gym</code> 換成轉接層、<code>torch.set_deterministic</code> 換成新名字、三處 NumPy 2 不再接受的寫法、以及 Colab 專屬的虛擬螢幕與下載。其中最容易被忽略的是 notebook 裡「看看環境長什麼樣子」的那幾格：它們會呼叫 <code>reset()</code>、<code>step()</code>，推進環境的亂數。拆檔時如果覺得它們只是展示而拿掉，同一個種子的分數就從 −26.40 變成 108.6（第 1 章）。所以 <code>train.py</code> 保留了它們，並在註解裡寫明原因。</p>
+<div class="warn"><h4>「只是印出來看看」的程式也會改變結果</h4>
+<p>HW13、HW14 拆檔時遇過同一件事：建立一個只用來印結構的模型，會用掉全域亂數。在強化學習裡更嚴重，因為環境本身就是一個亂數產生器：每一次 <code>reset()</code> 都抽亂數產生地形與初始推力，每一步也會抽兩個亂數決定引擎噴射的擾動。任何對環境的呼叫，都會改變之後每一局看到的世界。</p>
+</div>
+
+<h2 id="scores">0.7　範例的成績單：21 個種子、三種量法</h2>
+<p>單一次的 −26.40 能說明什麼？RL 對種子極為敏感，所以本書先把範例在 21 個訓練種子上各跑一次（543 與 0–19；<code>docs/tools/hw12_specs/A.txt</code>）。每一次訓練結束後，用三種方式量同一個策略：</p>
+<ul>
+<li><strong>judge</strong>：作業的量法。種子 543 的環境，5 局，動作照機率取樣。</li>
+<li><strong>閉迴路 stochastic</strong>：100 個訓練時沒看過的環境種子（100000–100099），策略即時看狀態、照機率取樣。這比較接近「這個策略平均有多好」。</li>
+<li><strong>閉迴路 greedy</strong>：同樣 100 個種子，但每一步直接選機率最大的動作。</li>
+</ul>
+<figure class="fig">
+<!-- CHART:ch00_seeds -->
+<svg viewBox="0 0 900 300" role="img" aria-label="範例在 21 個訓練種子上的分數。訓練 2,000 局後：judge 平均 -47.7，閉迴路 stochastic 平均 -42.4，greedy 平均 -6.3；訓練到 100 萬步後 stochastic 平均 -42.1。參考線：隨機亂按 -184.5、Gymnasium 的手寫控制器 225.5。">
+<line x1="288.2" y1="16" x2="288.2" y2="256" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="288.2" y="274" text-anchor="middle">-200</text>
+<line x1="404.5" y1="16" x2="404.5" y2="256" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="404.5" y="274" text-anchor="middle">-100</text>
+<line x1="520.9" y1="16" x2="520.9" y2="256" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="520.9" y="274" text-anchor="middle">0</text>
+<line x1="637.3" y1="16" x2="637.3" y2="256" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="637.3" y="274" text-anchor="middle">100</text>
+<line x1="753.6" y1="16" x2="753.6" y2="256" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="753.6" y="274" text-anchor="middle">200</text>
+<line x1="870.0" y1="16" x2="870.0" y2="256" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="870.0" y="274" text-anchor="middle">300</text>
+<text class="s-sm" x="550.0" y="294" text-anchor="middle">平均總獎勵（每個點是一個訓練種子；白色短線是平均）</text>
+<text class="s-lbl" x="218" y="40.0" text-anchor="end">judge（固定 5 局）</text>
+<line x1="329.5" y1="36.0" x2="640.3" y2="36.0" stroke="#c98500" stroke-width="2" opacity="0.6"/>
+<circle cx="503.1" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-15.3"/>
+<circle cx="404.7" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-99.8"/>
+<circle cx="536.7" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：13.6"/>
+<circle cx="547.5" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：22.8"/>
+<circle cx="413.6" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-92.2"/>
+<circle cx="450.5" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-60.5"/>
+<circle cx="478.0" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-36.9"/>
+<circle cx="490.2" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-26.4"/>
+<circle cx="412.6" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-93.0"/>
+<circle cx="363.8" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-135.0"/>
+<circle cx="473.4" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-40.9"/>
+<circle cx="473.2" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-41.0"/>
+<circle cx="438.1" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-71.2"/>
+<circle cx="329.5" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-164.5"/>
+<circle cx="515.1" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-5.0"/>
+<circle cx="474.1" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-40.2"/>
+<circle cx="606.5" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：73.5"/>
+<circle cx="640.3" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：102.6"/>
+<circle cx="393.7" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-109.3"/>
+<circle cx="359.7" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-138.5"/>
+<circle cx="470.1" cy="36.0" r="5" fill="#c98500" stroke="#181e25" stroke-width="2" data-tip="judge（固定 5 局）：-43.7"/>
+<line x1="465.4" y1="25.0" x2="465.4" y2="47.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="652.3" y="40.0">-47.7</text>
+<rect x="0" y="16.0" width="900" height="40" fill="transparent" data-tip="judge（固定 5 局）：-15.3、-99.8、13.6、22.8、-92.2、-60.5、-36.9、-26.4、-93.0、-135.0、-40.9、-41.0、-71.2、-164.5、-5.0、-40.2、73.5、102.6、-109.3、-138.5、-43.7（平均 -47.7）"/>
+<text class="s-lbl" x="218" y="80.0" text-anchor="end">閉迴路 stochastic（100 局）</text>
+<line x1="375.2" y1="76.0" x2="567.6" y2="76.0" stroke="#8b949e" stroke-width="2" opacity="0.6"/>
+<circle cx="463.4" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-49.4"/>
+<circle cx="475.1" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-39.3"/>
+<circle cx="452.0" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-59.2"/>
+<circle cx="567.6" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：40.2"/>
+<circle cx="468.0" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-45.4"/>
+<circle cx="440.8" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-68.8"/>
+<circle cx="461.8" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-50.8"/>
+<circle cx="480.9" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-34.4"/>
+<circle cx="503.1" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-15.3"/>
+<circle cx="462.4" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-50.3"/>
+<circle cx="501.1" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-17.0"/>
+<circle cx="456.7" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-55.2"/>
+<circle cx="375.2" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-125.3"/>
+<circle cx="430.3" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-77.9"/>
+<circle cx="497.8" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-19.9"/>
+<circle cx="481.1" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-34.2"/>
+<circle cx="506.9" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-12.0"/>
+<circle cx="529.2" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：7.1"/>
+<circle cx="449.7" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-61.2"/>
+<circle cx="467.2" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-46.1"/>
+<circle cx="433.3" cy="76.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 stochastic（100 局）：-75.3"/>
+<line x1="471.6" y1="65.0" x2="471.6" y2="87.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="579.6" y="80.0">-42.4</text>
+<rect x="0" y="56.0" width="900" height="40" fill="transparent" data-tip="閉迴路 stochastic（100 局）：-49.4、-39.3、-59.2、40.2、-45.4、-68.8、-50.8、-34.4、-15.3、-50.3、-17.0、-55.2、-125.3、-77.9、-19.9、-34.2、-12.0、7.1、-61.2、-46.1、-75.3（平均 -42.4）"/>
+<text class="s-lbl" x="218" y="120.0" text-anchor="end">閉迴路 greedy（100 局）</text>
+<line x1="427.3" y1="116.0" x2="577.4" y2="116.0" stroke="#8b949e" stroke-width="2" opacity="0.6"/>
+<circle cx="501.8" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：-16.5"/>
+<circle cx="577.4" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：48.5"/>
+<circle cx="515.7" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：-4.5"/>
+<circle cx="575.6" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：47.0"/>
+<circle cx="474.6" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：-39.8"/>
+<circle cx="496.4" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：-21.0"/>
+<circle cx="523.5" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：2.3"/>
+<circle cx="523.5" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：2.3"/>
+<circle cx="557.6" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：31.5"/>
+<circle cx="470.4" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：-43.4"/>
+<circle cx="508.3" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：-10.8"/>
+<circle cx="528.6" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：6.6"/>
+<circle cx="427.3" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：-80.5"/>
+<circle cx="490.8" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：-25.9"/>
+<circle cx="532.1" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：9.7"/>
+<circle cx="547.8" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：23.1"/>
+<circle cx="560.1" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：33.7"/>
+<circle cx="563.1" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：36.3"/>
+<circle cx="468.7" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：-44.9"/>
+<circle cx="475.7" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：-38.8"/>
+<circle cx="465.1" cy="116.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="閉迴路 greedy（100 局）：-48.0"/>
+<line x1="513.5" y1="105.0" x2="513.5" y2="127.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="589.4" y="120.0">-6.3</text>
+<rect x="0" y="96.0" width="900" height="40" fill="transparent" data-tip="閉迴路 greedy（100 局）：-16.5、48.5、-4.5、47.0、-39.8、-21.0、2.3、2.3、31.5、-43.4、-10.8、6.6、-80.5、-25.9、9.7、23.1、33.7、36.3、-44.9、-38.8、-48.0（平均 -6.3）"/>
+<text class="s-lbl" x="218" y="160.0" text-anchor="end">訓練到 100 萬步，stochastic</text>
+<line x1="371.2" y1="156.0" x2="634.8" y2="156.0" stroke="#8b949e" stroke-width="2" opacity="0.6"/>
+<circle cx="456.6" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-55.2"/>
+<circle cx="471.6" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-42.4"/>
+<circle cx="456.5" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-55.3"/>
+<circle cx="554.1" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：28.6"/>
+<circle cx="371.2" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-128.6"/>
+<circle cx="459.3" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-53.0"/>
+<circle cx="634.8" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：97.9"/>
+<circle cx="513.3" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-6.5"/>
+<circle cx="535.7" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：12.7"/>
+<circle cx="427.6" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-80.2"/>
+<circle cx="449.8" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-61.1"/>
+<circle cx="457.5" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-54.5"/>
+<circle cx="407.1" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-97.8"/>
+<circle cx="479.1" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-35.9"/>
+<circle cx="416.3" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-89.9"/>
+<circle cx="516.6" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-3.7"/>
+<circle cx="400.4" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-103.6"/>
+<circle cx="500.9" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-17.2"/>
+<circle cx="381.3" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-120.0"/>
+<circle cx="495.2" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：-22.1"/>
+<circle cx="524.3" cy="156.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="訓練到 100 萬步，stochastic：2.9"/>
+<line x1="471.9" y1="145.0" x2="471.9" y2="167.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="646.8" y="160.0">-42.1</text>
+<rect x="0" y="136.0" width="900" height="40" fill="transparent" data-tip="訓練到 100 萬步，stochastic：-55.2、-42.4、-55.3、28.6、-128.6、-53.0、97.9、-6.5、12.7、-80.2、-61.1、-54.5、-97.8、-35.9、-89.9、-3.7、-103.6、-17.2、-120.0、-22.1、2.9（平均 -42.1）"/>
+<text class="s-lbl" x="218" y="200.0" text-anchor="end">參考：隨機亂按</text>
+<circle cx="306.2" cy="196.0" r="5" fill="#4a5562" stroke="#181e25" stroke-width="2" data-tip="參考：隨機亂按：-184.5"/>
+<text class="s-mono" x="318.2" y="200.0">-184.5</text>
+<rect x="0" y="176.0" width="900" height="40" fill="transparent" data-tip="參考：隨機亂按：-184.5"/>
+<text class="s-lbl" x="218" y="240.0" text-anchor="end">參考：手寫控制器</text>
+<circle cx="783.3" cy="236.0" r="5" fill="#008300" stroke="#181e25" stroke-width="2" data-tip="參考：手寫控制器：225.5"/>
+<text class="s-mono" x="795.3" y="240.0">225.5</text>
+<rect x="0" y="216.0" width="900" height="40" fill="transparent" data-tip="參考：手寫控制器：225.5"/>
+</svg>
+<!-- /CHART:ch00_seeds -->
+<figcaption>圖 0.3　範例在 21 個訓練種子上的分數（<code>docs/tools/hw12_runs.jsonl</code> 的 <code>A_sample</code>）。最下面兩行是參考：均勻隨機亂按，與 Gymnasium 內建的手寫控制器 <code>heuristic</code>，都在同樣 100 個種子上量。</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<thead><tr><th>量法（21 個種子）</th><th class="num">平均</th><th class="num">標準差</th><th class="num">最低</th><th class="num">最高</th></tr></thead>
+<tbody>
+<tr><td>judge（訓練 2,000 局）</td><td class="num">−47.7</td><td class="num">65.6</td><td class="num">−164.5</td><td class="num">102.6</td></tr>
+<tr><td>閉迴路 stochastic（2,000 局）</td><td class="num">−42.4</td><td class="num">33.2</td><td class="num">−125.3</td><td class="num">40.2</td></tr>
+<tr><td>閉迴路 greedy（2,000 局）</td><td class="num">−6.3</td><td class="num">34.6</td><td class="num">−80.5</td><td class="num">48.5</td></tr>
+<tr><td>閉迴路 stochastic（訓練到 100 萬步，約 3,343 局）</td><td class="num">−42.1</td><td class="num">52.8</td><td class="num">−128.6</td><td class="num">97.9</td></tr>
+<tr><td>參考：均勻隨機亂按</td><td class="num">−184.5</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+<tr><td>參考：手寫控制器 <code>heuristic</code></td><td class="num">225.5</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+</tbody>
+</table></div>
+<p>四件事：</p>
+<ol>
+<li><strong>範例學到了一點東西，但遠遠不夠</strong>。比隨機亂按（−184.5）好了 140 分左右，可是 21 個種子只有 4 個的 judge 分數 ≥ 0。閉迴路的 100 局裡，stochastic 平均有 78 局墜毀、greedy 有 71 局。</li>
+<li><strong>多練也沒用</strong>。把同一個演算法訓練到 100 萬步（多 1.6 倍的局數），閉迴路平均從 −42.4 變成 −42.1，原地踏步。問題不在時間，在演算法本身（第 3 章：範例的權重是「瞬時獎勵」）。</li>
+<li><strong>judge 和閉迴路只有中度相關</strong>。21 個種子的 judge 分數與閉迴路 stochastic 的相關係數是 0.53。種子 543 訓練到 100 萬步時，judge 是 97.2、閉迴路只有 −6.5——同一個策略，judge 看起來快到 100 分那一級，換 100 個沒看過的地形卻是負分。judge 的標準差（65.6）也是閉迴路（33.2）的兩倍：5 局實在太少。</li>
+<li><strong>greedy 比 stochastic 高約 36 分</strong>。照機率擲骰子，偶爾會擲到很糟的動作；永遠選最可能的動作就避開了這些。可是第 4 章會看到，換一個演算法之後，greedy 反而會讓小艇懸在半空中不肯降落。</li>
+</ol>
+<p>那條 225.5 分的參考線值得多看一眼。<code>heuristic</code> 是 Gymnasium 原始碼裡一個幾十行的手寫控制器：根據位置和速度算出「應該要有的角度與下降速度」，再用簡單的比例控制開關引擎。它在 100 個種子上降落了 89 次。不需要學習也能做到 225 分——這告訴我們這個環境並不難，難的是「只靠分數、不看規則」學會它。本書的目標就是讓學習出來的策略追上這條線。</p>
+
+<h2 id="map">0.8　這本書怎麼走</h2>
+<p>接下來的路線圖：</p>
+<ul>
+<li>第 1 章拆開環境：8 個狀態數字、每一步的獎勵怎麼組成、Gymnasium 和舊版 Gym 的差別、四條亂數流。</li>
+<li>第 2 章看策略網路怎麼取樣，以及為什麼這份作業用 CPU。</li>
+<li>第 3 章逐行讀範例的訓練迴圈，找出它停在 −42 的原因。</li>
+<li>第 4 章照助教的 medium 提示把權重改成折扣累積報酬；第 5 章加上 baseline 與 critic（投影片 p.5，以及報告題 1 的 A2C）；第 6 章疊上常見的穩定技巧、PPO，並以 DQN 對照。</li>
+<li>第 7 章回到評分：5 局的運氣、評分網站的漏洞，以及報告題 2。</li>
+<li>第 8 章是總結、題庫與速查表。</li>
+</ul>
+<p>每一個改良都跑 10 個訓練種子，在 2,000 局與 100 萬環境步兩個時間點各量一次（大綱的<a href="outline.html#spec">實驗規格</a>）。2022 年與現在的差異——RL 怎麼從玩遊戲走進大型語言模型——在<a href="index.html#then-now">目錄頁</a>的導論，第 6 章再接回來。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>強化學習沒有正確答案，只有環境回報的獎勵；資料由策略自己產生，分數常常在很多步之後才出現（信用分配）。</li>
+<li>作業交的是在種子 543 的環境上跑 5 局的動作序列，評分網站重播動作、算平均總獎勵。2022 年沒有公布門檻，本書用 2021 年的配分表當參考。</li>
+<li>2022 年的範例程式沒有公開；本書讀 2021 年的官方範例，兩年的投影片連範例結果圖都相同。</li>
+<li>策略網路是 8 → 16 → 16 → 4 的全連接網路，tanh、softmax，共 484 個參數（<code>model.py:9–20</code>）。</li>
+<li>拆好的 <code>train.py</code>／<code>test.py</code>／<code>judge.py</code> 與 notebook 原樣串成的參照腳本逐位元相同；notebook 開頭的探索格會推進環境亂數，不能拿掉。</li>
+<li>範例在 21 個種子上 judge 平均 −47.7，只有 4 個 ≥ 0；閉迴路 −42.4；訓練到 100 萬步也不會變好。手寫控制器有 225.5。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 把策略網路的兩個隱藏層都改成 64 個神經元，參數量變成多少？</summary>
+<p>fc1：8 × 64 + 64 = 576；fc2：64 × 64 + 64 = 4,160；fc3：64 × 4 + 4 = 260。合計 4,996，大約是原本的 10 倍。第 6 章的 D 組實驗用的就是這個寬度。</p></details>
+<details class="quiz"><summary>2. 同樣是種子 543、同樣的程式，2021 年 Colab 的第一批是 448 步，本機是 508 步。為什麼？能不能讓它們一樣？</summary>
+<p>第一批的步數由環境決定（地形、初始推力、每一步的噴射擾動）與策略的取樣決定。Gymnasium 1.4 的 <code>LunarLander-v3</code> 用的亂數產生器和 2021 年的 gym 0.18 不同，同一個種子產生的地形與推力就不同；torch 1.8 和 2.11 的初始化與取樣也不保證一樣。除非裝回整套舊版本（Python 3.7、gym 0.18.3、torch 1.8.1），否則無法逐位元重現，只能比較分布。</p></details>
+<details class="quiz"><summary>3. 某同學看到最後一批印出「Total: 106.5」，就認為策略已經過了 100 分那一級。這個判斷錯在哪裡？</summary>
+<p>那只是 5 局的平均，而每一局的分數從 −200 到 +260 都有可能。圖 0.2 顯示每批的平均上下跳動幾百分，最後 50 批的平均是 −65.2；拿去測試，judge 是 −26.40，閉迴路是 −34.4。要判斷策略好不好，至少要看很多局的平均，最好是訓練時沒看過的環境。</p></details>
+<details class="quiz"><summary>4. 為什麼本書要同時報 judge 與閉迴路兩種分數？只報 judge 不行嗎？</summary>
+<p>judge 是作業的評分方式，所以要報；但它只有 5 局、而且環境固定，雜訊很大（21 個種子的標準差 65.6，閉迴路只有 33.2），和閉迴路的相關係數只有 0.53。比較兩種方法時，只看 judge 很容易被運氣誤導；閉迴路的 100 局量的才比較接近策略真正的平均表現。</p></details>
+<details class="quiz"><summary>5. 手寫控制器 <code>heuristic</code> 不用學習就有 225.5 分。那為什麼還要用強化學習？</summary>
+<p>手寫控制器需要知道環境的物理（哪個引擎往哪推、該保持什麼角度），而且只適用於這一個環境。強化學習只需要狀態、動作與獎勵，不需要知道規則；同一套演算法可以用在規則寫不出來的問題上（例如下棋、或第 6 章的語言模型）。這個環境簡單到可以手寫控制器，正好讓我們知道「學得好」大概是多少分。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Richard S. Sutton、Andrew G. Barto，<a href="http://incompleteideas.net/book/the-book-2nd.html">Reinforcement Learning: An Introduction（第二版，2018）</a>：強化學習的標準教科書，第 1 章與第 3 章對應本章的名詞。</li>
+<li>OpenAI，<a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">Spinning Up: Key Concepts in RL</a>：一頁讀完狀態、動作、策略、回報的定義與記號。</li>
+<li>Gymnasium 文件，<a href="https://gymnasium.farama.org/environments/box2d/lunar_lander/">Lunar Lander</a>：本作業的環境說明（第 1 章會指出文件與程式不一致的一處）。</li>
+<li>李宏毅，<a href="https://youtu.be/z95ZYgPgXOY">DRL Lecture 1: Policy Gradient (Review)</a>：2021 年範例 notebook 最後列出的參考影片。</li>
+</ul>
+
+<footer class="chap-footer"><p>ML2022 Spring HW12 讀碼教材。作業內容出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群），範例程式出自 2021 年的同一門課；書中數字皆為本機實測。</p></footer>
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="index.html">← 目錄</a><a href="ch01.html">第 1 章 →</a></nav>
+<script id="book-js">
+/* HW12 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>
