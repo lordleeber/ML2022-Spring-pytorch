@@ -133,13 +133,13 @@ def stacked_outcomes(items, snap, key):
     W2, label_w, mr, row_h, mt, mb = 900, 230, 60, 34, 34, 34
     h = mt + row_h * len(items) + mb
     pw = W2 - label_w - mr
-    cols = [('降落', '#199e70'), ('墜毀', '#d55181'), ('截斷（懸停）', '#c98500')]
+    cols = [('降落', '#199e70'), ('墜毀', '#d55181'), ('截斷（撐滿 1,000 步）', '#c98500')]
     out = [f'<svg viewBox="0 0 {W2} {h}" role="img" aria-label="ARIA">']
     x = label_w
     for name, col in cols:
         out.append(f'<rect x="{x}" y="8" width="12" height="12" rx="2" fill="{col}"/>')
         out.append(f'<text class="s-sm" x="{x + 18}" y="18">{name}</text>')
-        x += 140
+        x += 190
     aria = []
     for i, (label, tag, _) in enumerate(items):
         ss = [r['snapshots'][snap]['closed_' + key] for r in runs(tag) if r['seed'] < 10]
@@ -164,7 +164,30 @@ def ch04_outcomes():
     return stacked_outcomes(B_ITEMS, 'steps', 'greedy')
 
 
+C_ITEMS = [('無 baseline（Adam）', 'C_rtg_adam', C['rtg']), ('MC baseline（p.5）', 'C_mc', C['base']),
+           ('MC，critic 只練 5 步', 'C_mc_ci5', C['base']), ('MC，範例的 SGD', 'C_mc_sgd', C['base']),
+           ('A2C TD(0)', 'C_td0', C['a2c']), ('A2C 5-step', 'C_n5', C['a2c']), ('A2C 20-step', 'C_n20', C['a2c']),
+           ('A2C GAE λ 0.95', 'C_gae0.95', C['a2c']), ('GAE 0.95，critic 只練 5 步', 'C_gae0.95_ci5', C['a2c']),
+           ('A2C GAE λ 0.99', 'C_gae0.99', C['a2c'])]
+
+
+def ch05_scores():
+    rows = []
+    for label, tag, color in C_ITEMS:
+        v = [r['snapshots']['steps']['closed_stochastic']['mean'] for r in runs(tag) if r['seed'] < 10]
+        rows.append({'label': label, 'color': color, 'values': v, 'mean': float(np.mean(v))})
+    rows.append({'label': '參考：手寫控制器', 'color': C['extra'], 'values': [HEURISTIC]})
+    return charts.dot_rows(rows, -300, 300, [-200, -100, 0, 100, 200, 300], label_w=250, vfmt='{:.1f}',
+                           xlabel='閉迴路 stochastic 平均總獎勵（訓練到 100 萬步；每個點是一個種子 0–9）',
+                           aria='C 組訓練到 100 萬步後的閉迴路分數平均：' + '、'.join(f'{r["label"]} {r["mean"]:.1f}' for r in rows[:-1]))
+
+
+def ch05_outcomes():
+    return stacked_outcomes(C_ITEMS, 'steps', 'greedy')
+
+
 CHARTS = {'ch00_curve': ('ch00.html', ch00_curve), 'ch00_seeds': ('ch00.html', ch00_seeds),
+          'ch05_scores': ('ch05.html', ch05_scores), 'ch05_outcomes': ('ch05.html', ch05_outcomes),
           'ch04_gamma': ('ch04.html', ch04_gamma), 'ch04_outcomes': ('ch04.html', ch04_outcomes),
           'ch03_curves': ('ch03.html', ch03_curves), 'ch03_lr': ('ch03.html', ch03_lr)}
 

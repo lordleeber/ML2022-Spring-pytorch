@@ -1,0 +1,9 @@
+policies: [('B_rtg0.99_s1', 'ep'), ('C_rtg_adam_s1', 'steps'), ('C_mc_s1', 'steps'), ('C_gae0.99_s2', 'steps')]
+B_rtg0.99_s1    stoch.: no truncated episodes
+B_rtg0.99_s1    greedy: 100 truncated; ended with both legs down   0 (mean total    nan, |x| nan, steps with both legs down   nan); in the air 100 (mean height 0.47, mean total  -48.0)
+C_rtg_adam_s1   stoch.:  40 truncated; ended with both legs down  33 (mean total   72.7, |x| 0.27, steps with both legs down   512); in the air   7 (mean height -0.03, mean total   55.7)
+C_rtg_adam_s1   greedy: 100 truncated; ended with both legs down   0 (mean total    nan, |x| nan, steps with both legs down   nan); in the air 100 (mean height 0.40, mean total  -45.3)
+C_mc_s1         stoch.:  79 truncated; ended with both legs down  74 (mean total  149.2, |x| 0.07, steps with both legs down   746); in the air   5 (mean height -0.00, mean total  118.8)
+C_mc_s1         greedy: 100 truncated; ended with both legs down  89 (mean total   90.0, |x| 0.08, steps with both legs down   369); in the air  11 (mean height -0.00, mean total   83.0)
+C_gae0.99_s2    stoch.: no truncated episodes
+C_gae0.99_s2    greedy: 100 truncated; ended with both legs down   1 (mean total  -17.7, |x| 0.11, steps with both legs down    69); in the air  99 (mean height 0.08, mean total   -3.8)
