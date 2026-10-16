@@ -1,0 +1,101 @@
+# group C (ch05): baseline and critic; Adam 3e-3 for all so only the weights differ (critic: Adam 1e-3, 50 full-batch steps per update unless noted)
+--seed 0 --returns rtg --optim adam --lr 0.003 --tag C_rtg_adam --save docs/tools/hw12_models/C_rtg_adam_s0.pt
+--seed 0 --adv mc --optim adam --lr 0.003 --critic_iters 50 --tag C_mc --save docs/tools/hw12_models/C_mc_s0.pt
+--seed 0 --adv mc --optim adam --lr 0.003 --critic_iters 5 --tag C_mc_ci5
+--seed 0 --adv mc --critic_iters 50 --tag C_mc_sgd
+--seed 0 --adv gae --lam 0 --optim adam --lr 0.003 --critic_iters 50 --tag C_td0
+--seed 0 --adv nstep --nstep 5 --optim adam --lr 0.003 --critic_iters 50 --tag C_n5
+--seed 0 --adv nstep --nstep 20 --optim adam --lr 0.003 --critic_iters 50 --tag C_n20
+--seed 0 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.95
+--seed 0 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.99 --save docs/tools/hw12_models/C_gae0.99_s0.pt
+--seed 0 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 5 --tag C_gae0.95_ci5
+--seed 1 --returns rtg --optim adam --lr 0.003 --tag C_rtg_adam --save docs/tools/hw12_models/C_rtg_adam_s1.pt
+--seed 1 --adv mc --optim adam --lr 0.003 --critic_iters 50 --tag C_mc --save docs/tools/hw12_models/C_mc_s1.pt
+--seed 1 --adv mc --optim adam --lr 0.003 --critic_iters 5 --tag C_mc_ci5
+--seed 1 --adv mc --critic_iters 50 --tag C_mc_sgd
+--seed 1 --adv gae --lam 0 --optim adam --lr 0.003 --critic_iters 50 --tag C_td0
+--seed 1 --adv nstep --nstep 5 --optim adam --lr 0.003 --critic_iters 50 --tag C_n5
+--seed 1 --adv nstep --nstep 20 --optim adam --lr 0.003 --critic_iters 50 --tag C_n20
+--seed 1 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.95
+--seed 1 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.99 --save docs/tools/hw12_models/C_gae0.99_s1.pt
+--seed 1 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 5 --tag C_gae0.95_ci5
+--seed 2 --returns rtg --optim adam --lr 0.003 --tag C_rtg_adam --save docs/tools/hw12_models/C_rtg_adam_s2.pt
+--seed 2 --adv mc --optim adam --lr 0.003 --critic_iters 50 --tag C_mc --save docs/tools/hw12_models/C_mc_s2.pt
+--seed 2 --adv mc --optim adam --lr 0.003 --critic_iters 5 --tag C_mc_ci5
+--seed 2 --adv mc --critic_iters 50 --tag C_mc_sgd
+--seed 2 --adv gae --lam 0 --optim adam --lr 0.003 --critic_iters 50 --tag C_td0
+--seed 2 --adv nstep --nstep 5 --optim adam --lr 0.003 --critic_iters 50 --tag C_n5
+--seed 2 --adv nstep --nstep 20 --optim adam --lr 0.003 --critic_iters 50 --tag C_n20
+--seed 2 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.95
+--seed 2 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.99 --save docs/tools/hw12_models/C_gae0.99_s2.pt
+--seed 2 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 5 --tag C_gae0.95_ci5
+--seed 3 --returns rtg --optim adam --lr 0.003 --tag C_rtg_adam --save docs/tools/hw12_models/C_rtg_adam_s3.pt
+--seed 3 --adv mc --optim adam --lr 0.003 --critic_iters 50 --tag C_mc --save docs/tools/hw12_models/C_mc_s3.pt
+--seed 3 --adv mc --optim adam --lr 0.003 --critic_iters 5 --tag C_mc_ci5
+--seed 3 --adv mc --critic_iters 50 --tag C_mc_sgd
+--seed 3 --adv gae --lam 0 --optim adam --lr 0.003 --critic_iters 50 --tag C_td0
+--seed 3 --adv nstep --nstep 5 --optim adam --lr 0.003 --critic_iters 50 --tag C_n5
+--seed 3 --adv nstep --nstep 20 --optim adam --lr 0.003 --critic_iters 50 --tag C_n20
+--seed 3 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.95
+--seed 3 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.99 --save docs/tools/hw12_models/C_gae0.99_s3.pt
+--seed 3 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 5 --tag C_gae0.95_ci5
+--seed 4 --returns rtg --optim adam --lr 0.003 --tag C_rtg_adam --save docs/tools/hw12_models/C_rtg_adam_s4.pt
+--seed 4 --adv mc --optim adam --lr 0.003 --critic_iters 50 --tag C_mc --save docs/tools/hw12_models/C_mc_s4.pt
+--seed 4 --adv mc --optim adam --lr 0.003 --critic_iters 5 --tag C_mc_ci5
+--seed 4 --adv mc --critic_iters 50 --tag C_mc_sgd
+--seed 4 --adv gae --lam 0 --optim adam --lr 0.003 --critic_iters 50 --tag C_td0
+--seed 4 --adv nstep --nstep 5 --optim adam --lr 0.003 --critic_iters 50 --tag C_n5
+--seed 4 --adv nstep --nstep 20 --optim adam --lr 0.003 --critic_iters 50 --tag C_n20
+--seed 4 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.95
+--seed 4 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.99 --save docs/tools/hw12_models/C_gae0.99_s4.pt
+--seed 4 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 5 --tag C_gae0.95_ci5
+--seed 5 --returns rtg --optim adam --lr 0.003 --tag C_rtg_adam --save docs/tools/hw12_models/C_rtg_adam_s5.pt
+--seed 5 --adv mc --optim adam --lr 0.003 --critic_iters 50 --tag C_mc --save docs/tools/hw12_models/C_mc_s5.pt
+--seed 5 --adv mc --optim adam --lr 0.003 --critic_iters 5 --tag C_mc_ci5
+--seed 5 --adv mc --critic_iters 50 --tag C_mc_sgd
+--seed 5 --adv gae --lam 0 --optim adam --lr 0.003 --critic_iters 50 --tag C_td0
+--seed 5 --adv nstep --nstep 5 --optim adam --lr 0.003 --critic_iters 50 --tag C_n5
+--seed 5 --adv nstep --nstep 20 --optim adam --lr 0.003 --critic_iters 50 --tag C_n20
+--seed 5 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.95
+--seed 5 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.99 --save docs/tools/hw12_models/C_gae0.99_s5.pt
+--seed 5 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 5 --tag C_gae0.95_ci5
+--seed 6 --returns rtg --optim adam --lr 0.003 --tag C_rtg_adam --save docs/tools/hw12_models/C_rtg_adam_s6.pt
+--seed 6 --adv mc --optim adam --lr 0.003 --critic_iters 50 --tag C_mc --save docs/tools/hw12_models/C_mc_s6.pt
+--seed 6 --adv mc --optim adam --lr 0.003 --critic_iters 5 --tag C_mc_ci5
+--seed 6 --adv mc --critic_iters 50 --tag C_mc_sgd
+--seed 6 --adv gae --lam 0 --optim adam --lr 0.003 --critic_iters 50 --tag C_td0
+--seed 6 --adv nstep --nstep 5 --optim adam --lr 0.003 --critic_iters 50 --tag C_n5
+--seed 6 --adv nstep --nstep 20 --optim adam --lr 0.003 --critic_iters 50 --tag C_n20
+--seed 6 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.95
+--seed 6 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.99 --save docs/tools/hw12_models/C_gae0.99_s6.pt
+--seed 6 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 5 --tag C_gae0.95_ci5
+--seed 7 --returns rtg --optim adam --lr 0.003 --tag C_rtg_adam --save docs/tools/hw12_models/C_rtg_adam_s7.pt
+--seed 7 --adv mc --optim adam --lr 0.003 --critic_iters 50 --tag C_mc --save docs/tools/hw12_models/C_mc_s7.pt
+--seed 7 --adv mc --optim adam --lr 0.003 --critic_iters 5 --tag C_mc_ci5
+--seed 7 --adv mc --critic_iters 50 --tag C_mc_sgd
+--seed 7 --adv gae --lam 0 --optim adam --lr 0.003 --critic_iters 50 --tag C_td0
+--seed 7 --adv nstep --nstep 5 --optim adam --lr 0.003 --critic_iters 50 --tag C_n5
+--seed 7 --adv nstep --nstep 20 --optim adam --lr 0.003 --critic_iters 50 --tag C_n20
+--seed 7 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.95
+--seed 7 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.99 --save docs/tools/hw12_models/C_gae0.99_s7.pt
+--seed 7 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 5 --tag C_gae0.95_ci5
+--seed 8 --returns rtg --optim adam --lr 0.003 --tag C_rtg_adam --save docs/tools/hw12_models/C_rtg_adam_s8.pt
+--seed 8 --adv mc --optim adam --lr 0.003 --critic_iters 50 --tag C_mc --save docs/tools/hw12_models/C_mc_s8.pt
+--seed 8 --adv mc --optim adam --lr 0.003 --critic_iters 5 --tag C_mc_ci5
+--seed 8 --adv mc --critic_iters 50 --tag C_mc_sgd
+--seed 8 --adv gae --lam 0 --optim adam --lr 0.003 --critic_iters 50 --tag C_td0
+--seed 8 --adv nstep --nstep 5 --optim adam --lr 0.003 --critic_iters 50 --tag C_n5
+--seed 8 --adv nstep --nstep 20 --optim adam --lr 0.003 --critic_iters 50 --tag C_n20
+--seed 8 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.95
+--seed 8 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.99 --save docs/tools/hw12_models/C_gae0.99_s8.pt
+--seed 8 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 5 --tag C_gae0.95_ci5
+--seed 9 --returns rtg --optim adam --lr 0.003 --tag C_rtg_adam --save docs/tools/hw12_models/C_rtg_adam_s9.pt
+--seed 9 --adv mc --optim adam --lr 0.003 --critic_iters 50 --tag C_mc --save docs/tools/hw12_models/C_mc_s9.pt
+--seed 9 --adv mc --optim adam --lr 0.003 --critic_iters 5 --tag C_mc_ci5
+--seed 9 --adv mc --critic_iters 50 --tag C_mc_sgd
+--seed 9 --adv gae --lam 0 --optim adam --lr 0.003 --critic_iters 50 --tag C_td0
+--seed 9 --adv nstep --nstep 5 --optim adam --lr 0.003 --critic_iters 50 --tag C_n5
+--seed 9 --adv nstep --nstep 20 --optim adam --lr 0.003 --critic_iters 50 --tag C_n20
+--seed 9 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.95
+--seed 9 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --tag C_gae0.99 --save docs/tools/hw12_models/C_gae0.99_s9.pt
+--seed 9 --adv gae --lam 0.95 --optim adam --lr 0.003 --critic_iters 5 --tag C_gae0.95_ci5

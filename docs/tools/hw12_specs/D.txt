@@ -1,0 +1,41 @@
+# group D (ch06): tricks stacked one at a time on C_gae0.99
+--seed 0 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --tag D_h64
+--seed 0 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --tag D_h64_ent
+--seed 0 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --tag D_h64_ent_clip
+--seed 0 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --episode_per_batch 10 --tag D_h64_ent_clip_b10 --save docs/tools/hw12_models/D_full_s0.pt
+--seed 1 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --tag D_h64
+--seed 1 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --tag D_h64_ent
+--seed 1 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --tag D_h64_ent_clip
+--seed 1 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --episode_per_batch 10 --tag D_h64_ent_clip_b10 --save docs/tools/hw12_models/D_full_s1.pt
+--seed 2 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --tag D_h64
+--seed 2 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --tag D_h64_ent
+--seed 2 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --tag D_h64_ent_clip
+--seed 2 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --episode_per_batch 10 --tag D_h64_ent_clip_b10 --save docs/tools/hw12_models/D_full_s2.pt
+--seed 3 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --tag D_h64
+--seed 3 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --tag D_h64_ent
+--seed 3 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --tag D_h64_ent_clip
+--seed 3 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --episode_per_batch 10 --tag D_h64_ent_clip_b10 --save docs/tools/hw12_models/D_full_s3.pt
+--seed 4 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --tag D_h64
+--seed 4 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --tag D_h64_ent
+--seed 4 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --tag D_h64_ent_clip
+--seed 4 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --episode_per_batch 10 --tag D_h64_ent_clip_b10 --save docs/tools/hw12_models/D_full_s4.pt
+--seed 5 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --tag D_h64
+--seed 5 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --tag D_h64_ent
+--seed 5 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --tag D_h64_ent_clip
+--seed 5 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --episode_per_batch 10 --tag D_h64_ent_clip_b10 --save docs/tools/hw12_models/D_full_s5.pt
+--seed 6 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --tag D_h64
+--seed 6 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --tag D_h64_ent
+--seed 6 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --tag D_h64_ent_clip
+--seed 6 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --episode_per_batch 10 --tag D_h64_ent_clip_b10 --save docs/tools/hw12_models/D_full_s6.pt
+--seed 7 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --tag D_h64
+--seed 7 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --tag D_h64_ent
+--seed 7 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --tag D_h64_ent_clip
+--seed 7 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --episode_per_batch 10 --tag D_h64_ent_clip_b10 --save docs/tools/hw12_models/D_full_s7.pt
+--seed 8 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --tag D_h64
+--seed 8 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --tag D_h64_ent
+--seed 8 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --tag D_h64_ent_clip
+--seed 8 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --episode_per_batch 10 --tag D_h64_ent_clip_b10 --save docs/tools/hw12_models/D_full_s8.pt
+--seed 9 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --tag D_h64
+--seed 9 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --tag D_h64_ent
+--seed 9 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --tag D_h64_ent_clip
+--seed 9 --adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --hidden 64 --entropy 0.01 --clip_grad 1 --episode_per_batch 10 --tag D_h64_ent_clip_b10 --save docs/tools/hw12_models/D_full_s9.pt

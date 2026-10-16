@@ -1,0 +1,19 @@
+# pilot 2: is A2C's hovering a critic that is fit too little? (seeds 0-2)
+--adv gae --optim adam --lr 0.003 --critic_iters 50 --seed 0 --tag pilot2_gae_ci50
+--adv gae --optim adam --lr 0.003 --critic_iters 50 --seed 1 --tag pilot2_gae_ci50
+--adv gae --optim adam --lr 0.003 --critic_iters 50 --seed 2 --tag pilot2_gae_ci50
+--adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --seed 0 --tag pilot2_gae99_ci50
+--adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --seed 1 --tag pilot2_gae99_ci50
+--adv gae --lam 0.99 --optim adam --lr 0.003 --critic_iters 50 --seed 2 --tag pilot2_gae99_ci50
+--adv nstep --nstep 20 --optim adam --lr 0.003 --critic_iters 50 --seed 0 --tag pilot2_n20_ci50
+--adv nstep --nstep 20 --optim adam --lr 0.003 --critic_iters 50 --seed 1 --tag pilot2_n20_ci50
+--adv nstep --nstep 20 --optim adam --lr 0.003 --critic_iters 50 --seed 2 --tag pilot2_n20_ci50
+--adv mc --optim adam --lr 0.003 --critic_iters 50 --seed 0 --tag pilot2_mc_ci50
+--adv mc --optim adam --lr 0.003 --critic_iters 50 --seed 1 --tag pilot2_mc_ci50
+--adv mc --optim adam --lr 0.003 --critic_iters 50 --seed 2 --tag pilot2_mc_ci50
+--adv mc --seed 0 --tag pilot2_mc_sgd_ci50 --critic_iters 50
+--adv mc --seed 1 --tag pilot2_mc_sgd_ci50 --critic_iters 50
+--adv mc --seed 2 --tag pilot2_mc_sgd_ci50 --critic_iters 50
+--adv gae --optim adam --lr 0.003 --critic_iters 50 --entropy 0.01 --seed 0 --tag pilot2_gae_ci50_ent
+--adv gae --optim adam --lr 0.003 --critic_iters 50 --entropy 0.01 --seed 1 --tag pilot2_gae_ci50_ent
+--adv gae --optim adam --lr 0.003 --critic_iters 50 --entropy 0.01 --seed 2 --tag pilot2_gae_ci50_ent

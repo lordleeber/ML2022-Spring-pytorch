@@ -1,0 +1,41 @@
+# group E (ch06): PPO and the DQN control
+--algo ppo --hidden 64 --lr 0.0003 --seed 0 --tag E_ppo --save docs/tools/hw12_models/E_ppo_s0.pt
+--algo ppo --hidden 16 --lr 0.0003 --seed 0 --tag E_ppo_h16
+--algo ppo --hidden 64 --lr 0.0003 --entropy 0.01 --seed 0 --tag E_ppo_ent
+--algo dqn --hidden 64 --lr 0.0005 --seed 0 --tag E_dqn --save docs/tools/hw12_models/E_dqn_s0.pt
+--algo ppo --hidden 64 --lr 0.0003 --seed 1 --tag E_ppo --save docs/tools/hw12_models/E_ppo_s1.pt
+--algo ppo --hidden 16 --lr 0.0003 --seed 1 --tag E_ppo_h16
+--algo ppo --hidden 64 --lr 0.0003 --entropy 0.01 --seed 1 --tag E_ppo_ent
+--algo dqn --hidden 64 --lr 0.0005 --seed 1 --tag E_dqn --save docs/tools/hw12_models/E_dqn_s1.pt
+--algo ppo --hidden 64 --lr 0.0003 --seed 2 --tag E_ppo --save docs/tools/hw12_models/E_ppo_s2.pt
+--algo ppo --hidden 16 --lr 0.0003 --seed 2 --tag E_ppo_h16
+--algo ppo --hidden 64 --lr 0.0003 --entropy 0.01 --seed 2 --tag E_ppo_ent
+--algo dqn --hidden 64 --lr 0.0005 --seed 2 --tag E_dqn --save docs/tools/hw12_models/E_dqn_s2.pt
+--algo ppo --hidden 64 --lr 0.0003 --seed 3 --tag E_ppo --save docs/tools/hw12_models/E_ppo_s3.pt
+--algo ppo --hidden 16 --lr 0.0003 --seed 3 --tag E_ppo_h16
+--algo ppo --hidden 64 --lr 0.0003 --entropy 0.01 --seed 3 --tag E_ppo_ent
+--algo dqn --hidden 64 --lr 0.0005 --seed 3 --tag E_dqn --save docs/tools/hw12_models/E_dqn_s3.pt
+--algo ppo --hidden 64 --lr 0.0003 --seed 4 --tag E_ppo --save docs/tools/hw12_models/E_ppo_s4.pt
+--algo ppo --hidden 16 --lr 0.0003 --seed 4 --tag E_ppo_h16
+--algo ppo --hidden 64 --lr 0.0003 --entropy 0.01 --seed 4 --tag E_ppo_ent
+--algo dqn --hidden 64 --lr 0.0005 --seed 4 --tag E_dqn --save docs/tools/hw12_models/E_dqn_s4.pt
+--algo ppo --hidden 64 --lr 0.0003 --seed 5 --tag E_ppo --save docs/tools/hw12_models/E_ppo_s5.pt
+--algo ppo --hidden 16 --lr 0.0003 --seed 5 --tag E_ppo_h16
+--algo ppo --hidden 64 --lr 0.0003 --entropy 0.01 --seed 5 --tag E_ppo_ent
+--algo dqn --hidden 64 --lr 0.0005 --seed 5 --tag E_dqn --save docs/tools/hw12_models/E_dqn_s5.pt
+--algo ppo --hidden 64 --lr 0.0003 --seed 6 --tag E_ppo --save docs/tools/hw12_models/E_ppo_s6.pt
+--algo ppo --hidden 16 --lr 0.0003 --seed 6 --tag E_ppo_h16
+--algo ppo --hidden 64 --lr 0.0003 --entropy 0.01 --seed 6 --tag E_ppo_ent
+--algo dqn --hidden 64 --lr 0.0005 --seed 6 --tag E_dqn --save docs/tools/hw12_models/E_dqn_s6.pt
+--algo ppo --hidden 64 --lr 0.0003 --seed 7 --tag E_ppo --save docs/tools/hw12_models/E_ppo_s7.pt
+--algo ppo --hidden 16 --lr 0.0003 --seed 7 --tag E_ppo_h16
+--algo ppo --hidden 64 --lr 0.0003 --entropy 0.01 --seed 7 --tag E_ppo_ent
+--algo dqn --hidden 64 --lr 0.0005 --seed 7 --tag E_dqn --save docs/tools/hw12_models/E_dqn_s7.pt
+--algo ppo --hidden 64 --lr 0.0003 --seed 8 --tag E_ppo --save docs/tools/hw12_models/E_ppo_s8.pt
+--algo ppo --hidden 16 --lr 0.0003 --seed 8 --tag E_ppo_h16
+--algo ppo --hidden 64 --lr 0.0003 --entropy 0.01 --seed 8 --tag E_ppo_ent
+--algo dqn --hidden 64 --lr 0.0005 --seed 8 --tag E_dqn --save docs/tools/hw12_models/E_dqn_s8.pt
+--algo ppo --hidden 64 --lr 0.0003 --seed 9 --tag E_ppo --save docs/tools/hw12_models/E_ppo_s9.pt
+--algo ppo --hidden 16 --lr 0.0003 --seed 9 --tag E_ppo_h16
+--algo ppo --hidden 64 --lr 0.0003 --entropy 0.01 --seed 9 --tag E_ppo_ent
+--algo dqn --hidden 64 --lr 0.0005 --seed 9 --tag E_dqn --save docs/tools/hw12_models/E_dqn_s9.pt

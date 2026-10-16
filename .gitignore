@@ -74,3 +74,7 @@ HW10/visualization.png
 docs/tools/hw10_logs/*.err
 HW10/cifar10/
 HW10/surrogates/
+
+HW12/outputs/
+HW12/*.npy
+docs/tools/hw12_models/

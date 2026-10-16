@@ -1,0 +1,21 @@
+# pilot: pick workable settings for groups C-E (seeds 0-2, both budgets)
+--adv mc --returns rtg --seed 0 --tag pilot_mc_sgd
+--adv mc --returns rtg --seed 1 --tag pilot_mc_sgd
+--adv mc --returns rtg --seed 2 --tag pilot_mc_sgd
+--adv mc --optim adam --lr 0.003 --seed 0 --tag pilot_mc_adam
+--adv mc --optim adam --lr 0.003 --seed 1 --tag pilot_mc_adam
+--adv mc --optim adam --lr 0.003 --seed 2 --tag pilot_mc_adam
+--adv gae --optim adam --lr 0.003 --seed 0 --tag pilot_gae_adam
+--adv gae --optim adam --lr 0.003 --seed 1 --tag pilot_gae_adam
+--adv gae --optim adam --lr 0.003 --seed 2 --tag pilot_gae_adam
+--returns rtg --optim adam --lr 0.003 --seed 0 --tag pilot_rtg_adam
+--returns rtg --optim adam --lr 0.003 --seed 1 --tag pilot_rtg_adam
+--returns rtg --optim adam --lr 0.003 --seed 2 --tag pilot_rtg_adam
+--algo ppo --hidden 64 --lr 0.0003 --seed 0 --tag pilot_ppo
+--algo ppo --hidden 64 --lr 0.0003 --seed 1 --tag pilot_ppo
+--algo ppo --hidden 64 --lr 0.0003 --seed 2 --tag pilot_ppo
+--algo dqn --hidden 64 --lr 0.0005 --seed 0 --tag pilot_dqn
+--algo dqn --hidden 64 --lr 0.0005 --seed 1 --tag pilot_dqn
+--algo dqn --hidden 64 --lr 0.0005 --seed 2 --tag pilot_dqn
+--adv gae --optim adam --lr 0.003 --hidden 64 --seed 0 --tag pilot_gae_adam64
+--adv gae --optim adam --lr 0.003 --hidden 64 --seed 1 --tag pilot_gae_adam64

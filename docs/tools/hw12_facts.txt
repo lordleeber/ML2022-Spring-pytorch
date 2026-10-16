@@ -1,0 +1,49 @@
+== model
+fc1.weight   (16, 8)    128
+fc1.bias     (16,)      16
+fc2.weight   (16, 16)   256
+fc2.bias     (16,)      16
+fc3.weight   (4, 16)    64
+fc3.bias     (4,)       4
+total 484
+shapes: in (3, 8) fc1 (3, 16) out (3, 4)
+PolicyGradientNetwork(
+  (fc1): Linear(in_features=8, out_features=16, bias=True)
+  (fc2): Linear(in_features=16, out_features=16, bias=True)
+  (fc3): Linear(in_features=16, out_features=4, bias=True)
+)
+
+== environment (gym_compat over Gymnasium)
+observation_space Box([ -2.5     -2.5    -10.     -10.      -6.2832 -10.      -0.      -0.    ], [ 2.5     2.5    10.     10.      6.2832 10.      1.      1.    ], (8,), float32)
+action_space Discrete(4)
+first reset after fix(env, 543): [-0.0013  1.3985 -0.1278 -0.5538  0.0015  0.029   0.      0.    ]
+action_space.sample(): 3
+step -> reward -1.0511407416545058 done False
+random-agent episode of cell [24]: 120 steps
+max_episode_steps 1000 reward_threshold 200
+
+== test episodes of the sample policy (fix(env, 543), sampled actions, as test.py)
+episode 0: steps 312 total -34.25 last reward -100.00 actions [1, 57, 180, 74] parts {'shaping': 123.38, 'main': -53.7, 'side': -3.93, 'end': -100.0}
+episode 1: steps 238 total -161.82 last reward -100.00 actions [1, 61, 129, 47] parts {'shaping': -19.91, 'main': -38.7, 'side': -3.21, 'end': -100.0}
+episode 2: steps 286 total -170.98 last reward -100.00 actions [5, 68, 148, 65] parts {'shaping': -22.62, 'main': -44.4, 'side': -3.96, 'end': -100.0}
+episode 3: steps 479 total 257.59 last reward 100.00 actions [121, 83, 179, 96] parts {'shaping': 216.66, 'main': -53.7, 'side': -5.37, 'end': 100.0}
+   t=0 a=3 probs=[0.001 0.    0.002 0.997] state=[-0.014  1.412 -0.677  0.001  0.013  0.109  0.     0.   ] r=0.678 cum=0.68
+   t=1 a=3 probs=[0.001 0.    0.002 0.997] state=[-0.02   1.411 -0.667 -0.026  0.017  0.068  0.     0.   ] r=0.668 cum=1.35
+   t=2 a=3 probs=[0.001 0.    0.003 0.996] state=[-0.027  1.41  -0.659 -0.052  0.019  0.038  0.     0.   ] r=0.472 cum=1.82
+   t=40 a=1 probs=[0.009 0.968 0.023 0.   ] state=[-0.207  1.32  -0.065  0.024 -0.627 -0.395  0.     0.   ] r=-1.622 cum=-0.55
+   t=80 a=2 probs=[0.    0.052 0.948 0.   ] state=[-0.173  1.125  0.268 -0.251 -0.166  0.607  0.     0.   ] r=4.989 cum=29.68
+   t=120 a=3 probs=[0.002 0.    0.325 0.674] state=[-0.135  1.028 -0.102 -0.276  0.775 -0.025  0.     0.   ] r=-1.204 cum=-21.39
+   t=160 a=2 probs=[0.   0.   0.99 0.01] state=[-0.296  0.684 -0.528 -0.305 -0.115 -0.641  0.     0.   ] r=-1.496 cum=34.44
+   t=200 a=0 probs=[0.001 0.726 0.273 0.   ] state=[-0.362  0.559  0.059 -0.366 -0.824  0.15   0.     0.   ] r=-1.146 cum=-11.42
+   t=240 a=2 probs=[0. 0. 1. 0.] state=[-0.205  0.15   0.401 -0.306  0.329  0.745  0.     0.   ] r=-1.793 cum=57.7
+   t=280 a=3 probs=[0.002 0.    0.002 0.997] state=[-0.179  0.074  0.128 -0.008  0.876 -0.216  0.     1.   ] r=0.015 cum=51.92
+   t=320 a=1 probs=[0.011 0.988 0.001 0.   ] state=[-0.146  0.041  0.052  0.005 -0.378 -0.024  1.     0.   ] r=1.255 cum=107.75
+   t=360 a=0 probs=[0.919 0.057 0.    0.024] state=[-0.129  0.001 -0.001  0.    -0.015  0.     1.     1.   ] r=-0.065 cum=157.73
+   t=400 a=0 probs=[0.918 0.058 0.    0.024] state=[-0.129  0.001  0.002 -0.    -0.015 -0.001  1.     1.   ] r=-0.051 cum=157.53
+   t=440 a=0 probs=[0.919 0.057 0.    0.024] state=[-0.128  0.001  0.    -0.    -0.014 -0.     1.     1.   ] r=0.007 cum=157.62
+   t=478 a=0 probs=[0.919 0.057 0.    0.025] state=[-0.128  0.001  0.     0.    -0.014  0.     1.     1.   ] r=100 cum=257.59
+episode 4: steps 219 total -22.56 last reward -100.00 actions [0, 47, 113, 59] parts {'shaping': 114.22, 'main': -33.6, 'side': -3.18, 'end': -100.0}
+
+== uniform random policy and the Gymnasium heuristic on the 100 closed-loop seeds (100000-100099)
+random    mean -184.5 std 115.1 min -588.2 max 24.0 >=200 0.00 mean steps 92 landed 0 crashed 100 timeout 0
+heuristic mean 225.5 std 118.0 min -221.5 max 313.8 >=200 0.86 mean steps 274 landed 89 crashed 8 timeout 3

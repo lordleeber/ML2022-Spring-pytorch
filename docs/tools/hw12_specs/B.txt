@@ -1,0 +1,71 @@
+# group B (ch04): what each log-prob is weighted with; everything else as the sample (SGD 0.001, 16 hidden, batch-normalised)
+--seed 0 --returns total --tag B_total
+--seed 0 --returns rtg --gamma 0.9 --tag B_rtg0.9 --save docs/tools/hw12_models/B_rtg0.9_s0.pt
+--seed 0 --returns rtg --gamma 0.95 --tag B_rtg0.95 --save docs/tools/hw12_models/B_rtg0.95_s0.pt
+--seed 0 --returns rtg --gamma 0.99 --tag B_rtg0.99 --save docs/tools/hw12_models/B_rtg0.99_s0.pt
+--seed 0 --returns rtg --gamma 0.999 --tag B_rtg0.999 --save docs/tools/hw12_models/B_rtg0.999_s0.pt
+--seed 0 --returns rtg --gamma 1.0 --tag B_rtg1.0 --save docs/tools/hw12_models/B_rtg1.0_s0.pt
+--seed 0 --returns rtg --gamma 0.99 --norm none --tag B_rtg0.99_nonorm
+--seed 1 --returns total --tag B_total
+--seed 1 --returns rtg --gamma 0.9 --tag B_rtg0.9 --save docs/tools/hw12_models/B_rtg0.9_s1.pt
+--seed 1 --returns rtg --gamma 0.95 --tag B_rtg0.95 --save docs/tools/hw12_models/B_rtg0.95_s1.pt
+--seed 1 --returns rtg --gamma 0.99 --tag B_rtg0.99 --save docs/tools/hw12_models/B_rtg0.99_s1.pt
+--seed 1 --returns rtg --gamma 0.999 --tag B_rtg0.999 --save docs/tools/hw12_models/B_rtg0.999_s1.pt
+--seed 1 --returns rtg --gamma 1.0 --tag B_rtg1.0 --save docs/tools/hw12_models/B_rtg1.0_s1.pt
+--seed 1 --returns rtg --gamma 0.99 --norm none --tag B_rtg0.99_nonorm
+--seed 2 --returns total --tag B_total
+--seed 2 --returns rtg --gamma 0.9 --tag B_rtg0.9 --save docs/tools/hw12_models/B_rtg0.9_s2.pt
+--seed 2 --returns rtg --gamma 0.95 --tag B_rtg0.95 --save docs/tools/hw12_models/B_rtg0.95_s2.pt
+--seed 2 --returns rtg --gamma 0.99 --tag B_rtg0.99 --save docs/tools/hw12_models/B_rtg0.99_s2.pt
+--seed 2 --returns rtg --gamma 0.999 --tag B_rtg0.999 --save docs/tools/hw12_models/B_rtg0.999_s2.pt
+--seed 2 --returns rtg --gamma 1.0 --tag B_rtg1.0 --save docs/tools/hw12_models/B_rtg1.0_s2.pt
+--seed 2 --returns rtg --gamma 0.99 --norm none --tag B_rtg0.99_nonorm
+--seed 3 --returns total --tag B_total
+--seed 3 --returns rtg --gamma 0.9 --tag B_rtg0.9 --save docs/tools/hw12_models/B_rtg0.9_s3.pt
+--seed 3 --returns rtg --gamma 0.95 --tag B_rtg0.95 --save docs/tools/hw12_models/B_rtg0.95_s3.pt
+--seed 3 --returns rtg --gamma 0.99 --tag B_rtg0.99 --save docs/tools/hw12_models/B_rtg0.99_s3.pt
+--seed 3 --returns rtg --gamma 0.999 --tag B_rtg0.999 --save docs/tools/hw12_models/B_rtg0.999_s3.pt
+--seed 3 --returns rtg --gamma 1.0 --tag B_rtg1.0 --save docs/tools/hw12_models/B_rtg1.0_s3.pt
+--seed 3 --returns rtg --gamma 0.99 --norm none --tag B_rtg0.99_nonorm
+--seed 4 --returns total --tag B_total
+--seed 4 --returns rtg --gamma 0.9 --tag B_rtg0.9 --save docs/tools/hw12_models/B_rtg0.9_s4.pt
+--seed 4 --returns rtg --gamma 0.95 --tag B_rtg0.95 --save docs/tools/hw12_models/B_rtg0.95_s4.pt
+--seed 4 --returns rtg --gamma 0.99 --tag B_rtg0.99 --save docs/tools/hw12_models/B_rtg0.99_s4.pt
+--seed 4 --returns rtg --gamma 0.999 --tag B_rtg0.999 --save docs/tools/hw12_models/B_rtg0.999_s4.pt
+--seed 4 --returns rtg --gamma 1.0 --tag B_rtg1.0 --save docs/tools/hw12_models/B_rtg1.0_s4.pt
+--seed 4 --returns rtg --gamma 0.99 --norm none --tag B_rtg0.99_nonorm
+--seed 5 --returns total --tag B_total
+--seed 5 --returns rtg --gamma 0.9 --tag B_rtg0.9 --save docs/tools/hw12_models/B_rtg0.9_s5.pt
+--seed 5 --returns rtg --gamma 0.95 --tag B_rtg0.95 --save docs/tools/hw12_models/B_rtg0.95_s5.pt
+--seed 5 --returns rtg --gamma 0.99 --tag B_rtg0.99 --save docs/tools/hw12_models/B_rtg0.99_s5.pt
+--seed 5 --returns rtg --gamma 0.999 --tag B_rtg0.999 --save docs/tools/hw12_models/B_rtg0.999_s5.pt
+--seed 5 --returns rtg --gamma 1.0 --tag B_rtg1.0 --save docs/tools/hw12_models/B_rtg1.0_s5.pt
+--seed 5 --returns rtg --gamma 0.99 --norm none --tag B_rtg0.99_nonorm
+--seed 6 --returns total --tag B_total
+--seed 6 --returns rtg --gamma 0.9 --tag B_rtg0.9 --save docs/tools/hw12_models/B_rtg0.9_s6.pt
+--seed 6 --returns rtg --gamma 0.95 --tag B_rtg0.95 --save docs/tools/hw12_models/B_rtg0.95_s6.pt
+--seed 6 --returns rtg --gamma 0.99 --tag B_rtg0.99 --save docs/tools/hw12_models/B_rtg0.99_s6.pt
+--seed 6 --returns rtg --gamma 0.999 --tag B_rtg0.999 --save docs/tools/hw12_models/B_rtg0.999_s6.pt
+--seed 6 --returns rtg --gamma 1.0 --tag B_rtg1.0 --save docs/tools/hw12_models/B_rtg1.0_s6.pt
+--seed 6 --returns rtg --gamma 0.99 --norm none --tag B_rtg0.99_nonorm
+--seed 7 --returns total --tag B_total
+--seed 7 --returns rtg --gamma 0.9 --tag B_rtg0.9 --save docs/tools/hw12_models/B_rtg0.9_s7.pt
+--seed 7 --returns rtg --gamma 0.95 --tag B_rtg0.95 --save docs/tools/hw12_models/B_rtg0.95_s7.pt
+--seed 7 --returns rtg --gamma 0.99 --tag B_rtg0.99 --save docs/tools/hw12_models/B_rtg0.99_s7.pt
+--seed 7 --returns rtg --gamma 0.999 --tag B_rtg0.999 --save docs/tools/hw12_models/B_rtg0.999_s7.pt
+--seed 7 --returns rtg --gamma 1.0 --tag B_rtg1.0 --save docs/tools/hw12_models/B_rtg1.0_s7.pt
+--seed 7 --returns rtg --gamma 0.99 --norm none --tag B_rtg0.99_nonorm
+--seed 8 --returns total --tag B_total
+--seed 8 --returns rtg --gamma 0.9 --tag B_rtg0.9 --save docs/tools/hw12_models/B_rtg0.9_s8.pt
+--seed 8 --returns rtg --gamma 0.95 --tag B_rtg0.95 --save docs/tools/hw12_models/B_rtg0.95_s8.pt
+--seed 8 --returns rtg --gamma 0.99 --tag B_rtg0.99 --save docs/tools/hw12_models/B_rtg0.99_s8.pt
+--seed 8 --returns rtg --gamma 0.999 --tag B_rtg0.999 --save docs/tools/hw12_models/B_rtg0.999_s8.pt
+--seed 8 --returns rtg --gamma 1.0 --tag B_rtg1.0 --save docs/tools/hw12_models/B_rtg1.0_s8.pt
+--seed 8 --returns rtg --gamma 0.99 --norm none --tag B_rtg0.99_nonorm
+--seed 9 --returns total --tag B_total
+--seed 9 --returns rtg --gamma 0.9 --tag B_rtg0.9 --save docs/tools/hw12_models/B_rtg0.9_s9.pt
+--seed 9 --returns rtg --gamma 0.95 --tag B_rtg0.95 --save docs/tools/hw12_models/B_rtg0.95_s9.pt
+--seed 9 --returns rtg --gamma 0.99 --tag B_rtg0.99 --save docs/tools/hw12_models/B_rtg0.99_s9.pt
+--seed 9 --returns rtg --gamma 0.999 --tag B_rtg0.999 --save docs/tools/hw12_models/B_rtg0.999_s9.pt
+--seed 9 --returns rtg --gamma 1.0 --tag B_rtg1.0 --save docs/tools/hw12_models/B_rtg1.0_s9.pt
+--seed 9 --returns rtg --gamma 0.99 --norm none --tag B_rtg0.99_nonorm
