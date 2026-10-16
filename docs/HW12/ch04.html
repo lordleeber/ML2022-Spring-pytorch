@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 4 章　回報怎麼算 — HW12 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW12 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製；由 HW10 的樣板複製、改色）
+   版面：單欄 1080px——近黑的冷灰底、紙白的字、月面青只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：範例 灰、reward-to-go 藍、baseline 橘、A2C 綠、PPO 紫、DQN 洋紅、JudgeBoi 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與前幾本相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #5cc8d6;      /* 月面青：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(92, 200, 214, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #5cc8d6;
+  /* 角色色 */
+  --r-sample: #8b949e; --r-rtg: #3987e5; --r-base: #d95926; --r-a2c: #199e70;
+  --r-ppo: #9085e9; --r-dqn: #d55181; --r-judge: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "s → π_θ(a|s) → a → 環境 → r, s′　·　θ ← θ + α ∇ log π_θ(a|s) · A　·　LunarLander　8 維狀態　4 個動作";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fdf1ef; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #121b1d; border-color: rgba(92, 200, 214, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1f0d0b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.sample { --rc: var(--r-sample); } .role.rtg { --rc: var(--r-rtg); } .role.base { --rc: var(--r-base); }
+.role.a2c { --rc: var(--r-a2c); } .role.ppo { --rc: var(--r-ppo); } .role.dqn { --rc: var(--r-dqn); }
+.role.judge { --rc: var(--r-judge); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW12 讀碼教材</p>
+  <h1>第 4 章　回報怎麼算：讓每個動作看見未來，但別看太遠</h1>
+  <p class="chap-lead">範例的註解寫著 medium 的提示：把瞬時獎勵改成「accumulative decaying reward」。這一章照做，並且把折扣 γ 從 0.9 掃到 1，再對照「整局總報酬」。結果是：γ = 0.99 讓閉迴路分數從 −30 升到 +60，第一次超過 0；但同時冒出一個新現象——小艇學會懸在半空中，不墜毀也不降落，直到 1,000 步被截斷。這一章解釋為什麼。</p>
+</header>
+<main>
+
+<h2 id="code">4.1　把 r<sub>t</sub> 換成 R<sub>t</sub></h2>
+<p>只要改第 74 行附近：每一局結束時，把這一局的獎勵序列從後往前累加，第 t 步的權重變成 R<sub>t</sub> ＝ r<sub>t</sub> + γ r<sub>t+1</sub> + γ² r<sub>t+2</sub> + ……。本書不改 <code>train.py</code>（它要保持和 notebook 逐位元相同），而是在實驗工具裡加選項 <code>--returns</code>：</p>
+<figure class="listing"><figcaption>docs/tools/hw12_exp.py:246–262 — discounted()、episode_weights() 的前半</figcaption>
+<pre class="py" data-hot="248,249,250,258,259,260,261,262"><code>def discounted(rs, gamma):
+    out, g = [], 0.0
+    for r in reversed(rs):
+        g = r + gamma * g
+        out.append(g)
+    return out[::-1]
+
+
+def episode_weights(ep, values):
+    # ep: one episode's rewards / last_value (bootstrap if truncated); values: V(s_t) or None
+    rs = ep['rewards']
+    if opt.adv == 'none':
+        if opt.returns == 'immediate':
+            return rs, None
+        if opt.returns == 'total':
+            return [sum(rs)] * len(rs), None
+        return discounted(rs, opt.gamma), None</code></pre></figure>
+<p><code>discounted()</code> 從最後一步往前走：最後一步的回報就是它自己的獎勵，前一步是自己的獎勵加上 γ 乘以後一步的回報。這樣只要一次走訪就能算完，不必對每一步都重新加總後面所有的獎勵。三種權重：</p>
+<ul>
+<li><code>immediate</code>：範例的瞬時獎勵（第 3 章證明了它等於 γ = 0）。</li>
+<li><code>rtg</code>：reward-to-go，投影片 p.4 的 R<sub>t</sub>；γ 由 <code>--gamma</code> 指定。</li>
+<li><code>total</code>：整局的總獎勵 R(τ)，局裡每一步都用同一個數——3.1 節推導出的「最原始」的策略梯度。</li>
+</ul>
+<p>其他一切和範例相同：同樣的網路、SGD 學習率 0.001、一批 5 局、整批標準化。B 組實驗（<code>docs/tools/hw12_specs/B.txt</code>）每種設定跑 10 個種子（0–9），每次訓練在 2,000 局與 100 萬環境步各量一次。</p>
+
+<h2 id="results">4.2　結果：γ = 0.99 第一次超過 0</h2>
+<figure class="fig">
+<!-- CHART:ch04_gamma -->
+<svg viewBox="0 0 900 340" role="img" aria-label="訓練到 100 萬步後各種權重的閉迴路分數平均：範例：瞬時（γ = 0） -29.8、整局總報酬 -20.9、reward-to-go γ = 0.9 -65.6、γ = 0.95 5.5、γ = 0.99 60.2、γ = 0.999 6.6、γ = 1 0.2">
+<line x1="336.7" y1="16" x2="336.7" y2="296" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="336.7" y="314" text-anchor="middle">-200</text>
+<line x1="443.3" y1="16" x2="443.3" y2="296" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="443.3" y="314" text-anchor="middle">-100</text>
+<line x1="550.0" y1="16" x2="550.0" y2="296" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="550.0" y="314" text-anchor="middle">0</text>
+<line x1="656.7" y1="16" x2="656.7" y2="296" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="656.7" y="314" text-anchor="middle">100</text>
+<line x1="763.3" y1="16" x2="763.3" y2="296" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="763.3" y="314" text-anchor="middle">200</text>
+<line x1="870.0" y1="16" x2="870.0" y2="296" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="870.0" y="314" text-anchor="middle">300</text>
+<text class="s-sm" x="550.0" y="334" text-anchor="middle">閉迴路 stochastic 平均總獎勵（訓練到 100 萬步；每個點是一個種子 0–9）</text>
+<text class="s-lbl" x="218" y="40.0" text-anchor="end">範例：瞬時（γ = 0）</text>
+<line x1="439.5" y1="36.0" x2="654.4" y2="36.0" stroke="#8b949e" stroke-width="2" opacity="0.6"/>
+<circle cx="491.1" cy="36.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="範例：瞬時（γ = 0）：-55.2"/>
+<circle cx="504.8" cy="36.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="範例：瞬時（γ = 0）：-42.4"/>
+<circle cx="580.5" cy="36.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="範例：瞬時（γ = 0）：28.6"/>
+<circle cx="654.4" cy="36.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="範例：瞬時（γ = 0）：97.9"/>
+<circle cx="563.5" cy="36.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="範例：瞬時（γ = 0）：12.7"/>
+<circle cx="484.8" cy="36.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="範例：瞬時（γ = 0）：-61.1"/>
+<circle cx="491.9" cy="36.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="範例：瞬時（γ = 0）：-54.5"/>
+<circle cx="445.6" cy="36.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="範例：瞬時（γ = 0）：-97.8"/>
+<circle cx="439.5" cy="36.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="範例：瞬時（γ = 0）：-103.6"/>
+<circle cx="526.5" cy="36.0" r="5" fill="#8b949e" stroke="#181e25" stroke-width="2" data-tip="範例：瞬時（γ = 0）：-22.1"/>
+<line x1="518.3" y1="25.0" x2="518.3" y2="47.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="666.4" y="40.0">-29.8</text>
+<rect x="0" y="16.0" width="900" height="40" fill="transparent" data-tip="範例：瞬時（γ = 0）：-55.2、-42.4、28.6、97.9、12.7、-61.1、-54.5、-97.8、-103.6、-22.1（平均 -29.8）"/>
+<text class="s-lbl" x="218" y="80.0" text-anchor="end">整局總報酬</text>
+<line x1="117.7" y1="76.0" x2="656.2" y2="76.0" stroke="#4a5562" stroke-width="2" opacity="0.6"/>
+<circle cx="552.8" cy="76.0" r="5" fill="#4a5562" stroke="#181e25" stroke-width="2" data-tip="整局總報酬：2.6"/>
+<circle cx="566.6" cy="76.0" r="5" fill="#4a5562" stroke="#181e25" stroke-width="2" data-tip="整局總報酬：15.6"/>
+<circle cx="624.8" cy="76.0" r="5" fill="#4a5562" stroke="#181e25" stroke-width="2" data-tip="整局總報酬：70.1"/>
+<circle cx="596.3" cy="76.0" r="5" fill="#4a5562" stroke="#181e25" stroke-width="2" data-tip="整局總報酬：43.4"/>
+<circle cx="117.7" cy="76.0" r="5" fill="#4a5562" stroke="#181e25" stroke-width="2" data-tip="整局總報酬：-405.3"/>
+<circle cx="606.8" cy="76.0" r="5" fill="#4a5562" stroke="#181e25" stroke-width="2" data-tip="整局總報酬：53.3"/>
+<circle cx="586.5" cy="76.0" r="5" fill="#4a5562" stroke="#181e25" stroke-width="2" data-tip="整局總報酬：34.3"/>
+<circle cx="535.5" cy="76.0" r="5" fill="#4a5562" stroke="#181e25" stroke-width="2" data-tip="整局總報酬：-13.6"/>
+<circle cx="656.2" cy="76.0" r="5" fill="#4a5562" stroke="#181e25" stroke-width="2" data-tip="整局總報酬：99.5"/>
+<circle cx="433.9" cy="76.0" r="5" fill="#4a5562" stroke="#181e25" stroke-width="2" data-tip="整局總報酬：-108.9"/>
+<line x1="527.7" y1="65.0" x2="527.7" y2="87.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="668.2" y="80.0">-20.9</text>
+<rect x="0" y="56.0" width="900" height="40" fill="transparent" data-tip="整局總報酬：2.6、15.6、70.1、43.4、-405.3、53.3、34.3、-13.6、99.5、-108.9（平均 -20.9）"/>
+<text class="s-lbl" x="218" y="120.0" text-anchor="end">reward-to-go γ = 0.9</text>
+<line x1="424.4" y1="116.0" x2="517.6" y2="116.0" stroke="#3987e5" stroke-width="2" opacity="0.6"/>
+<circle cx="449.2" cy="116.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="reward-to-go γ = 0.9：-94.5"/>
+<circle cx="514.8" cy="116.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="reward-to-go γ = 0.9：-33.0"/>
+<circle cx="507.6" cy="116.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="reward-to-go γ = 0.9：-39.7"/>
+<circle cx="517.6" cy="116.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="reward-to-go γ = 0.9：-30.3"/>
+<circle cx="467.8" cy="116.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="reward-to-go γ = 0.9：-77.1"/>
+<circle cx="424.4" cy="116.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="reward-to-go γ = 0.9：-117.7"/>
+<circle cx="510.1" cy="116.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="reward-to-go γ = 0.9：-37.4"/>
+<circle cx="500.1" cy="116.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="reward-to-go γ = 0.9：-46.7"/>
+<circle cx="472.1" cy="116.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="reward-to-go γ = 0.9：-73.0"/>
+<circle cx="436.2" cy="116.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="reward-to-go γ = 0.9：-106.7"/>
+<line x1="480.0" y1="105.0" x2="480.0" y2="127.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="529.6" y="120.0">-65.6</text>
+<rect x="0" y="96.0" width="900" height="40" fill="transparent" data-tip="reward-to-go γ = 0.9：-94.5、-33.0、-39.7、-30.3、-77.1、-117.7、-37.4、-46.7、-73.0、-106.7（平均 -65.6）"/>
+<text class="s-lbl" x="218" y="160.0" text-anchor="end">γ = 0.95</text>
+<line x1="462.0" y1="156.0" x2="699.4" y2="156.0" stroke="#3987e5" stroke-width="2" opacity="0.6"/>
+<circle cx="636.9" cy="156.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.95：81.5"/>
+<circle cx="588.2" cy="156.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.95：35.8"/>
+<circle cx="501.2" cy="156.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.95：-45.7"/>
+<circle cx="514.3" cy="156.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.95：-33.4"/>
+<circle cx="651.0" cy="156.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.95：94.7"/>
+<circle cx="462.0" cy="156.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.95：-82.5"/>
+<circle cx="478.5" cy="156.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.95：-67.1"/>
+<circle cx="542.2" cy="156.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.95：-7.3"/>
+<circle cx="484.8" cy="156.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.95：-61.2"/>
+<circle cx="699.4" cy="156.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.95：140.1"/>
+<line x1="555.8" y1="145.0" x2="555.8" y2="167.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="711.4" y="160.0">5.5</text>
+<rect x="0" y="136.0" width="900" height="40" fill="transparent" data-tip="γ = 0.95：81.5、35.8、-45.7、-33.4、94.7、-82.5、-67.1、-7.3、-61.2、140.1（平均 5.5）"/>
+<text class="s-lbl" x="218" y="200.0" text-anchor="end">γ = 0.99</text>
+<line x1="425.6" y1="196.0" x2="799.3" y2="196.0" stroke="#3987e5" stroke-width="2" opacity="0.6"/>
+<circle cx="676.2" cy="196.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.99：118.3"/>
+<circle cx="586.3" cy="196.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.99：34.1"/>
+<circle cx="635.5" cy="196.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.99：80.1"/>
+<circle cx="641.2" cy="196.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.99：85.5"/>
+<circle cx="799.3" cy="196.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.99：233.7"/>
+<circle cx="663.7" cy="196.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.99：106.6"/>
+<circle cx="425.6" cy="196.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.99：-116.6"/>
+<circle cx="647.7" cy="196.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.99：91.6"/>
+<circle cx="521.3" cy="196.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.99：-26.9"/>
+<circle cx="545.1" cy="196.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.99：-4.6"/>
+<line x1="614.2" y1="185.0" x2="614.2" y2="207.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="811.3" y="200.0">60.2</text>
+<rect x="0" y="176.0" width="900" height="40" fill="transparent" data-tip="γ = 0.99：118.3、34.1、80.1、85.5、233.7、106.6、-116.6、91.6、-26.9、-4.6（平均 60.2）"/>
+<text class="s-lbl" x="218" y="240.0" text-anchor="end">γ = 0.999</text>
+<line x1="423.5" y1="236.0" x2="642.1" y2="236.0" stroke="#3987e5" stroke-width="2" opacity="0.6"/>
+<circle cx="591.2" cy="236.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.999：38.6"/>
+<circle cx="472.8" cy="236.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.999：-72.4"/>
+<circle cx="618.8" cy="236.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.999：64.5"/>
+<circle cx="543.3" cy="236.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.999：-6.3"/>
+<circle cx="575.2" cy="236.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.999：23.6"/>
+<circle cx="423.5" cy="236.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.999：-118.6"/>
+<circle cx="617.5" cy="236.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.999：63.2"/>
+<circle cx="572.1" cy="236.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.999：20.7"/>
+<circle cx="514.3" cy="236.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.999：-33.5"/>
+<circle cx="642.1" cy="236.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 0.999：86.3"/>
+<line x1="557.1" y1="225.0" x2="557.1" y2="247.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="654.1" y="240.0">6.6</text>
+<rect x="0" y="216.0" width="900" height="40" fill="transparent" data-tip="γ = 0.999：38.6、-72.4、64.5、-6.3、23.6、-118.6、63.2、20.7、-33.5、86.3（平均 6.6）"/>
+<text class="s-lbl" x="218" y="280.0" text-anchor="end">γ = 1</text>
+<line x1="466.1" y1="276.0" x2="712.4" y2="276.0" stroke="#3987e5" stroke-width="2" opacity="0.6"/>
+<circle cx="466.1" cy="276.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 1：-78.7"/>
+<circle cx="484.0" cy="276.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 1：-61.8"/>
+<circle cx="509.5" cy="276.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 1：-37.9"/>
+<circle cx="475.8" cy="276.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 1：-69.5"/>
+<circle cx="501.5" cy="276.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 1：-45.5"/>
+<circle cx="639.8" cy="276.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 1：84.2"/>
+<circle cx="546.2" cy="276.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 1：-3.6"/>
+<circle cx="607.2" cy="276.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 1：53.6"/>
+<circle cx="712.4" cy="276.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 1：152.3"/>
+<circle cx="560.0" cy="276.0" r="5" fill="#3987e5" stroke="#181e25" stroke-width="2" data-tip="γ = 1：9.4"/>
+<line x1="550.3" y1="265.0" x2="550.3" y2="287.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="724.4" y="280.0">0.2</text>
+<rect x="0" y="256.0" width="900" height="40" fill="transparent" data-tip="γ = 1：-78.7、-61.8、-37.9、-69.5、-45.5、84.2、-3.6、53.6、152.3、9.4（平均 0.2）"/>
+</svg>
+<!-- /CHART:ch04_gamma -->
+<figcaption>圖 4.1　訓練到 100 萬步後的閉迴路 stochastic 分數（B 組與範例，種子 0–9）。</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<thead><tr><th rowspan="2">權重（種子 0–9）</th><th colspan="2">2,000 局</th><th colspan="3">100 萬環境步</th></tr>
+<tr><th class="num">judge</th><th class="num">stochastic</th><th class="num">judge</th><th class="num">stochastic</th><th class="num">greedy</th></tr></thead>
+<tbody>
+<tr><td>範例：瞬時（γ = 0）</td><td class="num">−44.0</td><td class="num">−37.0</td><td class="num">−64.7</td><td class="num">−29.8</td><td class="num">−24.9</td></tr>
+<tr><td>整局總報酬</td><td class="num">−87.2</td><td class="num">−101.4</td><td class="num">−8.9</td><td class="num">−20.9</td><td class="num">−98.0</td></tr>
+<tr><td>reward-to-go γ = 0.9</td><td class="num">−31.6</td><td class="num">−32.7</td><td class="num">−62.7</td><td class="num">−65.6</td><td class="num">−73.5</td></tr>
+<tr><td>γ = 0.95</td><td class="num">−24.5</td><td class="num">−23.3</td><td class="num">−12.9</td><td class="num">5.5</td><td class="num">−18.2</td></tr>
+<tr><td><strong>γ = 0.99</strong></td><td class="num"><strong>40.5</strong></td><td class="num"><strong>40.5</strong></td><td class="num"><strong>68.8</strong></td><td class="num"><strong>60.2</strong></td><td class="num"><strong>51.5</strong></td></tr>
+<tr><td>γ = 0.999</td><td class="num">−32.2</td><td class="num">−45.2</td><td class="num">14.7</td><td class="num">6.6</td><td class="num">−44.1</td></tr>
+<tr><td>γ = 1</td><td class="num">−96.5</td><td class="num">−68.9</td><td class="num">4.6</td><td class="num">0.2</td><td class="num">−48.7</td></tr>
+</tbody>
+</table></div>
+<p>γ = 0.99——正是範例註解裡寫的那個數——在兩個時間點都是最好的：2,000 局時閉迴路 40.5（範例 −37.0），100 萬步時 60.2（範例 −29.8）。它是第一個平均分數超過 0 的設定，100 萬步時 stochastic 有 20% 的局 ≥ 200 分。但它的種子間標準差也很大（52.3 到 90.2），最好的種子 100 萬步時超過 200，最差的仍是負的。</p>
+<p>其他的 γ 呈現一個倒 U 形：太小（0.9）和範例差不多，太大（0.999、1）在 2,000 局時甚至比範例還差，要到 100 萬步才追上來。整局總報酬在 2,000 局時是最差的（−101.4，100 局全墜毀），到 100 萬步卻追過了範例。下面幾節分別解釋。</p>
+<p>這裡也看得出為什麼本書要同時報兩種預算。同樣是 2,000 局，各設定實際用掉的環境步數差很多：範例 525,666 步，γ = 0.99 是 416,336 步，γ = 0.999 只有 258,106 步，γ = 1 是 208,285 步，整局總報酬更只有 182,480 步——它們在訓練初期學會的是「快點結束」，局很短，2,000 局裡累積的經驗只有範例的一半甚至三分之一。用「局數」比較，等於讓摔得快的方法少練了一半；改用「環境步數」比較（100 萬步），γ = 0.999 與 γ = 1 才追上來。反過來，100 萬步時各設定跑的局數也不同（範例約 3,330 局、整局總報酬約 6,004 局）。兩種預算回答不同的問題：局數比的是「玩幾次」，步數比的是「看了多少資料」，後者是 RL 論文的慣例。</p>
+
+<h2 id="gamma">4.3　γ 是一個視野</h2>
+<p>γ 的意思可以換成一個比較直觀的量：<strong>有效視野</strong> 1 / (1 − γ)，大約是「多少步以後的獎勵開始被打折到看不見」。γ = 0.9 是 10 步，0.95 是 20 步，0.99 是 100 步，0.999 是 1,000 步，γ = 1 則一路看到局的結束。0.99<sup>100</sup> ≈ 0.37，100 步之後的獎勵只剩三分之一多一點。</p>
+<p>拿第 1 章那一局成功降落的軌跡來算：兩腳在第 360 步著地，可是 +100 要等小艇完全靜止、物理引擎讓它「睡著」，到第 478 步才給——著地之後還要等 118 步。站在著地那一刻看，+100 的折扣是：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>γ</th><th class="num">有效視野（步）</th><th class="num">118 步後的 +100，現在值多少</th></tr></thead>
+<tbody>
+<tr><td>0.9</td><td class="num">10</td><td class="num">0.0004</td></tr>
+<tr><td>0.95</td><td class="num">20</td><td class="num">0.24</td></tr>
+<tr><td>0.99</td><td class="num">100</td><td class="num">30.5</td></tr>
+<tr><td>0.999</td><td class="num">1,000</td><td class="num">88.9</td></tr>
+<tr><td>1</td><td class="num">∞</td><td class="num">100</td></tr>
+</tbody>
+</table></div>
+<p>γ = 0.9 或 0.95 時，降落的獎勵<strong>根本看不見</strong>；它們只看得見位能的變化與油錢——也就是「飛得慢、飛得正、離降落區近」。那它們為什麼比範例（γ = 0）好一點？因為墜毀的 −100 在幾步之內就會發生：10 步的視野足以讓「快撞地了」的動作被懲罰。γ 越大，視野越遠，看得見降落；代價是權重裡混進越多「之後的運氣」：100 步之後發生什麼，和現在這個動作的關係越來越弱，雜訊卻一樣大。γ = 1 時，第一步的權重包含了整局幾百步的所有隨機性。這就是偏差與變異數的取捨：小 γ 偏差大（看不見真正的目標）、變異數小；大 γ 偏差小、變異數大。γ = 0.99 剛好讓 +100 還看得見三成，又不至於被太遠的雜訊淹沒。</p>
+
+<h2 id="total">4.4　整局總報酬：信用分配最差的一種</h2>
+<p>整局總報酬給局裡每一步同一個權重。一局好，每個動作都被推高——包括那些其實做錯的；一局壞，每個動作都被壓低——包括那些其實做對的。只有在很多局之後，「好動作比較常出現在好的局裡」這個統計關係才浮現出來。所以它學得最慢：2,000 局時 100 局全墜毀，閉迴路 −101.4，比範例還差 64 分。</p>
+<p>但它沒有範例那種「只看一步」的偏差：每個動作至少間接地為整局的結果負責。訓練到 100 萬步（每個種子約 6,004 局——局很短，因為大多墜毀）之後，閉迴路追到 −20.9，超過了範例的 −29.8。這是一個很好的對照：<strong>範例是低變異、高偏差，練再久也停在原地；整局總報酬是零偏差（對 3.1 節的梯度是不偏的）、高變異，練得夠久就會慢慢爬上來</strong>。reward-to-go 加折扣介於兩者之間：拿掉過去的獎勵降低變異，折扣再降一些，代價是一點偏差。</p>
+
+<h2 id="hover">4.5　懸停：不墜毀就好</h2>
+<p>回到表格最右欄：γ = 0.99 的 greedy 分數（51.5）比 stochastic（60.2）低。這和第 0 章範例的情況相反——範例 greedy 比 stochastic 高 36 分。看結局的分布：</p>
+<figure class="fig">
+<!-- CHART:ch04_outcomes -->
+<svg viewBox="0 0 900 306" role="img" aria-label="範例：瞬時（γ = 0） 降落 28.3、墜毀 69.3、截斷 2.4；整局總報酬 降落 8.2、墜毀 55.3、截斷 36.5；reward-to-go γ = 0.9 降落 1.5、墜毀 25.8、截斷 72.7；γ = 0.95 降落 6.2、墜毀 25.0、截斷 68.8；γ = 0.99 降落 32.5、墜毀 29.0、截斷 38.5；γ = 0.999 降落 9.6、墜毀 29.4、截斷 61.0；γ = 1 降落 19.6、墜毀 52.4、截斷 28.0">
+<rect x="230" y="8" width="12" height="12" rx="2" fill="#199e70"/>
+<text class="s-sm" x="248" y="18">降落</text>
+<rect x="370" y="8" width="12" height="12" rx="2" fill="#d55181"/>
+<text class="s-sm" x="388" y="18">墜毀</text>
+<rect x="510" y="8" width="12" height="12" rx="2" fill="#c98500"/>
+<text class="s-sm" x="528" y="18">截斷（懸停）</text>
+<text class="s-lbl" x="218" y="55.0" text-anchor="end">範例：瞬時（γ = 0）</text>
+<rect x="230.0" y="40" width="172.6" height="22" fill="#199e70" data-tip="範例：瞬時（γ = 0）：降落 28.3 局"/>
+<text class="s-mono" x="316.3" y="55.0" text-anchor="middle" style="fill:#0f1316">28</text>
+<rect x="402.6" y="40" width="422.7" height="22" fill="#d55181" data-tip="範例：瞬時（γ = 0）：墜毀 69.3 局"/>
+<text class="s-mono" x="614.0" y="55.0" text-anchor="middle" style="fill:#0f1316">69</text>
+<rect x="825.4" y="40" width="14.6" height="22" fill="#c98500" data-tip="範例：瞬時（γ = 0）：截斷（懸停） 2.4 局"/>
+<text class="s-lbl" x="218" y="89.0" text-anchor="end">整局總報酬</text>
+<rect x="230.0" y="74" width="50.0" height="22" fill="#199e70" data-tip="整局總報酬：降落 8.2 局"/>
+<text class="s-mono" x="255.0" y="89.0" text-anchor="middle" style="fill:#0f1316">8</text>
+<rect x="280.0" y="74" width="337.3" height="22" fill="#d55181" data-tip="整局總報酬：墜毀 55.3 局"/>
+<text class="s-mono" x="448.7" y="89.0" text-anchor="middle" style="fill:#0f1316">55</text>
+<rect x="617.3" y="74" width="222.7" height="22" fill="#c98500" data-tip="整局總報酬：截斷（懸停） 36.5 局"/>
+<text class="s-mono" x="728.7" y="89.0" text-anchor="middle" style="fill:#0f1316">36</text>
+<text class="s-lbl" x="218" y="123.0" text-anchor="end">reward-to-go γ = 0.9</text>
+<rect x="230.0" y="108" width="9.2" height="22" fill="#199e70" data-tip="reward-to-go γ = 0.9：降落 1.5 局"/>
+<rect x="239.2" y="108" width="157.4" height="22" fill="#d55181" data-tip="reward-to-go γ = 0.9：墜毀 25.8 局"/>
+<text class="s-mono" x="317.8" y="123.0" text-anchor="middle" style="fill:#0f1316">26</text>
+<rect x="396.5" y="108" width="443.5" height="22" fill="#c98500" data-tip="reward-to-go γ = 0.9：截斷（懸停） 72.7 局"/>
+<text class="s-mono" x="618.3" y="123.0" text-anchor="middle" style="fill:#0f1316">73</text>
+<text class="s-lbl" x="218" y="157.0" text-anchor="end">γ = 0.95</text>
+<rect x="230.0" y="142" width="37.8" height="22" fill="#199e70" data-tip="γ = 0.95：降落 6.2 局"/>
+<text class="s-mono" x="248.9" y="157.0" text-anchor="middle" style="fill:#0f1316">6</text>
+<rect x="267.8" y="142" width="152.5" height="22" fill="#d55181" data-tip="γ = 0.95：墜毀 25.0 局"/>
+<text class="s-mono" x="344.1" y="157.0" text-anchor="middle" style="fill:#0f1316">25</text>
+<rect x="420.3" y="142" width="419.7" height="22" fill="#c98500" data-tip="γ = 0.95：截斷（懸停） 68.8 局"/>
+<text class="s-mono" x="630.2" y="157.0" text-anchor="middle" style="fill:#0f1316">69</text>
+<text class="s-lbl" x="218" y="191.0" text-anchor="end">γ = 0.99</text>
+<rect x="230.0" y="176" width="198.2" height="22" fill="#199e70" data-tip="γ = 0.99：降落 32.5 局"/>
+<text class="s-mono" x="329.1" y="191.0" text-anchor="middle" style="fill:#0f1316">32</text>
+<rect x="428.2" y="176" width="176.9" height="22" fill="#d55181" data-tip="γ = 0.99：墜毀 29.0 局"/>
+<text class="s-mono" x="516.7" y="191.0" text-anchor="middle" style="fill:#0f1316">29</text>
+<rect x="605.1" y="176" width="234.8" height="22" fill="#c98500" data-tip="γ = 0.99：截斷（懸停） 38.5 局"/>
+<text class="s-mono" x="722.6" y="191.0" text-anchor="middle" style="fill:#0f1316">38</text>
+<text class="s-lbl" x="218" y="225.0" text-anchor="end">γ = 0.999</text>
+<rect x="230.0" y="210" width="58.6" height="22" fill="#199e70" data-tip="γ = 0.999：降落 9.6 局"/>
+<text class="s-mono" x="259.3" y="225.0" text-anchor="middle" style="fill:#0f1316">10</text>
+<rect x="288.6" y="210" width="179.3" height="22" fill="#d55181" data-tip="γ = 0.999：墜毀 29.4 局"/>
+<text class="s-mono" x="378.2" y="225.0" text-anchor="middle" style="fill:#0f1316">29</text>
+<rect x="467.9" y="210" width="372.1" height="22" fill="#c98500" data-tip="γ = 0.999：截斷（懸停） 61.0 局"/>
+<text class="s-mono" x="654.0" y="225.0" text-anchor="middle" style="fill:#0f1316">61</text>
+<text class="s-lbl" x="218" y="259.0" text-anchor="end">γ = 1</text>
+<rect x="230.0" y="244" width="119.6" height="22" fill="#199e70" data-tip="γ = 1：降落 19.6 局"/>
+<text class="s-mono" x="289.8" y="259.0" text-anchor="middle" style="fill:#0f1316">20</text>
+<rect x="349.6" y="244" width="319.6" height="22" fill="#d55181" data-tip="γ = 1：墜毀 52.4 局"/>
+<text class="s-mono" x="509.4" y="259.0" text-anchor="middle" style="fill:#0f1316">52</text>
+<rect x="669.2" y="244" width="170.8" height="22" fill="#c98500" data-tip="γ = 1：截斷（懸停） 28.0 局"/>
+<text class="s-mono" x="754.6" y="259.0" text-anchor="middle" style="fill:#0f1316">28</text>
+<text class="s-sm" x="535.0" y="298" text-anchor="middle">100 局閉迴路裡的結局（10 個種子的平均）</text>
+</svg>
+<!-- /CHART:ch04_outcomes -->
+<figcaption>圖 4.2　訓練到 100 萬步後，greedy 策略在 100 局閉迴路裡的結局（10 個種子的平均）。黃色是撐滿 1,000 步被截斷的局。</figcaption>
+</figure>
+<p>範例的 greedy 只有 2.4 局被截斷；reward-to-go 的 greedy 卻有 38.5（γ = 0.99）到 72.7 局（γ = 0.9）被截斷。在 2,000 局那個時間點，γ = 0.99 的 10 個種子裡有 5 個的 greedy 策略至少一半的局被截斷，其中種子 1 是 100 局全部截斷——而它的 stochastic 版本一局都沒有被截斷。本書的 <code>docs/tools/hw12_ch04.py</code> 把種子 1 的策略放回環境（評估種子 100000），兩種方式各跑一局：</p>
+<pre class="shell">greedy: env seed 100000, 1000 steps, total -52.3, truncated, action shares [0.    0.207 0.577 0.216]
+   t=   0 x -0.010 y 1.410 speed 0.502 last-20 actions [3]
+   t= 200 x +0.121 y 0.850 speed 0.172 last-20 actions [3, 2, 1, 3, 2, 2, 1, 3, 2, 1, 2, 2, 2, 3, 2, 1, 2, 2, 2, 3]
+   t= 600 x +0.150 y 0.495 speed 0.009 last-20 actions [2, 1, 2, 3, 2, 1, 2, 3, 2, 2, 1, 3, 2, 2, 1, 3, 2, 2, 2, 3]   «1»
+   t= 999 x +0.170 y 0.452 speed 0.085 last-20 actions [2, 2, 3, 2, 1, 2, 3, 2, 1, 3, 2, 1, 2, 2, 2, 3, 1, 2, 2, 2]
+   steps 200..end: main engine share 0.579, mean height 0.552, mean speed 0.061
+   fuel paid for the main engine over the episode: 173.1                                                            «2»
+stochastic: env seed 100000, 284 steps, total 19.2, crashed, action shares [0.056 0.211 0.539 0.194]                «3»</pre>
+<ol class="notes">
+<li><span class="mk">1</span>第 600 步時小艇停在高度 0.495、速度幾乎是 0，動作是主引擎與兩側引擎的固定節奏：開主引擎頂住重力，左右輪流修正姿態。它在降落區上方一點點的地方，一停就是 800 步。</li>
+<li><span class="mk">2</span>1,000 步裡開了 577 次主引擎，光油錢就 −173.1；最後總分 −52.3，被截斷。</li>
+<li><span class="mk">3</span>同一個策略、同一個地形，照機率擲骰子：偶爾擲到「不開主引擎」，小艇就往下掉一點，284 步之後到了地面——這一局最後還是墜毀了（總分 19.2），但至少下來了。</li>
+</ol>
+<p>為什麼會學出懸停？把 4.3 節的視野放回來。懸在空中的每一步，位能幾乎不變，只扣 0.3 的油錢；往下降，速度一變快位能就下降，而且有撞地 −100 的風險，它就在幾十步之內，看得一清二楚；降落的 +100 卻要等到著地後再靜止一百多步才來，被折扣掉大半。對一個視野只有 100 步的策略來說，「懸著不動、每步付一點油錢」是一個合理的局部最佳解。greedy 把這個解執行得最徹底：在懸停的狀態下，主引擎永遠是機率最大的動作，所以永遠不會下來；stochastic 的隨機性反而救了它。γ = 0.9 與 0.95 根本看不見 +100，懸停最嚴重（γ = 0.9 在 100 萬步時，連 stochastic 都有 71.8 局被截斷）。不過這不是單調的：γ = 0.999 看得見 +100，greedy 卻也有 61 局被截斷——它的權重最吵，100 萬步時還沒學穩，懸停是它在半路上停留的地方。γ = 0.99 兩者兼顧，截斷最少（38.5 局），但也還遠遠不是 0。</p>
+<div class="note"><h4>懸停是 RL 的經典失敗模式</h4>
+<p>「找到一個不會被罰的狀態就待著不動」在很多環境裡都會出現：機器人學會站著不走、遊戲角色躲在角落。原因都一樣——懲罰近、獎勵遠。解法包括：加大 γ 或用更好的價值估計讓遠處的獎勵看得見（第 5 章）、加入熵正則化讓策略保持一點隨機（第 6 章）、修改獎勵（例如對時間收費），或像 Gymnasium 這樣用時間上限截斷——不過截斷本身不是懲罰，策略照樣可以懸停到時間到。</p>
+</div>
+
+<h2 id="nonorm">4.6　累積報酬不標準化：一場災難</h2>
+<p>第 3 章看到，範例拿掉標準化只是變得比較不穩定（閉迴路 −71.7）。換成累積報酬再拿掉標準化（<code>B_rtg0.99_nonorm</code>），10 個種子在兩個時間點的分數一模一樣：閉迴路 −431.6，judge −435.8，100 局全部墜毀，而且 stochastic 與 greedy 完全相同。100 萬步裡每個種子跑了將近 14,000 局（平均每局 71 步），訓練曲線在最初幾百局之後就不再變化。</p>
+<p>stochastic 與 greedy 相同，代表策略已經變成確定的：每個狀態都只會選同一個動作——和第 3 章學習率 ×10 的崩潰是同一件事。原因是權重的尺度。R<sub>t</sub> 是好幾十步的獎勵加總，訓練初期幾乎每一局都以 −100 結束，墜毀前那幾十步的 R<sub>t</sub> 都在 −100 上下；loss 又是幾百步的加總。範例標準化之後，普通步數的權重只有 ±0.3 左右（第 3 章）；不標準化時，同樣的位置是幾十到上百，步伐大了兩個數量級左右，某個動作的機率很快被推到 0 或 1，從此再也動不了。訓練曲線也印證了這一點：每個種子在前 400 局左右就停在固定的水準，之後一萬多局都沒有再變。標準化在這裡不是一個可有可無的技巧，而是讓 SGD 學習率 0.001 有意義的前提。</p>
+
+<h2 id="next">4.7　還剩下什麼問題</h2>
+<p>γ = 0.99 把平均分數拉過了 0，但離手寫控制器的 225.5 還很遠，而且 10 個種子從負分到 200 多分都有。問題已經從「訊號是錯的」（範例的短視）變成「訊號太吵」：一個動作的 R<sub>t</sub> 包含了之後一百多步的運氣，同一個狀態下同一個動作，這一局 R<sub>t</sub> 是 +50、下一局可能是 −150。降低這個雜訊的標準做法是 baseline：不要問「這個動作之後總共拿了多少分」，而要問「比這個狀態下平常會拿的分數，多拿了多少」。這是投影片 p.5 的內容，也是第 5 章的主題。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>把瞬時獎勵換成 reward-to-go R<sub>t</sub>（<code>discounted()</code> 從後往前一次算完）。γ = 0.99 最好：2,000 局 40.5、100 萬步 60.2（範例 −37.0、−29.8）。</li>
+<li>γ 對應有效視野 1/(1−γ)。降落的 +100 要在著地後再等一百多步才給：γ = 0.9 看不見它，γ = 0.99 看得見三成。小 γ 偏差大，大 γ 變異大。</li>
+<li>整局總報酬是不偏但最吵的權重：2,000 局時最差，100 萬步時反而超過範例。</li>
+<li>reward-to-go 讓 greedy 策略學會懸停：近處的墜毀看得見、遠處的降落看不清，懸著付油錢是局部最佳解。γ = 0.99 的 greedy 在 100 萬步時仍有 38.5% 的局被截斷；stochastic 的隨機性反而讓它下來。</li>
+<li>累積報酬不標準化，第一步就崩潰成固定動作策略（10 個種子都是 −431.6）。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. 一局 3 步、獎勵 2、−1、−100，γ = 0.9。用 <code>discounted()</code> 的方式從後往前算出三個 R<sub>t</sub>。</summary>
+<p>R<sub>3</sub> ＝ −100；R<sub>2</sub> ＝ −1 + 0.9 × (−100) ＝ −91；R<sub>1</sub> ＝ 2 + 0.9 × (−91) ＝ −79.9。</p></details>
+<details class="quiz"><summary>2. 為什麼 γ = 0.9 能讓「快撞地」的動作被懲罰，卻看不見降落？</summary>
+<p>墜毀通常是幾步之內的事：前 5 步的 −100 打折後還有 0.9<sup>5</sup> × 100 ≈ 59。降落的 +100 要在著地後再靜止一百多步才給，0.9<sup>118</sup> 幾乎是 0。所以 γ = 0.9 的策略知道要避免撞地，卻沒有理由真的降落——懸停最嚴重（100 萬步時 72.7% 的 greedy 局被截斷）。</p></details>
+<details class="quiz"><summary>3. 一位同學想消除懸停，把測試改成 greedy。這對 γ = 0.99 的策略是好主意嗎？</summary>
+<p>不是。4.5 節的資料正好相反：γ = 0.99 的 greedy 平均 51.5、stochastic 60.2；greedy 有 38.5% 的局懸停到截斷。測試時擲骰子，偶爾不開主引擎，反而讓懸停的小艇下來。是否改 greedy 要看策略，不能一概而論（範例是 greedy 比較好）。</p></details>
+<details class="quiz"><summary>4. 如果把環境改成「每一步扣 1 分」（對時間收費），你預期懸停會怎樣？會不會有副作用？</summary>
+<p>懸停每一步的代價從 0.3 變成 1.3，1,000 步就是 −1,300，策略比較有動機趕快結束這一局；副作用是「趕快結束」也包括故意墜毀——如果降落太難，直接摔下去（−100）可能比懸停便宜。這是推論，本書沒有實際跑。</p></details>
+<details class="quiz"><summary>5. 整局總報酬是「不偏」的，為什麼還是比 reward-to-go 差？</summary>
+<p>不偏只代表很多很多局的平均方向正確；每一批只有 5 局，估計的變異數很大。整局總報酬把動作之前發生的獎勵也算進權重，那些獎勵和這個動作無關、只增加雜訊。reward-to-go 拿掉它們，期望值不變、變異數變小，同樣的局數就能學得更快。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>OpenAI Spinning Up，<a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html#don-t-let-the-past-distract-you">Don't Let the Past Distract You</a>：reward-to-go 為什麼不改變期望值。</li>
+<li>Sutton、Barto，<a href="http://incompleteideas.net/book/the-book-2nd.html">Reinforcement Learning: An Introduction</a> 第 3.3 節：回報與折扣。</li>
+<li>Gymnasium 文件，<a href="https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/">Handling Time Limits</a>：截斷與終止的差別，以及為什麼截斷時要用價值估計補上未來（第 5 章用到）。</li>
+</ul>
+
+<footer class="chap-footer"><p>ML2022 Spring HW12 讀碼教材。作業內容出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群），範例程式出自 2021 年的同一門課；書中數字皆為本機實測。</p></footer>
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch03.html">← 第 3 章</a><a href="ch05.html">第 5 章 →</a></nav>
+<script id="book-js">
+/* HW12 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

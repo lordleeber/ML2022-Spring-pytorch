@@ -113,7 +113,59 @@ def ch03_lr():
                                 f'1e-2 {m[2]:.1f}、不標準化 {m[3]:.1f}。參考：永遠不動 −130.3、永遠開主引擎 −883.0。')
 
 
+B_ITEMS = [('範例：瞬時（γ = 0）', 'A_sample', C['sample']), ('整局總報酬', 'B_total', '#4a5562'),
+           ('reward-to-go γ = 0.9', 'B_rtg0.9', C['rtg']), ('γ = 0.95', 'B_rtg0.95', C['rtg']),
+           ('γ = 0.99', 'B_rtg0.99', C['rtg']), ('γ = 0.999', 'B_rtg0.999', C['rtg']), ('γ = 1', 'B_rtg1.0', C['rtg'])]
+
+
+def ch04_gamma():
+    rows = []
+    for label, tag, color in B_ITEMS:
+        v = [r['snapshots']['steps']['closed_stochastic']['mean'] for r in runs(tag) if r['seed'] < 10]
+        rows.append({'label': label, 'color': color, 'values': v, 'mean': float(np.mean(v))})
+    return charts.dot_rows(rows, -300, 300, [-200, -100, 0, 100, 200, 300], label_w=230, vfmt='{:.1f}',
+                           xlabel='閉迴路 stochastic 平均總獎勵（訓練到 100 萬步；每個點是一個種子 0–9）',
+                           aria='訓練到 100 萬步後各種權重的閉迴路分數平均：' + '、'.join(f'{r["label"]} {r["mean"]:.1f}' for r in rows))
+
+
+def stacked_outcomes(items, snap, key):
+    """one horizontal bar per setting: mean landed / crashed / timeout out of 100 closed-loop episodes"""
+    W2, label_w, mr, row_h, mt, mb = 900, 230, 60, 34, 34, 34
+    h = mt + row_h * len(items) + mb
+    pw = W2 - label_w - mr
+    cols = [('降落', '#199e70'), ('墜毀', '#d55181'), ('截斷（懸停）', '#c98500')]
+    out = [f'<svg viewBox="0 0 {W2} {h}" role="img" aria-label="ARIA">']
+    x = label_w
+    for name, col in cols:
+        out.append(f'<rect x="{x}" y="8" width="12" height="12" rx="2" fill="{col}"/>')
+        out.append(f'<text class="s-sm" x="{x + 18}" y="18">{name}</text>')
+        x += 140
+    aria = []
+    for i, (label, tag, _) in enumerate(items):
+        ss = [r['snapshots'][snap]['closed_' + key] for r in runs(tag) if r['seed'] < 10]
+        vals = [float(np.mean([s[k] for s in ss])) for k in ('landed', 'crashed', 'timeout')]
+        y = mt + row_h * i
+        out.append(f'<text class="s-lbl" x="{label_w - 12}" y="{y + row_h / 2 + 4:.1f}" text-anchor="end">{charts._esc(label)}</text>')
+        x = label_w
+        for v, (name, col) in zip(vals, cols):
+            wdt = pw * v / 100
+            out.append(f'<rect x="{x:.1f}" y="{y + 6}" width="{wdt:.1f}" height="{row_h - 12}" fill="{col}" '
+                       f'data-tip="{charts._esc(label)}：{name} {v:.1f} 局"/>')
+            if wdt > 34:
+                out.append(f'<text class="s-mono" x="{x + wdt / 2:.1f}" y="{y + row_h / 2 + 4:.1f}" text-anchor="middle" style="fill:#0f1316">{v:.0f}</text>')
+            x += wdt
+        aria.append(f'{label} 降落 {vals[0]:.1f}、墜毀 {vals[1]:.1f}、截斷 {vals[2]:.1f}')
+    out.append(f'<text class="s-sm" x="{label_w + pw / 2:.1f}" y="{h - 8}" text-anchor="middle">100 局閉迴路裡的結局（10 個種子的平均）</text>')
+    out.append('</svg>')
+    return '\n'.join(out).replace('ARIA', charts._esc('；'.join(aria)))
+
+
+def ch04_outcomes():
+    return stacked_outcomes(B_ITEMS, 'steps', 'greedy')
+
+
 CHARTS = {'ch00_curve': ('ch00.html', ch00_curve), 'ch00_seeds': ('ch00.html', ch00_seeds),
+          'ch04_gamma': ('ch04.html', ch04_gamma), 'ch04_outcomes': ('ch04.html', ch04_outcomes),
           'ch03_curves': ('ch03.html', ch03_curves), 'ch03_lr': ('ch03.html', ch03_lr)}
 
 

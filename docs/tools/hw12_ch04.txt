@@ -1,0 +1,40 @@
+== group B and the sample (seeds 0-9), both snapshots
+A_sample          ep    n=10 judge   -44.0 ± 58.6 sto   -37.0 ± 40.0 greedy     2.3 ± 38.8 | sto L/C/T 15.8/79.2/ 5.0 greedy L/C/T 25.9/70.4/ 3.7 | eps  2000 steps  525666 sto>=200 0.14
+A_sample          steps n=10 judge   -64.7 ± 51.5 sto   -29.8 ± 58.3 greedy   -24.9 ± 58.4 | sto L/C/T 24.0/70.4/ 5.6 greedy L/C/T 28.3/69.3/ 2.4 | eps  3330 steps 1001139 sto>=200 0.18
+B_total           ep    n=10 judge   -87.2 ± 40.1 sto  -101.4 ± 29.5 greedy  -222.9 ±209.3 | sto L/C/T  0.0/100.0/ 0.0 greedy L/C/T  0.1/89.6/10.3 | eps  2000 steps  182480 sto>=200 0.00
+B_total           steps n=10 judge    -8.9 ±126.1 sto   -20.9 ±138.9 greedy   -98.0 ±142.0 | sto L/C/T 14.0/69.8/16.2 greedy L/C/T  8.2/55.3/36.5 | eps  6004 steps 1000799 sto>=200 0.08
+B_rtg0.9          ep    n=10 judge   -31.6 ± 64.9 sto   -32.7 ± 76.2 greedy   -28.5 ± 72.2 | sto L/C/T  8.6/60.2/31.2 greedy L/C/T 12.2/55.2/32.6 | eps  2000 steps  455209 sto>=200 0.06
+B_rtg0.9          steps n=10 judge   -62.7 ± 24.1 sto   -65.6 ± 30.9 greedy   -73.5 ± 30.1 | sto L/C/T  2.3/25.9/71.8 greedy L/C/T  1.5/25.8/72.7 | eps  3436 steps 1002114 sto>=200 0.01
+   seeds whose greedy policy times out on >= 50 of 100 seeds (2,000 episodes): [5, 8]
+B_rtg0.95         ep    n=10 judge   -24.5 ± 90.0 sto   -23.3 ± 70.4 greedy   -91.6 ±160.2 | sto L/C/T 16.8/63.0/20.2 greedy L/C/T 10.1/62.8/27.1 | eps  2000 steps  572171 sto>=200 0.02
+B_rtg0.95         steps n=10 judge   -12.9 ± 86.5 sto     5.5 ± 73.8 greedy   -18.2 ± 70.7 | sto L/C/T  9.2/23.8/67.0 greedy L/C/T  6.2/25.0/68.8 | eps  3121 steps 1001501 sto>=200 0.06
+   seeds whose greedy policy times out on >= 50 of 100 seeds (2,000 episodes): [2, 9]
+B_rtg0.99         ep    n=10 judge    40.5 ± 66.9 sto    40.5 ± 52.3 greedy   -33.6 ±120.7 | sto L/C/T 21.0/63.8/15.2 greedy L/C/T 14.4/27.9/57.7 | eps  2000 steps  416336 sto>=200 0.12
+B_rtg0.99         steps n=10 judge    68.8 ± 84.7 sto    60.2 ± 90.2 greedy    51.5 ± 97.2 | sto L/C/T 30.4/45.0/24.6 greedy L/C/T 32.5/29.0/38.5 | eps  3530 steps 1001038 sto>=200 0.20
+   seeds whose greedy policy times out on >= 50 of 100 seeds (2,000 episodes): [1, 2, 6, 7, 8]
+B_rtg0.999        ep    n=10 judge   -32.2 ± 41.4 sto   -45.2 ± 31.6 greedy  -240.6 ±113.2 | sto L/C/T  0.3/92.3/ 7.4 greedy L/C/T  0.3/61.7/38.0 | eps  2000 steps  258106 sto>=200 0.00
+B_rtg0.999        steps n=10 judge    14.7 ± 63.6 sto     6.6 ± 61.7 greedy   -44.1 ± 74.0 | sto L/C/T 19.9/49.1/31.0 greedy L/C/T  9.6/29.4/61.0 | eps  4298 steps 1001904 sto>=200 0.06
+   seeds whose greedy policy times out on >= 50 of 100 seeds (2,000 episodes): [2, 1, 3, 5]
+B_rtg1.0          ep    n=10 judge   -96.5 ± 49.4 sto   -68.9 ± 33.4 greedy  -213.6 ± 73.4 | sto L/C/T  0.0/92.9/ 7.1 greedy L/C/T  1.5/73.1/25.4 | eps  2000 steps  208285 sto>=200 0.00
+B_rtg1.0          steps n=10 judge     4.6 ± 90.9 sto     0.2 ± 71.8 greedy   -48.7 ±106.9 | sto L/C/T 15.5/63.2/21.3 greedy L/C/T 19.6/52.4/28.0 | eps  4985 steps 1000902 sto>=200 0.09
+   seeds whose greedy policy times out on >= 50 of 100 seeds (2,000 episodes): [1, 3]
+B_rtg0.99_nonorm  ep    n=10 judge  -435.8 ±291.6 sto  -431.6 ±260.9 greedy  -431.6 ±260.9 | sto L/C/T  0.0/100.0/ 0.0 greedy L/C/T  0.0/100.0/ 0.0 | eps  2000 steps  144466 sto>=200 0.00
+B_rtg0.99_nonorm  steps n=10 judge  -435.8 ±291.6 sto  -431.6 ±260.9 greedy  -431.6 ±260.9 | sto L/C/T  0.0/100.0/ 0.0 greedy L/C/T  0.0/100.0/ 0.0 | eps 13992 steps 1000181 sto>=200 0.00
+
+== one hovering greedy policy, replayed: B_rtg0.99, the seed with the most greedy timeouts
+seed 1 greedy timeouts 100 stochastic timeouts 0
+greedy: env seed 100000, 1000 steps, total -52.3, truncated, action shares [0.    0.207 0.577 0.216]
+   t=   0 x -0.010 y 1.410 speed 0.502 last-20 actions [3]
+   t= 100 x -0.090 y 1.037 speed 0.207 last-20 actions [1, 3, 2, 2, 2, 1, 3, 2, 2, 2, 2, 1, 3, 2, 2, 2, 3, 1, 2, 2]
+   t= 200 x +0.121 y 0.850 speed 0.172 last-20 actions [3, 2, 1, 3, 2, 2, 1, 3, 2, 1, 2, 2, 2, 3, 2, 1, 2, 2, 2, 3]
+   t= 400 x +0.206 y 0.601 speed 0.069 last-20 actions [2, 1, 2, 2, 3, 2, 1, 2, 2, 3, 2, 2, 2, 2, 3, 1, 2, 3, 2, 1]
+   t= 600 x +0.150 y 0.495 speed 0.009 last-20 actions [2, 1, 2, 3, 2, 1, 2, 3, 2, 2, 1, 3, 2, 2, 1, 3, 2, 2, 2, 3]
+   t= 800 x +0.214 y 0.477 speed 0.074 last-20 actions [2, 2, 2, 3, 1, 2, 2, 3, 1, 2, 2, 2, 3, 2, 2, 3, 1, 2, 2, 3]
+   t= 999 x +0.170 y 0.452 speed 0.085 last-20 actions [2, 2, 3, 2, 1, 2, 3, 2, 1, 3, 2, 1, 2, 2, 2, 3, 1, 2, 2, 2]
+   steps 200..end: main engine share 0.579, mean height 0.552, mean speed 0.061
+   fuel paid for the main engine over the episode: 173.1
+stochastic: env seed 100000, 284 steps, total 19.2, crashed, action shares [0.056 0.211 0.539 0.194]
+   t=   0 x -0.010 y 1.410 speed 0.502 last-20 actions [3]
+   t= 100 x -0.084 y 0.735 speed 0.334 last-20 actions [1, 2, 2, 2, 2, 2, 3, 2, 2, 2, 0, 3, 2, 2, 1, 2, 2, 3, 3, 2]
+   t= 200 x +0.085 y 0.234 speed 0.201 last-20 actions [2, 2, 3, 3, 2, 2, 2, 0, 3, 2, 1, 2, 2, 1, 2, 1, 1, 2, 0, 3]
+   t= 283 x +0.058 y -0.028 speed 0.072 last-20 actions [2, 3, 2, 2, 2, 1, 2, 3, 2, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1]
