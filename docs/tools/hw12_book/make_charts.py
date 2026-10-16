@@ -15,8 +15,13 @@ root = sys.argv[1]
 RUNS = [json.loads(l) for l in open(os.path.join(root, 'docs/tools/hw12_runs.jsonl'))]
 C = {'sample': '#8b949e', 'rtg': '#3987e5', 'base': '#d95926', 'a2c': '#199e70', 'ppo': '#9085e9',
      'dqn': '#d55181', 'judge': '#c98500', 'extra': '#008300'}
-HEURISTIC = 225.5   # docs/tools/hw12_facts.txt: Gymnasium's heuristic controller on the 100 evaluation seeds
-RANDOM = -184.5     # same file: uniform random policy
+# reference policies on the 100 evaluation seeds, read from docs/tools/hw12_facts.txt (written by hw12_facts.py)
+REF = {}
+for line in open(os.path.join(root, 'docs/tools/hw12_facts.txt')):
+    m = re.match(r'(random|heuristic)\s+mean (\S+) .*>=200 (\S+) .*timeout (\d+)', line)
+    if m:
+        REF[m.group(1)] = {'mean': float(m.group(2)), 'solved': float(m.group(3)), 'timeout': int(m.group(4))}
+HEURISTIC, RANDOM = REF['heuristic']['mean'], REF['random']['mean']
 
 
 def runs(tag):
@@ -264,7 +269,10 @@ def ch07_scatter():
         out.append(f'<circle cx="{ML + pw + 18}" cy="{ly - 4}" r="4" fill="{color}"/>')
         out.append(f'<text class="s-lbl" x="{ML + pw + 28}" y="{ly}">{charts._esc(label)}</text>')
     out.append('</svg>')
-    aria = f'全部 {n} 個快照的 judge 分數對閉迴路分數的散佈圖；虛線是兩者相等。兩者整體相關係數 0.971，但個別點偏離對角線可達 100 分以上。超出 −450 到 300 的點畫在邊界上。'
+    js = [s['judge_mean'] for r in RUNS if r['tag'][:2] in ('A_', 'B_', 'C_', 'D_', 'E_') for s in r['snapshots'].values()]
+    cs = [s['closed_stochastic']['mean'] for r in RUNS if r['tag'][:2] in ('A_', 'B_', 'C_', 'D_', 'E_') for s in r['snapshots'].values()]
+    aria = (f'全部 {n} 個快照的 judge 分數對閉迴路分數的散佈圖；虛線是兩者相等。兩者整體相關係數 {np.corrcoef(js, cs)[0, 1]:.3f}，'
+            f'但個別點偏離對角線可達 {np.max(np.abs(np.array(js) - np.array(cs))):.0f} 分。超出 −450 到 300 的點畫在邊界上。')
     return '\n'.join(out).replace('ARIA', charts._esc(aria))
 
 
@@ -303,10 +311,15 @@ def ch08_table():
                     f'<td class="num">{m([x["closed_greedy"]["mean"] for x in s]):.1f}</td>'
                     f'<td class="num">{m([x["closed_greedy"]["timeout"] for x in s]):.1f}</td>'
                     f'<td class="num">{m([x["closed_stochastic"]["solved_rate"] for x in s]) * 100:.0f}%</td></tr>')
-    rows.append('<tr><td>參考：均勻隨機</td><td>1</td><td class="num">—</td><td class="num">−184.5</td><td class="num">—</td>'
-                '<td class="num">−162.3</td><td class="num">−184.5</td><td class="num">—</td><td class="num">0</td><td class="num">0%</td></tr>')
-    rows.append('<tr><td>參考：手寫控制器 <code>heuristic</code></td><td>0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>'
-                '<td class="num">—</td><td class="num">225.5</td><td class="num">—</td><td class="num">3</td><td class="num">86%</td></tr>')
+    rnd = runs('A_random')[0]['snapshots']['ep']
+    f = lambda v: f'{v:.1f}'.replace('-', '−')
+    rows.append(f'<tr><td>參考：均勻隨機</td><td>1</td><td class="num">—</td><td class="num">{f(rnd["closed_stochastic"]["mean"])}</td>'
+                f'<td class="num">—</td><td class="num">{f(rnd["judge_mean"])}</td><td class="num">{f(rnd["closed_stochastic"]["mean"])}</td>'
+                f'<td class="num">—</td><td class="num">{rnd["closed_greedy"]["timeout"]}</td><td class="num">{rnd["closed_stochastic"]["solved_rate"] * 100:.0f}%</td></tr>')
+    h = REF['heuristic']
+    rows.append(f'<tr><td>參考：手寫控制器 <code>heuristic</code>（<code>hw12_facts.txt</code>）</td><td>0</td><td class="num">—</td><td class="num">—</td>'
+                f'<td class="num">—</td><td class="num">—</td><td class="num">{f(h["mean"])}</td><td class="num">—</td>'
+                f'<td class="num">{h["timeout"]}</td><td class="num">{h["solved"] * 100:.0f}%</td></tr>')
     return head + '\n'.join(rows) + '\n</tbody></table></div>'
 
 

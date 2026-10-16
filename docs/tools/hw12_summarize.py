@@ -1,12 +1,13 @@
 # Summarise docs/tools/hw12_runs.jsonl by tag: mean ± std (min..max) over training seeds, for both snapshots.
 # usage: python docs/tools/hw12_summarize.py [tag prefix ...]
 import json
+import os
 import sys
 from collections import defaultdict
 
 import numpy as np
 
-runs = [json.loads(l) for l in open('docs/tools/hw12_runs.jsonl')]
+runs = [json.loads(l) for l in open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hw12_runs.jsonl'))]
 prefixes = sys.argv[1:]
 groups = defaultdict(list)
 for r in runs:

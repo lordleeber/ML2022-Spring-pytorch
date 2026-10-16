@@ -53,7 +53,8 @@ for a in range(4):
             R += r
             n += 1
         tot.append(R); steps.append(n)
-        outc['timeout' if trunc and not term else ('landed' if r > 0 else 'crashed')] += 1
+        # outcome as in hw12_exp.py: the last reward is +-100 when the episode terminates
+        outc['timeout' if trunc and not term else ('landed' if r >= 50 else ('crashed' if r <= -50 else 'other'))] += 1
     print(f'always {NAMES[a]:8s} mean {np.mean(tot):8.1f} min {np.min(tot):8.1f} max {np.max(tot):8.1f} '
           f'steps {np.mean(steps):6.1f} {dict(outc)}')
 

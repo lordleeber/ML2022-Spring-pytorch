@@ -294,7 +294,7 @@ td.num { font-family: var(--font-mono); }
 <tr><td><strong>PPO 64 ＋熵 0.01</strong></td><td>6</td><td class="num">91.3</td><td class="num">221.0</td><td class="num">2,418</td><td class="num">230.8</td><td class="num"><strong>213.6 ± 24.3</strong></td><td class="num">222.2</td><td class="num">8.6</td><td class="num">74%</td></tr>
 <tr><td>DQN 隱藏層 64</td><td>6</td><td class="num">82.4</td><td class="num">143.8</td><td class="num">2,563</td><td class="num">187.7</td><td class="num">185.6 ± 45.6</td><td class="num">185.6</td><td class="num">10.9</td><td class="num">63%</td></tr>
 <tr><td>參考：均勻隨機</td><td>1</td><td class="num">—</td><td class="num">−184.5</td><td class="num">—</td><td class="num">−162.3</td><td class="num">−184.5</td><td class="num">—</td><td class="num">0</td><td class="num">0%</td></tr>
-<tr><td>參考：手寫控制器 <code>heuristic</code></td><td>0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">225.5</td><td class="num">—</td><td class="num">3</td><td class="num">86%</td></tr>
+<tr><td>參考：手寫控制器 <code>heuristic</code>（<code>hw12_facts.txt</code>）</td><td>0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">225.5</td><td class="num">—</td><td class="num">3</td><td class="num">86%</td></tr>
 </tbody></table></div>
 <!-- /CHART:ch08_table -->
 <p>（「stochastic」「greedy」是 100 個沒看過的地形上的閉迴路平均，± 是 10 個種子之間的標準差；「greedy 截斷」是 100 局裡撐滿 1,000 步的局數；「≥ 200」是 stochastic 的 100 局裡總分 ≥ 200 的比例；「步數（萬）」是訓練 2,000 局實際用掉的環境步數。手寫控制器只在同樣 100 個地形上跑過一次，它的「greedy 截斷」欄是它自己被截斷的局數。）</p>

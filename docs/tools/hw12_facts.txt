@@ -45,5 +45,5 @@ episode 3: steps 479 total 257.59 last reward 100.00 actions [121, 83, 179, 96] 
 episode 4: steps 219 total -22.56 last reward -100.00 actions [0, 47, 113, 59] parts {'shaping': 114.22, 'main': -33.6, 'side': -3.18, 'end': -100.0}
 
 == uniform random policy and the Gymnasium heuristic on the 100 closed-loop seeds (100000-100099)
-random    mean -184.5 std 115.1 min -588.2 max 24.0 >=200 0.00 mean steps 92 landed 0 crashed 100 timeout 0
-heuristic mean 225.5 std 118.0 min -221.5 max 313.8 >=200 0.86 mean steps 274 landed 89 crashed 8 timeout 3
+random    mean -184.5 std 115.1 min -588.2 max 24.0 >=200 0.00 mean steps 92 landed 0 crashed 100 timeout 0 other 0
+heuristic mean 225.5 std 118.0 min -221.5 max 313.8 >=200 0.86 mean steps 274 landed 89 crashed 8 timeout 3 other 0

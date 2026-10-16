@@ -138,6 +138,24 @@ def main():
     ok = Cs > -150
     print(f'excluding collapsed runs (closed > -150): {ok.sum()} snapshots, corr {np.corrcoef(J[ok], Cs[ok])[0, 1]:.3f}')
 
+    # the same over groups A-E only (pilot runs excluded): the numbers chapter 7 quotes
+    print('== 4b. the same over groups A-E only (pilot runs excluded); d = judge - closed')
+    J, Cs, tags = [], [], []
+    for r in runs:
+        if r['tag'][:2] in ('A_', 'B_', 'C_', 'D_', 'E_'):
+            for s in r['snapshots'].values():
+                J.append(s['judge_mean']); Cs.append(s['closed_stochastic']['mean']); tags.append(r['tag'])
+    J, Cs = np.array(J), np.array(Cs)
+    d = J - Cs
+    print(len(J), 'corr', np.corrcoef(J, Cs)[0, 1].round(3), 'mean|d|', np.abs(d).mean().round(1), '>50', (np.abs(d) > 50).mean().round(3),
+          '>100', (np.abs(d) > 100).mean().round(3), 'max d', d.max().round(1), 'min d', d.min().round(1))
+    ok = Cs > -150
+    print('excl', ok.sum(), np.corrcoef(J[ok], Cs[ok])[0, 1].round(3))
+    i = np.argmax(d)
+    print('max over', tags[i], J[i].round(1), Cs[i].round(1))
+    i = np.argmin(d)
+    print('max under', tags[i], J[i].round(1), Cs[i].round(1))
+
 
 if __name__ == '__main__':
     main()

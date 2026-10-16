@@ -1,8 +1,8 @@
 # HW12 facts for chapters 0-2: model shapes and parameters, what the environment returns, one test episode
 # step by step with its reward split into the terms of LunarLander.step, the random policy, and
 # Gymnasium's hand-written heuristic controller on the same 100 evaluation seeds as hw12_exp.py.
-# usage: python docs/tools/hw12_facts.py <sample network .pt or dump .pt> > docs/tools/hw12_facts.txt
-#        (the network: HW12/outputs/network.pt from train.py, or hw12_exp.py --step_budget 0 --dump)
+# usage: python docs/tools/hw12_facts.py docs/tools/hw12_models/A_sample_s543.pt > docs/tools/hw12_facts.txt
+#        (or HW12/outputs/network.pt from train.py, or a hw12_exp.py --dump file: the same seed-543 sample network)
 import os
 import sys
 
@@ -49,7 +49,8 @@ print('random-agent episode of cell [24]:', n, 'steps')
 print('max_episode_steps', env.env.spec.max_episode_steps, 'reward_threshold', env.env.spec.reward_threshold)
 
 ckpt = torch.load(sys.argv[1], weights_only=False)
-state_dict = ckpt['network'] if 'network' in ckpt else ckpt
+# a train.py network.pt, a hw12_exp.py --dump file, or a hw12_exp.py --save file (its 2,000-episode snapshot)
+state_dict = ckpt['weights']['ep'] if 'weights' in ckpt else (ckpt['network'] if 'network' in ckpt else ckpt)
 policy = PolicyGradientNetwork()
 policy.load_state_dict(state_dict)
 policy.eval()
@@ -108,8 +109,9 @@ for name in ('random', 'heuristic'):
             tot += r
             n += 1
         totals.append(tot); lengths.append(n)
-        outcomes.append('timeout' if trunc and not term else ('landed' if r > 0 else 'crashed'))
+        # outcome as in hw12_exp.py: the last reward is +-100 when the episode terminates
+        outcomes.append('timeout' if trunc and not term else ('landed' if r >= 50 else ('crashed' if r <= -50 else 'other')))
     t = np.array(totals)
     print(f'{name:9s} mean {t.mean():.1f} std {t.std():.1f} min {t.min():.1f} max {t.max():.1f} '
           f'>=200 {(t >= 200).mean():.2f} mean steps {np.mean(lengths):.0f} '
-          f'landed {outcomes.count("landed")} crashed {outcomes.count("crashed")} timeout {outcomes.count("timeout")}')
+          f'landed {outcomes.count("landed")} crashed {outcomes.count("crashed")} timeout {outcomes.count("timeout")} other {outcomes.count("other")}')

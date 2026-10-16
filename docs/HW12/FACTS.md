@@ -125,3 +125,12 @@
 - judge.py 長度：前一半 → [7.52, −149.14, −417.48, −484.74, −383.01]，平均 −285.37，done [F, F, T, T, T]；多 50 個動作 → 不變 −26.4；輪轉一格 → 平均 −281.55。
 - A–E 組 605 個快照：judge 與閉迴路相關 0.971（排除閉迴路 ≤ −150 的 41 個後 0.933）；|差| 平均 33.3，>50 的 22%，>100 的 3.8%；最大高估 B_rtg0.99（judge 70.1、閉迴路 −116.6）。
 - MuZero 摘要原文（arXiv 1911.08265）含「combining a tree-based search with a learned model」「without any knowledge of the game rules」。
+
+## 已知問題（2026-10-17 code review；`docs/tools/hw12_exp.py` 不改，因為第 4–6 章引用它在 a61f4fc 的行號）
+都不影響本書的任何結果，日後要改工具時一併處理（改完要重填各章的 listing、更新版本聲明）：
+1. PPO 在每個 minibatch 內用 `ADV[idx].std()` 標準化（第 401 行）：若 `rollout % minibatch == 1`，最後一個 minibatch 只有一筆，std 為 NaN，網路被寫成 NaN。本書用 2048／64，整除，不會觸發。
+2. `--adv` 不是 none 時 `--returns` 被忽略（`episode_weights`，第 257 行起），沒有警告；本書的規格沒有這種組合。
+3. 參數解析與訓練寫在模組最外層，`hw12_exp.py` 不能被 import，評估迴圈因此在 `hw12_facts.py`、`hw12_ch05_timeouts.py`、`hw12_ch07.py`（MLP）、`hw12_ch06_gradnorm.py`（discounted）各有一份。2026-10-17 已把結局判定統一成 hw12_exp.py 的定義（最後一步 ≥ 50 降落、≤ −50 墜毀、其他 other）。
+4. `--dump` 時每次更新都深拷貝一次權重與曲線（第 357 行），只為留下 2,000 局那一份；只影響驗證用的執行速度。
+
+已修（同一次 review）：`hw12_ch07.py` 自己印出第 7 章引用的 4b 段（605 個快照等）；`make_charts.py` 的參考列與散佈圖的相關係數改由紀錄與 `hw12_facts.txt` 產生；`hw12_facts.py`／`hw12_ch01.py` 的結局判定與 hw12_exp.py 一致、可直接讀 `hw12_models/*.pt`；`hw12_summarize.py` 以 `__file__` 找紀錄；`apply_template.py` 的 head 區塊切到 book-style 的結尾。

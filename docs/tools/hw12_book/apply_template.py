@@ -20,7 +20,7 @@ s = s.replace('</body>', '<script id="book-js">\n' + js + '</script>\n</body>', 
 open(idx, 'w').write(s)
 # copy the exact blocks from index.html into the other pages
 s = open(idx).read()
-head_block = s[s.index('<link rel="preconnect"'):s.index('</style>') + len('</style>\n')]
+head_block = s[s.index('<link rel="preconnect"'):s.index('</style>', s.index('<style id="book-style">')) + len('</style>\n')]
 js_block = s[s.index('<script id="book-js">'):s.index('</script>', s.index('<script id="book-js">')) + len('</script>\n')]
 for p in sorted(glob.glob(os.path.join(d, '*.html'))):
     if p == idx: continue
