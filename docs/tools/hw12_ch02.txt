@@ -1,0 +1,19 @@
+== the untrained network, built as in train.py (torch seeded by fix(env, 543), exploration cells use no torch RNG)
+first state [-0.0013  1.3985 -0.1278 -0.5538  0.0015  0.029   0.      0.    ]
+probs [0.313  0.2289 0.2666 0.1915] sum 1.0 entropy 1.3700436353683472 max entropy ln4 1.3862943611198906
+one sample: 3 log_prob -1.652858853340149 = log(p[a]) -1.652858853340149
+100000 draws, frequency [0.3131 0.2281 0.2668 0.192 ]
+log_prob requires_grad when the net is not under no_grad: True
+
+== train() vs eval(): the network has no dropout and no batch norm
+identical outputs: True | modules: ['PolicyGradientNetwork', 'Linear', 'Linear', 'Linear']
+
+== the trained sample policy (seed 543, 2,000 episodes) on its own 5 judge episodes
+judge rewards (same as test.py): [np.float64(-34.25), np.float64(-161.82), np.float64(-170.98), np.float64(257.59), np.float64(-22.56)] steps 1534
+max prob: mean 0.850 median 0.912; share of steps with max prob > 0.9: 0.525, > 0.99: 0.186
+entropy: mean 0.354 (ln4 = 1.386); sampled action == argmax on 0.836 of the steps (251 of 1534)
+
+== gradient of log pi(a|s) with respect to the 4 logits (fc3 output), untrained network, first state, a = 3
+probs [0.313  0.2289 0.2666 0.1915] grad wrt logits [-0.313  -0.2289 -0.2666  0.8085] onehot(3) - probs [-0.313  -0.2289 -0.2666  0.8085]
+weight +1.0: descent direction of the logits [-0.313  -0.2289 -0.2666  0.8085]
+weight -1.0: descent direction of the logits [ 0.313   0.2289  0.2666 -0.8085]
