@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 8 章　總結 — HW12 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW12 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製；由 HW10 的樣板複製、改色）
+   版面：單欄 1080px——近黑的冷灰底、紙白的字、月面青只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：範例 灰、reward-to-go 藍、baseline 橘、A2C 綠、PPO 紫、DQN 洋紅、JudgeBoi 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與前幾本相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #5cc8d6;      /* 月面青：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(92, 200, 214, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #5cc8d6;
+  /* 角色色 */
+  --r-sample: #8b949e; --r-rtg: #3987e5; --r-base: #d95926; --r-a2c: #199e70;
+  --r-ppo: #9085e9; --r-dqn: #d55181; --r-judge: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "s → π_θ(a|s) → a → 環境 → r, s′　·　θ ← θ + α ∇ log π_θ(a|s) · A　·　LunarLander　8 維狀態　4 個動作";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fdf1ef; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #121b1d; border-color: rgba(92, 200, 214, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1f0d0b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.sample { --rc: var(--r-sample); } .role.rtg { --rc: var(--r-rtg); } .role.base { --rc: var(--r-base); }
+.role.a2c { --rc: var(--r-a2c); } .role.ppo { --rc: var(--r-ppo); } .role.dqn { --rc: var(--r-dqn); }
+.role.judge { --rc: var(--r-judge); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a><a href="index.html">回目錄 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW12 讀碼教材</p>
+  <h1>第 8 章　總結：從 −30 到 214，每一步值多少</h1>
+  <p class="chap-lead">這一章把全書 303 次正式訓練放進一張表，排出「每一個改動值多少分」的階梯，整理讀程式時找到的問題，給下一位學生一條建議的路線，最後是三級題庫、名詞對照與速查表。</p>
+</header>
+<main>
+
+<h2 id="all">8.1　全書實驗總表</h2>
+<p>A 到 E 五組，29 種設定，每種 10 個訓練種子（0–9；範例另外跑了 543 與 10–19，這裡只取 0–9 以便比較），每次訓練在 2,000 局與 100 萬環境步各量一次。另有 Phase 0 的 44 次與試跑的 38 次訓練，只用來選規格，不在表裡。原始紀錄在 <code>docs/tools/hw12_runs.jsonl</code>，這張表由 <code>docs/tools/hw12_book/make_charts.py</code> 直接從紀錄產生。</p>
+<!-- CHART:ch08_table -->
+<div class="tablewrap"><table>
+<thead><tr><th rowspan="2">設定（種子 0–9）</th><th rowspan="2">章</th><th colspan="2">2,000 局</th><th colspan="6">100 萬環境步</th></tr>
+<tr><th class="num">步數（萬）</th><th class="num">stoch.</th><th class="num">局數</th><th class="num">judge</th><th class="num">stochastic</th><th class="num">greedy</th><th class="num">greedy 截斷</th><th class="num">≥ 200</th></tr></thead>
+<tbody>
+<tr><td>範例（瞬時獎勵、SGD 1e-3）</td><td>3</td><td class="num">52.6</td><td class="num">-37.0</td><td class="num">3,330</td><td class="num">-64.7</td><td class="num">-29.8 ± 58.3</td><td class="num">-24.9</td><td class="num">2.4</td><td class="num">18%</td></tr>
+<tr><td>範例，不標準化</td><td>3</td><td class="num">41.3</td><td class="num">-71.7</td><td class="num">3,908</td><td class="num">-53.2</td><td class="num">-47.2 ± 39.6</td><td class="num">-57.4</td><td class="num">8.3</td><td class="num">11%</td></tr>
+<tr><td>範例，學習率 1e-4</td><td>3</td><td class="num">21.5</td><td class="num">-229.3</td><td class="num">6,346</td><td class="num">-142.5</td><td class="num">-138.4 ± 19.8</td><td class="num">-958.1</td><td class="num">37.5</td><td class="num">0%</td></tr>
+<tr><td>範例，學習率 1e-2</td><td>3</td><td class="num">20.5</td><td class="num">-395.3</td><td class="num">9,691</td><td class="num">-345.1</td><td class="num">-314.3 ± 321.3</td><td class="num">-317.5</td><td class="num">1.0</td><td class="num">3%</td></tr>
+<tr><td>整局總報酬</td><td>4</td><td class="num">18.2</td><td class="num">-101.4</td><td class="num">6,004</td><td class="num">-8.9</td><td class="num">-20.9 ± 138.9</td><td class="num">-98.0</td><td class="num">36.5</td><td class="num">8%</td></tr>
+<tr><td>reward-to-go γ 0.9</td><td>4</td><td class="num">45.5</td><td class="num">-32.7</td><td class="num">3,436</td><td class="num">-62.7</td><td class="num">-65.6 ± 30.9</td><td class="num">-73.5</td><td class="num">72.7</td><td class="num">0%</td></tr>
+<tr><td>reward-to-go γ 0.95</td><td>4</td><td class="num">57.2</td><td class="num">-23.3</td><td class="num">3,121</td><td class="num">-12.9</td><td class="num">5.5 ± 73.8</td><td class="num">-18.2</td><td class="num">68.8</td><td class="num">6%</td></tr>
+<tr><td>reward-to-go γ 0.99</td><td>4</td><td class="num">41.6</td><td class="num">40.5</td><td class="num">3,530</td><td class="num">68.8</td><td class="num">60.2 ± 90.2</td><td class="num">51.5</td><td class="num">38.5</td><td class="num">20%</td></tr>
+<tr><td>reward-to-go γ 0.999</td><td>4</td><td class="num">25.8</td><td class="num">-45.2</td><td class="num">4,298</td><td class="num">14.7</td><td class="num">6.6 ± 61.7</td><td class="num">-44.1</td><td class="num">61.0</td><td class="num">6%</td></tr>
+<tr><td>reward-to-go γ 1</td><td>4</td><td class="num">20.8</td><td class="num">-68.9</td><td class="num">4,985</td><td class="num">4.6</td><td class="num">0.2 ± 71.8</td><td class="num">-48.7</td><td class="num">28.0</td><td class="num">9%</td></tr>
+<tr><td>reward-to-go 0.99，不標準化</td><td>4</td><td class="num">14.4</td><td class="num">-431.6</td><td class="num">13,992</td><td class="num">-435.8</td><td class="num">-431.6 ± 260.9</td><td class="num">-431.6</td><td class="num">0.0</td><td class="num">0%</td></tr>
+<tr><td>reward-to-go 0.99，Adam 3e-3</td><td>5</td><td class="num">83.1</td><td class="num">125.1</td><td class="num">2,339</td><td class="num">140.1</td><td class="num">134.3 ± 29.8</td><td class="num">88.3</td><td class="num">51.5</td><td class="num">16%</td></tr>
+<tr><td>MC baseline（p.5）</td><td>5</td><td class="num">83.2</td><td class="num">162.1</td><td class="num">2,406</td><td class="num">183.4</td><td class="num">183.8 ± 49.0</td><td class="num">140.6</td><td class="num">44.1</td><td class="num">45%</td></tr>
+<tr><td>MC，critic 5 步</td><td>5</td><td class="num">84.4</td><td class="num">152.9</td><td class="num">2,396</td><td class="num">158.2</td><td class="num">153.5 ± 45.8</td><td class="num">60.4</td><td class="num">67.2</td><td class="num">32%</td></tr>
+<tr><td>MC，SGD 1e-3</td><td>5</td><td class="num">48.0</td><td class="num">42.3</td><td class="num">3,132</td><td class="num">98.1</td><td class="num">85.5 ± 75.6</td><td class="num">79.1</td><td class="num">25.2</td><td class="num">26%</td></tr>
+<tr><td>A2C TD(0)</td><td>5</td><td class="num">78.9</td><td class="num">45.0</td><td class="num">2,462</td><td class="num">81.3</td><td class="num">59.6 ± 92.7</td><td class="num">44.0</td><td class="num">33.4</td><td class="num">27%</td></tr>
+<tr><td>A2C 5-step</td><td>5</td><td class="num">80.7</td><td class="num">39.3</td><td class="num">2,434</td><td class="num">36.9</td><td class="num">41.7 ± 69.6</td><td class="num">-16.0</td><td class="num">28.1</td><td class="num">22%</td></tr>
+<tr><td>A2C 20-step</td><td>5</td><td class="num">84.6</td><td class="num">84.3</td><td class="num">2,256</td><td class="num">124.2</td><td class="num">100.0 ± 18.2</td><td class="num">37.9</td><td class="num">59.1</td><td class="num">20%</td></tr>
+<tr><td>A2C GAE 0.95</td><td>5</td><td class="num">100.3</td><td class="num">95.2</td><td class="num">2,060</td><td class="num">74.4</td><td class="num">94.4 ± 66.0</td><td class="num">21.5</td><td class="num">61.8</td><td class="num">26%</td></tr>
+<tr><td>GAE 0.95，critic 5 步</td><td>5</td><td class="num">125.0</td><td class="num">-81.8</td><td class="num">1,749</td><td class="num">-92.9</td><td class="num">-81.0 ± 13.6</td><td class="num">-127.0</td><td class="num">98.2</td><td class="num">0%</td></tr>
+<tr><td>A2C GAE 0.99</td><td>5</td><td class="num">85.9</td><td class="num">179.2</td><td class="num">2,498</td><td class="num">189.1</td><td class="num">181.9 ± 39.1</td><td class="num">141.2</td><td class="num">39.4</td><td class="num">57%</td></tr>
+<tr><td>GAE 0.99 ＋隱藏層 64</td><td>6</td><td class="num">81.7</td><td class="num">172.3</td><td class="num">2,790</td><td class="num">192.7</td><td class="num">195.0 ± 47.3</td><td class="num">205.4</td><td class="num">16.7</td><td class="num">63%</td></tr>
+<tr><td>＋熵 0.01</td><td>6</td><td class="num">89.1</td><td class="num">162.3</td><td class="num">2,676</td><td class="num">176.6</td><td class="num">175.9 ± 58.3</td><td class="num">201.9</td><td class="num">17.2</td><td class="num">47%</td></tr>
+<tr><td>＋梯度裁切 1</td><td>6</td><td class="num">119.2</td><td class="num">143.6</td><td class="num">1,769</td><td class="num">154.8</td><td class="num">136.3 ± 32.1</td><td class="num">126.0</td><td class="num">40.6</td><td class="num">18%</td></tr>
+<tr><td>＋每批 10 局</td><td>6</td><td class="num">114.7</td><td class="num">123.0</td><td class="num">1,819</td><td class="num">132.9</td><td class="num">120.6 ± 24.5</td><td class="num">70.3</td><td class="num">69.2</td><td class="num">6%</td></tr>
+<tr><td>PPO 隱藏層 16</td><td>6</td><td class="num">126.5</td><td class="num">69.6</td><td class="num">1,660</td><td class="num">17.1</td><td class="num">21.9 ± 69.3</td><td class="num">20.4</td><td class="num">31.9</td><td class="num">10%</td></tr>
+<tr><td>PPO 隱藏層 64</td><td>6</td><td class="num">108.0</td><td class="num">169.0</td><td class="num">1,945</td><td class="num">151.6</td><td class="num">143.3 ± 71.1</td><td class="num">146.9</td><td class="num">10.7</td><td class="num">40%</td></tr>
+<tr><td><strong>PPO 64 ＋熵 0.01</strong></td><td>6</td><td class="num">91.3</td><td class="num">221.0</td><td class="num">2,418</td><td class="num">230.8</td><td class="num"><strong>213.6 ± 24.3</strong></td><td class="num">222.2</td><td class="num">8.6</td><td class="num">74%</td></tr>
+<tr><td>DQN 隱藏層 64</td><td>6</td><td class="num">82.4</td><td class="num">143.8</td><td class="num">2,563</td><td class="num">187.7</td><td class="num">185.6 ± 45.6</td><td class="num">185.6</td><td class="num">10.9</td><td class="num">63%</td></tr>
+<tr><td>參考：均勻隨機</td><td>1</td><td class="num">—</td><td class="num">−184.5</td><td class="num">—</td><td class="num">−162.3</td><td class="num">−184.5</td><td class="num">—</td><td class="num">0</td><td class="num">0%</td></tr>
+<tr><td>參考：手寫控制器 <code>heuristic</code></td><td>0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">225.5</td><td class="num">—</td><td class="num">3</td><td class="num">86%</td></tr>
+</tbody></table></div>
+<!-- /CHART:ch08_table -->
+<p>（「stochastic」「greedy」是 100 個沒看過的地形上的閉迴路平均，± 是 10 個種子之間的標準差；「greedy 截斷」是 100 局裡撐滿 1,000 步的局數；「≥ 200」是 stochastic 的 100 局裡總分 ≥ 200 的比例；「步數（萬）」是訓練 2,000 局實際用掉的環境步數。手寫控制器只在同樣 100 個地形上跑過一次，它的「greedy 截斷」欄是它自己被截斷的局數。）</p>
+
+<h2 id="ladder">8.2　每一步值多少</h2>
+<p>把主要的改動排成一條路（100 萬步、閉迴路 stochastic，括號裡是 10 個種子的標準差）：</p>
+<div class="tablewrap"><table>
+<thead><tr><th>改動</th><th class="num">分數</th><th class="num">比上一步</th><th>章</th><th>說明</th></tr></thead>
+<tbody>
+<tr><td>範例：瞬時獎勵（γ = 0）、SGD</td><td class="num">−29.8（58.3）</td><td class="num">—</td><td>3</td><td>練再久也不會變好</td></tr>
+<tr><td>權重改成 reward-to-go，γ = 0.99</td><td class="num">60.2（90.2）</td><td class="num">+90</td><td>4</td><td>助教的 medium 提示；開始出現懸停</td></tr>
+<tr><td>優化器換成 Adam 3e-3</td><td class="num">134.3（29.8）</td><td class="num">+74</td><td>5</td><td>種子差異也變小</td></tr>
+<tr><td>加上 baseline（MC，p.5）或 GAE λ 0.99</td><td class="num">183.8（49.0）／181.9（39.1）</td><td class="num">+50</td><td>5</td><td>critic 要練夠，否則 GAE 懸停</td></tr>
+<tr><td>隱藏層加寬到 64</td><td class="num">195.0（47.3）</td><td class="num">+13</td><td>6</td><td>greedy +64、截斷從 39 降到 17</td></tr>
+<tr><td>換成 PPO（64）＋熵 0.01</td><td class="num"><strong>213.6（24.3）</strong></td><td class="num">+19</td><td>6</td><td>全部種子 ≥ 180；greedy 222.2</td></tr>
+<tr><td>參考：手寫控制器</td><td class="num">225.5</td><td class="num">—</td><td>0</td><td>不學習，直接寫規則</td></tr>
+</tbody>
+</table></div>
+<p>這條路有三個教訓。<strong>第一，最大的一步是把訊號弄對</strong>：範例的權重只看一步（第 3 章），換成往後看 100 步左右的 reward-to-go，就從負分到正分。<strong>第二，不起眼的工程選擇常常比「演算法」更大</strong>：光是換優化器就多了 74 分，比加 baseline 還多；如果比較 baseline 時忘了這件事，會把優化器的功勞算到 baseline 頭上（第 5 章 5.4 節）。<strong>第三，後面每一步的增益都和種子雜訊同一個量級</strong>：加寬網路的 +13 分小於標準差（約 47），單看平均不能說它一定有用——它真正的好處在 greedy（+64）與截斷的局數。只有 10 個種子時，小於一個標準差的差距就不要下結論。</p>
+<p>也有很多改動是負的：學習率 ×10 讓 10 個種子有 9 個崩潰成固定動作（第 3 章），reward-to-go 不標準化崩潰到 −431.6（第 4 章），critic 只練 5 步讓 GAE 懸停到 −81.0（第 5 章），梯度裁切 1 與每批 10 局在 D 組都讓分數下降（第 6 章）。RL 的技巧不是越多越好，每一項都要實際跑過才知道。</p>
+
+<h2 id="issues">8.3　讀程式找到的問題</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>#</th><th>問題</th><th>位置</th><th>章</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>範例用每一步的瞬時獎勵 r<sub>t</sub> 當權重，等同 γ = 0 的 REINFORCE（實測逐位元相同），不是 p.4 的 R<sub>t</sub></td><td><code>train.py</code> 第 74 行</td><td>3</td></tr>
+<tr><td>2</td><td>p.5 的標題是 Actor-Critic，框裡是 REINFORCE with baseline（baseline 擬合蒙地卡羅回報，沒有 bootstrapping）</td><td>投影片 p.5</td><td>5</td></tr>
+<tr><td>3</td><td>範例本身過不了最低參考線：21 個種子 judge 平均 −47.7、只有 4 個 ≥ 0；練到 100 萬步也不會變好</td><td>整份範例</td><td>0、3</td></tr>
+<tr><td>4</td><td>loss 是 <code>.sum()</code>：局變長，梯度跟著變大，同一個學習率實際步伐會變成三倍；學習率 ×10 就崩潰</td><td><code>model.py</code> 第 33 行</td><td>3</td></tr>
+<tr><td>5</td><td>每局最後的 ±100 主宰了整批標準化：標準差從 3.66 撐到 10.20，墜毀那一步的權重 −10 到 −16</td><td><code>train.py</code> 第 98 行</td><td>3</td></tr>
+<tr><td>6</td><td>Gymnasium 文件說結束時「額外」加減 100，程式卻是把那一步的獎勵直接設成 ±100；範例的 Final 因此是（降落 − 墜毀局數）× 20</td><td>Gymnasium <code>lunar_lander.py</code></td><td>1</td></tr>
+<tr><td>7</td><td>只為了「看看環境」的探索格會推進環境亂數；拿掉它們，同一種子的 judge 從 −26.4 變成 108.6</td><td><code>train.py</code> 第 24–40 行</td><td>1</td></tr>
+<tr><td>8</td><td>測試時隨機取樣，judge 帶著測試亂數的運氣：同一策略重跑 100 次，標準差 71.3；挑最好的可以從 −45 變成 237</td><td><code>test.py</code> 第 32 行</td><td>7</td></tr>
+<tr><td>9</td><td>模擬評分的程式不檢查長度：多的動作被忽略、少的照樣給分；投影片說長度不符要退件</td><td><code>judge.py</code> 第 29–34 行</td><td>7</td></tr>
+<tr><td>10</td><td><code>torch.set_deterministic</code> 已移除；<code>np.array(action_list)</code>、<code>np.shape(log_probs)</code> 在 NumPy 2 會丟例外</td><td><code>env_setup.py</code>、<code>train.py</code>、<code>test.py</code></td><td>0、1</td></tr>
+<tr><td>11</td><td>Gym 0.18 的介面在 Gymnasium 都改了（<code>env.seed</code>、四值 <code>step</code>、<code>v2</code>）；terminated 與 truncated 被合成一個 <code>done</code>，critic 類方法需要分開</td><td><code>gym_compat.py</code></td><td>1、5</td></tr>
+<tr><td>12</td><td>沒用到的程式：<code>StepLR</code>、<code>seq_rewards</code>、<code>total_step</code>、<code>agent.forward</code>；CUDA／cuDNN 設定在 CPU 作業裡沒有作用</td><td><code>model.py</code>、<code>train.py</code>、<code>env_setup.py</code></td><td>2、3</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="route">8.4　給下一位學生的路線</h2>
+<ol>
+<li><strong>先建立可信的評估</strong>：在幾十到上百個沒看過的環境種子上量閉迴路平均，至少跑 5 個訓練種子。judge 只用來確認交出去的檔案格式正確。</li>
+<li><strong>把權重改成 reward-to-go、γ = 0.99</strong>（第 4 章），並保留標準化。</li>
+<li><strong>優化器換成 Adam</strong>（學習率 3e-3 左右），loss 改用平均會讓學習率比較好調。</li>
+<li><strong>加 baseline</strong>：最簡單是 p.5 的 MC baseline；要用 GAE 就把 λ 設高（0.99），並確認 critic 練得夠（看 explained variance，接近 0 就代表沒在學）。</li>
+<li><strong>網路加寬到 64</strong>，看 greedy 與截斷的局數是否改善。</li>
+<li><strong>要再往上，換 PPO 並加熵正則化</strong>：本書 10 個種子全部 ≥ 180、平均 213.6，大約 9 分鐘（20 個並行）就能練完 100 萬步，在投影片的 30 分鐘限制之內。</li>
+<li><strong>測試方式用閉迴路評估決定</strong>：greedy 對 PPO、GAE 有利，對會懸停的策略不利。不要為了 judge 重跑測試挑最好的——那量的是運氣。</li>
+</ol>
+
+<h2 id="now">8.5　從登月小艇到語言模型</h2>
+<p>這份作業的方法在 2022 年之後被搬到了一個意想不到的地方：大型語言模型。第 6 章 6.7 節對照過：動作變成下一個 token、一局變成一段回答、獎勵由獎勵模型或答案的對錯給出，而且和 LunarLander 的 +100 一樣，往往要等到最後才有。RLHF 用 PPO（加上 KL 懲罰），GRPO 用「同一個問題的一組回答的平均分」當 baseline——本書第 3 章的策略梯度、第 4 章的信用分配、第 5 章的 baseline、第 6 章的 clip 與熵，在那裡全部原封不動地出現。本書遇到的幾個現象也有對應：懸停（找到一個不被罰的狀態就待著）對應到模型學會說一些安全但沒用的話；judge 被「挑」高對應到 reward hacking（策略學會討好評分方式，而不是真的變好）；種子之間的巨大差異則是任何 RL 訓練都要面對的。課程也跟著轉向：ML2025 的 HW7 是 RLHF，ML2026 的 HW8 是 Test-Time Scaling。</p>
+
+<h2 id="bank">8.6　三級題庫</h2>
+<h3>入門</h3>
+<details class="quiz"><summary>入門 1. 策略網路有幾個參數？輸入、輸出各是什麼？</summary>
+<p>484 個（8×16+16 + 16×16+16 + 16×4+4）。輸入是 8 維狀態（位置、速度、角度、角速度、兩隻腳），輸出是 4 個動作的機率（第 0 章）。</p></details>
+<details class="quiz"><summary>入門 2. LunarLander 一局有哪三種結束方式？最後一步的獎勵各是多少？</summary>
+<p>墜毀（−100）、平穩停下（+100）、撐滿 1,000 步被截斷（普通的位能差減油錢）。±100 是直接「設成」，不是「加上」（第 1 章）。</p></details>
+<details class="quiz"><summary>入門 3. 範例第 74 行存的 reward 和投影片 p.4 的 R<sub>t</sub> 有什麼不同？</summary>
+<p>範例存瞬時獎勵 r<sub>t</sub>，只看這一步；p.4 的 R<sub>t</sub> 是從這一步到結束的折扣累積獎勵。範例等同 γ = 0（第 3 章）。</p></details>
+<details class="quiz"><summary>入門 4. 為什麼本書每個設定都跑 10 個種子？</summary>
+<p>RL 對種子極敏感：範例 21 個種子的 judge 從 −164.5 到 102.6；單一個種子的結果可能完全是運氣（第 0、7 章）。</p></details>
+<details class="quiz"><summary>入門 5. judge 和閉迴路評估差在哪裡？</summary>
+<p>judge 重播存下的動作序列（開迴路），只在種子 543 的 5 局上；閉迴路讓策略在 100 個沒看過的地形上即時互動。同一串動作換地形會從 213 分變成 −292 分（第 7 章）。</p></details>
+<h3>進階</h3>
+<details class="quiz"><summary>進階 1. 證明對只依賴狀態的 b(s)，E[∇log π(a|s) · b(s)] ＝ 0。</summary>
+<p>E ＝ Σ<sub>a</sub> π(a|s) ∇log π(a|s) b(s) ＝ b(s) Σ<sub>a</sub> ∇π(a|s) ＝ b(s) ∇Σ<sub>a</sub> π(a|s) ＝ b(s) ∇1 ＝ 0（第 5 章）。</p></details>
+<details class="quiz"><summary>進階 2. 為什麼 γ = 0.9 的 reward-to-go 會懸停得最嚴重？用數字說明。</summary>
+<p>+100 要在著地後再靜止約 118 步才給，0.9<sup>118</sup> × 100 ≈ 0.0004，等於看不見；墜毀的 −100 卻在幾步之內。懸著付油錢就成了局部最佳解（第 4 章）。</p></details>
+<details class="quiz"><summary>進階 3. critic 只練 5 步時，為什麼 MC baseline 還能用、GAE 卻懸停？</summary>
+<p>MC 的權重是完整的 R<sub>t</sub> 減 V，V 沒用只是沒減少變異；GAE 的權重用 V 拼出未來，V ≈ 常數時退化成 γλ ≈ 0.94 折扣的短視報酬，有效視野約 17 步（第 5 章）。</p></details>
+<details class="quiz"><summary>進階 4. 被 1,000 步截斷的局有哪兩種？怎麼分辨？</summary>
+<p>懸在空中（高度明顯大於 0、總分為負）與停在地上不熄火（兩腳著地、總分不錯但少了 +100）。檢查最後的狀態：高度與兩隻腳的著地旗標（第 5 章 5.8 節）。</p></details>
+<details class="quiz"><summary>進階 5. PPO 為什麼需要 ratio？clip 解決什麼問題？</summary>
+<p>同一批資料要用很多次，但資料是舊策略產生的；ratio ＝ π<sub>新</sub>／π<sub>舊</sub> 修正這個差異。新舊策略差太多時修正不可靠，clip 把 ratio 限制在 [0.8, 1.2]，不再從這筆資料得到更多推力（第 6 章）。</p></details>
+<h3>挑戰</h3>
+<details class="quiz"><summary>挑戰 1. 把範例 loss 的 <code>.sum()</code> 改成 <code>.mean()</code>，並找出能讓它穩定學習的學習率範圍。</summary>
+<p>提示：第一批約 500 步，mean 的梯度約是 sum 的 1/500；可以從 0.1 到 1 掃起。注意 mean 之後局長不再影響步伐。本書沒有跑這個實驗，請自行用 <code>docs/tools/hw12_exp.py</code> 加一個選項驗證。</p></details>
+<details class="quiz"><summary>挑戰 2. 讓「停在地上不熄火」消失：設計一個不改變最佳策略的獎勵修改，並實測。</summary>
+<p>提示：potential-based shaping（第 1 章延伸閱讀）不改變最佳策略；例如把「兩腳著地且速度接近 0」加進位能。另一個方向是修改評估而不是獎勵：截斷時如果兩腳著地，算作降落。兩者回答的問題不同，要說清楚。</p></details>
+<details class="quiz"><summary>挑戰 3. 實作一個向量化版本（同時開 16 個環境），量它在 CPU 與 GPU 上每一步的時間。</summary>
+<p>提示：<code>gymnasium.vector.SyncVectorEnv</code>，網路一次吃 (16, 8) 的狀態。第 2 章的推論是固定成本被分攤後 GPU 會變得有競爭力，但 16 個環境可能還不夠，請實測。</p></details>
+<details class="quiz"><summary>挑戰 4. 用 judge 以外的方式設計一個「不能被挑高」的評分，並說明它的代價。</summary>
+<p>提示：每次評分用新的隨機環境種子、局數加多（例如 100 局）、或要求交策略（網路權重）而不是動作序列，由評分端自己跑閉迴路。代價包括評分時間、需要統一的執行環境、以及學生無法在本機重現評分的確切數字。</p></details>
+
+<h2 id="glossary">8.7　名詞對照</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>中文</th><th>英文</th><th>意思</th><th>首見</th></tr></thead>
+<tbody>
+<tr><td>代理人、環境</td><td>agent, environment</td><td>做決定的一方，與它互動的世界</td><td>0</td></tr>
+<tr><td>狀態、動作、獎勵</td><td>state, action, reward</td><td>s、a、r</td><td>0</td></tr>
+<tr><td>一局、回報</td><td>episode, return</td><td>從開始到結束；一局的獎勵總和</td><td>0</td></tr>
+<tr><td>策略</td><td>policy π</td><td>從狀態決定動作的規則；本書是機率分布</td><td>0</td></tr>
+<tr><td>信用分配</td><td>credit assignment</td><td>把結果歸功給造成它的動作</td><td>0</td></tr>
+<tr><td>終止、截斷</td><td>terminated, truncated</td><td>任務本身結束；時間上限到了</td><td>1</td></tr>
+<tr><td>位能式獎勵塑形</td><td>potential-based reward shaping</td><td>獎勵 ＝ 位能的變化，不改變最佳策略</td><td>1</td></tr>
+<tr><td>熵</td><td>entropy</td><td>分布有多「平」；均勻 4 選 1 是 ln 4</td><td>2</td></tr>
+<tr><td>探索</td><td>exploration</td><td>嘗試目前認為不是最好的動作</td><td>2</td></tr>
+<tr><td>策略梯度、REINFORCE</td><td>policy gradient</td><td>∇J ＝ E[Σ ∇log π · 權重]</td><td>3</td></tr>
+<tr><td>累積報酬、折扣</td><td>reward-to-go, discount γ</td><td>從這一步往後的獎勵總和；越遠打越多折</td><td>3</td></tr>
+<tr><td>有效視野</td><td>effective horizon</td><td>1／(1 − γ)</td><td>4</td></tr>
+<tr><td>baseline、優勢</td><td>baseline, advantage</td><td>扣掉的「平均水準」；A ＝ R − V</td><td>5</td></tr>
+<tr><td>價值函數、critic</td><td>value function V(s)</td><td>這個狀態平均能拿幾分</td><td>5</td></tr>
+<tr><td>自舉</td><td>bootstrapping</td><td>用自己的估計（V）當目標的一部分</td><td>5</td></tr>
+<tr><td>時序差分誤差</td><td>TD error δ</td><td>r + γV(s′) − V(s)</td><td>5</td></tr>
+<tr><td>GAE</td><td>generalized advantage estimation</td><td>δ 以 γλ 加權累加</td><td>5</td></tr>
+<tr><td>解釋變異</td><td>explained variance</td><td>1 − Var(目標 − V)／Var(目標)</td><td>5</td></tr>
+<tr><td>PPO</td><td>proximal policy optimization</td><td>ratio 加 clip，同一批資料用多次</td><td>6</td></tr>
+<tr><td>DQN、經驗回放、目標網路</td><td>deep Q-network, replay buffer, target network</td><td>學 Q 值；重用舊資料；固定的訓練目標</td><td>6</td></tr>
+<tr><td>開迴路、閉迴路</td><td>open loop, closed loop</td><td>事先決定好的動作序列；每一步看狀態決定</td><td>7</td></tr>
+<tr><td>model-free、model-based</td><td>—</td><td>不學環境模型；先學模型再在模型裡規劃（MuZero）</td><td>7</td></tr>
+<tr><td>RLHF、GRPO</td><td>—</td><td>用 PPO 微調語言模型；用一組回答的平均分當 baseline</td><td>6</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="cheat">8.8　速查表</h2>
+<div class="cardgrid">
+<div class="card"><h4>檔案</h4>
+<p><code>HW12/train.py</code> 訓練（範例）<br><code>HW12/test.py</code> 測試、存動作<br><code>HW12/judge.py</code> 重播評分<br><code>HW12/gym_compat.py</code> Gym 0.18 介面<br><code>docs/tools/hw12_exp.py</code> 全部實驗</p></div>
+<div class="card"><h4>關鍵數字</h4>
+<p>參數 484；狀態 8、動作 4<br>截斷 1,000 步；解決 ≥ 200<br>範例 judge −26.40（種子 543）<br>範例 21 種子 −47.7 ± 65.6<br>手寫控制器 225.5</p></div>
+<div class="card"><h4>最好的設定</h4>
+<p>PPO、隱藏層 64、熵 0.01<br>rollout 2,048、10 輪、批次 64<br>clip 0.2、GAE λ 0.95、Adam 3e-4<br>100 萬步：213.6 ± 24.3<br>greedy 222.2、judge 230.8</p></div>
+</div>
+<pre class="shell cmd">$ cd HW12 &amp;&amp; OMP_NUM_THREADS=1 ../.venv/bin/python train.py      # 範例，約 2 分 10 秒
+$ ../.venv/bin/python test.py &amp;&amp; ../.venv/bin/python judge.py      # judge −26.40
+$ cd .. &amp;&amp; OMP_NUM_THREADS=1 .venv/bin/python docs/tools/hw12_exp.py --algo ppo --hidden 64 --lr 0.0003 --entropy 0.01 --seed 0
+$ .venv/bin/python docs/tools/hw12_summarize.py E_ppo_ent             # 讀紀錄</pre>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>303 次正式訓練、29 種設定：範例 −29.8 → reward-to-go 60.2 → Adam 134.3 → baseline 約 183 → 加寬 195.0 → PPO＋熵 213.6（手寫控制器 225.5）。</li>
+<li>最大的改進來自把訊號弄對與換優化器；後面的增益和種子雜訊同一量級，要看多個種子與多種量法。</li>
+<li>讀程式找到 12 個問題，從範例的權重、標準化與 loss 尺度，到評分的運氣與不檢查長度。</li>
+<li>同一套策略梯度、baseline、PPO，正是現在微調大型語言模型的方法。</li>
+</ul>
+</div>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>Sutton、Barto，<a href="http://incompleteideas.net/book/the-book-2nd.html">Reinforcement Learning: An Introduction（第二版）</a>：本書所有觀念的教科書版本。</li>
+<li>OpenAI，<a href="https://spinningup.openai.com/en/latest/">Spinning Up in Deep RL</a>：從策略梯度到 PPO 的入門與參考實作。</li>
+<li>Costa Huang 等，<a href="https://github.com/vwxyzjn/cleanrl">CleanRL</a>：單檔、可讀的 PPO、DQN 等實作，適合和本書的 <code>hw12_exp.py</code> 對照。</li>
+<li>Nathan Lambert，<a href="https://rlhfbook.com/">Reinforcement Learning from Human Feedback</a>：RLHF、PPO 與 GRPO 在語言模型上的用法。</li>
+</ul>
+
+<footer class="chap-footer"><p>ML2022 Spring HW12 讀碼教材。作業內容出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群），範例程式出自 2021 年的同一門課；書中數字皆為本機實測。</p></footer>
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch07.html">← 第 7 章</a><a href="index.html">回目錄 →</a></nav>
+<script id="book-js">
+/* HW12 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

@@ -268,7 +268,50 @@ def ch07_scatter():
     return '\n'.join(out).replace('ARIA', charts._esc(aria))
 
 
+ALL_ROWS = [
+    ('範例（瞬時獎勵、SGD 1e-3）', 'A_sample', 3), ('範例，不標準化', 'A_nonorm', 3), ('範例，學習率 1e-4', 'A_lr1e-4', 3),
+    ('範例，學習率 1e-2', 'A_lr1e-2', 3), ('整局總報酬', 'B_total', 4), ('reward-to-go γ 0.9', 'B_rtg0.9', 4),
+    ('reward-to-go γ 0.95', 'B_rtg0.95', 4), ('reward-to-go γ 0.99', 'B_rtg0.99', 4), ('reward-to-go γ 0.999', 'B_rtg0.999', 4),
+    ('reward-to-go γ 1', 'B_rtg1.0', 4), ('reward-to-go 0.99，不標準化', 'B_rtg0.99_nonorm', 4),
+    ('reward-to-go 0.99，Adam 3e-3', 'C_rtg_adam', 5), ('MC baseline（p.5）', 'C_mc', 5), ('MC，critic 5 步', 'C_mc_ci5', 5),
+    ('MC，SGD 1e-3', 'C_mc_sgd', 5), ('A2C TD(0)', 'C_td0', 5), ('A2C 5-step', 'C_n5', 5), ('A2C 20-step', 'C_n20', 5),
+    ('A2C GAE 0.95', 'C_gae0.95', 5), ('GAE 0.95，critic 5 步', 'C_gae0.95_ci5', 5), ('A2C GAE 0.99', 'C_gae0.99', 5),
+    ('GAE 0.99 ＋隱藏層 64', 'D_h64', 6), ('＋熵 0.01', 'D_h64_ent', 6), ('＋梯度裁切 1', 'D_h64_ent_clip', 6),
+    ('＋每批 10 局', 'D_h64_ent_clip_b10', 6), ('PPO 隱藏層 16', 'E_ppo_h16', 6), ('PPO 隱藏層 64', 'E_ppo', 6),
+    ('PPO 64 ＋熵 0.01', 'E_ppo_ent', 6), ('DQN 隱藏層 64', 'E_dqn', 6)]
+
+
+def ch08_table():
+    head = ('<div class="tablewrap"><table>\n<thead><tr><th rowspan="2">設定（種子 0–9）</th><th rowspan="2">章</th>'
+            '<th colspan="2">2,000 局</th><th colspan="6">100 萬環境步</th></tr>\n'
+            '<tr><th class="num">步數（萬）</th><th class="num">stoch.</th><th class="num">局數</th><th class="num">judge</th>'
+            '<th class="num">stochastic</th><th class="num">greedy</th><th class="num">greedy 截斷</th><th class="num">≥ 200</th></tr></thead>\n<tbody>\n')
+    rows = []
+    for label, tag, ch in ALL_ROWS:
+        rs = [r for r in runs(tag) if r['seed'] < 10]
+        e = [r['snapshots']['ep'] for r in rs]
+        s = [r['snapshots']['steps'] for r in rs]
+        m = lambda xs: float(np.mean(xs))
+        sto = [x['closed_stochastic']['mean'] for x in s]
+        b = (lambda t: f'<strong>{t}</strong>') if tag == 'E_ppo_ent' else (lambda t: t)
+        rows.append(f'<tr><td>{b(label)}</td><td>{ch}</td>'
+                    f'<td class="num">{m([x["env_steps"] for x in e]) / 1e4:.1f}</td>'
+                    f'<td class="num">{m([x["closed_stochastic"]["mean"] for x in e]):.1f}</td>'
+                    f'<td class="num">{m([x["episodes"] for x in s]):,.0f}</td>'
+                    f'<td class="num">{m([x["judge_mean"] for x in s]):.1f}</td>'
+                    f'<td class="num">{b(f"{m(sto):.1f} ± {np.std(sto):.1f}")}</td>'
+                    f'<td class="num">{m([x["closed_greedy"]["mean"] for x in s]):.1f}</td>'
+                    f'<td class="num">{m([x["closed_greedy"]["timeout"] for x in s]):.1f}</td>'
+                    f'<td class="num">{m([x["closed_stochastic"]["solved_rate"] for x in s]) * 100:.0f}%</td></tr>')
+    rows.append('<tr><td>參考：均勻隨機</td><td>1</td><td class="num">—</td><td class="num">−184.5</td><td class="num">—</td>'
+                '<td class="num">−162.3</td><td class="num">−184.5</td><td class="num">—</td><td class="num">0</td><td class="num">0%</td></tr>')
+    rows.append('<tr><td>參考：手寫控制器 <code>heuristic</code></td><td>0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>'
+                '<td class="num">—</td><td class="num">225.5</td><td class="num">—</td><td class="num">3</td><td class="num">86%</td></tr>')
+    return head + '\n'.join(rows) + '\n</tbody></table></div>'
+
+
 CHARTS = {'ch00_curve': ('ch00.html', ch00_curve), 'ch00_seeds': ('ch00.html', ch00_seeds),
+          'ch08_table': ('ch08.html', ch08_table),
           'ch07_scatter': ('ch07.html', ch07_scatter),
           'ch06_scores': ('ch06.html', ch06_scores), 'ch06_outcomes': ('ch06.html', ch06_outcomes),
           'ch06_curves': ('ch06.html', ch06_curves),
