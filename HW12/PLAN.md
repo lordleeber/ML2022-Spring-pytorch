@@ -1,5 +1,7 @@
 # HW12 強化學習（LunarLander）— 計畫
 
+> **2026-10-17 全書完成**：docs/HW12（index、outline、ch00–ch08，本機 commit，未推）。實驗 A–E 共 303 次訓練＋試跑 38＋Phase 0 44；事實在 docs/HW12/FACTS.md；教訓在 docs/TEXTBOOK_WORKFLOW.md「HW12 的調整」。不冷讀。
+
 > 2026-10-08 由前一個 session 整理成研究筆記，結論是「不建議」（2022 範例程式失傳）。**2026-10-16 使用者要求重讀並重新規劃**，本檔改寫成計畫（Phase 0 前）。總覽見 [docs/HW_STUDY_OVERVIEW.md](../docs/HW_STUDY_OVERVIEW.md)，流程見 [docs/TEXTBOOK_WORKFLOW.md](../docs/TEXTBOOK_WORKFLOW.md)。
 
 ## 來源（2026-10-16 重查）

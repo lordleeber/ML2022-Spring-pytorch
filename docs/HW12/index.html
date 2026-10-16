@@ -360,7 +360,23 @@ td.num { font-family: var(--font-mono); }
 </table></div>
 
 <h2 id="results">先看結果</h2>
-<!-- RESULTS -->
+<p>全書的主要結果如下（訓練到 100 萬環境步、10 個訓練種子的平均；分數是 100 個沒看過的地形上的閉迴路平均總獎勵，括號是種子之間的標準差；完整總表在<a href="ch08.html#all">第 8 章</a>）。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>方法</th><th class="num">閉迴路 stochastic</th><th class="num">閉迴路 greedy</th><th class="num">judge</th><th>出處</th></tr></thead>
+<tbody>
+<tr><td>均勻隨機亂按</td><td class="num">−184.5</td><td class="num">—</td><td class="num">−162.3</td><td>第 0、1 章</td></tr>
+<tr><td>範例（瞬時獎勵、SGD）</td><td class="num">−29.8（58.3）</td><td class="num">−24.9</td><td class="num">−64.7</td><td>第 0、3 章</td></tr>
+<tr><td>reward-to-go γ 0.99（助教的 medium 提示）</td><td class="num">60.2（90.2）</td><td class="num">51.5</td><td class="num">68.8</td><td>第 4 章</td></tr>
+<tr><td>同上，優化器換成 Adam</td><td class="num">134.3（29.8）</td><td class="num">88.3</td><td class="num">140.1</td><td>第 5 章</td></tr>
+<tr><td>MC baseline（投影片 p.5）</td><td class="num">183.8（49.0）</td><td class="num">140.6</td><td class="num">183.4</td><td>第 5 章</td></tr>
+<tr><td>A2C、GAE λ 0.99</td><td class="num">181.9（39.1）</td><td class="num">141.2</td><td class="num">189.1</td><td>第 5 章</td></tr>
+<tr><td>同上，隱藏層 64</td><td class="num">195.0（47.3）</td><td class="num">205.4</td><td class="num">192.7</td><td>第 6 章</td></tr>
+<tr><td>DQN（範例註解的「boss」）</td><td class="num">185.6（45.6）</td><td class="num">185.6</td><td class="num">187.7</td><td>第 6 章</td></tr>
+<tr><td><strong>PPO、隱藏層 64、熵 0.01</strong></td><td class="num"><strong>213.6（24.3）</strong></td><td class="num"><strong>222.2</strong></td><td class="num"><strong>230.8</strong></td><td>第 6 章</td></tr>
+<tr><td>參考：Gymnasium 的手寫控制器</td><td class="num">225.5</td><td class="num">—</td><td class="num">—</td><td>第 0 章</td></tr>
+</tbody>
+</table></div>
+<p>三個主要發現。<strong>第一，範例停在負分，原因是它的權重只看一步</strong>：它其實是 γ = 0 的 REINFORCE（和 γ = 0 的寫法逐位元相同），練到 100 萬步也不會變好；換成往後看約 100 步的 reward-to-go，就從 −30 升到 60。<strong>第二，後面每一步都比想像的微妙</strong>：光換優化器就多 74 分；critic 練不夠會讓小艇懸在半空中直到時間截斷；四個常見技巧疊上去只有加寬網路有用；PPO 不加熵會越練越差，加了熵才讓 10 個種子全部超過 180。<strong>第三，作業的評分量到的運氣比策略還多</strong>：同一個策略重跑測試，judge 的標準差可以有 71 分，挑 100 次裡最好的一次，範例本身就能交出 237 分；交出去的動作序列換一個地形，好策略也會掉到 −292 分。</p>
 
 <h2 id="prereq">預備知識</h2>
 <ul>
@@ -390,10 +406,21 @@ $ ../.venv/bin/python test.py                       # 測試 5 局，寫出 Acti
 $ ../.venv/bin/python judge.py                      # 重播動作序列，印出分數</pre>
 
 <h2 id="tools">本書的工具</h2>
-<!-- TOOLS -->
+<div class="tablewrap"><table>
+<thead><tr><th>檔案（<code>docs/tools/</code>）</th><th>用途</th></tr></thead>
+<tbody>
+<tr><td><code>hw12_make_ref.py</code>、<code>hw12_check_split.py</code></td><td>把 notebook 原樣串成參照腳本，逐位元比對拆好的 <code>train.py</code>／<code>test.py</code>／<code>judge.py</code></td></tr>
+<tr><td><code>hw12_exp.py</code></td><td>實驗工具：範例（預設與 <code>train.py</code> 逐位元相同）、reward-to-go、MC baseline、A2C（TD(0)、n-step、GAE）、PPO、DQN；每次訓練在 2,000 局與 100 萬步各評估一次</td></tr>
+<tr><td><code>hw12_grid.sh</code>、<code>hw12_queue.sh</code>、<code>hw12_specs/*.txt</code></td><td>一次並行 20 個訓練的佇列與各組規格（A–E、試跑、C 組中斷後的續跑）</td></tr>
+<tr><td><code>hw12_summarize.py</code></td><td>依 tag 彙整紀錄</td></tr>
+<tr><td><code>hw12_facts.py</code>、<code>hw12_ch01.py</code>–<code>hw12_ch07.py</code>、<code>hw12_ch05_timeouts.py</code>、<code>hw12_ch06_gradnorm.py</code>、<code>hw12_timing.py</code></td><td>各章的事實量測（輸出在同名的 <code>.txt</code>）與乾淨計時</td></tr>
+<tr><td><code>hw12_runs.jsonl</code>、<code>hw12_p0_runs.jsonl</code>、<code>hw12_logs/</code></td><td>全部訓練的原始紀錄（正式 303 次、試跑 38 次、Phase 0 44 次）；策略權重存在 <code>hw12_models/</code>（不進 git）</td></tr>
+<tr><td><code>hw12_book/</code></td><td>本書樣板（<code>book.css</code>、<code>book.js</code>、<code>apply_template.py</code>）、圖表與總表（<code>charts.py</code>、<code>make_charts.py</code>）、程式引用填入（<code>fill_listings.py</code>）</td></tr>
+</tbody>
+</table></div>
 
 <h2 id="version">版本聲明</h2>
-<!-- VERSION -->
+<p>本書的程式碼引用以 commit <code>a61f4fc</code> 為準（<code>HW12/</code> 的主線程式與 <code>docs/tools/hw12_exp.py</code> 在那之後沒有再改動）；Gymnasium 的原始碼引用來自共用 <code>.venv</code> 裡的 gymnasium 1.4.0。環境：Python 3.12、torch 2.11.0（只用 CPU，單執行緒）、NumPy 2.5.3、gymnasium 1.4.0、box2d 2.3.10；機器是 24 核 CPU 加一張 RTX PRO 4000 Blackwell（只在第 2 章的計時用到 GPU）。範例程式出自 2021 年的官方 repo（<code>ga642381/ML2021-Spring</code>），2022 年的版本沒有公開。所有數字都可以用上面的工具重現，事實與原始數據在 <code>docs/HW12/FACTS.md</code>。本書沒有做冷讀（cold-read）審閱。</p>
 
 </main>
 <nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="outline.html">教學大綱</a><a href="ch00.html">開始閱讀 →</a></nav>

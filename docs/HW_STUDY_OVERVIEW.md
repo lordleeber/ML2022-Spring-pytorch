@@ -1,6 +1,6 @@
 # 下一本書要做哪一份作業：候選評估（2026-10-08）
 
-HW01–HW04、HW06、HW07、HW09、HW10、HW13、HW14 的讀碼教材已完成（HW14、HW13 於 2026-10-09、HW07 與 HW10 於 2026-10-10 完成）。這份文件整理 2026-10-08 一個 session 裡看過的其餘作業，以及 ML2025／ML2026 的對照；每份作業的細節在各自資料夾的 `PLAN.md`。**新 session 從這裡開始**，然後讀選定作業的 `PLAN.md` 與 `docs/TEXTBOOK_WORKFLOW.md`（特別是「HW06 的調整」：大綱前先對照現行 skill、不寫附錄、每本書自己設計樣板）。
+HW01–HW04、HW06、HW07、HW09、HW10、HW12、HW13、HW14 的讀碼教材已完成（HW14、HW13 於 2026-10-09、HW07 與 HW10 於 2026-10-10、HW12 於 2026-10-17 完成）。這份文件整理 2026-10-08 一個 session 裡看過的其餘作業，以及 ML2025／ML2026 的對照；每份作業的細節在各自資料夾的 `PLAN.md`。**新 session 從這裡開始**，然後讀選定作業的 `PLAN.md` 與 `docs/TEXTBOOK_WORKFLOW.md`（特別是「HW06 的調整」：大綱前先對照現行 skill、不寫附錄、每本書自己設計樣板）。
 
 ## 評估標準
 1. **本機能不能量主指標**：這系列的原則是「每個數字都在本機實測」。測試集沒有標籤、又沒有驗證集的作業，結論會打折。
@@ -19,7 +19,7 @@ HW01–HW04、HW06、HW07、HW09、HW10、HW13、HW14 的讀碼教材已完成�
 | [HW10](../HW10/PLAN.md) | 對抗攻擊（轉移性） | ✓（用其他模型當本機黑箱） | 中高（對應 ML2026 HW1 越獄防禦） | 中（pytorchcv 已裝；imgaug 需 shim） | 已拆成 .py | **已完成**（docs/HW10） |
 | [HW11](../HW11/PLAN.md) | 領域適應（DaNN） | ✗（目標域無標籤） | 中 | 低～中 | 官方 notebook 已複製 | 不建議 |
 | [HW08](../HW08/PLAN.md) | 異常偵測（autoencoder） | ✗（測試集無標籤） | 中 | 低（已能跑） | 已在 repo | 不建議 |
-| [HW12](../HW12/PLAN.md) | 強化學習（LunarLander） | ✓ | 高（RLHF、GRPO） | 低～中（`gymnasium[box2d]` 有 cp312 wheel） | 2022 失傳；2021 官方範例還在（未下載） | **2026-10-16 重新規劃**，見 PLAN |
+| [HW12](../HW12/PLAN.md) | 強化學習（LunarLander） | ✓ | 高（RLHF、GRPO） | 低～中（`gymnasium[box2d]` 有 cp312 wheel） | 2022 失傳；改讀 2021 官方範例，拆成 .py | **已完成**（docs/HW12） |
 | HW15 | Meta Learning | 未看 | — | — | 官方 notebook 在 `~/poyi/GitHubPublic/ML2022-Spring/HW15/` | 未評估 |
 | [ML2025 HW6](https://github.com/lordleeber/ML2025-Spring-pytorch/blob/main/HW06/PLAN.md)（＝ML2026 HW5） | 微調而不遺忘（Llama-3.2-1B + LoRA） | 部分（安全率要審查模型） | 現行課程 | 中（Llama 需申請權限） | Colab／Kaggle（未下載） | HW14 的續集 |
 

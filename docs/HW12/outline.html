@@ -253,7 +253,7 @@ td.num { font-family: var(--font-mono); }
 <header class="chap-header">
   <p class="book-title">ML2022 Spring · HW12 讀碼教材</p>
   <h1>教學大綱</h1>
-  <p class="chap-lead">（2026-10-16 經使用者核可。）這一頁是全書的設計圖，列出每一章對應哪些檔案、要回答什麼問題、用哪些實測數字。2022 年的範例程式沒有公開，本書讀的是 2021 年的官方範例（理由見下方「取材」）。寫作途中如果發現大綱和程式不符，以程式為準，並回頭修改這一頁。</p>
+  <p class="chap-lead">（2026-10-16 經使用者核可；2026-10-17 全書完成：下面的實驗規格與問題清單已更新成實際的內容。）這一頁是全書的設計圖，列出每一章對應哪些檔案、要回答什麼問題、用哪些實測數字。2022 年的範例程式沒有公開，本書讀的是 2021 年的官方範例（理由見下方「取材」）。寫作途中如果發現大綱和程式不符，以程式為準，並回頭修改這一頁。</p>
 </header>
 <main>
 
@@ -300,34 +300,38 @@ td.num { font-family: var(--font-mono); }
 </tbody>
 </table></div>
 
-<h2 id="issues">讀程式找到的問題（Phase 0 已確認的）</h2>
+<h2 id="issues">讀程式找到的問題（各章實測，同第 8 章 8.3 節）</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>#</th><th>問題</th><th>位置</th><th>章</th></tr></thead>
 <tbody>
-<tr><td>1</td><td>範例用每一步的瞬時獎勵 r<sub>t</sub> 當權重，不是投影片 p.4 的折扣累積報酬 R<sub>t</sub>；註解自己也寫了 medium 要改成累積</td><td><code>train.py</code> 的 <code>rewards.append(reward)</code></td><td>3、4</td></tr>
-<tr><td>2</td><td>投影片 p.5 標題是 Actor-Critic，框裡的演算法是 REINFORCE with baseline（baseline 用蒙地卡羅報酬擬合，沒有 bootstrap）</td><td>投影片 p.5</td><td>5</td></tr>
-<tr><td>3</td><td>範例本身過不了最低的參考線：本機 21 個種子 judge 平均 −47.7，只有 4 個 ≥ 0；2021 年 Colab 的兩次輸出也是負的</td><td>整份範例</td><td>0、3</td></tr>
-<tr><td>4</td><td>測試時用 <code>agent.sample()</code> 隨機取樣，judge 分數大半是運氣；環境種子又是固定的，可以重跑測試、挑最好的動作序列交出去</td><td><code>test.py</code></td><td>7</td></tr>
-<tr><td>5</td><td>模擬評分的「Server」格只檢查有沒有 5 局，遇到 done 就 break，不檢查動作數和局長是否相符；投影片說長度不符會被退件</td><td><code>judge.py</code></td><td>7</td></tr>
-<tr><td>6</td><td>只為了「看看環境」的探索格會推進環境的亂數，拿掉它們，同一個種子的 judge 從 −26.4 變成 108.6</td><td><code>train.py</code> 的探索段</td><td>1、7</td></tr>
-<tr><td>7</td><td><code>torch.set_deterministic</code> 已從 torch 移除；<code>np.array(action_list)</code> 與 <code>np.shape(log_probs)</code> 在 NumPy 2 會丟例外（2021 年的 NumPy 1.19 能執行，<code>action_list</code> 只出現 VisibleDeprecationWarning）</td><td><code>env_setup.py</code>、<code>train.py</code>、<code>test.py</code></td><td>0、3、7</td></tr>
-<tr><td>8</td><td>Gym 0.18 的 API（<code>env.seed()</code>、四值 <code>step()</code>、<code>LunarLander-v2</code>）在 Gymnasium 都改了，要靠 shim；地形的亂數流也不同，2021 年印出的初始狀態對不上</td><td><code>gym_compat.py</code></td><td>1</td></tr>
-<tr><td>9</td><td>沒用到的程式：<code>StepLR</code> import、<code>seq_rewards</code>、<code>total_step</code>、<code>agent.forward</code>；<code>fix()</code> 設定了 CUDA 與 cuDNN，但整份作業都在 CPU 上跑</td><td><code>model.py</code>、<code>train.py</code>、<code>env_setup.py</code></td><td>2、3</td></tr>
-<tr><td>10</td><td>Gymnasium 的說明文件寫結束時「額外」加減 100，程式卻是直接把那一步的獎勵設成 <code>-100</code>／<code>+100</code>，蓋掉那一步的姿態、距離與耗油分數。所以範例印的「Final」其實就是降落與墜毀比例的差 × 100；只有被 1,000 步截斷的局，最後一步才是普通的分數</td><td>Gymnasium <code>lunar_lander.py</code> 的 <code>step</code>、<code>train.py</code> 的 <code>final_rewards</code></td><td>1、3</td></tr>
+<tr><td>1</td><td>範例用每一步的瞬時獎勵 r<sub>t</sub> 當權重，等同 γ = 0 的 REINFORCE（實測逐位元相同），不是 p.4 的 R<sub>t</sub></td><td><code>train.py</code> 第 74 行</td><td>3</td></tr>
+<tr><td>2</td><td>p.5 的標題是 Actor-Critic，框裡是 REINFORCE with baseline（baseline 擬合蒙地卡羅回報，沒有 bootstrapping）</td><td>投影片 p.5</td><td>5</td></tr>
+<tr><td>3</td><td>範例本身過不了最低參考線：21 個種子 judge 平均 −47.7、只有 4 個 ≥ 0；練到 100 萬步也不會變好</td><td>整份範例</td><td>0、3</td></tr>
+<tr><td>4</td><td>loss 是 <code>.sum()</code>：局變長，梯度跟著變大，同一個學習率實際步伐會變成三倍；學習率 ×10 就崩潰</td><td><code>model.py</code> 第 33 行</td><td>3</td></tr>
+<tr><td>5</td><td>每局最後的 ±100 主宰了整批標準化：標準差從 3.66 撐到 10.20，墜毀那一步的權重 −10 到 −16</td><td><code>train.py</code> 第 98 行</td><td>3</td></tr>
+<tr><td>6</td><td>Gymnasium 文件說結束時「額外」加減 100，程式卻是把那一步的獎勵直接設成 ±100；範例的 Final 因此是（降落 − 墜毀局數）× 20</td><td>Gymnasium <code>lunar_lander.py</code></td><td>1</td></tr>
+<tr><td>7</td><td>只為了「看看環境」的探索格會推進環境亂數；拿掉它們，同一種子的 judge 從 −26.4 變成 108.6</td><td><code>train.py</code> 第 24–40 行</td><td>1</td></tr>
+<tr><td>8</td><td>測試時隨機取樣，judge 帶著測試亂數的運氣：同一策略重跑 100 次，標準差 71.3；挑最好的可以從 −45 變成 237</td><td><code>test.py</code> 第 32 行</td><td>7</td></tr>
+<tr><td>9</td><td>模擬評分的程式不檢查長度：多的動作被忽略、少的照樣給分；投影片說長度不符要退件</td><td><code>judge.py</code> 第 29–34 行</td><td>7</td></tr>
+<tr><td>10</td><td><code>torch.set_deterministic</code> 已移除；<code>np.array(action_list)</code>、<code>np.shape(log_probs)</code> 在 NumPy 2 會丟例外</td><td><code>env_setup.py</code>、<code>train.py</code>、<code>test.py</code></td><td>0、1</td></tr>
+<tr><td>11</td><td>Gym 0.18 的介面在 Gymnasium 都改了（<code>env.seed</code>、四值 <code>step</code>、<code>v2</code>）；terminated 與 truncated 被合成一個 <code>done</code>，critic 類方法需要分開</td><td><code>gym_compat.py</code></td><td>1、5</td></tr>
+<tr><td>12</td><td>沒用到的程式：<code>StepLR</code>、<code>seq_rewards</code>、<code>total_step</code>、<code>agent.forward</code>；CUDA／cuDNN 設定在 CPU 作業裡沒有作用</td><td><code>model.py</code>、<code>train.py</code>、<code>env_setup.py</code></td><td>2、3</td></tr>
 </tbody>
 </table></div>
 
-<h2 id="spec">實驗規格</h2>
-<p>所有實驗用 <code>docs/tools/hw12_exp.py</code>：預設設定和 <code>train.py</code> 逐位元相同，之後加的演算法都是新選項，不改預設路徑。每個設定跑 10 個訓練種子（0–9；範例另有 543 與 10–19）。每一次訓練存兩個快照（2,000 局、100 萬環境步），每個快照都量 judge 與閉迴路兩種分數。一次 20 個行程並行，每組約 4 分鐘；計時另外單獨跑。</p>
+<h2 id="spec">實驗規格（實際跑過的）</h2>
+<p>所有實驗用 <code>docs/tools/hw12_exp.py</code>：預設設定和 <code>train.py</code> 逐位元相同，之後加的演算法都是新選項，不改預設路徑。每個設定跑 10 個訓練種子（0–9；範例另有 543 與 10–19）。每一次訓練存兩個快照（2,000 局、100 萬環境步），每個快照都量 judge 與閉迴路兩種分數。一次 20 個行程並行；計時另外在機器閒置時量。2026-10-16 約 18:18 機器重開，C 組跑完 43 組時中斷，22:40 以 <code>hw12_specs/C_resume.txt</code> 接著跑完（工具是決定性的，中斷不影響結果）。</p>
 <div class="tablewrap"><table>
 <thead><tr><th>組</th><th>內容</th><th>規模</th><th>章</th></tr></thead>
 <tbody>
-<tr><td>A</td><td>範例原樣 21 個種子、隨機策略、不跑探索格（<strong>已完成</strong>）；拿掉獎勵標準化；SGD 學習率 ×0.1、×10</td><td>約 30 組</td><td>1、3</td></tr>
-<tr><td>B</td><td>回報：瞬時、整局、reward-to-go × γ = 0.9、0.95、0.99、0.999、1（reward-to-go 0.99 與整局已探測過）</td><td>約 60 組</td><td>4</td></tr>
-<tr><td>C</td><td>baseline 與 critic：MC baseline（p.5）、A2C TD(0)、n-step（5、20）、GAE（λ = 0.95）</td><td>約 50 組</td><td>5</td></tr>
-<tr><td>D</td><td>技巧逐項疊加：Adam、網路寬度 64、熵正則、梯度裁切、每批局數</td><td>約 60 組</td><td>6</td></tr>
-<tr><td>E</td><td>PPO（2–3 種設定）；（選做）DQN</td><td>約 30 組</td><td>6</td></tr>
-<tr><td>F</td><td>評分：同一個策略重跑測試 K = 1–100 次取最大值；greedy vs stochastic 測試；截短或加長動作序列送進 judge</td><td>只做推論</td><td>7</td></tr>
+<tr><td>Phase 0</td><td>範例 21 個種子、隨機策略、不跑探索格；reward-to-go γ 0.99 與整局總報酬的探測</td><td>44 次（舊格式紀錄）</td><td>0</td></tr>
+<tr><td>試跑</td><td>選 C–E 組的規格：critic 練幾步、優化器、PPO 與 DQN 的設定（種子 0–2）</td><td>38 次</td><td>5（注記）</td></tr>
+<tr><td>A</td><td>範例 21 個種子、拿掉標準化、學習率 ×0.1 與 ×10、隨機策略、不跑探索格</td><td>53 次</td><td>0、1、3</td></tr>
+<tr><td>B</td><td>瞬時、整局、reward-to-go × γ = 0.9、0.95、0.99、0.999、1、reward-to-go 0.99 不標準化</td><td>70 次</td><td>4</td></tr>
+<tr><td>C</td><td>reward-to-go＋Adam 對照、MC baseline（critic 50／5 步、SGD）、TD(0)、5-step、20-step、GAE 0.95（critic 50／5 步）、GAE 0.99</td><td>100 次</td><td>5</td></tr>
+<tr><td>D</td><td>在 GAE 0.99 上依序疊加：隱藏層 64、熵 0.01、梯度裁切 1、每批 10 局</td><td>40 次</td><td>6</td></tr>
+<tr><td>E</td><td>PPO 隱藏層 16、64、64＋熵 0.01；DQN 隱藏層 64</td><td>40 次</td><td>6</td></tr>
+<tr><td>F</td><td>只做推論（<code>hw12_ch07.py</code>）：同一策略重跑測試 100 次與 best-of-K、開迴路重播在 100 個其他種子、改動作序列長度、judge 與閉迴路的相關；另有截斷局的分類（<code>hw12_ch05_timeouts.py</code>）與梯度範數（<code>hw12_ch06_gradnorm.py</code>）</td><td>—</td><td>5、6、7</td></tr>
 </tbody>
 </table></div>
 
