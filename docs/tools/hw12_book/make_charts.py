@@ -186,7 +186,55 @@ def ch05_outcomes():
     return stacked_outcomes(C_ITEMS, 'steps', 'greedy')
 
 
+F_ITEMS = [('A2C GAE λ 0.99（第 5 章）', 'C_gae0.99', C['a2c']), ('＋隱藏層 64', 'D_h64', C['a2c']),
+           ('＋熵 0.01', 'D_h64_ent', C['a2c']), ('＋梯度裁切 1', 'D_h64_ent_clip', C['a2c']),
+           ('＋每批 10 局', 'D_h64_ent_clip_b10', C['a2c']), ('PPO 隱藏層 16', 'E_ppo_h16', C['ppo']),
+           ('PPO 隱藏層 64', 'E_ppo', C['ppo']), ('PPO 64 ＋熵 0.01', 'E_ppo_ent', C['ppo']), ('DQN 隱藏層 64', 'E_dqn', C['dqn'])]
+
+
+def ch06_scores():
+    rows = []
+    for label, tag, color in F_ITEMS:
+        v = [r['snapshots']['steps']['closed_stochastic']['mean'] for r in runs(tag) if r['seed'] < 10]
+        rows.append({'label': label, 'color': color, 'values': v, 'mean': float(np.mean(v))})
+    rows.append({'label': '參考：手寫控制器', 'color': C['extra'], 'values': [HEURISTIC]})
+    return charts.dot_rows(rows, -300, 300, [-200, -100, 0, 100, 200, 300], label_w=250, vfmt='{:.1f}',
+                           xlabel='閉迴路 stochastic 平均總獎勵（訓練到 100 萬步；DQN 兩種量法相同；每個點是一個種子 0–9）',
+                           aria='D、E 組訓練到 100 萬步後的閉迴路分數平均：' + '、'.join(f'{r["label"]} {r["mean"]:.1f}' for r in rows[:-1]))
+
+
+def ch06_outcomes():
+    return stacked_outcomes(F_ITEMS, 'steps', 'greedy')
+
+
+def curve_on_steps(tag, grid):
+    # each run's 20-episode-bin returns placed at the env step where the bin ends, interpolated onto `grid`, then averaged
+    ys = []
+    for r in runs(tag):
+        if r['seed'] >= 10:
+            continue
+        xs, vs = np.array(r['curve_steps']), np.array(r['curve_return'])
+        ys.append(np.interp(grid, xs, vs, left=np.nan, right=np.nan))
+    return [None if np.isnan(v) else round(float(v), 1) for v in np.nanmean(ys, 0)]
+
+
+def ch06_curves():
+    grid = np.arange(50_000, 1_000_001, 50_000)
+    items = [('範例', 'A_sample', C['sample']), ('reward-to-go', 'B_rtg0.99', C['rtg']),
+             ('MC baseline', 'C_mc', C['base']), ('A2C GAE 0.99', 'C_gae0.99', C['a2c']),
+             ('PPO＋熵', 'E_ppo_ent', C['ppo']), ('DQN', 'E_dqn', C['dqn'])]
+    series = [dict(name=t, label=l, values=curve_on_steps(t, grid), color=c) for l, t, c in items]
+    svg = charts.line_chart(series, len(grid), -250, 250, [-200, -100, 0, 100, 200], xlabel='環境步數', ylabel='訓練中每 20 局的平均總獎勵',
+                            aria='訓練曲線（以環境步數為橫軸，種子 0–9 平均）。100 萬步時：' + '、'.join(
+                                f'{s["label"]} {s["values"][-1]}' for s in series),
+                            xticks=[(i, f'{(i + 1) * 5} 萬') for i in (1, 5, 9, 13, 17, 19)],
+                            fmt='{:.1f}', height=360, xname=lambda i: f'{(i + 1) * 50_000:,} 步')
+    return charts.legend(series) + '\n' + svg
+
+
 CHARTS = {'ch00_curve': ('ch00.html', ch00_curve), 'ch00_seeds': ('ch00.html', ch00_seeds),
+          'ch06_scores': ('ch06.html', ch06_scores), 'ch06_outcomes': ('ch06.html', ch06_outcomes),
+          'ch06_curves': ('ch06.html', ch06_curves),
           'ch05_scores': ('ch05.html', ch05_scores), 'ch05_outcomes': ('ch05.html', ch05_outcomes),
           'ch04_gamma': ('ch04.html', ch04_gamma), 'ch04_outcomes': ('ch04.html', ch04_outcomes),
           'ch03_curves': ('ch03.html', ch03_curves), 'ch03_lr': ('ch03.html', ch03_lr)}

@@ -1,0 +1,6 @@
+D_full_s0 ep   : steps per batch   3900, grad norm of the summed loss mean   291.9 (min  180.8, max   346.5) -> clip 1 scales the step by about 0.003
+D_full_s0 steps: steps per batch   4315, grad norm of the summed loss mean   253.2 (min  123.1, max   398.5) -> clip 1 scales the step by about 0.004
+D_full_s1 ep   : steps per batch   4670, grad norm of the summed loss mean   350.6 (min  238.2, max   470.9) -> clip 1 scales the step by about 0.003
+D_full_s1 steps: steps per batch   3377, grad norm of the summed loss mean   252.6 (min  197.2, max   342.7) -> clip 1 scales the step by about 0.004
+D_full_s2 ep   : steps per batch   4580, grad norm of the summed loss mean   297.8 (min  148.9, max   460.6) -> clip 1 scales the step by about 0.003
+D_full_s2 steps: steps per batch   4580, grad norm of the summed loss mean   297.8 (min  148.9, max   460.6) -> clip 1 scales the step by about 0.003

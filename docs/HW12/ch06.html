@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 6 章　讓訓練穩定 — HW12 讀碼教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style id="book-style">
+/* HW12 讀碼教材 — 全書樣板（定義在 index.html，其他頁逐字複製；由 HW10 的樣板複製、改色）
+   版面：單欄 1080px——近黑的冷灰底、紙白的字、月面青只用在標題記號與強調；
+   程式與輸出是比底色更深的面板；段落限寬，表格、程式、圖用滿 1080px。只有暗色主題。
+   角色色（圖表與標籤）：範例 灰、reward-to-go 藍、baseline 橘、A2C 綠、PPO 紫、DQN 洋紅、JudgeBoi 黃
+   （dataviz 參考色盤的暗色步階；圖表底 #181e25 與前幾本相同）。 */
+:root {
+  color-scheme: dark;
+  /* color */
+  --bg: #0f1316;          /* 頁面 */
+  --panel: #181e25;       /* 卡片、圖、表的底（圖表的 surface） */
+  --panel-2: #202833;     /* 次一層：表頭、quiz 摘要 */
+  --code-bg: #0d1115;     /* 程式與終端輸出 */
+  --ink: #e4e8ec;         /* 內文 */
+  --muted: #9aa5b1;       /* 次要文字、圖說 */
+  --hair: #2a343f;        /* 細線 */
+  --accent: #5cc8d6;      /* 月面青：標題記號、重點 */
+  --link: #8cc4e8;        /* 連結 */
+  --link-visited: #b9a8ec;
+  --hot: rgba(92, 200, 214, 0.12);   /* 程式的強調行 */
+  --note: #8cc4e8;  --warn: #e3b341;  --recap: #5cc8d6;
+  /* 角色色 */
+  --r-sample: #8b949e; --r-rtg: #3987e5; --r-base: #d95926; --r-a2c: #199e70;
+  --r-ppo: #9085e9; --r-dqn: #d55181; --r-judge: #c98500; --r-extra: #008300;
+  /* type */
+  --font-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
+  --measure: 46rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0 auto;
+  max-width: 67.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 1.5rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+main > p, main > ul, main > ol, main > h3, main > h4,
+.note > p, .warn > p, .recap > ul { max-width: var(--measure); }
+img { max-width: 100%; }
+
+a { color: var(--link); text-decoration: underline; text-decoration-color: rgba(140, 196, 232, 0.35); text-underline-offset: 0.2em; }
+a:visited { color: var(--link-visited); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- 導覽 ---------- */
+nav.chapnav {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center;
+  font-size: 0.9rem; padding-block: 0.6rem; border-bottom: 1px solid var(--hair);
+}
+nav.chapnav.bottom { border-bottom: 0; border-top: 1px solid var(--hair); margin-top: 3rem; }
+nav.chapnav .spacer { flex: 1; }
+nav.chapnav a { color: var(--muted); text-decoration: none; }
+nav.chapnav a:hover { color: var(--ink); }
+
+/* ---------- 章首 ---------- */
+header.chap-header { padding-block: 2.5rem 1.5rem; }
+.book-title {
+  margin: 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted);
+}
+.book-title::after {                     /* 這本書的資料流，當成每頁的眉標 */
+  content: "s → π_θ(a|s) → a → 環境 → r, s′　·　θ ← θ + α ∇ log π_θ(a|s) · A　·　LunarLander　8 維狀態　4 個動作";
+  display: block; margin-top: 0.25rem; color: var(--accent); opacity: 0.85;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-3);
+  line-height: 1.3; margin: 0.6rem 0 1rem; text-wrap: balance; letter-spacing: 0.01em;
+}
+.chap-lead { max-width: var(--measure); color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+/* ---------- 本章目錄（JS 產生） ---------- */
+.toc-box {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 6px;
+  padding: 0.9rem 1.25rem; margin-block: 0 2rem; max-width: var(--measure);
+}
+.toc-box-title { margin: 0 0 0.3rem; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted); }
+.toc-box ol { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 0.92rem; line-height: 1.7; }
+.toc-box li { break-inside: avoid; }
+
+/* ---------- 標題 ---------- */
+h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); line-height: 1.35;
+  margin: 3.2rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--hair); text-wrap: balance;
+  scroll-margin-top: 1rem;
+}
+h2::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: 0.6rem; vertical-align: 0.25em; background: var(--accent); }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); margin: 2.2rem 0 0.6rem; text-wrap: balance; scroll-margin-top: 1rem; }
+h4 { font-size: 1rem; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.35rem; }
+strong { color: #fdf1ef; font-weight: 700; }
+sub, sup { font-size: 0.72em; }
+
+code, pre, .s-mono, .s-key { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }  /* 程式照原字顯示：JetBrains Mono 預設會把 != 畫成 ≠ */
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--panel-2); padding: 0.08em 0.35em; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- 程式引用 ---------- */
+figure { margin: 1.5rem 0; }
+figure.listing { border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+figure.listing figcaption {
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);
+  padding: 0.45rem 1rem; background: var(--panel-2); border-bottom: 1px solid var(--hair);
+}
+pre {
+  font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6;
+  background: var(--code-bg); color: #dfe4e9; margin: 0 0 1.2rem; padding: 0.9rem 1rem;
+  overflow-x: auto; border-radius: 6px; tab-size: 4;
+}
+figure.listing pre { margin: 0; border-radius: 0; }
+.hot-line { display: inline-block; width: 100%; background: var(--hot); border-left: 3px solid var(--accent); margin-left: -1rem; padding-left: calc(1rem - 3px); }
+
+.tok-kw   { color: #e6b673; }
+.tok-str  { color: #a9d8a0; }
+.tok-cmt  { color: #75818d; font-style: italic; }
+.tok-num  { color: #f0a58a; }
+.tok-fn   { color: #8cc4e8; }
+.tok-type { color: #b9a8ec; }
+.tok-pre  { color: #f0a58a; }
+
+/* ---------- 終端：要貼上執行的指令 vs 輸出 ---------- */
+pre.shell { background: var(--code-bg); border: 1px solid var(--hair); color: #d5dbe1; }
+pre.shell.cmd { background: #121b1d; border-color: rgba(92, 200, 214, 0.45); }
+pre.shell.cmd::before { content: "執行"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; }
+pre.shell:not(.cmd)::before { content: "輸出"; display: block; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem; }
+.sh-prompt { color: var(--accent); user-select: none; }
+.sh-cmd { color: #fff; }
+.sh-cmt { color: #75818d; }
+pre.diagram { background: var(--panel); border: 1px solid var(--hair); color: var(--ink); }
+
+/* 標注：pre 裡的 «N» 與下方逐點說明 */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35em; height: 1.35em; border-radius: 50%; font-size: 0.78em; font-weight: 700;
+  background: var(--accent); color: #1f0d0b; font-family: var(--font-mono); vertical-align: 0.05em;
+}
+ol.notes { list-style: none; padding-left: 0; max-width: var(--measure); }
+ol.notes li { position: relative; padding-left: 2rem; }
+ol.notes li > .mk:first-child { position: absolute; left: 0; top: 0.3rem; }
+
+/* ---------- 圖 ---------- */
+figure.fig { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+figure.fig svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto; }
+figure.fig img { display: block; margin: 0 auto; border-radius: 3px; }
+figure figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.7; }
+.s-lbl  { fill: var(--ink);   font-size: 13px;   font-family: var(--font-body); }
+.s-sm   { fill: var(--muted); font-size: 11.5px; font-family: var(--font-body); }
+.s-mono { fill: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.s-key  { fill: var(--ink);   font-size: 12.5px; font-family: var(--font-mono); }
+.s-box  { fill: var(--panel-2); stroke: var(--hair); stroke-width: 1.5; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.6rem 0 0.4rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1em; }
+
+/* ---------- 公式 ---------- */
+.eq {
+  font-family: var(--font-mono); font-size: 0.92rem; background: var(--panel); border: 1px solid var(--hair);
+  border-radius: 6px; padding: 0.8rem 1.1rem; margin: 0 0 1.2rem; overflow-x: auto; line-height: 1.9;
+}
+
+/* ---------- 提示框 ---------- */
+.note, .warn, .recap {
+  background: var(--panel); border: 1px solid var(--hair); border-left: 4px solid var(--note);
+  border-radius: 6px; padding: 0.9rem 1.2rem; margin: 1.5rem 0;
+}
+.warn { border-left-color: var(--warn); }
+.recap { border-left-color: var(--recap); }
+.note h4 { color: var(--note); }
+.warn h4 { color: var(--warn); }
+.recap h4 { color: var(--recap); }
+.note > :last-child, .warn > :last-child, .recap > :last-child { margin-bottom: 0; }
+
+/* ---------- 表格 ---------- */
+.tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--hair); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--hair); }
+th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ---------- 自我測驗與摺疊 ---------- */
+details { margin: 0 0 0.6rem; }
+details > summary { cursor: pointer; }
+details.quiz { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; max-width: var(--measure); }
+details.quiz > summary { padding: 0.7rem 1rem; font-weight: 600; list-style-position: outside; margin-left: 1.1rem; }
+details.quiz[open] > summary { border-bottom: 1px solid var(--hair); }
+details.quiz > p { padding: 0.7rem 1.1rem 0.2rem; margin: 0; }
+main > details:not(.quiz) > summary { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.6rem; }
+
+/* ---------- 目錄頁 ---------- */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 1rem 1.1rem; min-width: 0; }
+.card h4 { font-family: var(--font-display); color: var(--accent); }
+.card p { margin: 0; font-size: 0.95rem; }
+ol.toc { padding-left: 0; list-style: none; max-width: none; display: grid; gap: 0.6rem; }
+ol.toc li { background: var(--panel); border: 1px solid var(--hair); border-radius: 6px; padding: 0.7rem 1rem; margin: 0; }
+ol.toc a { text-decoration: none; }
+.toc-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.toc-desc { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* ---------- 頁尾 ---------- */
+.chap-footer { color: var(--muted); font-size: 0.82rem; padding-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .cardgrid { grid-template-columns: minmax(0, 1fr); }
+  .toc-box ol { columns: 1; }
+  h1 { font-size: 1.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print { nav.chapnav { display: none; } body { max-width: none; } }
+figure.listing pre.shell { border: 0; background: var(--code-bg); }
+figure.listing pre.shell::before { content: none; }
+
+/* ---------- 角色標籤（色塊只標身分，文字一律用內文色） ---------- */
+.role { white-space: nowrap; }
+.role::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: 0.02em; background: var(--rc, var(--muted)); }
+.role.sample { --rc: var(--r-sample); } .role.rtg { --rc: var(--r-rtg); } .role.base { --rc: var(--r-base); }
+.role.a2c { --rc: var(--r-a2c); } .role.ppo { --rc: var(--r-ppo); } .role.dqn { --rc: var(--r-dqn); }
+.role.judge { --rc: var(--r-judge); } .role.extra { --rc: var(--r-extra); }
+/* 圖內：資料標記用 fill／stroke 屬性帶方法色；hover 提示 */
+.viz-tip {
+  position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 4px; padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink); white-space: nowrap; display: none;
+}
+figure.fig { position: relative; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<nav class="chapnav"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch05.html">← 第 5 章</a><a href="ch07.html">第 7 章 →</a></nav>
+<header class="chap-header">
+  <p class="book-title">ML2022 Spring · HW12 讀碼教材</p>
+  <h1>第 6 章　讓訓練穩定：常見技巧、PPO 與 DQN</h1>
+  <p class="chap-lead">第 5 章最好的方法平均 180 分，但種子之間差 100 分，greedy 也還有四成的局撐到 1,000 步。這一章先在 GAE λ 0.99 上逐項疊加四個常見技巧，發現只有一個有用；再換成 PPO——現在訓練大型語言模型時最常用的強化學習演算法——加上熵正則化之後，10 個種子全部超過 180 分，平均追上 Gymnasium 的手寫控制器；最後以範例註解裡的「boss」DQN 對照。章末接回現在：同一套演算法怎麼用在 ChatGPT 這類模型上。</p>
+</header>
+<main>
+
+<h2 id="tricks">6.1　逐項疊加四個技巧</h2>
+<p>D 組（<code>docs/tools/hw12_specs/D.txt</code>）以第 5 章的 GAE λ 0.99 為起點，每一組在前一組的基礎上多加一項：隱藏層從 16 加寬到 64、熵正則化（係數 0.01）、梯度裁切（範數上限 1）、每批從 5 局加到 10 局。每組 10 個種子。</p>
+<figure class="fig">
+<!-- CHART:ch06_scores -->
+<svg viewBox="0 0 900 460" role="img" aria-label="D、E 組訓練到 100 萬步後的閉迴路分數平均：A2C GAE λ 0.99（第 5 章） 181.9、＋隱藏層 64 195.0、＋熵 0.01 175.9、＋梯度裁切 1 136.3、＋每批 10 局 120.6、PPO 隱藏層 16 21.9、PPO 隱藏層 64 143.3、PPO 64 ＋熵 0.01 213.6、DQN 隱藏層 64 185.6">
+<line x1="353.3" y1="16" x2="353.3" y2="416" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="353.3" y="434" text-anchor="middle">-200</text>
+<line x1="456.7" y1="16" x2="456.7" y2="416" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="456.7" y="434" text-anchor="middle">-100</text>
+<line x1="560.0" y1="16" x2="560.0" y2="416" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="560.0" y="434" text-anchor="middle">0</text>
+<line x1="663.3" y1="16" x2="663.3" y2="416" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="663.3" y="434" text-anchor="middle">100</text>
+<line x1="766.7" y1="16" x2="766.7" y2="416" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="766.7" y="434" text-anchor="middle">200</text>
+<line x1="870.0" y1="16" x2="870.0" y2="416" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="870.0" y="434" text-anchor="middle">300</text>
+<text class="s-sm" x="560.0" y="454" text-anchor="middle">閉迴路 stochastic 平均總獎勵（訓練到 100 萬步；DQN 兩種量法相同；每個點是一個種子 0–9）</text>
+<text class="s-lbl" x="238" y="40.0" text-anchor="end">A2C GAE λ 0.99（第 5 章）</text>
+<line x1="685.6" y1="36.0" x2="799.1" y2="36.0" stroke="#199e70" stroke-width="2" opacity="0.6"/>
+<circle cx="764.5" cy="36.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="A2C GAE λ 0.99（第 5 章）：197.9"/>
+<circle cx="685.6" cy="36.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="A2C GAE λ 0.99（第 5 章）：121.5"/>
+<circle cx="768.1" cy="36.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="A2C GAE λ 0.99（第 5 章）：201.4"/>
+<circle cx="686.8" cy="36.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="A2C GAE λ 0.99（第 5 章）：122.7"/>
+<circle cx="799.1" cy="36.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="A2C GAE λ 0.99（第 5 章）：231.3"/>
+<circle cx="760.6" cy="36.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="A2C GAE λ 0.99（第 5 章）：194.1"/>
+<circle cx="781.7" cy="36.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="A2C GAE λ 0.99（第 5 章）：214.6"/>
+<circle cx="693.9" cy="36.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="A2C GAE λ 0.99（第 5 章）：129.6"/>
+<circle cx="780.9" cy="36.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="A2C GAE λ 0.99（第 5 章）：213.8"/>
+<circle cx="758.2" cy="36.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="A2C GAE λ 0.99（第 5 章）：191.8"/>
+<line x1="747.9" y1="25.0" x2="747.9" y2="47.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="811.1" y="40.0">181.9</text>
+<rect x="0" y="16.0" width="900" height="40" fill="transparent" data-tip="A2C GAE λ 0.99（第 5 章）：197.9、121.5、201.4、122.7、231.3、194.1、214.6、129.6、213.8、191.8（平均 181.9）"/>
+<text class="s-lbl" x="238" y="80.0" text-anchor="end">＋隱藏層 64</text>
+<line x1="658.0" y1="76.0" x2="810.3" y2="76.0" stroke="#199e70" stroke-width="2" opacity="0.6"/>
+<circle cx="782.2" cy="76.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋隱藏層 64：215.0"/>
+<circle cx="809.6" cy="76.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋隱藏層 64：241.5"/>
+<circle cx="760.9" cy="76.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋隱藏層 64：194.4"/>
+<circle cx="790.9" cy="76.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋隱藏層 64：223.4"/>
+<circle cx="711.3" cy="76.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋隱藏層 64：146.4"/>
+<circle cx="792.8" cy="76.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋隱藏層 64：225.3"/>
+<circle cx="791.4" cy="76.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋隱藏層 64：223.9"/>
+<circle cx="810.3" cy="76.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋隱藏層 64：242.2"/>
+<circle cx="708.1" cy="76.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋隱藏層 64：143.4"/>
+<circle cx="658.0" cy="76.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋隱藏層 64：94.8"/>
+<line x1="761.5" y1="65.0" x2="761.5" y2="87.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="822.3" y="80.0">195.0</text>
+<rect x="0" y="56.0" width="900" height="40" fill="transparent" data-tip="＋隱藏層 64：215.0、241.5、194.4、223.4、146.4、225.3、223.9、242.2、143.4、94.8（平均 195.0）"/>
+<text class="s-lbl" x="238" y="120.0" text-anchor="end">＋熵 0.01</text>
+<line x1="629.7" y1="116.0" x2="833.5" y2="116.0" stroke="#199e70" stroke-width="2" opacity="0.6"/>
+<circle cx="736.2" cy="116.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋熵 0.01：170.5"/>
+<circle cx="810.9" cy="116.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋熵 0.01：242.8"/>
+<circle cx="833.5" cy="116.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋熵 0.01：264.7"/>
+<circle cx="715.9" cy="116.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋熵 0.01：150.9"/>
+<circle cx="697.1" cy="116.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋熵 0.01：132.7"/>
+<circle cx="739.4" cy="116.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋熵 0.01：173.6"/>
+<circle cx="822.3" cy="116.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋熵 0.01：253.8"/>
+<circle cx="718.1" cy="116.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋熵 0.01：153.0"/>
+<circle cx="629.7" cy="116.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋熵 0.01：67.4"/>
+<circle cx="714.5" cy="116.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋熵 0.01：149.5"/>
+<line x1="741.8" y1="105.0" x2="741.8" y2="127.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="845.5" y="120.0">175.9</text>
+<rect x="0" y="96.0" width="900" height="40" fill="transparent" data-tip="＋熵 0.01：170.5、242.8、264.7、150.9、132.7、173.6、253.8、153.0、67.4、149.5（平均 175.9）"/>
+<text class="s-lbl" x="238" y="160.0" text-anchor="end">＋梯度裁切 1</text>
+<line x1="647.2" y1="156.0" x2="787.6" y2="156.0" stroke="#199e70" stroke-width="2" opacity="0.6"/>
+<circle cx="787.6" cy="156.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋梯度裁切 1：220.2"/>
+<circle cx="698.3" cy="156.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋梯度裁切 1：133.8"/>
+<circle cx="698.3" cy="156.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋梯度裁切 1：133.8"/>
+<circle cx="701.5" cy="156.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋梯度裁切 1：136.9"/>
+<circle cx="703.2" cy="156.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋梯度裁切 1：138.6"/>
+<circle cx="688.0" cy="156.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋梯度裁切 1：123.8"/>
+<circle cx="702.8" cy="156.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋梯度裁切 1：138.2"/>
+<circle cx="680.3" cy="156.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋梯度裁切 1：116.4"/>
+<circle cx="701.8" cy="156.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋梯度裁切 1：137.2"/>
+<circle cx="647.2" cy="156.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋梯度裁切 1：84.4"/>
+<line x1="700.9" y1="145.0" x2="700.9" y2="167.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="799.6" y="160.0">136.3</text>
+<rect x="0" y="136.0" width="900" height="40" fill="transparent" data-tip="＋梯度裁切 1：220.2、133.8、133.8、136.9、138.6、123.8、138.2、116.4、137.2、84.4（平均 136.3）"/>
+<text class="s-lbl" x="238" y="200.0" text-anchor="end">＋每批 10 局</text>
+<line x1="623.7" y1="196.0" x2="703.8" y2="196.0" stroke="#199e70" stroke-width="2" opacity="0.6"/>
+<circle cx="699.3" cy="196.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋每批 10 局：134.8"/>
+<circle cx="695.1" cy="196.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋每批 10 局：130.7"/>
+<circle cx="698.6" cy="196.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋每批 10 局：134.1"/>
+<circle cx="702.6" cy="196.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋每批 10 局：138.0"/>
+<circle cx="703.8" cy="196.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋每批 10 局：139.2"/>
+<circle cx="623.7" cy="196.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋每批 10 局：61.6"/>
+<circle cx="650.3" cy="196.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋每批 10 局：87.3"/>
+<circle cx="682.7" cy="196.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋每批 10 局：118.8"/>
+<circle cx="702.1" cy="196.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋每批 10 局：137.6"/>
+<circle cx="688.4" cy="196.0" r="5" fill="#199e70" stroke="#181e25" stroke-width="2" data-tip="＋每批 10 局：124.2"/>
+<line x1="684.7" y1="185.0" x2="684.7" y2="207.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="715.8" y="200.0">120.6</text>
+<rect x="0" y="176.0" width="900" height="40" fill="transparent" data-tip="＋每批 10 局：134.8、130.7、134.1、138.0、139.2、61.6、87.3、118.8、137.6、124.2（平均 120.6）"/>
+<text class="s-lbl" x="238" y="240.0" text-anchor="end">PPO 隱藏層 16</text>
+<line x1="485.0" y1="236.0" x2="720.8" y2="236.0" stroke="#9085e9" stroke-width="2" opacity="0.6"/>
+<circle cx="720.8" cy="236.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 16：155.6"/>
+<circle cx="533.1" cy="236.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 16：-26.1"/>
+<circle cx="485.0" cy="236.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 16：-72.6"/>
+<circle cx="576.3" cy="236.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 16：15.8"/>
+<circle cx="526.6" cy="236.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 16：-32.3"/>
+<circle cx="625.0" cy="236.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 16：62.9"/>
+<circle cx="663.4" cy="236.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 16：100.0"/>
+<circle cx="523.4" cy="236.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 16：-35.4"/>
+<circle cx="637.1" cy="236.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 16：74.6"/>
+<circle cx="535.8" cy="236.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 16：-23.4"/>
+<line x1="582.6" y1="225.0" x2="582.6" y2="247.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="732.8" y="240.0">21.9</text>
+<rect x="0" y="216.0" width="900" height="40" fill="transparent" data-tip="PPO 隱藏層 16：155.6、-26.1、-72.6、15.8、-32.3、62.9、100.0、-35.4、74.6、-23.4（平均 21.9）"/>
+<text class="s-lbl" x="238" y="280.0" text-anchor="end">PPO 隱藏層 64</text>
+<line x1="554.4" y1="276.0" x2="842.4" y2="276.0" stroke="#9085e9" stroke-width="2" opacity="0.6"/>
+<circle cx="717.5" cy="276.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 64：152.4"/>
+<circle cx="684.0" cy="276.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 64：120.0"/>
+<circle cx="809.0" cy="276.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 64：241.0"/>
+<circle cx="697.2" cy="276.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 64：132.8"/>
+<circle cx="554.4" cy="276.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 64：-5.4"/>
+<circle cx="842.4" cy="276.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 64：273.3"/>
+<circle cx="679.8" cy="276.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 64：116.0"/>
+<circle cx="705.9" cy="276.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 64：141.2"/>
+<circle cx="704.5" cy="276.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 64：139.9"/>
+<circle cx="686.3" cy="276.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 隱藏層 64：122.2"/>
+<line x1="708.1" y1="265.0" x2="708.1" y2="287.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="854.4" y="280.0">143.3</text>
+<rect x="0" y="256.0" width="900" height="40" fill="transparent" data-tip="PPO 隱藏層 64：152.4、120.0、241.0、132.8、-5.4、273.3、116.0、141.2、139.9、122.2（平均 143.3）"/>
+<text class="s-lbl" x="238" y="320.0" text-anchor="end">PPO 64 ＋熵 0.01</text>
+<line x1="746.9" y1="316.0" x2="825.3" y2="316.0" stroke="#9085e9" stroke-width="2" opacity="0.6"/>
+<circle cx="797.4" cy="316.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 64 ＋熵 0.01：229.7"/>
+<circle cx="804.9" cy="316.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 64 ＋熵 0.01：237.0"/>
+<circle cx="766.6" cy="316.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 64 ＋熵 0.01：200.0"/>
+<circle cx="751.9" cy="316.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 64 ＋熵 0.01：185.7"/>
+<circle cx="752.6" cy="316.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 64 ＋熵 0.01：186.4"/>
+<circle cx="746.9" cy="316.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 64 ＋熵 0.01：180.9"/>
+<circle cx="799.0" cy="316.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 64 ＋熵 0.01：231.3"/>
+<circle cx="790.4" cy="316.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 64 ＋熵 0.01：222.9"/>
+<circle cx="825.3" cy="316.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 64 ＋熵 0.01：256.8"/>
+<circle cx="772.2" cy="316.0" r="5" fill="#9085e9" stroke="#181e25" stroke-width="2" data-tip="PPO 64 ＋熵 0.01：205.3"/>
+<line x1="780.7" y1="305.0" x2="780.7" y2="327.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="837.3" y="320.0">213.6</text>
+<rect x="0" y="296.0" width="900" height="40" fill="transparent" data-tip="PPO 64 ＋熵 0.01：229.7、237.0、200.0、185.7、186.4、180.9、231.3、222.9、256.8、205.3（平均 213.6）"/>
+<text class="s-lbl" x="238" y="360.0" text-anchor="end">DQN 隱藏層 64</text>
+<line x1="666.6" y1="356.0" x2="808.7" y2="356.0" stroke="#d55181" stroke-width="2" opacity="0.6"/>
+<circle cx="701.5" cy="356.0" r="5" fill="#d55181" stroke="#181e25" stroke-width="2" data-tip="DQN 隱藏層 64：137.0"/>
+<circle cx="697.2" cy="356.0" r="5" fill="#d55181" stroke="#181e25" stroke-width="2" data-tip="DQN 隱藏層 64：132.8"/>
+<circle cx="749.3" cy="356.0" r="5" fill="#d55181" stroke="#181e25" stroke-width="2" data-tip="DQN 隱藏層 64：183.2"/>
+<circle cx="781.5" cy="356.0" r="5" fill="#d55181" stroke="#181e25" stroke-width="2" data-tip="DQN 隱藏層 64：214.4"/>
+<circle cx="666.6" cy="356.0" r="5" fill="#d55181" stroke="#181e25" stroke-width="2" data-tip="DQN 隱藏層 64：103.1"/>
+<circle cx="792.9" cy="356.0" r="5" fill="#d55181" stroke="#181e25" stroke-width="2" data-tip="DQN 隱藏層 64：225.4"/>
+<circle cx="798.1" cy="356.0" r="5" fill="#d55181" stroke="#181e25" stroke-width="2" data-tip="DQN 隱藏層 64：230.4"/>
+<circle cx="786.2" cy="356.0" r="5" fill="#d55181" stroke="#181e25" stroke-width="2" data-tip="DQN 隱藏層 64：218.9"/>
+<circle cx="735.9" cy="356.0" r="5" fill="#d55181" stroke="#181e25" stroke-width="2" data-tip="DQN 隱藏層 64：170.2"/>
+<circle cx="808.7" cy="356.0" r="5" fill="#d55181" stroke="#181e25" stroke-width="2" data-tip="DQN 隱藏層 64：240.7"/>
+<line x1="751.8" y1="345.0" x2="751.8" y2="367.0" stroke="#e4e8ec" stroke-width="2"/>
+<text class="s-mono" x="820.7" y="360.0">185.6</text>
+<rect x="0" y="336.0" width="900" height="40" fill="transparent" data-tip="DQN 隱藏層 64：137.0、132.8、183.2、214.4、103.1、225.4、230.4、218.9、170.2、240.7（平均 185.6）"/>
+<text class="s-lbl" x="238" y="400.0" text-anchor="end">參考：手寫控制器</text>
+<circle cx="793.0" cy="396.0" r="5" fill="#008300" stroke="#181e25" stroke-width="2" data-tip="參考：手寫控制器：225.5"/>
+<text class="s-mono" x="805.0" y="400.0">225.5</text>
+<rect x="0" y="376.0" width="900" height="40" fill="transparent" data-tip="參考：手寫控制器：225.5"/>
+</svg>
+<!-- /CHART:ch06_scores -->
+<figcaption>圖 6.1　D、E 組訓練到 100 萬步後的閉迴路 stochastic 分數（種子 0–9）。前五行是 D 組（每一行包含上一行的所有改動），接著三行 PPO、一行 DQN。</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<thead><tr><th>種子 0–9</th><th class="num">2,000 局 stoch.</th><th class="num">100 萬步 stoch.</th><th class="num">100 萬步 greedy</th><th class="num">greedy 截斷</th><th class="num">≥ 200 的局</th></tr></thead>
+<tbody>
+<tr><td>A2C GAE λ 0.99（第 5 章）</td><td class="num">179.2</td><td class="num">181.9 ± 39.1</td><td class="num">141.2</td><td class="num">39.4</td><td class="num">57%</td></tr>
+<tr><td><strong>＋隱藏層 64</strong></td><td class="num">172.3</td><td class="num"><strong>195.0 ± 47.3</strong></td><td class="num"><strong>205.4</strong></td><td class="num">16.7</td><td class="num">63%</td></tr>
+<tr><td>＋熵 0.01</td><td class="num">162.3</td><td class="num">175.9 ± 58.3</td><td class="num">201.9</td><td class="num">17.2</td><td class="num">47%</td></tr>
+<tr><td>＋梯度裁切 1</td><td class="num">143.6</td><td class="num">136.3 ± 32.1</td><td class="num">126.0</td><td class="num">40.6</td><td class="num">18%</td></tr>
+<tr><td>＋每批 10 局</td><td class="num">123.0</td><td class="num">120.6 ± 24.5</td><td class="num">70.3</td><td class="num">69.2</td><td class="num">6%</td></tr>
+</tbody>
+</table></div>
+<p>只有第一項有用。<strong>把隱藏層加寬到 64</strong>（策略與 critic 都加寬，參數量約是原本的 10 倍：第 0 章的自我測驗算過，策略網路變成 4,996 個），100 萬步時 stochastic 升到 195.0，greedy 更從 141.2 跳到 205.4，被截斷的局從 39.4 降到 16.7——這是全書第一次 greedy 比 stochastic 好。16 個神經元的網路要同時記住「怎麼降低速度」「怎麼對準」「什麼時候該熄火」，容量顯然不夠；寬一點的網路能把「著地之後就別再開引擎」這種細節學起來，第 5 章 5.8 節的「停在地上不熄火」就少了。</p>
+<p>之後三項都讓結果變差：熵正則化讓 stochastic 少了 19 分（greedy 差不多）；梯度裁切再少 40 分；每批 10 局再少 16 分，而且 stochastic 有 75% 的局被截斷。要小心的是，這是<strong>疊加</strong>的設計：「梯度裁切變差」是加在 64 加熵之上的結果，本書沒有跑「只加梯度裁切」的對照，不能說它單獨也會變差。</p>
+<p>梯度裁切的數字值得多看一眼。本書的 <code>docs/tools/hw12_ch06_gradnorm.py</code> 在這組訓練出來的策略上量了範例式「加總」loss 的梯度範數：每批 5 局約 3,400–4,700 步，梯度範數平均 250–350。上限設成 1，等於每次把梯度乘上約 0.003。但策略用的是 Adam，而 Adam 本來就對梯度的整體大小不敏感——它除以梯度的移動平均尺度——所以裁切的效果不是「步伐小了 300 倍」，而是讓每一批的梯度大小都被拉成一樣，不論那一批有多少步、訊號有多強。為什麼這樣會變差，本書沒有拆開驗證。一般的建議是：梯度裁切的上限要配合 loss 的尺度設定，常見實作用「平均」的 loss，上限 0.5 才有意義；對加總的 loss，1 是一個從來不會不觸發的上限。</p>
+<p>每批 10 局的代價則很直觀：同樣 100 萬步，更新次數少了一半。策略梯度每次更新都要重新收集資料，資料用一次就丟——這正是下一節 PPO 要解決的問題。</p>
+
+<h2 id="entropy">6.2　熵正則化：保留一點隨機</h2>
+<p>第 2 章說過，取樣是策略梯度唯一的探索；策略越確定，探索越少，太早變確定就會卡住。熵正則化在 loss 裡減去 β × 熵（實驗工具第 340 行：<code>loss = loss - opt.entropy * torch.stack(entropies).sum()</code>），等於獎勵「保持隨機」。在 D 組，它沒有幫忙：GAE λ 0.99 加寬之後本來就學得不錯，多一點隨機只讓 stochastic 的表現打折。但在下一節的 PPO，它是決定性的一項。同一個技巧在不同演算法裡效果相反，這在 RL 裡很常見——也是為什麼本書每一項都要實際跑，而不是照著清單全部加上去。</p>
+
+<h2 id="ppo">6.3　PPO：同一批資料用十次</h2>
+<p>策略梯度有一個浪費的地方：每批資料只能用來更新一次。更新之後策略變了，舊資料是「舊策略」產生的，直接再用一次，梯度的期望值就不對了。PPO（Proximal Policy Optimization，Schulman 等人，2017）的做法是用<strong>機率比</strong>修正：</p>
+<div class="eq">ratio ＝ π<sub>新</sub>(a|s) ／ π<sub>舊</sub>(a|s)　　L ＝ −min( ratio · A,　clip(ratio, 1 − ε, 1 + ε) · A )</div>
+<p>ratio 乘上優勢，就是「用舊資料估計新策略的梯度」；但當新策略離舊策略太遠，這個估計就不可靠了。clip 把 ratio 限制在 [1 − ε, 1 + ε]（ε ＝ 0.2）：一個動作的機率已經被推高超過 20%，就不再從這筆資料得到更多推力。這讓 PPO 可以安心地把同一批資料切成小批次、重複訓練好幾輪。本書的實作：</p>
+<figure class="listing"><figcaption>docs/tools/hw12_exp.py:387–408 — train_ppo() 的 GAE 與更新</figcaption>
+<pre class="py" data-hot="389,390,391,395,396,400,402,403,404"><code>        adv, a_ = [0.0] * opt.rollout, 0.0
+        for t in reversed(range(opt.rollout)):
+            next_v = (NV[t] if D[t] else (last_v if t == opt.rollout - 1 else V[t + 1]))
+            delta = R[t] + opt.gamma * next_v - V[t]
+            a_ = delta + opt.gamma * opt.lam * (0.0 if D[t] else a_)
+            adv[t] = a_
+        S_t = torch.FloatTensor(np.array(S)); A_t = torch.tensor(A); LP_t = torch.tensor(LP)
+        ADV = torch.tensor(adv, dtype=torch.float32); RET = ADV + torch.tensor(V, dtype=torch.float32)
+        for epoch in range(opt.ppo_epochs):
+            perm = torch.randperm(opt.rollout)
+            for k in range(0, opt.rollout, opt.minibatch):
+                idx = perm[k:k + opt.minibatch]
+                dist = Categorical(actor(S_t[idx]))
+                ratio = torch.exp(dist.log_prob(A_t[idx]) - LP_t[idx])
+                adv_mb = (ADV[idx] - ADV[idx].mean()) / (ADV[idx].std() + 1e-8)
+                pg_loss = -torch.min(ratio * adv_mb, torch.clamp(ratio, 1 - opt.clip, 1 + opt.clip) * adv_mb).mean()
+                v_loss = F.mse_loss(critic(S_t[idx]).squeeze(-1), RET[idx])
+                loss = pg_loss + opt.vf_coef * v_loss - opt.entropy * dist.entropy().mean()
+                optimizer.zero_grad()
+                loss.backward()
+                clip(params)
+                optimizer.step()</code></pre></figure>
+<p>和第 5 章的 A2C 相比，有四個不同。第一，資料不是「5 局」而是<strong>固定 2,048 步</strong>（<code>--rollout</code>），局可以跨越兩次收集，收集到一半的局在第 386 行用 V 補上未來。第二，第 389–392 行是同樣的 GAE（λ ＝ 0.95），但要處理局在中間結束的情況：結束的那一步不再往後累加。第三，第 395–408 行把 2,048 步打亂，切成 32 個 64 步的小批次，重複 10 輪——同一批資料用了 320 次梯度更新，而 A2C 只用 1 次。第四，loss 用 <code>.mean()</code> 而不是 <code>.sum()</code>，優勢在每個小批次內標準化；策略與 critic 用同一個 Adam（學習率 0.0003），critic 的 loss 乘 0.5。這次的實驗沒有開梯度裁切（<code>--clip_grad</code> 預設 0，第 407 行什麼都不做），常見實作會用 0.5。</p>
+
+<h2 id="ppo-results">6.4　PPO 的結果：熵是關鍵</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>種子 0–9</th><th class="num">2,000 局 stoch.</th><th class="num">100 萬步 judge</th><th class="num">100 萬步 stoch.</th><th class="num">100 萬步 greedy</th><th class="num">≥ 200 的局</th><th class="num">平均訓練時間</th></tr></thead>
+<tbody>
+<tr><td>PPO 隱藏層 16</td><td class="num">69.6</td><td class="num">17.1</td><td class="num">21.9 ± 69.3</td><td class="num">20.4</td><td class="num">10%</td><td class="num">508 s</td></tr>
+<tr><td>PPO 隱藏層 64</td><td class="num">169.0</td><td class="num">151.6</td><td class="num">143.3 ± 71.1</td><td class="num">146.9</td><td class="num">40%</td><td class="num">531 s</td></tr>
+<tr><td><strong>PPO 64 ＋熵 0.01</strong></td><td class="num"><strong>221.0</strong></td><td class="num"><strong>230.8</strong></td><td class="num"><strong>213.6 ± 24.3</strong></td><td class="num"><strong>222.2</strong></td><td class="num">74%</td><td class="num">523 s</td></tr>
+<tr><td>DQN 隱藏層 64</td><td class="num">143.8</td><td class="num">187.7</td><td class="num">185.6 ± 45.6</td><td class="num">185.6</td><td class="num">63%</td><td class="num">316 s</td></tr>
+<tr><td>參考：手寫控制器</td><td class="num">—</td><td class="num">—</td><td class="num">225.5</td><td class="num">—</td><td class="num">86%</td><td class="num">—</td></tr>
+</tbody>
+</table></div>
+<p>（訓練時間是 20 個訓練同時跑時量的，只能互相比較。）</p>
+<p><strong>PPO 加上熵正則化是全書最好的設定</strong>。100 萬步時 stochastic 213.6、greedy 222.2，10 個種子最低也有 180.9——種子之間的標準差只有 24.3，是第 5 章最好方法的一半。訓練 2,000 局時就已經有 221.0，greedy 229.0——比手寫控制器的 225.5 還高。100 局裡有 78–87 局成功降落，只有 6–8 局墜毀。</p>
+<p>沒有熵正則化的 PPO 則不穩定：2,000 局時 169.0，訓練得更久反而降到 143.3，最差的種子 100 萬步時只剩 −5.4。這和 6.2 節的說明一致：PPO 對同一批資料做 320 次更新，策略很快就變得非常確定，探索消失之後就可能卡在一個不好的地方再也出不來。熵正則化讓它保持一點隨機，學習就能持續。隱藏層 16 的 PPO 最差（21.9），而且也是越練越差（2,000 局 69.6）；小網路加上大量重複更新，看起來是一個不好的組合。</p>
+
+<h2 id="dqn">6.5　DQN：範例註解裡的「boss」</h2>
+<p>範例第 80 行的註解寫著「boss : implement DQN」。DQN（Deep Q-Network，Mnih 等人，2015）是另一條路線：它不直接學策略，而是學每個動作的 Q 值——「在狀態 s 做動作 a，之後平均能拿幾分」——然後永遠選 Q 值最大的動作。</p>
+<figure class="listing"><figcaption>docs/tools/hw12_exp.py:426–453 — train_dqn() 的主迴圈</figcaption>
+<pre class="py" data-hot="426,427,428,433,442,445,446,452,453"><code>        eps = max(opt.eps_end, 1.0 - (1.0 - opt.eps_end) * run.steps / opt.eps_decay)
+        if torch.rand(1).item() &lt; eps:
+            action = torch.randint(4, (1,)).item()
+        else:
+            with torch.no_grad():
+                action = int(q(torch.FloatTensor(state)).argmax())
+        next_state, r, term, trunc, _ = env.env.step(action)
+        bs[ptr], ba[ptr], br[ptr], bs2[ptr], bd[ptr] = state, action, r, next_state, float(term)
+        ptr, n_stored = (ptr + 1) % N, min(n_stored + 1, N)
+        run.steps += 1
+        ep_ret += r; ep_len += 1
+        state = next_state
+        if term or trunc:
+            run.end_episode(ep_ret, ep_len)
+            state, ep_ret, ep_len = env.reset(), 0.0, 0
+        if run.steps &gt;= opt.learn_start and run.steps % opt.train_freq == 0:
+            idx = torch.randint(n_stored, (opt.dqn_batch,)).numpy()
+            s, a = torch.from_numpy(bs[idx]), torch.from_numpy(ba[idx])
+            with torch.no_grad():
+                y = torch.from_numpy(br[idx]) + opt.gamma * (1 - torch.from_numpy(bd[idx])) * target(torch.from_numpy(bs2[idx])).max(1).values
+            loss = F.smooth_l1_loss(q(s).gather(1, a[:, None]).squeeze(1), y)
+            optimizer.zero_grad()
+            loss.backward()
+            clip(q.parameters())
+            optimizer.step()
+            run.updates += 1
+        if run.steps % opt.target_update == 0:
+            target.load_state_dict(q.state_dict())</code></pre></figure>
+<p>三個元件。<strong>ε-greedy 探索</strong>（第 426–431 行）：以機率 ε 隨機選動作，否則選 Q 最大的；ε 在前 10 萬步從 1 線性降到 0.01。DQN 的策略本身是確定的（永遠選最大），所以探索要另外加，評估時 stochastic 與 greedy 也就完全相同。<strong>經驗回放</strong>（第 433 行存、第 442 行抽）：每一步存進一個 10 萬筆的環形緩衝區，訓練時隨機抽 64 筆——舊的經驗可以一直被重用，這是它比策略梯度更省資料的原因。<strong>目標網路</strong>（第 445、452–453 行）：訓練目標 y ＝ r + γ max Q<sub>target</sub>(s′, ·) 用一份每 1,000 步才同步一次的舊網路來算，避免「追著自己跑」而發散。注意第 433 行只把 <code>term</code>（真正結束）當成沒有未來，截斷的局仍然用 Q 補上——第 1 章 1.6 節的 terminated 與 truncated 在這裡派上用場。</p>
+<p>結果：100 萬步時 185.6，和第 5 章最好的兩個方法相當，但比 PPO 加熵低 28 分；種子之間差異較大（標準差 45.6，最差 103.1），2,000 局時更是從 −64.5 到 257.4 都有。它的優勢是快：每 4 步才做一次小批次更新、每一步只算一次前向，平均訓練時間 316 秒，是 PPO 的六成。DQN 的局限是只能處理離散動作；LunarLander 剛好只有 4 個動作，所以適用。</p>
+
+<h2 id="curves">6.6　以環境步數看全部方法</h2>
+<figure class="fig">
+<!-- CHART:ch06_curves -->
+<div class="legend"><span><i style="background:#8b949e"></i>範例</span><span><i style="background:#3987e5"></i>reward-to-go</span><span><i style="background:#d95926"></i>MC baseline</span><span><i style="background:#199e70"></i>A2C GAE 0.99</span><span><i style="background:#9085e9"></i>PPO＋熵</span><span><i style="background:#d55181"></i>DQN</span></div>
+<svg viewBox="0 0 900 360" role="img" aria-label="訓練曲線（以環境步數為橫軸，種子 0–9 平均）。100 萬步時：範例 -23.3、reward-to-go 79.4、MC baseline 174.8、A2C GAE 0.99 198.4、PPO＋熵 219.7、DQN 123.6">
+<line x1="56" y1="284.6" x2="780" y2="284.6" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="288.6" text-anchor="end">-200</text>
+<line x1="56" y1="225.8" x2="780" y2="225.8" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="229.8" text-anchor="end">-100</text>
+<line x1="56" y1="167.0" x2="780" y2="167.0" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="171.0" text-anchor="end">0</text>
+<line x1="56" y1="108.2" x2="780" y2="108.2" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="112.2" text-anchor="end">100</text>
+<line x1="56" y1="49.4" x2="780" y2="49.4" stroke="#2a343f" stroke-width="1"/>
+<text class="s-mono" x="48" y="53.4" text-anchor="end">200</text>
+<text class="s-mono" x="94.1" y="332" text-anchor="middle">10 萬</text>
+<text class="s-mono" x="246.5" y="332" text-anchor="middle">30 萬</text>
+<text class="s-mono" x="398.9" y="332" text-anchor="middle">50 萬</text>
+<text class="s-mono" x="551.4" y="332" text-anchor="middle">70 萬</text>
+<text class="s-mono" x="703.8" y="332" text-anchor="middle">90 萬</text>
+<text class="s-mono" x="780.0" y="332" text-anchor="middle">100 萬</text>
+<line x1="56" y1="314" x2="780" y2="314" stroke="#4a5562" stroke-width="1"/>
+<text class="s-sm" x="418.0" y="354" text-anchor="middle">環境步數</text>
+<text class="s-sm" x="14" y="167.0" text-anchor="middle" transform="rotate(-90 14 167.0)">訓練中每 20 局的平均總獎勵</text>
+<polyline points="56.0,292.7 94.1,246.5 132.2,227.4 170.3,233.2 208.4,227.0 246.5,215.6 284.6,209.5 322.7,209.9 360.8,211.1 398.9,190.4 437.1,192.6 475.2,192.5 513.3,191.9 551.4,190.1 589.5,180.7 627.6,175.8 665.7,183.8 703.8,180.0 741.9,189.2 780.0,180.7" fill="none" stroke="#8b949e" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,245.5 94.1,229.9 132.2,197.3 170.3,191.6 208.4,172.9 246.5,163.5 284.6,164.4 322.7,144.8 360.8,130.3 398.9,119.4 437.1,140.3 475.2,137.6 513.3,123.4 551.4,138.1 589.5,145.6 627.6,131.2 665.7,131.4 703.8,156.8 741.9,105.6 780.0,120.3" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,223.4 94.1,194.0 132.2,177.1 170.3,156.5 208.4,145.8 246.5,136.2 284.6,114.6 322.7,107.8 360.8,108.7 398.9,105.8 437.1,103.9 475.2,94.4 513.3,97.3 551.4,95.2 589.5,93.4 627.6,70.3 665.7,73.0 703.8,63.2 741.9,60.4 780.0,64.2" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,227.2 94.1,189.7 132.2,173.5 170.3,153.2 208.4,137.4 246.5,120.7 284.6,105.7 322.7,106.6 360.8,108.0 398.9,102.7 437.1,100.4 475.2,86.4 513.3,80.0 551.4,79.7 589.5,76.0 627.6,68.6 665.7,67.7 703.8,55.3 741.9,62.9 780.0,50.3" fill="none" stroke="#199e70" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,209.3 94.1,165.9 132.2,154.8 170.3,152.3 208.4,134.4 246.5,124.3 284.6,113.2 322.7,99.8 360.8,91.9 398.9,90.9 437.1,76.6 475.2,79.0 513.3,65.7 551.4,63.0 589.5,52.8 627.6,43.3 665.7,50.8 703.8,43.9 741.9,40.2 780.0,37.8" fill="none" stroke="#9085e9" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="56.0,195.5 94.1,193.1 132.2,188.2 170.3,160.9 208.4,141.8 246.5,102.1 284.6,96.1 322.7,79.2 360.8,76.4 398.9,76.2 437.1,80.9 475.2,56.6 513.3,59.0 551.4,56.8 589.5,50.6 627.6,52.2 665.7,45.7 703.8,44.8 741.9,48.5 780.0,94.3" fill="none" stroke="#d55181" stroke-width="2" stroke-linejoin="round"/>
+<rect x="786.0" y="33.8" width="8" height="8" rx="2" fill="#9085e9"/>
+<text class="s-lbl" x="798.0" y="41.8">PPO＋熵</text>
+<rect x="786.0" y="47.8" width="8" height="8" rx="2" fill="#199e70"/>
+<text class="s-lbl" x="798.0" y="55.8">A2C GAE 0.99</text>
+<rect x="786.0" y="61.8" width="8" height="8" rx="2" fill="#d95926"/>
+<text class="s-lbl" x="798.0" y="69.8">MC baseline</text>
+<rect x="786.0" y="90.3" width="8" height="8" rx="2" fill="#d55181"/>
+<text class="s-lbl" x="798.0" y="98.3">DQN</text>
+<rect x="786.0" y="116.3" width="8" height="8" rx="2" fill="#3987e5"/>
+<text class="s-lbl" x="798.0" y="124.3">reward-to-go</text>
+<rect x="786.0" y="176.7" width="8" height="8" rx="2" fill="#8b949e"/>
+<text class="s-lbl" x="798.0" y="184.7">範例</text>
+<rect x="36.9" y="20" width="38.1" height="294" fill="transparent" data-tip="50,000 步：範例 -213.7　reward-to-go -133.5　MC baseline -96.0　A2C GAE 0.99 -102.3　PPO＋熵 -72.0　DQN -48.5"/>
+<rect x="75.1" y="20" width="38.1" height="294" fill="transparent" data-tip="100,000 步：範例 -135.2　reward-to-go -107.0　MC baseline -46.0　A2C GAE 0.99 -38.6　PPO＋熵 1.9　DQN -44.4"/>
+<rect x="113.2" y="20" width="38.1" height="294" fill="transparent" data-tip="150,000 步：範例 -102.8　reward-to-go -51.5　MC baseline -17.1　A2C GAE 0.99 -11.1　PPO＋熵 20.7　DQN -36.1"/>
+<rect x="151.3" y="20" width="38.1" height="294" fill="transparent" data-tip="200,000 步：範例 -112.5　reward-to-go -41.8　MC baseline 17.8　A2C GAE 0.99 23.4　PPO＋熵 25.0　DQN 10.3"/>
+<rect x="189.4" y="20" width="38.1" height="294" fill="transparent" data-tip="250,000 步：範例 -102.0　reward-to-go -10.0　MC baseline 36.1　A2C GAE 0.99 50.3　PPO＋熵 55.4　DQN 42.9"/>
+<rect x="227.5" y="20" width="38.1" height="294" fill="transparent" data-tip="300,000 步：範例 -82.7　reward-to-go 5.9　MC baseline 52.4　A2C GAE 0.99 78.8　PPO＋熵 72.6　DQN 110.4"/>
+<rect x="265.6" y="20" width="38.1" height="294" fill="transparent" data-tip="350,000 步：範例 -72.3　reward-to-go 4.4　MC baseline 89.2　A2C GAE 0.99 104.2　PPO＋熵 91.5　DQN 120.5"/>
+<rect x="303.7" y="20" width="38.1" height="294" fill="transparent" data-tip="400,000 步：範例 -73.0　reward-to-go 37.8　MC baseline 100.7　A2C GAE 0.99 102.8　PPO＋熵 114.3　DQN 149.4"/>
+<rect x="341.8" y="20" width="38.1" height="294" fill="transparent" data-tip="450,000 步：範例 -75.0　reward-to-go 62.4　MC baseline 99.2　A2C GAE 0.99 100.4　PPO＋熵 127.7　DQN 154.1"/>
+<rect x="379.9" y="20" width="38.1" height="294" fill="transparent" data-tip="500,000 步：範例 -39.8　reward-to-go 80.9　MC baseline 104.1　A2C GAE 0.99 109.4　PPO＋熵 129.5　DQN 154.4"/>
+<rect x="418.0" y="20" width="38.1" height="294" fill="transparent" data-tip="550,000 步：範例 -43.6　reward-to-go 45.4　MC baseline 107.3　A2C GAE 0.99 113.3　PPO＋熵 153.7　DQN 146.5"/>
+<rect x="456.1" y="20" width="38.1" height="294" fill="transparent" data-tip="600,000 步：範例 -43.3　reward-to-go 50.0　MC baseline 123.5　A2C GAE 0.99 137.0　PPO＋熵 149.6　DQN 187.7"/>
+<rect x="494.2" y="20" width="38.1" height="294" fill="transparent" data-tip="650,000 步：範例 -42.3　reward-to-go 74.1　MC baseline 118.6　A2C GAE 0.99 147.9　PPO＋熵 172.3　DQN 183.7"/>
+<rect x="532.3" y="20" width="38.1" height="294" fill="transparent" data-tip="700,000 步：範例 -39.3　reward-to-go 49.1　MC baseline 122.1　A2C GAE 0.99 148.5　PPO＋熵 176.9　DQN 187.4"/>
+<rect x="570.4" y="20" width="38.1" height="294" fill="transparent" data-tip="750,000 步：範例 -23.3　reward-to-go 36.4　MC baseline 125.1　A2C GAE 0.99 154.8　PPO＋熵 194.2　DQN 198.0"/>
+<rect x="608.5" y="20" width="38.1" height="294" fill="transparent" data-tip="800,000 步：範例 -14.9　reward-to-go 60.8　MC baseline 164.5　A2C GAE 0.99 167.3　PPO＋熵 210.3　DQN 195.2"/>
+<rect x="646.6" y="20" width="38.1" height="294" fill="transparent" data-tip="850,000 步：範例 -28.5　reward-to-go 60.5　MC baseline 159.9　A2C GAE 0.99 168.9　PPO＋熵 197.7　DQN 206.3"/>
+<rect x="684.7" y="20" width="38.1" height="294" fill="transparent" data-tip="900,000 步：範例 -22.1　reward-to-go 17.3　MC baseline 176.6　A2C GAE 0.99 190.0　PPO＋熵 209.4　DQN 207.8"/>
+<rect x="722.8" y="20" width="38.1" height="294" fill="transparent" data-tip="950,000 步：範例 -37.7　reward-to-go 104.4　MC baseline 181.3　A2C GAE 0.99 177.1　PPO＋熵 215.6　DQN 201.5"/>
+<rect x="760.9" y="20" width="38.1" height="294" fill="transparent" data-tip="1,000,000 步：範例 -23.3　reward-to-go 79.4　MC baseline 174.8　A2C GAE 0.99 198.4　PPO＋熵 219.7　DQN 123.6"/>
+</svg>
+<!-- /CHART:ch06_curves -->
+<figcaption>圖 6.2　訓練曲線，橫軸是環境步數：每個種子的「每 20 局平均總獎勵」放在那 20 局結束時的步數上，內插到每 5 萬步，再對種子 0–9 取平均。PPO 畫的是加了熵正則化的版本；reward-to-go 是第 4 章的 γ ＝ 0.99。</figcaption>
+</figure>
+<p>從這張圖可以把全書的進展讀成一條線：範例（灰）在 50 萬步時是 −39.8，之後幾乎停住（100 萬步 −23.3）；reward-to-go（藍）在 50 萬步爬到 80.9，之後也停了（79.4）；MC baseline（橘）與 GAE（綠）在 50 萬步時剛過 100，到 100 萬步分別是 174.8 與 198.4，還在往上；PPO 加熵（紫）一路領先，50 萬步 129.5、100 萬步 219.7。DQN（洋紅）的形狀不同：50 萬步時已經是 154.4，是那個時間點最高的，之後卻掉到 123.6——訓練時它仍帶著 1% 的隨機動作，Q 值估計的波動也可能讓策略忽好忽壞（本書沒有進一步拆開）。這是訓練時的分數（策略照機率取樣、DQN 帶著 ε 的隨機），和閉迴路評估的數字不完全相同，但走勢一致。</p>
+
+<h2 id="now">6.7　現在的做法：同一套演算法訓練語言模型</h2>
+<div class="note"><h4>從四個引擎到下一個字</h4>
+<p>2022 年底 ChatGPT 問世，讓強化學習最重要的應用變成了微調大型語言模型。對照本書的名詞：<strong>狀態</strong>是到目前為止的對話與已經寫出的字，<strong>動作</strong>是下一個 token（詞表有幾萬個，不是 4 個），<strong>一局</strong>是一整段回答，<strong>獎勵</strong>通常只在回答結束時給一次——由另一個模型（獎勵模型）或規則（例如數學答案對不對）打分。這和 LunarLander 的 +100 一樣，是一個很遠、很稀疏的獎勵，第 3 到第 5 章的信用分配問題原封不動地出現。</p>
+<p>RLHF（從人類回饋強化學習，InstructGPT，2022）用的正是 6.3 節的 PPO：critic 估計每個前綴之後的分數，GAE 算優勢，ratio 的 clip 限制每次更新的幅度；另外再加一項「不要離原本的模型太遠」的 KL 懲罰，作用類似本章的熵正則化，防止策略崩潰到某種奇怪的輸出。2024 年 DeepSeekMath 提出、之後用來訓練推理模型的 GRPO，則把 critic 拿掉：對同一個問題產生一組（幾個到幾十個）回答，用這組回答的平均分當 baseline——這就是第 5 章 5.2 節「只依賴狀態的 baseline」，狀態是問題，baseline 是同一個問題的平均表現，連 V 網路都不用訓練。課程本身也跟著轉向：ML2025 的 HW7 就是 RLHF。</p>
+</div>
+
+<h2 id="outcomes">6.8　結局：PPO 加熵幾乎不再懸停</h2>
+<figure class="fig">
+<!-- CHART:ch06_outcomes -->
+<svg viewBox="0 0 900 374" role="img" aria-label="A2C GAE λ 0.99（第 5 章） 降落 57.7、墜毀 2.9、截斷 39.4；＋隱藏層 64 降落 72.2、墜毀 11.1、截斷 16.7；＋熵 0.01 降落 72.0、墜毀 10.8、截斷 17.2；＋梯度裁切 1 降落 49.1、墜毀 10.3、截斷 40.6；＋每批 10 局 降落 29.0、墜毀 1.8、截斷 69.2；PPO 隱藏層 16 降落 34.4、墜毀 33.7、截斷 31.9；PPO 隱藏層 64 降落 73.3、墜毀 16.0、截斷 10.7；PPO 64 ＋熵 0.01 降落 85.4、墜毀 6.0、截斷 8.6；DQN 隱藏層 64 降落 67.1、墜毀 22.0、截斷 10.9">
+<rect x="230" y="8" width="12" height="12" rx="2" fill="#199e70"/>
+<text class="s-sm" x="248" y="18">降落</text>
+<rect x="420" y="8" width="12" height="12" rx="2" fill="#d55181"/>
+<text class="s-sm" x="438" y="18">墜毀</text>
+<rect x="610" y="8" width="12" height="12" rx="2" fill="#c98500"/>
+<text class="s-sm" x="628" y="18">截斷（撐滿 1,000 步）</text>
+<text class="s-lbl" x="218" y="55.0" text-anchor="end">A2C GAE λ 0.99（第 5 章）</text>
+<rect x="230.0" y="40" width="352.0" height="22" fill="#199e70" data-tip="A2C GAE λ 0.99（第 5 章）：降落 57.7 局"/>
+<text class="s-mono" x="406.0" y="55.0" text-anchor="middle" style="fill:#0f1316">58</text>
+<rect x="582.0" y="40" width="17.7" height="22" fill="#d55181" data-tip="A2C GAE λ 0.99（第 5 章）：墜毀 2.9 局"/>
+<rect x="599.7" y="40" width="240.3" height="22" fill="#c98500" data-tip="A2C GAE λ 0.99（第 5 章）：截斷（撐滿 1,000 步） 39.4 局"/>
+<text class="s-mono" x="719.8" y="55.0" text-anchor="middle" style="fill:#0f1316">39</text>
+<text class="s-lbl" x="218" y="89.0" text-anchor="end">＋隱藏層 64</text>
+<rect x="230.0" y="74" width="440.4" height="22" fill="#199e70" data-tip="＋隱藏層 64：降落 72.2 局"/>
+<text class="s-mono" x="450.2" y="89.0" text-anchor="middle" style="fill:#0f1316">72</text>
+<rect x="670.4" y="74" width="67.7" height="22" fill="#d55181" data-tip="＋隱藏層 64：墜毀 11.1 局"/>
+<text class="s-mono" x="704.3" y="89.0" text-anchor="middle" style="fill:#0f1316">11</text>
+<rect x="738.1" y="74" width="101.9" height="22" fill="#c98500" data-tip="＋隱藏層 64：截斷（撐滿 1,000 步） 16.7 局"/>
+<text class="s-mono" x="789.1" y="89.0" text-anchor="middle" style="fill:#0f1316">17</text>
+<text class="s-lbl" x="218" y="123.0" text-anchor="end">＋熵 0.01</text>
+<rect x="230.0" y="108" width="439.2" height="22" fill="#199e70" data-tip="＋熵 0.01：降落 72.0 局"/>
+<text class="s-mono" x="449.6" y="123.0" text-anchor="middle" style="fill:#0f1316">72</text>
+<rect x="669.2" y="108" width="65.9" height="22" fill="#d55181" data-tip="＋熵 0.01：墜毀 10.8 局"/>
+<text class="s-mono" x="702.1" y="123.0" text-anchor="middle" style="fill:#0f1316">11</text>
+<rect x="735.1" y="108" width="104.9" height="22" fill="#c98500" data-tip="＋熵 0.01：截斷（撐滿 1,000 步） 17.2 局"/>
+<text class="s-mono" x="787.5" y="123.0" text-anchor="middle" style="fill:#0f1316">17</text>
+<text class="s-lbl" x="218" y="157.0" text-anchor="end">＋梯度裁切 1</text>
+<rect x="230.0" y="142" width="299.5" height="22" fill="#199e70" data-tip="＋梯度裁切 1：降落 49.1 局"/>
+<text class="s-mono" x="379.8" y="157.0" text-anchor="middle" style="fill:#0f1316">49</text>
+<rect x="529.5" y="142" width="62.8" height="22" fill="#d55181" data-tip="＋梯度裁切 1：墜毀 10.3 局"/>
+<text class="s-mono" x="560.9" y="157.0" text-anchor="middle" style="fill:#0f1316">10</text>
+<rect x="592.3" y="142" width="247.7" height="22" fill="#c98500" data-tip="＋梯度裁切 1：截斷（撐滿 1,000 步） 40.6 局"/>
+<text class="s-mono" x="716.2" y="157.0" text-anchor="middle" style="fill:#0f1316">41</text>
+<text class="s-lbl" x="218" y="191.0" text-anchor="end">＋每批 10 局</text>
+<rect x="230.0" y="176" width="176.9" height="22" fill="#199e70" data-tip="＋每批 10 局：降落 29.0 局"/>
+<text class="s-mono" x="318.4" y="191.0" text-anchor="middle" style="fill:#0f1316">29</text>
+<rect x="406.9" y="176" width="11.0" height="22" fill="#d55181" data-tip="＋每批 10 局：墜毀 1.8 局"/>
+<rect x="417.9" y="176" width="422.1" height="22" fill="#c98500" data-tip="＋每批 10 局：截斷（撐滿 1,000 步） 69.2 局"/>
+<text class="s-mono" x="628.9" y="191.0" text-anchor="middle" style="fill:#0f1316">69</text>
+<text class="s-lbl" x="218" y="225.0" text-anchor="end">PPO 隱藏層 16</text>
+<rect x="230.0" y="210" width="209.8" height="22" fill="#199e70" data-tip="PPO 隱藏層 16：降落 34.4 局"/>
+<text class="s-mono" x="334.9" y="225.0" text-anchor="middle" style="fill:#0f1316">34</text>
+<rect x="439.8" y="210" width="205.6" height="22" fill="#d55181" data-tip="PPO 隱藏層 16：墜毀 33.7 局"/>
+<text class="s-mono" x="542.6" y="225.0" text-anchor="middle" style="fill:#0f1316">34</text>
+<rect x="645.4" y="210" width="194.6" height="22" fill="#c98500" data-tip="PPO 隱藏層 16：截斷（撐滿 1,000 步） 31.9 局"/>
+<text class="s-mono" x="742.7" y="225.0" text-anchor="middle" style="fill:#0f1316">32</text>
+<text class="s-lbl" x="218" y="259.0" text-anchor="end">PPO 隱藏層 64</text>
+<rect x="230.0" y="244" width="447.1" height="22" fill="#199e70" data-tip="PPO 隱藏層 64：降落 73.3 局"/>
+<text class="s-mono" x="453.6" y="259.0" text-anchor="middle" style="fill:#0f1316">73</text>
+<rect x="677.1" y="244" width="97.6" height="22" fill="#d55181" data-tip="PPO 隱藏層 64：墜毀 16.0 局"/>
+<text class="s-mono" x="725.9" y="259.0" text-anchor="middle" style="fill:#0f1316">16</text>
+<rect x="774.7" y="244" width="65.3" height="22" fill="#c98500" data-tip="PPO 隱藏層 64：截斷（撐滿 1,000 步） 10.7 局"/>
+<text class="s-mono" x="807.4" y="259.0" text-anchor="middle" style="fill:#0f1316">11</text>
+<text class="s-lbl" x="218" y="293.0" text-anchor="end">PPO 64 ＋熵 0.01</text>
+<rect x="230.0" y="278" width="520.9" height="22" fill="#199e70" data-tip="PPO 64 ＋熵 0.01：降落 85.4 局"/>
+<text class="s-mono" x="490.5" y="293.0" text-anchor="middle" style="fill:#0f1316">85</text>
+<rect x="750.9" y="278" width="36.6" height="22" fill="#d55181" data-tip="PPO 64 ＋熵 0.01：墜毀 6.0 局"/>
+<text class="s-mono" x="769.2" y="293.0" text-anchor="middle" style="fill:#0f1316">6</text>
+<rect x="787.5" y="278" width="52.5" height="22" fill="#c98500" data-tip="PPO 64 ＋熵 0.01：截斷（撐滿 1,000 步） 8.6 局"/>
+<text class="s-mono" x="813.8" y="293.0" text-anchor="middle" style="fill:#0f1316">9</text>
+<text class="s-lbl" x="218" y="327.0" text-anchor="end">DQN 隱藏層 64</text>
+<rect x="230.0" y="312" width="409.3" height="22" fill="#199e70" data-tip="DQN 隱藏層 64：降落 67.1 局"/>
+<text class="s-mono" x="434.7" y="327.0" text-anchor="middle" style="fill:#0f1316">67</text>
+<rect x="639.3" y="312" width="134.2" height="22" fill="#d55181" data-tip="DQN 隱藏層 64：墜毀 22.0 局"/>
+<text class="s-mono" x="706.4" y="327.0" text-anchor="middle" style="fill:#0f1316">22</text>
+<rect x="773.5" y="312" width="66.5" height="22" fill="#c98500" data-tip="DQN 隱藏層 64：截斷（撐滿 1,000 步） 10.9 局"/>
+<text class="s-mono" x="806.8" y="327.0" text-anchor="middle" style="fill:#0f1316">11</text>
+<text class="s-sm" x="535.0" y="366" text-anchor="middle">100 局閉迴路裡的結局（10 個種子的平均）</text>
+</svg>
+<!-- /CHART:ch06_outcomes -->
+<figcaption>圖 6.3　訓練到 100 萬步後，greedy 策略在 100 局閉迴路裡的結局（10 個種子的平均）。</figcaption>
+</figure>
+<p>PPO 加熵的 greedy 策略，100 局平均有 85.4 局降落、6.0 局墜毀、8.6 局截斷；第 5 章最好的方法是 57.7、2.9、39.4。熵正則化在這裡的貢獻很直觀：策略不會變得極端確定，「停在地上偶爾開一下引擎」或「懸在空中」這類局部最佳解比較容易被擺脫。DQN 則是另一種取捨：截斷只有 10.9 局，墜毀卻有 22.0 局——它的 Q 值估計在接近地面時不夠準，有時會選錯。</p>
+
+<div class="recap"><h4>本章重點</h4>
+<ul>
+<li>在 GAE λ 0.99 上疊加技巧，只有加寬隱藏層到 64 有用（stochastic 195.0、greedy 205.4、截斷 16.7%）；熵、梯度裁切 1、每批 10 局依序讓結果變差（疊加設計，沒有單獨的對照）。</li>
+<li>加總的 loss 梯度範數約 250–350，裁切上限 1 永遠觸發；策略用 Adam，裁切的效果是把每批的梯度拉成一樣大。</li>
+<li>PPO 用機率比與 clip 讓同一批 2,048 步被重複用於 320 次更新。加熵 0.01 之後是全書最好：100 萬步 stochastic 213.6 ± 24.3、greedy 222.2，所有種子 ≥ 180，接近手寫控制器 225.5。沒有熵的 PPO 越練越差（169.0 → 143.3）。</li>
+<li>DQN 學 Q 值、ε-greedy 探索、經驗回放、目標網路：185.6，最省時間（316 s），但種子差異大、墜毀較多。</li>
+<li>RLHF 用的是 PPO（加 KL 懲罰），GRPO 用「同一個問題的一組回答的平均分」當 baseline——都是本書第 5、6 章的觀念。</li>
+</ul>
+</div>
+
+<h2 id="quiz">自我測驗</h2>
+<details class="quiz"><summary>1. PPO 的 clip 為什麼要和 min 一起用？只寫 <code>clip(ratio) · A</code> 會怎樣？</summary>
+<p>min 讓目標取「未裁切」與「裁切後」兩者中較悲觀的一個。A &gt; 0 時，ratio 超過 1 + ε 就不再增加目標（不再鼓勵繼續推高）；但 ratio 低於 1 − ε 時，未裁切的值比較小，min 選它，梯度仍會把機率拉回來。只寫 clip(ratio) · A，ratio 在 [1 − ε, 1 + ε] 之外梯度是 0，連「推錯方向、需要拉回來」的情況也不管了。</p></details>
+<details class="quiz"><summary>2. 為什麼 DQN 的 stochastic 與 greedy 分數完全相同？</summary>
+<p>DQN 的策略是「選 Q 值最大的動作」，本身沒有機率分布；訓練時的隨機來自 ε-greedy，評估時不加 ε。實驗工具的 <code>QAgent.act</code> 不論 greedy 參數都回傳 argmax，所以兩種量法是同一件事。</p></details>
+<details class="quiz"><summary>3. 熵正則化在 D 組讓 stochastic 少了 19 分，在 PPO 卻多了 70 分。請說明可能的原因。</summary>
+<p>D 組的 GAE 每批資料只更新一次，策略變確定的速度慢，本來就保有足夠的探索；額外的熵只讓取樣時多出一些不必要的隨機動作，評估時被扣分。PPO 每批資料更新 320 次，策略很快變得極端確定，探索消失、可能卡住（沒有熵時 100 萬步比 2,000 局還差）；熵正則化正好補上這個缺口。這是根據實驗結果的解釋，本書沒有另外量策略熵隨訓練的變化。</p></details>
+<details class="quiz"><summary>4. 經驗回放能讓 DQN 重複使用舊資料，策略梯度為什麼不能直接這樣做？PPO 是怎麼部分解決的？</summary>
+<p>策略梯度的公式是在「目前策略產生的資料」上取期望；舊資料來自舊策略，直接用會讓梯度有偏差。DQN 學的是 Q 值，它的更新目標（Bellman 方程）不依賴是哪個策略收集的資料（off-policy），所以可以重用。PPO 用 ratio ＝ π<sub>新</sub>／π<sub>舊</sub> 修正這個偏差，並用 clip 限制新舊策略的差距，只在一小段時間內重複使用同一批資料。</p></details>
+<details class="quiz"><summary>5. 在 RLHF 裡，「獎勵只在回答結束時給一次」對應到本書的哪個現象？你預期會遇到什麼困難？</summary>
+<p>對應 LunarLander 的 +100：要等著地後靜止一百多步才給，很遠、很稀疏（第 4 章）。困難是信用分配：一段幾百個 token 的回答，哪一個字讓分數變高或變低？解法也一樣——用 critic 估計中途的價值（PPO + GAE），或用同一個問題的多個回答互相比較當 baseline（GRPO），降低變異。</p></details>
+
+<h2 id="reading">延伸閱讀</h2>
+<ul>
+<li>John Schulman 等，<a href="https://arxiv.org/abs/1707.06347">Proximal Policy Optimization Algorithms</a>（2017）：PPO 的原始論文。</li>
+<li>Volodymyr Mnih 等，<a href="https://www.nature.com/articles/nature14236">Human-level control through deep reinforcement learning</a>（Nature，2015）：DQN、經驗回放與目標網路。</li>
+<li>Long Ouyang 等，<a href="https://arxiv.org/abs/2203.02155">Training language models to follow instructions with human feedback</a>（2022）：InstructGPT，RLHF 用 PPO 的代表作。</li>
+<li>Zhihong Shao 等，<a href="https://arxiv.org/abs/2402.03300">DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models</a>（2024）：提出 GRPO。</li>
+<li>Shengyi Huang 等，<a href="https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/">The 37 Implementation Details of Proximal Policy Optimization</a>（ICLR Blog Track，2022）：PPO 實作細節對結果的影響，包括本章沒有開的梯度裁切。</li>
+</ul>
+
+<footer class="chap-footer"><p>ML2022 Spring HW12 讀碼教材。作業內容出自台大《機器學習 2022 Spring》課程（李宏毅老師與助教群），範例程式出自 2021 年的同一門課；書中數字皆為本機實測。</p></footer>
+</main>
+<nav class="chapnav bottom"><a href="index.html">↑ 目錄</a><span class="spacer"></span><a href="ch05.html">← 第 5 章</a><a href="ch07.html">第 7 章 →</a></nav>
+<script id="book-js">
+/* HW12 讀碼教材 — 頁面腳本（定義在 index.html，其他頁逐字複製）
+   pre.py 上色、pre.shell 上色、data-hot 行強調（行號取 figcaption 的起始行）、«N» 圓形標記、本章目錄。 */
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var PY_KW = new Set(('False None True and as assert async await break class continue def del elif else except ' +
+    'finally for from global if import in is lambda nonlocal not or pass raise return try while with yield').split(' '));
+  var PY_BUILTIN = new Set(('int float str list dict set tuple len range enumerate zip print open super isinstance ' +
+    'max min sum abs round sorted any all bool type object self').split(' '));
+  var PY_RE = new RegExp(
+    '(#[^\\n]*)' +                                                   // 1 comment
+    '|("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|[rbfRBF]{0,2}"(?:\\\\.|[^"\\\\\\n])*"|[rbfRBF]{0,2}\'(?:\\\\.|[^\'\\\\\\n])*\')' + // 2 string
+    '|(@[A-Za-z_][\\w.]*)' +                                         // 3 decorator
+    '|\\b([A-Za-z_]\\w*)(?=\\s*\\()' +                               // 4 call
+    '|\\b(\\d+(?:\\.\\d+)?(?:[eE][-+]?\\d+)?)\\b' +                  // 5 number
+    '|\\b([A-Za-z_]\\w*)\\b', 'g');                                  // 6 word
+
+  function highlightPy(text) {
+    var out = '', last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(text)) !== null) {
+      out += esc(text.slice(last, m.index));
+      last = PY_RE.lastIndex;
+      if (m[1]) out += '<span class="tok-cmt">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-pre">' + esc(m[3]) + '</span>';
+      else if (m[4]) {
+        var cls = PY_KW.has(m[4]) ? 'tok-kw' : (PY_BUILTIN.has(m[4]) ? 'tok-type' : 'tok-fn');
+        out += '<span class="' + cls + '">' + esc(m[4]) + '</span>';
+      } else if (m[5]) out += '<span class="tok-num">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += PY_KW.has(m[6]) ? '<span class="tok-kw">' + esc(m[6]) + '</span>' : esc(m[6]);
+    }
+    return out + esc(text.slice(last));
+  }
+
+  function highlightShell(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)\$\s(.*)$/);
+      if (m) {
+        var cmd = m[2], cmt = '', k = cmd.search(/\s#\s/);
+        if (k >= 0) { cmt = cmd.slice(k); cmd = cmd.slice(0, k); }
+        return esc(m[1]) + '<span class="sh-prompt">$</span> <span class="sh-cmd">' + esc(cmd) + '</span>' +
+          (cmt ? '<span class="sh-cmt">' + esc(cmt) + '</span>' : '');
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function parseHot(spec) {
+    var set = new Set();
+    spec.split(',').forEach(function (part) {
+      var m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
+      if (m) for (var i = +m[1]; i <= +(m[2] || m[1]); i++) set.add(i);
+    });
+    return set;
+  }
+
+  /* 行號 = figcaption 的起始行號 + 區塊內第幾行。跨行的 span（多行字串）在行尾收、下一行重開。 */
+  function wrapHot(html, spec, offset) {
+    var hot = parseHot(spec), carry = null;
+    return html.split('\n').map(function (line, i) {
+      var s = (carry || '') + line;
+      var opens = s.match(/<span[^>]*>/g) || [], closes = s.match(/<\/span>/g) || [];
+      if (opens.length > closes.length) { carry = opens[opens.length - 1]; s += '</span>'; } else carry = null;
+      return hot.has(i + 1 + offset) ? '<span class="hot-line">' + s + '</span>' : s;
+    }).join('\n');
+  }
+
+  document.querySelectorAll('pre').forEach(function (pre) {
+    if (pre.classList.contains('diagram')) return;
+    var target = pre.querySelector('code') || pre;
+    var text = target.textContent;
+    if (pre.classList.contains('shell')) target.innerHTML = highlightShell(text);
+    else if (pre.classList.contains('py')) target.innerHTML = highlightPy(text);
+    if (/«\d+»/.test(target.innerHTML)) target.innerHTML = target.innerHTML.replace(/«(\d+)»/g, '<span class="mk">$1</span>');
+    if (pre.dataset.hot) {
+      var cap = pre.closest('figure.listing') && pre.closest('figure.listing').querySelector('figcaption');
+      var m = cap && cap.textContent.match(/:(\d+)/);
+      target.innerHTML = wrapHot(target.innerHTML, pre.dataset.hot, m ? parseInt(m[1], 10) - 1 : 0);
+    }
+  });
+
+  var main = document.querySelector('main'), header = document.querySelector('header.chap-header');
+  if (main && header) {
+    var hs = main.querySelectorAll('h2');
+    if (hs.length >= 3) {
+      var box = document.createElement('nav');
+      box.className = 'toc-box';
+      box.setAttribute('aria-label', '本章目錄');
+      var html = '<p class="toc-box-title">本章目錄</p><ol>';
+      hs.forEach(function (h, i) {
+        if (!h.id) h.id = 'sec-' + (i + 1);
+        html += '<li><a href="#' + h.id + '">' + esc(h.textContent) + '</a></li>';
+      });
+      box.innerHTML = html + '</ol>';
+      header.insertAdjacentElement('afterend', box);
+    }
+  }
+  /* 圖表的 hover：figure.fig 裡任何帶 data-tip 的元素，滑過時在 .viz-tip 顯示它的內容 */
+  document.querySelectorAll('figure.fig').forEach(function (fig) {
+    if (!fig.querySelector('[data-tip]')) return;
+    var tip = fig.querySelector('.viz-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'viz-tip'; fig.appendChild(tip); }
+    fig.addEventListener('mousemove', function (e) {
+      var t = e.target.closest && e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var r = fig.getBoundingClientRect(), x = e.clientX - r.left + 14;
+      if (x + tip.offsetWidth > r.width - 8) x = e.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(4, x) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+    });
+    fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+</body>
+</html>
