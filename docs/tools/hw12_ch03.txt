@@ -1,0 +1,14 @@
+same network as hw12_exp.py / train.py (seed 543): True
+batches 1-50: steps/batch 564, reward mean -1.993, std 10.20, std without the +-100 steps 3.66, +-100 steps/batch 4.98, weight of a crash step -9.69 (min -12.18), share of positive weights 0.671
+   mean normalised weight by action [0,1,2,3]: [-0.023  0.001  0.028 -0.005]  share of steps: [0.235 0.186 0.367 0.212]
+batches 351-400: steps/batch 1677, reward mean -0.237, std 6.27, std without the +-100 steps 3.11, +-100 steps/batch 4.62, weight of a crash step -15.91 (min -25.86), share of positive weights 0.532
+   mean normalised weight by action [0,1,2,3]: [ 0.023 -0.1    0.087 -0.104]  share of steps: [0.127 0.206 0.448 0.218]
+
+== learning rate (group A, 10 seeds each, closed-loop stochastic at the 2,000-episode snapshot)
+A_lr1e-4 [(0, -203.8, 126), (1, -220.5, 131), (2, -210.0, 118), (3, -223.5, 117), (4, -255.3, 110), (5, -235.4, 118), (6, -235.6, 113), (7, -213.3, 118), (8, -253.2, 114), (9, -242.4, 115)]
+   episodes per 1M steps: [5665, 5755, 6550, 6385, 7575, 6255, 6190, 5820, 6695, 6570]
+A_sample [(0, 40.2, 262), (1, -46.1, 459), (2, -50.8, 323), (3, -39.3, 315), (4, -17.0, 152), (5, -55.2, 345), (6, -12.0, 307), (7, -15.3, 330), (8, -49.4, 291), (9, -125.3, 291)]
+   episodes per 1M steps: [3310, 3145, 3440, 3285, 3335, 3335, 3350, 3345, 3400, 3360]
+A_lr1e-2 [(0, -148.6, 71), (1, -572.1, 68), (2, -883.0, 125), (3, -765.9, 101), (4, -155.2, 71), (5, 0.6, 324), (6, -141.8, 72), (7, -137.4, 79), (8, -266.8, 116), (9, -883.0, 125)]
+   episodes per 1M steps: [6795, 14680, 8855, 11750, 13775, 3830, 13845, 5830, 9390, 8160]
+immediate == rtg gamma 0 after 100 episodes: True True

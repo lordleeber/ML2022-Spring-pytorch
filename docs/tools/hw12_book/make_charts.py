@@ -77,7 +77,44 @@ def ch00_seeds():
                                 f'Gymnasium 的手寫控制器 {HEURISTIC}。')
 
 
-CHARTS = {'ch00_curve': ('ch00.html', ch00_curve), 'ch00_seeds': ('ch00.html', ch00_seeds)}
+def mean_curve(tag, bins=100, seeds=None):
+    # mean over training seeds of the 20-episode-bin training return; the first `bins` bins = 2,000 episodes
+    c = [r['curve_return'][:bins] for r in runs(tag) if seeds is None or r['seed'] in seeds]
+    return [round(float(v), 1) for v in np.mean(c, 0)], len(c)
+
+
+def ch03_curves():
+    items = [('範例', 'A_sample', C['sample'], None), ('不標準化', 'A_nonorm', C['rtg'], None),
+             ('學習率 ×0.1', 'A_lr1e-4', C['base'], None), ('學習率 ×10', 'A_lr1e-2', C['dqn'], None)]
+    series = []
+    for label, tag, color, dash in items:
+        v, n = mean_curve(tag)
+        series.append(dict(name=tag, label=label, values=v, color=color))
+    aria = '訓練曲線，每 20 局平均總獎勵再對種子取平均，前 2,000 局。' + '；'.join(
+        f'{s["label"]}：第 1 個 20 局 {s["values"][0]}、第 1,000 局附近 {s["values"][49]}、最後 {s["values"][-1]}' for s in series)
+    svg = charts.line_chart(series, 100, -550, 0, [-500, -400, -300, -200, -100, 0], xlabel='訓練局數', ylabel='平均總獎勵',
+                            aria=aria, xticks=[(i, str((i + 1) * 20)) for i in (0, 24, 49, 74, 99)], fmt='{:.1f}', height=340,
+                            xname=lambda i: f'第 {i * 20 + 1}–{(i + 1) * 20} 局')
+    return charts.legend(series) + '\n' + svg
+
+
+def ch03_lr():
+    rows = []
+    for label, tag, color in [('學習率 ×0.1（1e-4）', 'A_lr1e-4', C['base']), ('範例（1e-3）', 'A_sample', C['sample']),
+                              ('學習率 ×10（1e-2）', 'A_lr1e-2', C['dqn']), ('範例但不標準化', 'A_nonorm', C['rtg'])]:
+        v = [r['snapshots']['ep']['closed_stochastic']['mean'] for r in runs(tag) if r['seed'] < 10]
+        rows.append({'label': label, 'color': color, 'values': v, 'mean': float(np.mean(v))})
+    rows.append({'label': '參考：永遠不動', 'color': '#4a5562', 'values': [-130.3]})
+    rows.append({'label': '參考：永遠開主引擎', 'color': '#4a5562', 'values': [-883.0]})
+    m = [r['mean'] for r in rows[:4]]
+    return charts.dot_rows(rows, -900, 100, [-800, -600, -400, -200, 0], label_w=230, vfmt='{:.1f}',
+                           xlabel='閉迴路 stochastic 平均總獎勵（訓練 2,000 局；每個點是一個種子 0–9）',
+                           aria=f'學習率與標準化，各 10 個種子的閉迴路分數平均：學習率 1e-4 {m[0]:.1f}、範例 1e-3 {m[1]:.1f}、'
+                                f'1e-2 {m[2]:.1f}、不標準化 {m[3]:.1f}。參考：永遠不動 −130.3、永遠開主引擎 −883.0。')
+
+
+CHARTS = {'ch00_curve': ('ch00.html', ch00_curve), 'ch00_seeds': ('ch00.html', ch00_seeds),
+          'ch03_curves': ('ch03.html', ch03_curves), 'ch03_lr': ('ch03.html', ch03_lr)}
 
 
 def put(page, name, content):
