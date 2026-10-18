@@ -1,6 +1,6 @@
-# 下一本書要做哪一份作業：候選評估（2026-10-08）
+# 下一本書要做哪一份作業：候選評估（2026-10-08，2026-10-18 更新）
 
-HW01–HW04、HW06、HW07、HW09、HW10、HW12、HW13、HW14 的讀碼教材已完成（HW14、HW13 於 2026-10-09、HW07 與 HW10 於 2026-10-10、HW12 於 2026-10-17 完成）。這份文件整理 2026-10-08 一個 session 裡看過的其餘作業，以及 ML2025／ML2026 的對照；每份作業的細節在各自資料夾的 `PLAN.md`。**新 session 從這裡開始**，然後讀選定作業的 `PLAN.md` 與 `docs/TEXTBOOK_WORKFLOW.md`（特別是「HW06 的調整」：大綱前先對照現行 skill、不寫附錄、每本書自己設計樣板）。
+HW01–HW04、HW06、HW07、HW09、HW10、HW12、HW13、HW14 的讀碼教材已完成（HW14、HW13 於 2026-10-09、HW07 與 HW10 於 2026-10-10、HW12 於 2026-10-17 完成）。姊妹 repo [ML2025-Spring-pytorch](https://github.com/lordleeber/ML2025-Spring-pytorch) 已完成 ML2025 的 HW3、HW6（2026-10-16）、HW4（2026-10-18），各書在該 repo 的 `docs/HWxx/`，流程以該 repo 的 `docs/TEXTBOOK_WORKFLOW.md` 為準。這份文件整理 2026-10-08 一個 session 裡看過的其餘作業，以及 ML2025／ML2026 的對照；每份作業的細節在各自資料夾的 `PLAN.md`。**新 session 從這裡開始**，然後讀選定作業的 `PLAN.md` 與 `docs/TEXTBOOK_WORKFLOW.md`（特別是「HW06 的調整」：大綱前先對照現行 skill、不寫附錄、每本書自己設計樣板）。
 
 ## 評估標準
 1. **本機能不能量主指標**：這系列的原則是「每個數字都在本機實測」。測試集沒有標籤、又沒有驗證集的作業，結論會打折。
@@ -21,9 +21,10 @@ HW01–HW04、HW06、HW07、HW09、HW10、HW12、HW13、HW14 的讀碼教材已�
 | [HW08](../HW08/PLAN.md) | 異常偵測（autoencoder） | ✗（測試集無標籤） | 中 | 低（已能跑） | 已在 repo | 不建議 |
 | [HW12](../HW12/PLAN.md) | 強化學習（LunarLander） | ✓ | 高（RLHF、GRPO） | 低～中（`gymnasium[box2d]` 有 cp312 wheel） | 2022 失傳；改讀 2021 官方範例，拆成 .py | **已完成**（docs/HW12） |
 | HW15 | Meta Learning | 未看 | — | — | 官方 notebook 在 `~/poyi/GitHubPublic/ML2022-Spring/HW15/` | 未評估 |
-| [ML2025 HW6](https://github.com/lordleeber/ML2025-Spring-pytorch/blob/main/HW06/PLAN.md)（＝ML2026 HW5） | 微調而不遺忘（Llama-3.2-1B + LoRA） | 部分（安全率要審查模型） | 現行課程 | 中（Llama 需申請權限） | Colab／Kaggle（未下載） | HW14 的續集 |
+| [ML2025 HW6](https://github.com/lordleeber/ML2025-Spring-pytorch/blob/main/HW06/PLAN.md)（＝ML2026 HW5） | 微調而不遺忘（Llama-3.2-1B + LoRA） | 部分（安全率要審查模型） | 現行課程 | 中（Llama 需申請權限） | 已下載並拆成 .py | **已完成**（ML2025 repo docs/HW06，2026-10-16） |
+| [ML2025 HW4](https://github.com/lordleeber/ML2025-Spring-pytorch/blob/main/HW04/PLAN.md)（＝ML2026 HW4） | 從零訓練 Transformer（GPT-2 逐像素生成寶可夢） | 部分（FID 本機算；PDR 用自訓代理分類器） | 現行課程 | 低（共用 venv、公開資料、不用預訓練模型） | 已拆成 .py | **已完成**（ML2025 repo docs/HW04，2026-10-18） |
 
-建議順序：HW14、HW13、HW07、HW10 已完成；下一本可接 ML2025 HW6 當 HW14 的 LLM 版續集（ML2025 HW5「Fine tune is powerful」則是 HW07 的續集）（HW13 的壓縮觀念則可接 ML2026 HW3 LLM Fast Inference）；有餘力再試 HW05 的環境。
+建議順序（2026-10-18 更新）：上表除了 HW05、HW08、HW11、HW15 都已完成。ML2025 系列還沒做的候選：HW5「Fine tune is powerful」（HW07 的續集，可沿用 HW6 的 LoRA／trl 環境）、HW9 Model Merging 與 HW8 Model Editing（延續 HW6 的「改模型而不壞掉其他能力」）、HW7 RLHF（接 ML2022 HW12）、HW10 Diffusion（接 ML2022 HW06 GAN 與 ML2025 HW4 的生成評估，FID 量法可沿用）；ML2026 HW3 LLM Fast Inference 可接 HW13。ML2022 這邊有餘力再試 HW05 的環境。
 
 ## 三個年份的主題對照（課程網站，2026-10-08 讀取）
 
