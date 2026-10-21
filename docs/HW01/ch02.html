@@ -1143,8 +1143,9 @@ pre.has-ln .ln::before {
 }
 </style>
 <script id="ln-js">
-/* 程式引用的行號：第 i 行 = figcaption 的起始行號（file.py:53–101）+ i，和 data-hot 用同一個規則。 */
-(function () {
+/* 程式引用的行號：第 i 行 = figcaption 的起始行號（file.py:53–101）+ i，和 data-hot 用同一個規則。
+   等 DOMContentLoaded 才跑：book-js 是同步執行的，這樣不論兩段 script 誰在前，行號都加在上色與強調行之後。 */
+document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('figure.listing').forEach(function (fig) {
     var cap = fig.querySelector('figcaption'), pre = fig.querySelector('pre');
     var m = cap && pre && cap.textContent.match(/:(\d+)/);
@@ -1160,7 +1161,7 @@ pre.has-ln .ln::before {
     pre.style.setProperty('--ln-w', String(start + lines.length - 1).length + 'ch');
     pre.classList.add('has-ln');
   });
-})();
+});
 </script>
 </body>
 </html>

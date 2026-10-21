@@ -3,7 +3,8 @@
 1. Text uses the full page width: `--measure: 46rem` (about 2/3 of the 67.5rem page) becomes `none`,
    in the pages and in docs/tools/hw*_book/book.css.
 2. Code listings show source line numbers: a <style id="ln-style"> + <script id="ln-js"> block is put
-   right before </body>, after the book's own script, so it runs after highlighting and data-hot.
+   right before </body>. It runs on DOMContentLoaded, so it comes after the book's own (synchronous)
+   highlighting and data-hot even when apply_template.py later re-inserts book-js after this block.
    The number of line i is the figcaption's start line (`file.py:53–101`) + i, the same rule data-hot uses.
    The number is drawn by ::before from data-n, so copying the code does not copy the numbers.
 """
@@ -21,8 +22,9 @@ pre.has-ln .ln::before {
 }
 </style>
 <script id="ln-js">
-/* 程式引用的行號：第 i 行 = figcaption 的起始行號（file.py:53–101）+ i，和 data-hot 用同一個規則。 */
-(function () {
+/* 程式引用的行號：第 i 行 = figcaption 的起始行號（file.py:53–101）+ i，和 data-hot 用同一個規則。
+   等 DOMContentLoaded 才跑：book-js 是同步執行的，這樣不論兩段 script 誰在前，行號都加在上色與強調行之後。 */
+document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('figure.listing').forEach(function (fig) {
     var cap = fig.querySelector('figcaption'), pre = fig.querySelector('pre');
     var m = cap && pre && cap.textContent.match(/:(\\d+)/);
@@ -38,7 +40,7 @@ pre.has-ln .ln::before {
     pre.style.setProperty('--ln-w', String(start + lines.length - 1).length + 'ch');
     pre.classList.add('has-ln');
   });
-})();
+});
 </script>
 '''
 
