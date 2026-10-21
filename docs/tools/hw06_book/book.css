@@ -21,7 +21,7 @@
   --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --step-0: 1.0625rem;  --step-1: 1.25rem;  --step-2: 1.6rem;  --step-3: 2.25rem;
-  --measure: 46rem;
+  --measure: none;
 }
 
 *, *::before, *::after { box-sizing: border-box; }

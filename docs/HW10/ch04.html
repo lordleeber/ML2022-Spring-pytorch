@@ -36,7 +36,7 @@
   --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --step-0: 1.0625rem;  --step-1: 1.3rem;  --step-2: 1.7rem;  --step-3: 2.4rem;
-  --measure: 46rem;
+  --measure: none;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -568,6 +568,33 @@ def ifgsm(model, x, y, loss_fn, epsilon=epsilon, alpha=alpha, num_iter=20):
       tip.style.top = (e.clientY - r.top + 14) + 'px';
     });
     fig.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  });
+})();
+</script>
+<style id="ln-style">
+pre.has-ln .ln::before {
+  content: attr(data-n); display: inline-block; min-width: var(--ln-w, 2ch); margin-right: 1.4ch;
+  text-align: right; color: var(--muted); opacity: 0.6; user-select: none; -webkit-user-select: none;
+  font-style: normal; font-weight: 400;
+}
+</style>
+<script id="ln-js">
+/* 程式引用的行號：第 i 行 = figcaption 的起始行號（file.py:53–101）+ i，和 data-hot 用同一個規則。 */
+(function () {
+  document.querySelectorAll('figure.listing').forEach(function (fig) {
+    var cap = fig.querySelector('figcaption'), pre = fig.querySelector('pre');
+    var m = cap && pre && cap.textContent.match(/:(\d+)/);
+    if (!m || pre.classList.contains('has-ln')) return;
+    var target = pre.querySelector('code') || pre, start = parseInt(m[1], 10);
+    var lines = target.innerHTML.split('\n');
+    if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
+    target.innerHTML = lines.map(function (line, i) {
+      var ln = '<span class="ln" data-n="' + (start + i) + '"></span>';
+      var hot = line.match(/^<span class="hot-line">/);
+      return hot ? hot[0] + ln + line.slice(hot[0].length) : ln + line;
+    }).join('\n');
+    pre.style.setProperty('--ln-w', String(start + lines.length - 1).length + 'ch');
+    pre.classList.add('has-ln');
   });
 })();
 </script>
